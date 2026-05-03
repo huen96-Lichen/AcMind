@@ -1,4 +1,4 @@
-// PinMind ScreenshotAdapter
+// AcMind ScreenshotAdapter
 // V2.1 Phase 7.1: Captures screenshot file into a CaptureRecord.
 // V2.1 Phase 7.3: Enhanced with image dimensions and captured_at metadata.
 
@@ -99,7 +99,7 @@ class ScreenshotAdapter implements CaptureAdapter<ScreenshotInput> {
       raw_file_path: filePath,
       title: `屏幕截图 · ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
       preview_text: `屏幕截图 · ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
-      source_app: input.sourceApp ?? 'PinMind',
+      source_app: input.sourceApp ?? 'AcMind',
       metadata: {
         fileSize,
         mimeType: 'image/png',

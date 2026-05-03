@@ -1,8 +1,8 @@
-# PinMind 蒸馏闭环落地实施计划
+# AcMind 蒸馏闭环落地实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 PinMind 的蒸馏链路从“看起来能用”推进到“捕获、入库、蒸馏、审阅、导出、重启恢复都是真闭环”的产品级状态。
+**Goal:** 把 AcMind 的蒸馏链路从“看起来能用”推进到“捕获、入库、蒸馏、审阅、导出、重启恢复都是真闭环”的产品级状态。
 
 **Architecture:** 保留 `SourceItem -> AiTask -> DistilledOutput -> ExportRecord` 作为蒸馏运行时主干，不再把 `CaptureItem` 直接当成蒸馏输入。新增一个显式的捕获桥接层，把 `CaptureItem` 按需转换为带来源追踪的 `SourceItem`，并让 Capture Inbox、EditPage、DistillReviewPanel、AI Console、Export Page 都读取同一条运行时状态链。这样既能快速闭环，又不会把现有蒸馏管线重写成两套。
 
@@ -12,7 +12,7 @@
 
 ## 0. 现状判断
 
-当前 PinMind 已经具备这些能力：
+当前 AcMind 已经具备这些能力：
 
 - `capture_items` 能持久化，列表、详情、导出都是真实功能
 - `source_items`、`ai_tasks`、`distilled_outputs`、`export_records` 的运行时链路已经存在

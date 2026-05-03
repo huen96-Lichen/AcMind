@@ -190,7 +190,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
     try {
       const vaultPath = settings.vault?.vaultPath ?? '';
       if (vaultPath) {
-        const result = await window.pinmind.vault.validatePath(vaultPath);
+        const result = await window.acmind.vault.validatePath(vaultPath);
         setVaultStatus({ path: vaultPath, valid: result.valid, userMessage: result.message ?? (result.valid ? '验证通过' : '验证未通过'), checking: false });
       } else {
         setVaultStatus({ path: '', valid: false, userMessage: '未配置仓库路径', checking: false });
@@ -201,7 +201,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
 
     // Template status
     try {
-      const info = await window.pinmind.outputSpec.getInfo();
+      const info = await window.acmind.outputSpec.getInfo();
       setTemplateStatus({
         specPackPath: info.specPackPath ?? '',
         loaded: info.loaded,
@@ -217,7 +217,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
 
     // Model status
     try {
-      const status = await window.pinmind.localModel.getRuntimeStatus();
+      const status = await window.acmind.localModel.getRuntimeStatus();
       setModelStatus({
         enabled: status.enabled,
         configuredModel: status.configuredModel ?? '',
@@ -235,7 +235,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
 
     // Recent errors
     try {
-      const errs = await window.pinmind.errors.list({ status: 'open', limit: 5 });
+      const errs = await window.acmind.errors.list({ status: 'open', limit: 5 });
       setRecentErrors(errs.map((e: any) => ({
         error_id: e.error_id,
         error_type: e.error_type,
@@ -249,9 +249,9 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
 
     // Phase 9.7: VaultKeeper status
     try {
-      const health = await window.pinmind.vk.checkHealth() as any;
-      const recentJobs = await window.pinmind.vk.getRecentJobs(5) as any[];
-      const failedJobs = await window.pinmind.vk.getFailedJobs() as any[];
+      const health = await window.acmind.vk.checkHealth() as any;
+      const recentJobs = await window.acmind.vk.getRecentJobs(5) as any[];
+      const failedJobs = await window.acmind.vk.getFailedJobs() as any[];
       setVkStatus({
         available: health?.available ?? false,
         connectionMethod: health?.connection_method ?? 'unavailable',
@@ -474,7 +474,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => void window.pinmind.vk.resubmitJob(job.error_id)}
+                          onClick={() => void window.acmind.vk.resubmitJob(job.error_id)}
                         >
                           重试
                         </Button>
@@ -534,7 +534,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'errors' } }))}
+                onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'errors' } }))}
               >
                 查看全部错误
               </Button>
@@ -550,12 +550,12 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
             <QuickLink
               label="处理历史"
               description="查看整理和入库的执行记录"
-              onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'history' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'history' } }))}
             />
             <QuickLink
               label="错误回看"
               description="查看和处理自动化流程中的失败内容"
-              onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'errors' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'errors' } }))}
             />
             <QuickLink
               label="刷新状态"
@@ -585,7 +585,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'settings', tab: 'advanced-logs' } }))}
+                onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'settings', tab: 'advanced-logs' } }))}
               >
                 前往日志设置
               </Button>

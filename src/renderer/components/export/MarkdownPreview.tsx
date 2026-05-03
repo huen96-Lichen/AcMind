@@ -24,7 +24,7 @@ export function MarkdownPreview({ outputId }: MarkdownPreviewProps): JSX.Element
       try {
         setError(null);
         setLoading(true);
-        const result = await window.pinmind.template.preview(outputId);
+        const result = await window.acmind.template.preview(outputId);
         setContent(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));

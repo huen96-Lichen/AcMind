@@ -1,4 +1,4 @@
-// PinMind Safe Write Utility
+// AcMind Safe Write Utility
 // Provides atomic file writes to prevent corruption from interrupted writes.
 // Pattern: write to temp file → rename to target path.
 
@@ -49,7 +49,7 @@ export function safeWrite(
   }
 
   // Generate temp file path in the same directory (ensures same filesystem for rename)
-  const tempFileName = `.pinmind_tmp_${crypto.randomBytes(8).toString('hex')}`;
+  const tempFileName = `.acmind_tmp_${crypto.randomBytes(8).toString('hex')}`;
   const tempPath = path.join(parentDir, tempFileName);
 
   try {
@@ -126,7 +126,7 @@ export function validateVaultPath(vaultPath: string): VaultValidationResult {
 
   // Check write permission by testing a temp file
   try {
-    const testFile = path.join(vaultPath, `.pinmind_write_test_${Date.now()}`);
+    const testFile = path.join(vaultPath, `.acmind_write_test_${Date.now()}`);
     writeFileSync(testFile, 'test');
     unlinkSync(testFile);
   } catch {

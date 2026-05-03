@@ -32,6 +32,21 @@ import type {
   ModelVersion,
   CaptureRecord,
   CaptureInput,
+  PinItem,
+  PinItemListFilter,
+  VoiceCreatePinRequest,
+  VoicePolishRequest,
+  VoicePolishResult,
+  ClipboardItem,
+  ShelfItem,
+  ProcessJob,
+  AIAction,
+  AIActionType,
+  SourceType,
+  ProcessedContent,
+  DistilledNote,
+  VaultSearchResult,
+  VoiceDictionaryEntry,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/types';
 
@@ -98,7 +113,7 @@ async function bridgeAndRunBatchWithFallback(
 // Type-safe API surface exposed to the renderer process
 // ---------------------------------------------------------------------------
 
-const pinmindApi = {
+const acmindApi = {
   // -- App ------------------------------------------------------------------
   app: {
     getVersion(): Promise<string> {
@@ -271,6 +286,45 @@ const pinmindApi = {
     collectFile(params: { filePath: string; title?: string }) {
       return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_COLLECT_FILE, params);
     },
+    // Phase 2A: 截图与贴图
+    startAreaCapture() {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_START_AREA);
+    },
+    cancelCapture() {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_CANCEL);
+    },
+    pinImage(filePath: string, sourceItemId?: string) {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_PIN_IMAGE, { filePath, sourceItemId });
+    },
+    saveToInbox(id: string) {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_SAVE_TO_INBOX, { id });
+    },
+    listRecentCaptures(limit?: number) {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_LIST_RECENT, { limit });
+    },
+    listPinnedImages() {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_LIST_PINNED);
+    },
+    closePinnedImage(id: string) {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_CLOSE_PINNED, { id });
+    },
+    onItemsChanged(cb: (data: { timestamp: number }) => void): () => void {
+      const handler = (_event: unknown, data: { timestamp: number }) => cb(data);
+      ipcRenderer.on(IPC_CHANNELS.CAPTURE_SCREENSHOTS_CHANGED, handler);
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.CAPTURE_SCREENSHOTS_CHANGED, handler); };
+    },
+    onPinnedChanged(cb: (data: { timestamp: number }) => void): () => void {
+      const handler = (_event: unknown, data: { timestamp: number }) => cb(data);
+      ipcRenderer.on(IPC_CHANNELS.CAPTURE_PINNED_CHANGED, handler);
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.CAPTURE_PINNED_CHANGED, handler); };
+    },
+    // Phase 2B: OCR
+    ocrExtract(imagePath: string, language?: string) {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OCR_EXTRACT, { imagePath, language });
+    },
+    ocrSaveToInbox(text: string, sourceImagePath?: string) {
+      return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OCR_SAVE_TO_INBOX, { text, sourceImagePath });
+    },
   },
 
   // -- Dialog (Phase 7.5) ----------------------------------------------------
@@ -291,9 +345,83 @@ const pinmindApi = {
     toggle(enabled: boolean): Promise<boolean> {
       return ipcRenderer.invoke('clipboard.toggle', enabled);
     },
+    pause(): Promise<boolean> {
+      return ipcRenderer.invoke('clipboard.pause');
+    },
+    resume(): Promise<boolean> {
+      return ipcRenderer.invoke('clipboard.resume');
+    },
+    isPaused(): Promise<boolean> {
+      return ipcRenderer.invoke('clipboard.isPaused');
+    },
+    listItems(params?: { limit?: number; offset?: number }): Promise<{ success: boolean; items: ClipboardItem[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_LIST_ITEMS, params);
+    },
+    getItem(id: string): Promise<{ success: boolean; item: ClipboardItem | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_GET_ITEM, { id });
+    },
+    searchItems(query: string, contentType?: string): Promise<{ success: boolean; items: ClipboardItem[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_SEARCH_ITEMS, { query, contentType });
+    },
+    copyItem(id: string): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_COPY_ITEM, { id });
+    },
+    deleteItem(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_DELETE_ITEM, { id });
+    },
+    pinItem(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_PIN_ITEM, { id });
+    },
+    unpinItem(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_UNPIN_ITEM, { id });
+    },
+    saveToInbox(id: string): Promise<{ success: boolean; sourceItem?: SourceItem; alreadySaved?: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_SAVE_TO_INBOX, { id });
+    },
+    clearHistory(): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CLIPBOARD_CLEAR_HISTORY);
+    },
+    onItemsChanged(callback: (data: { timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { timestamp: number }) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.CLIPBOARD_ITEMS_CHANGED, handler);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.CLIPBOARD_ITEMS_CHANGED, handler);
+      };
+    },
   },
 
-
+  // -- Shelf (Phase 1B) ----------------------------------------------------
+  shelf: {
+    listItems(status?: string): Promise<{ success: boolean; items: ShelfItem[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SHELF_LIST_ITEMS, { status });
+    },
+    getItem(id: string): Promise<{ success: boolean; item: ShelfItem | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SHELF_GET_ITEM, { id });
+    },
+    addFiles(filePaths: string[], label?: string): Promise<{ success: boolean; item?: ShelfItem; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SHELF_ADD_FILES, { filePaths, label });
+    },
+    addText(text: string, label?: string): Promise<{ success: boolean; item?: ShelfItem; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SHELF_ADD_TEXT, { text, label });
+    },
+    removeItem(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SHELF_REMOVE_ITEM, { id });
+    },
+    saveToInbox(id: string): Promise<{ success: boolean; sourceItem?: SourceItem; alreadySaved?: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SHELF_SAVE_TO_INBOX, { id });
+    },
+    onItemsChanged(callback: (data: { timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { timestamp: number }) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.SHELF_ITEMS_CHANGED, handler);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.SHELF_ITEMS_CHANGED, handler);
+      };
+    },
+  },
 
   // -- Events (Phase 2) -----------------------------------------------------
   onRecordsChanged(callback: (event: { action: string; id: string; timestamp: number }) => void): () => void {
@@ -435,14 +563,20 @@ const pinmindApi = {
       return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_CREATE_SNAPSHOT, data);
     },
     list(): Promise<DatasetSnapshot[]> {
-      return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_LIST);
+      return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_LIST);
     },
     get(id: string): Promise<DatasetSnapshot | null> {
-      return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_GET, id);
+      return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_GET, id);
     },
     exportBundle(snapshotId: string): Promise<{ bundleDir: string; manifest: unknown }> {
       return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_EXPORT_BUNDLE, snapshotId);
     },
+    // Batch 6: Dataset management
+    create: (data: { name: string; description?: string; purpose?: string }) => ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_CREATE, data),
+    addItems: (data: { datasetId: string; items: Array<{ sourceType: string; sourceId: string }> }) => ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_ADD_ITEMS, data),
+    updateItem: (data: { id: string; quality?: string; privacyLevel?: string; included?: boolean; reason?: string }) => ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_UPDATE_ITEM, data),
+    exportDataset: (data: { datasetId: string; format: string; includeExcluded?: boolean }) => ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_EXPORT, data),
+    delete: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_DELETE, { id }),
   },
   trainingRuns: {
     importResult(result: {
@@ -624,6 +758,15 @@ const pinmindApi = {
 
   // -- Voice Workflow (Phase 10) -------------------------------------------
   voice: {
+    getDictationGuide(): Promise<unknown> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_GET_DICTATION_GUIDE);
+    },
+    polishTranscript(request: VoicePolishRequest): Promise<{ success: boolean; result?: VoicePolishResult; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_POLISH_TRANSCRIPT, request);
+    },
+    createPinFromTranscript(request: VoiceCreatePinRequest): Promise<{ success: boolean; captureItem?: CaptureItem; pin?: PinItem; polish?: VoicePolishResult; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_CREATE_PIN_FROM_TRANSCRIPT, request);
+    },
     importAudio(params: { filePath: string; title?: string }): Promise<{ success: boolean; originalId?: string; captureItemId?: string; error?: string }> {
       return ipcRenderer.invoke(IPC_CHANNELS.VOICE_IMPORT_AUDIO, params);
     },
@@ -766,6 +909,47 @@ const pinmindApi = {
     };
   },
 
+  // -- AcMind Pin Pool -----------------------------------------------------
+  pinPool: {
+    list(filter?: PinItemListFilter): Promise<PinItem[]> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_LIST, filter);
+    },
+    get(id: string): Promise<PinItem | null> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_GET, id);
+    },
+    createFromCapture(captureItemId: string, overrides?: Partial<PinItem>): Promise<PinItem> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_CREATE_FROM_CAPTURE, captureItemId, overrides);
+    },
+    createFromText(text: string, title?: string): Promise<PinItem> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_CREATE_FROM_TEXT, text, title);
+    },
+    prefilter(id: string): Promise<{ pin: PinItem; result: unknown }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_PREFILTER, id);
+    },
+    promoteToInbox(id: string): Promise<{ pin: PinItem; sourceItem: SourceItem }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_PROMOTE_TO_INBOX, id);
+    },
+    update(id: string, patch: Partial<PinItem>): Promise<PinItem> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_UPDATE, id, patch);
+    },
+    ignore(id: string): Promise<PinItem> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_IGNORE, id);
+    },
+    delete(id: string): Promise<boolean> {
+      return ipcRenderer.invoke(IPC_CHANNELS.PIN_POOL_DELETE, id);
+    },
+  },
+
+  onPinPoolChanged(callback: (event: { action: string; id: string; timestamp: number }) => void): () => void {
+    const handler = (_event: Electron.IpcRendererEvent, data: { action: string; id: string; timestamp: number }) => {
+      callback(data);
+    };
+    ipcRenderer.on(IPC_CHANNELS.PIN_POOL_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.PIN_POOL_CHANGED, handler);
+    };
+  },
+
   // -- AI Distillation Workbench --------------------------------------------
   workbench: {
     saveMarkdown(data: { content: string; filename?: string }): Promise<{ success: boolean; filePath?: string; filename?: string; error?: string }> {
@@ -802,7 +986,36 @@ const pinmindApi = {
       ipcRenderer.on('capsule:state-changed', handler);
       return () => ipcRenderer.removeListener('capsule:state-changed', handler);
     },
+    getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.CAPSULE_GET_STATUS) as Promise<import('../shared/types').CapsuleStatus>,
   },
+
+  // -- Dashboard (Batch 4) ---------------------------------------------------
+  dashboard: {
+    getStats: () => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_GET_STATS) as Promise<import('../shared/types').DashboardStats | null>,
+  },
+
+  // -- Health Check (Batch 5) -------------------------------------------------
+  health: {
+    check: () => ipcRenderer.invoke(IPC_CHANNELS.HEALTH_CHECK) as Promise<import('../shared/types').HealthCheckResult>,
+  },
+
+  // -- Batch 6: Knowledge Projects -------------------------------------------
+  projects: {
+    list: () => ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_LIST),
+    create: (data: { name: string; description?: string; color?: string }) => ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_CREATE, data),
+    update: (data: { id: string; name?: string; description?: string; status?: string; color?: string }) => ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_UPDATE, data),
+    delete: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_DELETE, { id }),
+    addItem: (data: { projectId: string; itemType: string; itemId: string }) => ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_ADD_ITEM, data),
+    removeItem: (data: { projectId: string; itemId: string }) => ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_REMOVE_ITEM, data),
+  },
+
+  // -- Batch 6: Tags ----------------------------------------------------------
+  tags: {
+    list: () => ipcRenderer.invoke(IPC_CHANNELS.TAGS_LIST),
+    rename: (data: { oldName: string; newName: string }) => ipcRenderer.invoke(IPC_CHANNELS.TAGS_RENAME, data),
+    delete: (name: string) => ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, { name }),
+  },
+
   // Phase 1: Hybrid Search
   search: {
     hybrid: (query: string, options?: Record<string, unknown>, embeddingConfig?: Record<string, unknown>) =>
@@ -820,6 +1033,29 @@ const pinmindApi = {
   markitdown: {
     convert: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.MARKITDOWN_CONVERT, url),
     check: () => ipcRenderer.invoke(IPC_CHANNELS.MARKITDOWN_CHECK),
+  },
+  // Phase 3: File Converter (MarkItDown local file → Markdown)
+  fileConverter: {
+    convert(filePath: string): Promise<{ success: boolean; jobId: string; markdown?: string; title?: string; error?: string; engine?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.FILE_CONVERT, { filePath });
+    },
+    getStatus(jobId: string): Promise<{ success: boolean; job: ProcessJob | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.FILE_CONVERT_STATUS, { jobId });
+    },
+    listJobs(limit?: number): Promise<{ success: boolean; jobs: ProcessJob[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.FILE_CONVERT_LIST, { limit });
+    },
+    saveToInbox(jobId: string, markdown: string, title?: string, filePath?: string): Promise<{ success: boolean; sourceItem?: SourceItem; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.FILE_CONVERT_SAVE_TO_INBOX, { jobId, markdown, title, filePath });
+    },
+    preview(filePath: string): Promise<{ success: boolean; markdown?: string; title?: string; error?: string; engine?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.FILE_CONVERT_PREVIEW, { filePath });
+    },
+    onJobsChanged(cb: (data: { timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { timestamp: number }) => cb(data);
+      ipcRenderer.on(IPC_CHANNELS.FILE_CONVERT_JOBS_CHANGED, handler);
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.FILE_CONVERT_JOBS_CHANGED, handler); };
+    },
   },
   // Phase 3: Scheduler
   scheduler: {
@@ -910,13 +1146,113 @@ const pinmindApi = {
     getRuntimeStatus: () =>
       ipcRenderer.invoke(IPC_CHANNELS.LOCAL_MODEL_STATUS),
   },
+  // Phase 4: AI Runtime (Action 管理 + 真实 AI 调用)
+  aiRuntime: {
+    listActions(): Promise<{ success: boolean; actions: AIAction[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_LIST_ACTIONS);
+    },
+    getAction(id: string): Promise<{ success: boolean; action: AIAction | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_GET_ACTION, { id });
+    },
+    createAction(params: { name: string; inputTypes: SourceType[]; actionType: AIActionType; promptProfileId?: string }): Promise<{ success: boolean; action: AIAction }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_CREATE_ACTION, params);
+    },
+    updateAction(id: string, updates: Partial<AIAction>): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_UPDATE_ACTION, { id, updates });
+    },
+    deleteAction(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_DELETE_ACTION, { id });
+    },
+    runAction(actionId: string, input: string, sourceType?: SourceType): Promise<{
+      success: boolean;
+      taskId?: string;
+      content?: ProcessedContent;
+      rawText?: string;
+      modelCall?: { providerId: string; modelId: string; latencyMs: number; promptTokens?: number; completionTokens?: number };
+      routingReason?: string;
+      qualityScore?: number;
+      usedFallback?: boolean;
+      error?: string;
+    }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_RUN_ACTION, { actionId, input, sourceType });
+    },
+    listJobs(limit?: number): Promise<{ success: boolean; jobs: AiTask[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_LIST_JOBS, { limit });
+    },
+    getJob(id: string): Promise<{ success: boolean; job: AiTask | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_GET_JOB, { id });
+    },
+    cancelJob(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_CANCEL_JOB, { id });
+    },
+    healthCheck(providerId: string): Promise<{ success: boolean; ok?: boolean; latencyMs?: number; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_RUNTIME_HEALTH_CHECK, { providerId });
+    },
+    onJobChanged(cb: (data: { timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { timestamp: number }) => cb(data);
+      ipcRenderer.on(IPC_CHANNELS.AI_RUNTIME_JOB_CHANGED, handler);
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.AI_RUNTIME_JOB_CHANGED, handler); };
+    },
+  },
+  // Phase 5: DistilledNotes (蒸馏笔记 CRUD)
+  distilledNotes: {
+    list(params?: { limit?: number; offset?: number }): Promise<{ success: boolean; notes: DistilledNote[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DISTILLED_NOTES_LIST, params);
+    },
+    get(id: string): Promise<{ success: boolean; note: DistilledNote | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DISTILLED_NOTES_GET, { id });
+    },
+    create(note: DistilledNote): Promise<{ success: boolean; note: DistilledNote }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DISTILLED_NOTES_CREATE, { note });
+    },
+    update(id: string, patch: Partial<DistilledNote>): Promise<{ success: boolean; note: DistilledNote | null }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DISTILLED_NOTES_UPDATE, { id, patch });
+    },
+    delete(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DISTILLED_NOTES_DELETE, { id });
+    },
+  },
+  // Phase 5: VaultSearch (Obsidian Vault 关键词搜索)
+  vaultSearch: {
+    search(keyword: string, options?: { folderPath?: string; limit?: number }): Promise<{ success: boolean; results: VaultSearchResult[]; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VAULT_SEARCH, { keyword, ...options });
+    },
+  },
+  // Phase 6: Voice Dictionary (语音词典管理)
+  voiceDictionary: {
+    list(): Promise<{ success: boolean; entries: VoiceDictionaryEntry[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_DICTIONARY_LIST);
+    },
+    add(phrase: string, note?: string): Promise<{ success: boolean; entry: VoiceDictionaryEntry }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_DICTIONARY_ADD, { phrase, note });
+    },
+    delete(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_DICTIONARY_DELETE, { id });
+    },
+    toggle(id: string, enabled: boolean): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_DICTIONARY_TOGGLE, { id, enabled });
+    },
+  },
+  // Phase 6: ASR Provider (语音转写)
+  asr: {
+    getStatus(): Promise<{ success: boolean; status: { provider: string; configured: boolean; message: string; endpoint?: string } }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.ASR_GET_STATUS);
+    },
+    transcribe(filePath: string, options?: { language?: string; translate?: boolean; prompt?: string }): Promise<{ success: boolean; text: string; error?: string; engine?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.ASR_TRANSCRIBE, { filePath, ...options });
+    },
+  },
 } as const;
 
 // ---------------------------------------------------------------------------
 // Expose via contextBridge
 // ---------------------------------------------------------------------------
+// 'acmind' is the legacy name kept for backward compatibility with existing renderer code.
+// New code MUST use 'acmind'. Both names point to the same API object.
+// TODO: Migrate all renderer code from window.acmind to window.acmind, then remove 'acmind'.
 
-contextBridge.exposeInMainWorld('pinmind', pinmindApi);
+contextBridge.exposeInMainWorld('acmind', acmindApi);  // legacy, deprecated
+contextBridge.exposeInMainWorld('acmind', acmindApi);   // canonical
 
 // ---------------------------------------------------------------------------
 // Type declaration for renderer global
@@ -924,6 +1260,8 @@ contextBridge.exposeInMainWorld('pinmind', pinmindApi);
 
 declare global {
   interface Window {
-    pinmind: typeof pinmindApi;
+    /** @deprecated Use window.acmind instead. Will be removed after migration. */
+    pinmind: typeof acmindApi;
+    acmind: typeof acmindApi;
   }
 }

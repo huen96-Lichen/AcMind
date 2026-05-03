@@ -54,8 +54,8 @@ export function DistillBatchPanel({ onComplete }: DistillBatchPanelProps): JSX.E
   const loadItems = useCallback(async () => {
     try {
       setError(null);
-      const inboxItems = await window.pinmind.sourceItems.list({ status: 'inbox' });
-      const distilledItems = await window.pinmind.sourceItems.list({ status: 'distilled' });
+      const inboxItems = await window.acmind.sourceItems.list({ status: 'inbox' });
+      const distilledItems = await window.acmind.sourceItems.list({ status: 'distilled' });
       setItems([...inboxItems, ...distilledItems]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -112,7 +112,7 @@ export function DistillBatchPanel({ onComplete }: DistillBatchPanelProps): JSX.E
       const ops = Array.from(selectedOps);
 
       for (let i = 0; i < ids.length; i++) {
-        await window.pinmind.distill.run([ids[i]], ops, tier);
+        await window.acmind.distill.run([ids[i]], ops, tier);
         setProgress({ current: i + 1, total: ids.length });
       }
 
@@ -144,7 +144,7 @@ export function DistillBatchPanel({ onComplete }: DistillBatchPanelProps): JSX.E
               type="button"
               className="underline font-medium"
               style={{ color: 'var(--pm-brand-primary)' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'settings' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'settings' } }))}
             >
               设置
             </button>{' '}

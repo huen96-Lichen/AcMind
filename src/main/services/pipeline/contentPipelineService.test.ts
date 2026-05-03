@@ -54,14 +54,14 @@ vi.mock('../../settings', () => ({
 }));
 
 vi.mock('../../../shared/defaultSettings', () => ({
-  DEFAULT_SETTINGS: { storageRoot: '~/.pinmind' },
+  DEFAULT_SETTINGS: { storageRoot: '~/.acmind' },
 }));
 
 vi.mock('../exporter/pathResolver', () => ({
   pathResolver: {
     resolve: vi.fn((_a: any, _b: any, _c: any) => '/mock/path.md'),
     resolveForPipeline: vi.fn((vaultPath: string, defaultFolder: string, title: string, createdAt: number) =>
-      path.join(vaultPath, defaultFolder || '00_Inbox/PinMind', `${createdAt}_${title}.md`),
+      path.join(vaultPath, defaultFolder || '00_Inbox/AcMind', `${createdAt}_${title}.md`),
     ),
   },
 }));
@@ -99,7 +99,7 @@ vi.mock('../exporter/safeWrite', () => ({
 vi.mock('../outputSpec', () => ({
   outputSpecService: {
     getActiveProfile: vi.fn(() => ({
-      id: 'pinmind-default',
+      id: 'acmind-default',
       schema_version: '0.2',
       field_mapping: {
         schema_version: 'schema_version',
@@ -151,7 +151,7 @@ describe('contentPipeline', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinmind-test-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acmind-test-'));
     mockVaultPath = tmpDir;
     mockVaultConfig = { vaultPath: tmpDir, defaultFolder: '', conflictStrategy: 'rename' as const };
     testStorage._test.sourceItems.clear();
@@ -235,7 +235,7 @@ type: 决策复盘
     });
 
     it('prefers the first markdown heading over bullet-like first lines', async () => {
-      const markdownInput = `- PinMind V2.1 - V3.0 Phase 路线总纲
+      const markdownInput = `- AcMind V2.1 - V3.0 Phase 路线总纲
 
 # PinStack 产品手册 v2.1
 
@@ -248,7 +248,7 @@ type: 决策复盘
 
       const content = fs.readFileSync(result.outputPath!, 'utf8');
       expect(content).toContain('title: PinStack 产品手册 v2.1');
-      expect(content).not.toContain('title: "- PinMind V2.1 - V3.0 Phase 路线总纲"');
+      expect(content).not.toContain('title: "- AcMind V2.1 - V3.0 Phase 路线总纲"');
     });
 
     it('records state transitions in history', async () => {
@@ -389,7 +389,7 @@ type: 决策复盘
   // ---------------------------------------------------------------------------
 
   describe('E2E — frontmatter traceability', () => {
-    it('frontmatter contains source_app from SourceItem and writer_app=PinMind', async () => {
+    it('frontmatter contains source_app from SourceItem and writer_app=AcMind', async () => {
       const result = await contentPipeline.processText('测试 source_app 语义', {
         vaultPath: tmpDir,
       });
@@ -397,9 +397,9 @@ type: 决策复盘
       expect(result.success).toBe(true);
       const content = fs.readFileSync(result.outputPath!, 'utf8');
 
-      // writer_app must always be 'PinMind'
+      // writer_app must always be 'AcMind'
       expect(content).toContain('writer_app:');
-      expect(content).toContain('PinMind');
+      expect(content).toContain('AcMind');
 
       // source_app is only written when SourceItem.sourceApp is set.
       // For manual input via pipeline, sourceApp may not be set, so source_app
@@ -495,8 +495,8 @@ type: 决策复盘
     });
   });
 
-  describe('E2E — file written to 00_Inbox/PinMind', () => {
-    it('output file is under the PinMind output directory', async () => {
+  describe('E2E — file written to 00_Inbox/AcMind', () => {
+    it('output file is under the AcMind output directory', async () => {
       const result = await contentPipeline.processText('测试输出目录', {
         vaultPath: tmpDir,
       });
@@ -504,9 +504,9 @@ type: 决策复盘
       expect(result.success).toBe(true);
       expect(result.outputPath).toBeDefined();
 
-      // Path should contain 00_Inbox/PinMind (from pathResolver mock)
+      // Path should contain 00_Inbox/AcMind (from pathResolver mock)
       expect(result.outputPath).toContain('00_Inbox');
-      expect(result.outputPath).toContain('PinMind');
+      expect(result.outputPath).toContain('AcMind');
     });
   });
 });

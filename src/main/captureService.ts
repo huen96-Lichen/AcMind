@@ -3,8 +3,9 @@ import { execFile } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync, existsSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { BrowserWindow, shell, systemPreferences } from 'electron';
-import type { SourceItem, SourceItemStatus, SourceItemType, SourceItemSource, CaptureRecord, CaptureItem } from '../shared/types';
+import { BrowserWindow, shell, systemPreferences, screen, nativeImage, clipboard } from 'electron';
+import type { SourceItem, SourceItemStatus, SourceItemType, SourceItemSource, CaptureRecord, CaptureItem, PinItem, ClipboardItem, ClipboardContentType, AssetFile } from '../shared/types';
+import { IPC_CHANNELS } from '../shared/types';
 import { storage } from './storage';
 import { logger } from './logger';
 import { errorService } from './errorService';
@@ -68,8 +69,8 @@ class CaptureService {
     // Start clipboard watcher with content handler
     clipboardWatcher.start(this.handleNewClipboardContent.bind(this));
 
-    // Respect autoCapture setting
-    if (!currentSettings.autoCapture) {
+    // Respect autoCapture and backgroundClipboard settings
+    if (!currentSettings.autoCapture || !currentSettings.backgroundClipboard) {
       clipboardWatcher.setEnabled(false);
     }
 
@@ -151,7 +152,7 @@ class CaptureService {
         source: 'screenshot',
         contentPath,
         previewText: `屏幕截图 · ${new Date(now).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
-        sourceApp: 'PinMind',
+        sourceApp: 'AcMind',
         createdAt: now,
         status: 'inbox',
       };
@@ -159,9 +160,27 @@ class CaptureService {
       storage.insertSourceItem(sourceItem);
       this.emitRecordsChanged({ action: 'created', id, timestamp: now });
 
+      // Phase 4: Also create PinItem so screenshot enters Pin Pool
+      const pin: PinItem = {
+        id: randomUUID(),
+        captureItemId: '',
+        originalId: id,
+        sourceType: 'screenshot',
+        title: `屏幕截图 · ${new Date(now * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
+        previewText: '',
+        rawFilePath: contentPath,
+        status: 'pinned',
+        createdAt: now,
+        pinnedAt: now,
+        updatedAt: now,
+      };
+      storage.insertPinItem(pin);
+      this.emitPinPoolChanged('created', pin.id);
+
       logger.info('app', 'captureService', 'captureScreenshot', 'Screenshot captured and stored', {
         id,
         contentPath,
+        pinId: pin.id,
         sourceName: 'screen',
       });
 
@@ -183,10 +202,150 @@ class CaptureService {
   }
 
   /**
+   * Capture a region screenshot by taking a full screen capture and cropping with nativeImage.
+   * Returns the cropped image path, or null on failure.
+   */
+  async captureRegionScreenshot(bounds: { x: number; y: number; width: number; height: number }): Promise<string | null> {
+    logger.info('app', 'captureService', 'captureRegionScreenshot', 'Region screenshot requested', { bounds });
+
+    try {
+      if (process.platform === 'darwin') {
+        const mediaStatus = systemPreferences.getMediaAccessStatus('screen');
+        if (mediaStatus === 'denied' || mediaStatus === 'restricted') {
+          logger.warn('error', 'captureService', 'captureRegionScreenshot', 'Screen recording permission is not granted');
+          return null;
+        }
+      }
+
+      const storageRoot = settings.getStorageRoot();
+      const id = randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      const dateDir = new Date().toISOString().slice(0, 10);
+      const sourcesDir = path.join(storageRoot, 'sources', dateDir);
+      mkdirSync(sourcesDir, { recursive: true });
+
+      // Step 1: Full screen capture to temp file
+      const tempPath = path.join(sourcesDir, `_region_temp_${id}.png`);
+      if (process.platform === 'darwin') {
+        await execFileAsync('/usr/sbin/screencapture', ['-x', tempPath]);
+      } else {
+        const { desktopCapturer } = await import('electron');
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize: { width: 3840, height: 2160 },
+          fetchWindowIcons: false,
+        });
+        if (!sources[0]) {
+          logger.warn('error', 'captureService', 'captureRegionScreenshot', 'No screen source available');
+          return null;
+        }
+        writeFileSync(tempPath, sources[0].thumbnail.toPNG());
+      }
+
+      // Step 2: Crop with nativeImage
+      const fullImage = nativeImage.createFromPath(tempPath);
+      const fullSize = fullImage.getSize();
+
+      // Scale bounds from CSS pixels to device pixels
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const scaleFactor = primaryDisplay.scaleFactor || 1;
+      const cropBounds = {
+        x: Math.round(bounds.x * scaleFactor),
+        y: Math.round(bounds.y * scaleFactor),
+        width: Math.round(bounds.width * scaleFactor),
+        height: Math.round(bounds.height * scaleFactor),
+      };
+
+      // Clamp to image dimensions
+      cropBounds.x = Math.max(0, Math.min(cropBounds.x, fullSize.width - 1));
+      cropBounds.y = Math.max(0, Math.min(cropBounds.y, fullSize.height - 1));
+      cropBounds.width = Math.min(cropBounds.width, fullSize.width - cropBounds.x);
+      cropBounds.height = Math.min(cropBounds.height, fullSize.height - cropBounds.y);
+
+      const croppedImage = fullImage.crop(cropBounds);
+      const contentPath = path.join(sourcesDir, `${id}.png`);
+      writeFileSync(contentPath, croppedImage.toPNG());
+
+      // Cleanup temp file
+      try { unlinkSync(tempPath); } catch { /* ignore */ }
+
+      const pngBuffer = readFileSync(contentPath);
+      if (pngBuffer.length === 0) {
+        logger.warn('error', 'captureService', 'captureRegionScreenshot', 'Cropped screenshot buffer is empty');
+        return null;
+      }
+
+      // Step 3: Create SourceItem
+      const sourceItem: SourceItem = {
+        id,
+        type: 'image',
+        source: 'screenshot',
+        contentPath,
+        previewText: `区域截图 · ${new Date(now * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
+        sourceApp: 'AcMind',
+        createdAt: now,
+        status: 'inbox',
+      };
+      storage.insertSourceItem(sourceItem);
+      this.emitRecordsChanged({ action: 'created', id, timestamp: now });
+
+      // Step 4: Create PinItem
+      const pin: PinItem = {
+        id: randomUUID(),
+        captureItemId: '',
+        originalId: id,
+        sourceType: 'screenshot',
+        title: `区域截图 · ${new Date(now * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
+        previewText: '',
+        rawFilePath: contentPath,
+        status: 'pinned',
+        createdAt: now,
+        pinnedAt: now,
+        updatedAt: now,
+      };
+      storage.insertPinItem(pin);
+      this.emitPinPoolChanged('created', pin.id);
+
+      logger.info('app', 'captureService', 'captureRegionScreenshot', 'Region screenshot captured', {
+        id, contentPath, pinId: pin.id, bounds: cropBounds,
+      });
+
+      return contentPath;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('error', 'captureService', 'captureRegionScreenshot', 'Failed to capture region screenshot', { error: errorMsg });
+      errorService.recordError({
+        errorType: 'capture_failed',
+        stage: 'capture',
+        error,
+        userMessage: '区域截图失败，请检查屏幕录制权限或重试。',
+        retryable: false,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Copy an image file to clipboard.
+   */
+  async copyImageToClipboard(imagePath: string): Promise<boolean> {
+    try {
+      const image = nativeImage.createFromPath(imagePath);
+      clipboard.writeImage(image);
+      return true;
+    } catch (error) {
+      logger.error('error', 'captureService', 'copyImageToClipboard', 'Failed to copy image to clipboard', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
    * Save a text note as a SourceItem. Used by onboarding and quick capture flows.
    * Now uses the unified CaptureAdapter architecture internally.
    */
-  captureText(text: string, sourceApp = 'PinMind'): SourceItem {
+  captureText(text: string, sourceApp = 'AcMind'): SourceItem {
     const trimmed = text.trim();
     if (!trimmed) {
       throw new Error('Text content is empty');
@@ -208,7 +367,7 @@ class CaptureService {
    * Phase 10: Creates audio CaptureRecord, converts to SourceItem + CaptureItem,
    * and submits transcription job.
    */
-  captureAudio(filePath: string, title?: string, sourceApp = 'PinMind'): SourceItem {
+  captureAudio(filePath: string, title?: string, sourceApp = 'AcMind'): SourceItem {
     const captureRecord = captureRegistry.capture({
       sourceType: 'audio',
       filePath,
@@ -367,13 +526,20 @@ class CaptureService {
       return null;
     }
 
-    const contentPath = item.contentPath;
+    let contentPath = item.contentPath;
     if (!contentPath || !existsSync(contentPath)) {
-      logger.warn('app', 'captureService', 'getSourceItemContent', 'Content file not found', {
-        id,
-        contentPath,
-      });
-      return null;
+      // Fallback: look for associated asset files
+      const assets = storage.listAssetFilesBySourceItem(id);
+      const fallback = assets.find(a => a.localPath && existsSync(a.localPath));
+      if (fallback?.localPath) {
+        contentPath = fallback.localPath;
+      } else {
+        logger.warn('app', 'captureService', 'getSourceItemContent', 'Content file not found', {
+          id,
+          contentPath,
+        });
+        return null;
+      }
     }
 
     try {
@@ -468,6 +634,19 @@ class CaptureService {
   }
 
   /**
+   * List recent screenshot captures (Phase 2A).
+   * Returns SourceItems of type 'image' with source 'screenshot'.
+   */
+  listRecentCaptures(limit = 50): SourceItem[] {
+    return storage.getSourceItems({
+      type: 'image',
+      source: 'screenshot',
+      status: 'inbox',
+      limit,
+    });
+  }
+
+  /**
    * Get clipboard watcher running status.
    */
   getClipboardStatus(): { running: boolean; enabled: boolean } {
@@ -484,6 +663,34 @@ class CaptureService {
     clipboardWatcher.setEnabled(enabled);
   }
 
+  /**
+   * Tell the clipboard watcher to skip the next N clipboard changes.
+   */
+  ignoreNextCopy(count = 1): void {
+    clipboardWatcher.ignoreNextCopy(count);
+  }
+
+  /**
+   * Temporarily pause clipboard capture without stopping the poll timer.
+   */
+  pauseClipboard(): void {
+    clipboardWatcher.pause();
+  }
+
+  /**
+   * Resume clipboard capture after a pause.
+   */
+  resumeClipboard(): void {
+    clipboardWatcher.resume();
+  }
+
+  /**
+   * Check if clipboard capture is paused.
+   */
+  isClipboardPaused(): boolean {
+    return clipboardWatcher.isPaused();
+  }
+
   // -------------------------------------------------------------------------
   // Private: handle new clipboard content
   // -------------------------------------------------------------------------
@@ -494,6 +701,7 @@ class CaptureService {
 
       // Use the unified CaptureAdapter to produce a CaptureRecord
       let captureRecord: CaptureRecord;
+      let imageFilePath = '';  // track image file path for AssetFile creation
       if (content.type === 'text' && content.text) {
         captureRecord = captureRegistry.capture({
           sourceType: 'clipboard_text',
@@ -504,17 +712,17 @@ class CaptureService {
       } else if (content.type === 'image' && content.image) {
         // For clipboard images, save to file first, then use image adapter
         const storageRoot = settings.getStorageRoot();
-        const id = randomUUID();
+        const imageId = randomUUID();
         const dateDir = new Date().toISOString().slice(0, 10);
         const sourcesDir = path.join(storageRoot, 'sources', dateDir);
         mkdirSync(sourcesDir, { recursive: true });
-        const filePath = path.join(sourcesDir, `${id}.png`);
+        imageFilePath = path.join(sourcesDir, `${imageId}.png`);
         const pngBuffer = content.image.toPNG();
-        writeFileSync(filePath, pngBuffer);
+        writeFileSync(imageFilePath, pngBuffer);
 
         captureRecord = captureRegistry.capture({
           sourceType: 'image',
-          filePath,
+          filePath: imageFilePath,
           sourceApp,
         });
       } else {
@@ -524,14 +732,78 @@ class CaptureService {
         return;
       }
 
-      // Convert CaptureRecord to SourceItem (legacy bridge)
-      const sourceItem = this.captureRecordToSourceItem(captureRecord);
+      // Content-level dedup: check if a PinItem with the same original_id already exists
+      const existingPin = storage.getPinItemByOriginalId(captureRecord.original_id);
+      if (existingPin) {
+        logger.info('app', 'captureService', 'handleNewContent', 'Duplicate clipboard content skipped (PinItem exists)', {
+          originalId: captureRecord.original_id,
+          existingPinId: existingPin.id,
+        });
+        return;
+      }
 
-      logger.info('app', 'captureService', 'capture', `Captured ${content.type} from clipboard via adapter`, {
-        id: sourceItem.id,
-        type: content.type,
-        sourceApp,
+      // Create PinItem directly (clipboard → Pin Pool)
+      const now = Math.floor(Date.now() / 1000);
+      const pinSourceType: PinItem['sourceType'] = content.type === 'image' ? 'clipboard_image' : 'clipboard_text';
+      const rawText = content.type === 'text' ? (content.text || '') : '';
+      const pin: PinItem = {
+        id: randomUUID(),
+        captureItemId: '',
         originalId: captureRecord.original_id,
+        sourceType: pinSourceType,
+        title: rawText.slice(0, 32) || (content.type === 'image' ? '剪贴板图片' : '未命名 Pin'),
+        previewText: rawText.slice(0, 180),
+        rawText,
+        status: 'pinned',
+        createdAt: now,
+        pinnedAt: now,
+        updatedAt: now,
+      };
+      storage.insertPinItem(pin);
+
+      // Also create a ClipboardItem for the Clipboard history page
+      const isUrl = content.type === 'text' && /^https?:\/\/[^\s]+$/i.test(rawText.trim());
+      const clipboardContentType: ClipboardContentType = content.type === 'image' ? 'image' : isUrl ? 'url' : 'text';
+
+      // For image items, create an AssetFile so the file path is preserved
+      let clipboardAssetFileIds: string[] | undefined;
+      if (content.type === 'image' && content.image && imageFilePath) {
+        const assetFile: AssetFile = {
+          id: randomUUID(),
+          kind: 'image',
+          originalName: path.basename(imageFilePath),
+          localPath: imageFilePath,
+          createdAt: now * 1000,
+        };
+        storage.insertAssetFile(assetFile);
+        clipboardAssetFileIds = [assetFile.id];
+      }
+
+      const clipboardItem: ClipboardItem = {
+        id: randomUUID(),
+        contentType: clipboardContentType,
+        text: content.type === 'text' ? rawText : undefined,
+        assetFileIds: clipboardAssetFileIds,
+        sourceApp,
+        isPinned: false,
+        createdAt: now * 1000,
+      };
+      storage.insertClipboardItem(clipboardItem);
+
+      // Notify renderer of Pin Pool change
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('pinPool.changed', { action: 'created', id: pin.id, timestamp: now });
+          win.webContents.send(IPC_CHANNELS.CLIPBOARD_ITEMS_CHANGED, { timestamp: now });
+        }
+      }
+
+      logger.info('app', 'captureService', 'handleNewContent', `Clipboard ${content.type} → Pin Pool + ClipboardItem`, {
+        pinId: pin.id,
+        clipboardItemId: clipboardItem.id,
+        sourceType: pinSourceType,
+        originalId: captureRecord.original_id,
+        sourceApp,
       });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -556,6 +828,15 @@ class CaptureService {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
         win.webContents.send(RECORDS_CHANGED_CHANNEL, event);
+      }
+    }
+  }
+
+  private emitPinPoolChanged(action: 'created' | 'updated' | 'deleted', id: string): void {
+    const timestamp = Math.floor(Date.now() / 1000);
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+        win.webContents.send(IPC_CHANNELS.PIN_POOL_CHANGED, { action, id, timestamp });
       }
     }
   }

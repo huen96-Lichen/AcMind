@@ -9,11 +9,13 @@ import { logger } from './logger';
 export interface ShortcutManagerOptions {
   onScreenshot: () => void;
   onToggleDashboard: () => void;
+  onVoiceInput?: () => void;
 }
 
 export interface ShortcutRegistrationStatus {
   screenshotShortcut: string;
   dashboardShortcut: string;
+  voiceInputShortcut: string;
   captureHubShortcut: string;
   modeToggleShortcut: string;
   trayOpenDashboardShortcut: string;
@@ -21,6 +23,7 @@ export interface ShortcutRegistrationStatus {
   trayQuitShortcut: string;
   screenshotRegistered: boolean;
   dashboardRegistered: boolean;
+  voiceInputRegistered: boolean;
   captureHubRegistered: boolean;
   modeToggleRegistered: boolean;
   trayOpenDashboardRegistered: boolean;
@@ -31,6 +34,7 @@ export interface ShortcutRegistrationStatus {
 const DEFAULT_SHORTCUT_STATUS: ShortcutRegistrationStatus = {
   screenshotShortcut: '',
   dashboardShortcut: '',
+  voiceInputShortcut: '',
   captureHubShortcut: '',
   modeToggleShortcut: '',
   trayOpenDashboardShortcut: '',
@@ -38,6 +42,7 @@ const DEFAULT_SHORTCUT_STATUS: ShortcutRegistrationStatus = {
   trayQuitShortcut: '',
   screenshotRegistered: true,
   dashboardRegistered: true,
+  voiceInputRegistered: true,
   captureHubRegistered: true,
   modeToggleRegistered: true,
   trayOpenDashboardRegistered: true,
@@ -78,18 +83,31 @@ class ShortcutManager {
       options.onToggleDashboard();
     });
 
+    // Voice input shortcut (Phase 6)
+    const voiceInputShortcut = 'Cmd+Shift+V';
+    let voiceInputOk = true;
+    if (options.onVoiceInput) {
+      voiceInputOk = globalShortcut.register(voiceInputShortcut, () => {
+        logger.info('app', 'shortcutManager', 'voiceInput', 'Voice input shortcut triggered');
+        options.onVoiceInput?.();
+      });
+    }
+
     this.registered = true;
     this.status = {
       ...DEFAULT_SHORTCUT_STATUS,
       screenshotShortcut,
       dashboardShortcut,
+      voiceInputShortcut,
       screenshotRegistered: screenshotOk,
       dashboardRegistered: dashboardOk,
+      voiceInputRegistered: voiceInputOk,
     };
 
     logger.info('app', 'shortcutManager', 'register', 'Global shortcuts registered', {
       screenshot: { accelerator: screenshotShortcut, registered: screenshotOk },
       dashboard: { accelerator: dashboardShortcut, registered: dashboardOk },
+      voiceInput: { accelerator: voiceInputShortcut, registered: voiceInputOk },
     });
 
     if (!screenshotOk) {
@@ -97,6 +115,9 @@ class ShortcutManager {
     }
     if (!dashboardOk) {
       logger.warn('error', 'shortcutManager', 'register', `Failed to register dashboard shortcut: ${dashboardShortcut}`);
+    }
+    if (!voiceInputOk) {
+      logger.warn('error', 'shortcutManager', 'register', `Failed to register voice input shortcut: ${voiceInputShortcut}`);
     }
   }
 

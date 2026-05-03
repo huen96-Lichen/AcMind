@@ -1,4 +1,4 @@
-# PinMind
+# AcMind
 
 Local-first AI Memory Distiller — 将碎片化信息蒸馏为结构化知识，导出到 Obsidian Vault。
 

@@ -25,7 +25,7 @@ function viewTitle(view: string): string {
     history: '处理历史',
     search: '搜索',
   };
-  return labels[view] ?? 'PinMind';
+  return labels[view] ?? 'AcMind';
 }
 
 export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView }: TopBarProps): JSX.Element {
@@ -49,7 +49,7 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
 
   return (
     <header
-      className="pinmind-topbar drag-region flex items-center justify-between"
+      className="acmind-topbar drag-region flex items-center justify-between"
       style={{ height: 'var(--pm-topbar-height, 56px)', background: 'var(--pm-bg-topbar)' }}
     >
       <div className="no-drag flex min-w-0 items-center gap-2">
@@ -57,7 +57,7 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
           <Button
             variant="icon"
             size="sm"
-            onClick={() => window.dispatchEvent(new CustomEvent('pinmind:toggle-sidebar'))}
+            onClick={() => window.dispatchEvent(new CustomEvent('acmind:toggle-sidebar'))}
             title="菜单"
           >
             <PinStackIcon name="settings" size={18} />
@@ -102,18 +102,18 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
 
         <button
           type="button"
-          className="pinmind-topbar-avatar motion-button"
-          onClick={() => window.dispatchEvent(new CustomEvent('pinmind:open-personal-space'))}
+          className="acmind-topbar-avatar motion-button"
+          onClick={() => window.dispatchEvent(new CustomEvent('acmind:open-personal-space'))}
           title={isConfigured ? displayName : '个人空间'}
         >
           {isConfigured ? (
-            <span className="pinmind-topbar-avatar-letter">{avatarInitial}</span>
+            <span className="acmind-topbar-avatar-letter">{avatarInitial}</span>
           ) : (
-            <span className="pinmind-topbar-avatar-logo">
-              <PinStackIcon name="brand-pinmind-logo" size={14} />
+            <span className="acmind-topbar-avatar-logo">
+              <PinStackIcon name="brand-acmind-logo" size={14} />
             </span>
           )}
-          {!isConfigured ? <span className="pinmind-topbar-avatar-badge" /> : null}
+          {!isConfigured ? <span className="acmind-topbar-avatar-badge" /> : null}
         </button>
       </div>
     </header>

@@ -105,7 +105,7 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
       // ── Link tab: use collectWebpage for full pipeline ──
       if (tab === 'link') {
         try {
-          const result = await window.pinmind.capture.collectWebpage({
+          const result = await window.acmind.capture.collectWebpage({
             url: sourceUrl.trim(),
             title: title.trim() || undefined,
             rawText: linkMode === 'paste' ? rawText.trim() || undefined : undefined,
@@ -241,9 +241,9 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
     : (tab === 'link' ? '收集网页' : '添加碎片');
 
   return (
-    <div className="pinmind-dialog-overlay" onClick={handleClose}>
+    <div className="acmind-dialog-overlay" onClick={handleClose}>
       <div
-        className="pinmind-dialog motion-popover"
+        className="acmind-dialog motion-popover"
         onClick={(e) => e.stopPropagation()}
         onPaste={handlePaste}
         onDrop={handleDrop}
@@ -257,7 +257,7 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
           <button
             type="button"
             onClick={handleClose}
-            className="pinmind-btn pinmind-btn-ghost motion-button text-[16px] w-7 h-7 flex items-center justify-center rounded-full"
+            className="acmind-btn acmind-btn-ghost motion-button text-[16px] w-7 h-7 flex items-center justify-center rounded-full"
             style={{ color: 'var(--pm-text-tertiary)' }}
           >
             ×
@@ -288,25 +288,25 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
         <div className="flex flex-col gap-3">
           {/* Title */}
           <div>
-            <label className="pinmind-field-label block mb-1">标题（可选）</label>
+            <label className="acmind-field-label block mb-1">标题（可选）</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={tab === 'link' ? '网页标题（抓取时自动填充）' : '碎片标题'}
-              className="pinmind-input text-[13px] w-full"
+              className="acmind-input text-[13px] w-full"
             />
           </div>
 
           {/* Text content */}
           {tab === 'text' && (
             <div>
-              <label className="pinmind-field-label block mb-1">文本内容 *</label>
+              <label className="acmind-field-label block mb-1">文本内容 *</label>
               <textarea
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 placeholder="输入或粘贴文本内容..."
-                className="pinmind-textarea text-[13px] w-full"
+                className="acmind-textarea text-[13px] w-full"
                 rows={5}
                 autoFocus
               />
@@ -345,13 +345,13 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
               </div>
 
               <div>
-                <label className="pinmind-field-label block mb-1">链接地址 *</label>
+                <label className="acmind-field-label block mb-1">链接地址 *</label>
                 <input
                   type="url"
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
                   placeholder="https://..."
-                  className="pinmind-input text-[13px] w-full"
+                  className="acmind-input text-[13px] w-full"
                   autoFocus
                 />
                 {linkMode === 'fetch' && (
@@ -364,12 +364,12 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
               {/* Paste mode: show textarea for user-pasted content */}
               {linkMode === 'paste' && (
                 <div>
-                  <label className="pinmind-field-label block mb-1">网页正文</label>
+                  <label className="acmind-field-label block mb-1">网页正文</label>
                   <textarea
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder="粘贴网页正文内容..."
-                    className="pinmind-textarea text-[13px] w-full"
+                    className="acmind-textarea text-[13px] w-full"
                     rows={4}
                   />
                 </div>
@@ -380,7 +380,7 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
           {/* Image content */}
           {tab === 'image' && (
             <div>
-              <label className="pinmind-field-label block mb-1">图片 *</label>
+              <label className="acmind-field-label block mb-1">图片 *</label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -424,13 +424,13 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
 
           {/* User Note */}
           <div>
-            <label className="pinmind-field-label block mb-1">备注（可选）</label>
+            <label className="acmind-field-label block mb-1">备注（可选）</label>
             <input
               type="text"
               value={userNote}
               onChange={(e) => setUserNote(e.target.value)}
               placeholder="添加备注..."
-              className="pinmind-input text-[13px] w-full"
+              className="acmind-input text-[13px] w-full"
             />
           </div>
 
@@ -453,7 +453,7 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
             <button
               type="button"
               onClick={handleClose}
-              className="pinmind-btn pinmind-btn-ghost motion-button text-[13px]"
+              className="acmind-btn acmind-btn-ghost motion-button text-[13px]"
             >
               取消
             </button>
@@ -461,7 +461,7 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="pinmind-btn pinmind-btn-primary motion-button text-[13px]"
+              className="acmind-btn acmind-btn-primary motion-button text-[13px]"
             >
               {submitLabel}
             </button>

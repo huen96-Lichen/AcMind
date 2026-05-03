@@ -101,7 +101,7 @@ import brandObsidian from '../../assets/icon/brand/obsidian.svg';
 import brandOllama from '../../assets/icon/brand/ollama.svg';
 import brandOpenai from '../../assets/icon/brand/openai.svg';
 import brandWebClipper from '../../assets/icon/brand/web-clipper.svg';
-import pinmindLogoMark from '../../assets/icon/brand/pinmind-logo-mark.svg';
+import acmindLogoMark from '../../assets/icon/brand/acmind-logo-mark.svg';
 
 // ─── Feature icons (design spec) ──────────────────────────────────────────────
 import featureClipboard from '../../assets/icon/feature/clipboard.svg';
@@ -229,7 +229,7 @@ export const PINSTACK_ICON_ASSET_MAP = {
   'brand-ollama': brandOllama,
   'brand-openai': brandOpenai,
   'brand-web-clipper': brandWebClipper,
-  'brand-pinmind-logo': pinmindLogoMark,
+  'brand-acmind-logo': acmindLogoMark,
 
   // Feature icons — use "feat-" prefix
   'feat-clipboard': featureClipboard,

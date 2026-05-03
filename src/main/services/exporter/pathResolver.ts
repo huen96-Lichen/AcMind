@@ -1,13 +1,13 @@
-// PinMind Path Resolver
+// AcMind Path Resolver
 // Resolves file paths for Obsidian vault exports based on path rules
 // Centralized path generation — all output paths MUST go through this module.
 //
 // Filename format: YYYY-MM-DD_HHmm_标题.md
-// Example: 2026-04-30_1435_PinMind自动知识流设计.md
+// Example: 2026-04-30_1435_AcMind自动知识流设计.md
 
 import path from 'node:path';
 import type { VaultConfig, DistilledOutput, SourceItem } from '../../../shared/types';
-import { formatFilenameDate, sanitizeFilename as sanitizePinMindFilename } from '../../../shared/outputSpec';
+import { formatFilenameDate, sanitizeFilename as sanitizeAcMindFilename } from '../../../shared/outputSpec';
 import { DEFAULT_DISTILLED_CATEGORY } from '../../../shared/markdownSpec';
 
 // ---------------------------------------------------------------------------
@@ -15,10 +15,10 @@ import { DEFAULT_DISTILLED_CATEGORY } from '../../../shared/markdownSpec';
 // ---------------------------------------------------------------------------
 
 /** Default output subdirectory inside the Obsidian vault */
-export const PINMIND_OUTPUT_DIR = '00_Inbox/PinMind';
+export const ACMIND_OUTPUT_DIR = '00_Inbox/AcMind';
 
 /** Reserved directory for raw/original content backups (future use) */
-export const PINMIND_RAW_DIR = '99_PinMind_Raw';
+export const ACMIND_RAW_DIR = '99_AcMind_Raw';
 
 /** Maximum length for the title portion of a filename (excluding date prefix and extension) */
 const MAX_TITLE_LENGTH = 80;
@@ -62,8 +62,8 @@ class PathResolver {
     );
     const dateStr = formatFilenameDate(distilledOutput.createdAt);
 
-    // Use defaultFolder if set, otherwise fall back to PINMIND_OUTPUT_DIR
-    const folder = defaultFolder || PINMIND_OUTPUT_DIR;
+    // Use defaultFolder if set, otherwise fall back to ACMIND_OUTPUT_DIR
+    const folder = defaultFolder || ACMIND_OUTPUT_DIR;
 
     let relativePath: string;
 
@@ -106,7 +106,7 @@ class PathResolver {
     }
 
     const dateStr = formatFilenameDate(createdAt);
-    const folder = defaultFolder || PINMIND_OUTPUT_DIR;
+    const folder = defaultFolder || ACMIND_OUTPUT_DIR;
     const filename = this.buildFilename(dateStr, title);
 
     return path.join(vaultPath, folder, filename);
@@ -134,7 +134,7 @@ class PathResolver {
   sanitizeFilename(name: string): string {
     if (!name) return FALLBACK_TITLE;
 
-    let sanitized = sanitizePinMindFilename(name);
+    let sanitized = sanitizeAcMindFilename(name);
 
     // Limit title length
     if (sanitized.length > MAX_TITLE_LENGTH) {

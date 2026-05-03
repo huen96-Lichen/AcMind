@@ -21,9 +21,9 @@ export function DailyKnowledgeFlowPage(): JSX.Element {
       setError(null);
 
       const [allItems, distilledItems, exportRecords] = await Promise.all([
-        window.pinmind.sourceItems.list({}),
-        window.pinmind.sourceItems.list({ status: 'distilled' }),
-        window.pinmind.export.history({}),
+        window.acmind.sourceItems.list({}),
+        window.acmind.sourceItems.list({ status: 'distilled' }),
+        window.acmind.export.history({}),
       ]);
 
       const pending = allItems.filter(
@@ -48,14 +48,14 @@ export function DailyKnowledgeFlowPage(): JSX.Element {
   }, [loadData]);
 
   useEffect(() => {
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadData();
     });
     return unsubscribe;
   }, [loadData]);
 
   const navigate = (view: string) => {
-    window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view } }));
+    window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view } }));
   };
 
   const formatTime = (ts: number) => {

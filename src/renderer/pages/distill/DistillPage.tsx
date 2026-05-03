@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
 import { PinStackIcon } from '../../design-system/icons';
 import { useToast } from '../../components/shared/ToastViewport';
-import type { SourceItem } from '../../../shared/types';
+import type { SourceItem, DistilledOutput } from '../../../shared/types';
 
 type OrganizeTab = 'pending' | 'confirming' | 'done';
 
@@ -25,12 +25,14 @@ export function DistillPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SourceItem | null>(null);
+  const [distilledOutput, setDistilledOutput] = useState<DistilledOutput | null>(null);
+  const [loadingOutput, setLoadingOutput] = useState(false);
 
   const loadItems = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const allItems = await window.pinmind.sourceItems.list({});
+      const allItems = await window.acmind.sourceItems.list({});
       const statuses = STATUS_MAP[activeTab];
       const filtered = allItems.filter((item) => statuses.includes(item.status));
       setItems(filtered);
@@ -38,6 +40,7 @@ export function DistillPage(): JSX.Element {
         setSelectedItem(filtered[0]);
       } else if (filtered.length === 0) {
         setSelectedItem(null);
+        setDistilledOutput(null);
       }
     } catch (err) {
       setError('加载失败，请稍后重试。');
@@ -46,12 +49,38 @@ export function DistillPage(): JSX.Element {
     }
   }, [activeTab]);
 
+  // Batch 4 Phase 9: Load distilled output for selected item
+  const loadDistilledOutput = useCallback(async (sourceItemId: string) => {
+    setLoadingOutput(true);
+    try {
+      const outputs = await window.acmind.distilledOutputs.list({ sourceItemId });
+      const preferred =
+        outputs.find((o) => o.operation === 'summarize' || Boolean(o.contentMarkdown)) ??
+        outputs[0] ??
+        null;
+      setDistilledOutput(preferred);
+    } catch {
+      setDistilledOutput(null);
+    } finally {
+      setLoadingOutput(false);
+    }
+  }, []);
+
+  // Load distilled output when selected item changes
+  useEffect(() => {
+    if (selectedItem && (activeTab === 'confirming' || activeTab === 'done')) {
+      void loadDistilledOutput(selectedItem.id);
+    } else {
+      setDistilledOutput(null);
+    }
+  }, [selectedItem, activeTab, loadDistilledOutput]);
+
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
 
   useEffect(() => {
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadItems();
     });
     return unsubscribe;
@@ -68,7 +97,7 @@ export function DistillPage(): JSX.Element {
 
   const handleConfirmExport = async (item: SourceItem) => {
     try {
-      const outputs = await window.pinmind.distilledOutputs.list({ sourceItemId: item.id });
+      const outputs = await window.acmind.distilledOutputs.list({ sourceItemId: item.id });
       const preferredOutput =
         outputs.find((output) => output.operation === 'summarize' || Boolean(output.contentMarkdown)) ??
         outputs[0] ??
@@ -78,7 +107,7 @@ export function DistillPage(): JSX.Element {
         throw new Error('未找到可入库的蒸馏结果');
       }
 
-      await window.pinmind.export.single(preferredOutput.id);
+      await window.acmind.export.single(preferredOutput.id);
       addToast('已入库', 'success');
       void loadItems();
     } catch (error) {
@@ -88,7 +117,7 @@ export function DistillPage(): JSX.Element {
 
   const handleSkip = async (item: SourceItem) => {
     try {
-      await window.pinmind.sourceItems.delete(item.id);
+      await window.acmind.sourceItems.delete(item.id);
       addToast('已跳过', 'success');
       void loadItems();
     } catch {
@@ -153,7 +182,7 @@ export function DistillPage(): JSX.Element {
             description={emptyDesc(activeTab)}
             action={activeTab === 'pending' ? {
               label: '去收集',
-              onClick: () => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'capture-inbox' } })),
+              onClick: () => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'capture-inbox' } })),
             } : undefined}
           />
         </div>
@@ -198,9 +227,75 @@ export function DistillPage(): JSX.Element {
                   </div>
                 </div>
                 <div className="flex-1 min-h-0 overflow-auto p-4">
-                  <p className="text-[13px] leading-relaxed" style={{ color: 'var(--pm-text-secondary)' }}>
-                    {selectedItem.previewText || '暂无内容'}
-                  </p>
+                  {/* Batch 4 Phase 9: Show distilled output Markdown when available */}
+                  {distilledOutput?.contentMarkdown ? (
+                    <div className="flex flex-col gap-3">
+                      {distilledOutput.suggestedTitle && (
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--pm-text-tertiary)' }}>
+                            AI 标题
+                          </div>
+                          <p className="text-[14px] font-semibold" style={{ color: 'var(--pm-text-primary)' }}>
+                            {distilledOutput.suggestedTitle}
+                          </p>
+                        </div>
+                      )}
+                      {distilledOutput.summary && (
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--pm-text-tertiary)' }}>
+                            摘要
+                          </div>
+                          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--pm-text-secondary)' }}>
+                            {distilledOutput.summary}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--pm-text-tertiary)' }}>
+                          Markdown 草稿
+                        </div>
+                        <pre
+                          className="text-[12px] leading-relaxed whitespace-pre-wrap font-mono rounded-[8px] p-3"
+                          style={{
+                            color: 'var(--pm-text-secondary)',
+                            background: 'var(--pm-bg-surface-soft, rgba(255,255,255,0.5))',
+                            border: '0.5px solid var(--pm-border-subtle)',
+                            maxHeight: 300,
+                            overflow: 'auto',
+                          }}
+                        >
+                          {distilledOutput.contentMarkdown}
+                        </pre>
+                      </div>
+                      {distilledOutput.tags && distilledOutput.tags.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-semibold" style={{ color: 'var(--pm-text-tertiary)' }}>标签:</span>
+                          {distilledOutput.tags.map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="inline-block rounded-full px-2 py-0.5 text-[11px]"
+                              style={{
+                                background: 'var(--pm-brand-soft, rgba(255,107,43,0.08))',
+                                color: 'var(--pm-brand, #ff6b2b)',
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                        置信度: {distilledOutput.confidence != null ? `${Math.round(distilledOutput.confidence * 100)}%` : '-'} ·
+                        操作: {distilledOutput.operation || '-'}
+                      </div>
+                    </div>
+                  ) : loadingOutput ? (
+                    <LoadingState title="加载中" description="正在读取整理结果..." />
+                  ) : (
+                    <p className="text-[13px] leading-relaxed" style={{ color: 'var(--pm-text-secondary)' }}>
+                      {selectedItem.previewText || '暂无内容'}
+                    </p>
+                  )}
                 </div>
                 <div className="shrink-0 px-4 py-3 border-t border-[color:var(--pm-border-subtle)] flex items-center gap-2">
                   {activeTab === 'pending' && (

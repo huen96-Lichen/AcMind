@@ -1,8 +1,8 @@
-# PinMind Obsidian 输出与 Markdown 规范 v1
+# AcMind Obsidian 输出与 Markdown 规范 v1
 
 ## 1. 设计目标
 
-PinMind 的核心价值之一，是把碎片信息沉淀到 Obsidian。
+AcMind 的核心价值之一，是把碎片信息沉淀到 Obsidian。
 
 所以 Markdown 输出必须：
 
@@ -82,15 +82,15 @@ YYYY-MM-DD_标题.md
 例如：
 
 ```txt
-2026-04-27_PinMind项目推进约束.md
+2026-04-27_AcMind项目推进约束.md
 ```
 
 如果重名：
 
 ```txt
-2026-04-27_PinMind项目推进约束.md
-2026-04-27_PinMind项目推进约束 - 2.md
-2026-04-27_PinMind项目推进约束 - 3.md
+2026-04-27_AcMind项目推进约束.md
+2026-04-27_AcMind项目推进约束 - 2.md
+2026-04-27_AcMind项目推进约束 - 3.md
 ```
 
 禁止直接覆盖旧文件。
@@ -100,13 +100,13 @@ YYYY-MM-DD_标题.md
 早期可以输出到：
 
 ```txt
-99_Inbox/PinMind/
+99_Inbox/AcMind/
 ```
 
 或：
 
 ```txt
-99_未归纳/PinMind/
+99_未归纳/AcMind/
 ```
 
 等稳定后再由 AI 或用户整理到正式目录。
@@ -129,7 +129,7 @@ YYYY-MM-DD_标题.md
 
 建议保留两份：
 
-1. PinMind 本地 data/sources 中保存原始内容
+1. AcMind 本地 data/sources 中保存原始内容
 2. Markdown 文件中可以选择性保留“原始来源”摘要或全文
 
 对于长文本，不一定要把全文塞进 Obsidian 正文，可以保留引用路径。

@@ -1,4 +1,4 @@
-// PinMind ContentPipelineService
+// AcMind ContentPipelineService
 // Phase 1: Orchestrates the minimum viable loop:
 //   Manual text input → Auto-organize → Generate Markdown → Write to Obsidian → Return output path
 //
@@ -25,10 +25,10 @@ import type { ContentState } from './contentStateMachine';
 import {
   formatCapturedAt,
   sanitizeFilename,
-  normalizePinMindFields,
-  PINMIND_SCHEMA_VERSION,
+  normalizeAcMindFields,
+  ACMIND_SCHEMA_VERSION,
 } from '../../../shared/outputSpec';
-import type { PinMindStandardFields, PinMindStatus } from '../../../shared/outputSpec';
+import type { AcMindStandardFields, AcMindStatus } from '../../../shared/outputSpec';
 import { normalizeTags } from '../../../shared/tagNormalizer';
 import { captureRegistry } from '../capture';
 import type { CaptureInput } from '../capture';
@@ -1037,7 +1037,7 @@ class ContentPipelineService {
       // V2.1 Phase 7.4: Webpage with failed fetch — generate basic description
       const url = record.raw_url || meta.url || '未知链接';
       const domain = meta.domain || '';
-      lines.push(`这是一条由 PinMind 收集的网页链接。`);
+      lines.push(`这是一条由 AcMind 收集的网页链接。`);
       lines.push('');
       lines.push(`- **收集时间**：${capturedAt}`);
       lines.push(`- **原文链接**：[${url}](${url})`);
@@ -1065,7 +1065,7 @@ class ContentPipelineService {
       const fileSize = meta.file_size as number | undefined;
       const readableText = meta.readable_text_available as boolean | undefined;
 
-      lines.push(`这是一份由 PinMind 导入的文件。`);
+      lines.push(`这是一份由 AcMind 导入的文件。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **文件类型**：${ext || '未知'}`);
@@ -1099,7 +1099,7 @@ class ContentPipelineService {
       const fileSize = meta.file_size as number | undefined;
       const processingHint = meta.processing_hint as string | undefined;
 
-      lines.push(`这是一张由 PinMind 导入的图片。`);
+      lines.push(`这是一张由 AcMind 导入的图片。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **文件类型**：${ext || '未知'}`);
@@ -1150,7 +1150,7 @@ class ContentPipelineService {
       }
 
       // 无转写文本时，生成占位记录
-      lines.push(`这是一份由 PinMind 导入的音频文件。`);
+      lines.push(`这是一份由 AcMind 导入的音频文件。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **文件类型**：${ext || '未知'}`);
@@ -1195,7 +1195,7 @@ class ContentPipelineService {
       const ext = meta.extension || '';
       const fileSize = meta.file_size as number | undefined;
 
-      lines.push(`这是一份由 PinMind 导入的视频文件。`);
+      lines.push(`这是一份由 AcMind 导入的视频文件。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **文件类型**：${ext || '未知'}`);
@@ -1225,7 +1225,7 @@ class ContentPipelineService {
       const fileName = meta.filename || '未知PDF';
       const fileSize = meta.file_size as number | undefined;
 
-      lines.push(`这是一份由 PinMind 导入的 PDF 文档。`);
+      lines.push(`这是一份由 AcMind 导入的 PDF 文档。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **导入时间**：${capturedAt}`);
@@ -1254,7 +1254,7 @@ class ContentPipelineService {
       const fileName = meta.filename || '未知文档';
       const fileSize = meta.file_size as number | undefined;
 
-      lines.push(`这是一份由 PinMind 导入的 Word 文档。`);
+      lines.push(`这是一份由 AcMind 导入的 Word 文档。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **导入时间**：${capturedAt}`);
@@ -1284,7 +1284,7 @@ class ContentPipelineService {
       const ext = meta.extension || '';
       const fileSize = meta.file_size as number | undefined;
 
-      lines.push(`这是一份由 PinMind 导入的未知类型文件。`);
+      lines.push(`这是一份由 AcMind 导入的未知类型文件。`);
       lines.push('');
       lines.push(`- **文件名**：${fileName}`);
       lines.push(`- **文件类型**：${ext || '未知'}`);
@@ -1314,7 +1314,7 @@ class ContentPipelineService {
     const height = meta.image_height as number | undefined;
     const fileSize = meta.fileSize as number | undefined;
 
-    lines.push(`这是一张由 PinMind 收集的截图。`);
+    lines.push(`这是一张由 AcMind 收集的截图。`);
     lines.push('');
     lines.push(`- **收集时间**：${capturedAt}`);
     lines.push(`- **原始文件路径**：\`${filePath}\``);
@@ -1606,9 +1606,9 @@ class ContentPipelineService {
     }
 
     try {
-      // Build PinMind standard fields
+      // Build AcMind standard fields
       const now = formatCapturedAt(sourceItem.createdAt);
-      const fields: PinMindStandardFields = normalizePinMindFields(
+      const fields: AcMindStandardFields = normalizeAcMindFields(
         {
           title: structured.title,
           summary: structured.summary,
@@ -1640,7 +1640,7 @@ class ContentPipelineService {
         output_id: outputId,
         source_type: sourceItem.source,
         source_app: sourceItem.sourceApp ?? undefined,
-        writer_app: 'PinMind',
+        writer_app: 'AcMind',
         created: fields.captured_at,
         updated: updatedNow,
         source_url: sourceUrl,
@@ -1703,7 +1703,7 @@ class ContentPipelineService {
             output_id: outputId,
             source_type: sourceItem.source,
             source_app: sourceItem.sourceApp ?? undefined,
-            writer_app: 'PinMind',
+            writer_app: 'AcMind',
             created: fields.captured_at,
             updated: updatedNow,
           },

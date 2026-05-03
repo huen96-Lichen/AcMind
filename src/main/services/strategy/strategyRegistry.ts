@@ -1,4 +1,4 @@
-// PinMind Strategy Registry
+// AcMind Strategy Registry
 // Phase 8.1: 策略注册表，管理所有 source_type 对应的处理策略
 
 import type { SourceType } from '../../../shared/types';

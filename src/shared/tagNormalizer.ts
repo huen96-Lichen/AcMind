@@ -1,4 +1,4 @@
-// PinMind Tag Normalizer
+// AcMind Tag Normalizer
 // Centralized tag cleaning, deduplication, and formatting.
 // ALL tag output MUST go through this module before reaching frontmatter.
 //
@@ -10,7 +10,7 @@
 //   - Deduplicate (case-insensitive)
 //   - Limit length (max 30 chars per tag)
 //   - Limit count (3-7 tags per item)
-//   - Always include 'pinmind' default tag
+//   - Always include 'acmind' default tag
 //   - Optionally include 'inbox' default tag
 
 // ---------------------------------------------------------------------------
@@ -24,8 +24,8 @@ export interface TagNormalizerOptions {
   minTags?: number;
   /** Maximum length per tag in characters (default: 30) */
   maxTagLength?: number;
-  /** Whether to always include 'pinmind' tag (default: true) */
-  includePinmind?: boolean;
+  /** Whether to always include 'acmind' tag (default: true) */
+  includeAcMind?: boolean;
   /** Whether to include 'inbox' tag (default: false) */
   includeInbox?: boolean;
   /** Additional default tags to always include */
@@ -132,7 +132,7 @@ export function normalizeTags(
   const maxTags = options?.maxTags ?? DEFAULT_MAX_TAGS;
   const minTags = options?.minTags ?? DEFAULT_MIN_TAGS;
   const maxTagLength = options?.maxTagLength ?? DEFAULT_MAX_TAG_LENGTH;
-  const includePinmind = options?.includePinmind !== false; // default true
+  const includeAcMind = options?.includeAcMind !== false; // default true
   const includeInbox = options?.includeInbox ?? false;
   const extraDefaults = options?.extraDefaults ?? [];
 
@@ -148,8 +148,8 @@ export function normalizeTags(
   const result: string[] = [];
 
   // Add default tags first
-  if (includePinmind && !deduped.includes('pinmind')) {
-    result.push('pinmind');
+  if (includeAcMind && !deduped.includes('acmind')) {
+    result.push('acmind');
   }
   if (includeInbox && !deduped.includes('inbox')) {
     result.push('inbox');
@@ -184,7 +184,7 @@ export function ensureMinTags(
   if (tags.length >= minTags) return tags;
 
   const defaults: string[] = [];
-  if (!tags.includes('pinmind')) defaults.push('pinmind');
+  if (!tags.includes('acmind')) defaults.push('acmind');
   if (!tags.includes('inbox') && (options?.includeInbox ?? false)) defaults.push('inbox');
 
   const padded = [...tags, ...defaults];

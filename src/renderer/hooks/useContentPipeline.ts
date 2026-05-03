@@ -101,7 +101,7 @@ export function useContentPipeline(): UseContentPipelineReturn {
     text: string,
     options?: PipelineOptions,
   ): Promise<PipelineResult> => {
-    if (!window.pinmind?.pipeline) {
+    if (!window.acmind?.pipeline) {
       const result: PipelineResult = {
         success: false,
         sourceItemId: '',
@@ -118,7 +118,7 @@ export function useContentPipeline(): UseContentPipelineReturn {
     setStage('processing');
 
     try {
-      const result = await window.pinmind.pipeline.processText(text, options as Record<string, unknown>);
+      const result = await window.acmind.pipeline.processText(text, options as Record<string, unknown>);
       setStage(result.stage);
       setLastResult(result);
 
@@ -145,16 +145,16 @@ export function useContentPipeline(): UseContentPipelineReturn {
   }, []);
 
   const getStatus = useCallback(async (sourceItemId: string): Promise<PipelineStage> => {
-    if (!window.pinmind?.pipeline) return 'capture_failed';
+    if (!window.acmind?.pipeline) return 'capture_failed';
     try {
-      return await window.pinmind.pipeline.getStatus(sourceItemId);
+      return await window.acmind.pipeline.getStatus(sourceItemId);
     } catch {
       return 'capture_failed';
     }
   }, []);
 
   const retryExport = useCallback(async (sourceItemId: string): Promise<PipelineResult> => {
-    if (!window.pinmind?.pipeline) {
+    if (!window.acmind?.pipeline) {
       const result: PipelineResult = {
         success: false,
         sourceItemId,
@@ -171,7 +171,7 @@ export function useContentPipeline(): UseContentPipelineReturn {
     setStage('exporting');
 
     try {
-      const result = await window.pinmind.pipeline.retryExport(sourceItemId);
+      const result = await window.acmind.pipeline.retryExport(sourceItemId);
       setStage(result.stage);
       setLastResult(result);
 

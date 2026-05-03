@@ -1,4 +1,4 @@
-// PinMind Distillation Pipeline Orchestrator
+// AcMind Distillation Pipeline Orchestrator
 // Coordinates task creation, queueing, execution, and result storage
 // Phase 4: Now supports real AI providers via tierRouter + realDistiller
 // Phase 4: Supports batch processing via batchProcessor

@@ -15,7 +15,7 @@ describe('safeWrite', () => {
   });
 
   it('refuses to write empty markdown content', () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinmind-safe-write-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acmind-safe-write-'));
     const target = path.join(tmpDir, 'empty.md');
 
     expect(() => safeWrite(target, '   \n\t')).toThrow('Refusing to write empty Markdown content');
@@ -23,7 +23,7 @@ describe('safeWrite', () => {
   });
 
   it('writes non-empty markdown content', () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinmind-safe-write-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acmind-safe-write-'));
     const target = path.join(tmpDir, 'note.md');
 
     safeWrite(target, '# 标题\n\n正文');

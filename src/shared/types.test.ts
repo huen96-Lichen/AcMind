@@ -1,4 +1,4 @@
-// PinMind Shared Types Unit Tests
+// AcMind Shared Types Unit Tests
 // Tests for IPC_CHANNELS constant
 
 import { describe, it, expect } from 'vitest';
@@ -254,6 +254,21 @@ describe('IPC_CHANNELS', () => {
     'diagnostics.export',
   ];
 
+  const expectedAcMindMvp = [
+    'pinPool.list',
+    'pinPool.get',
+    'pinPool.createFromCapture',
+    'pinPool.prefilter',
+    'pinPool.promoteToInbox',
+    'pinPool.update',
+    'pinPool.ignore',
+    'pinPool.delete',
+    'pinPool.changed',
+    'voice.createPinFromTranscript',
+    'voice.polishTranscript',
+    'voice.getDictationGuide',
+  ];
+
   // -- Contains all expected channels ---------------------------------------
 
   it('should contain all Phase 1 channel names', () => {
@@ -424,6 +439,13 @@ describe('IPC_CHANNELS', () => {
     }
   });
 
+  it('should contain all AcMind MVP channel names', () => {
+    const values = Object.values(IPC_CHANNELS);
+    for (const channel of expectedAcMindMvp) {
+      expect(values).toContain(channel);
+    }
+  });
+
   // -- Values are unique ----------------------------------------------------
 
   it('should have unique values (no duplicate channel names)', () => {
@@ -482,6 +504,7 @@ describe('IPC_CHANNELS', () => {
       ...expectedVaultKeeper,
       ...expectedPhase10,
       ...expectedPhase126,
+      ...expectedAcMindMvp,
     ]).size;
     expect(Object.keys(IPC_CHANNELS).length).toBe(totalExpected);
   });

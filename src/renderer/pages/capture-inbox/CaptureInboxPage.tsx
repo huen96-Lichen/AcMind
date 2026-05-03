@@ -34,7 +34,7 @@ export function CaptureInboxPage(): JSX.Element {
     try {
       setLoading(true);
       setError(null);
-      const result = await window.pinmind.sourceItems.list({});
+      const result = await window.acmind.sourceItems.list({});
       setItems(result);
     } catch (err) {
       setError('加载失败，请稍后重试。');
@@ -48,14 +48,14 @@ export function CaptureInboxPage(): JSX.Element {
   }, [loadItems]);
 
   useEffect(() => {
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadItems();
     });
     return unsubscribe;
   }, [loadItems]);
 
   const handleCreateCaptureItem = useCallback(async (data: Parameters<NonNullable<React.ComponentProps<typeof AddCaptureItemDialog>['onCreate']>>[0]) => {
-    const result = await window.pinmind.capture.record({
+    const result = await window.acmind.capture.record({
       sourceType: data.type === 'text' ? 'manual_text' : data.type === 'image' ? 'image' : 'unknown_file',
       text: data.rawText,
       filePath: data.filePath,
@@ -71,7 +71,7 @@ export function CaptureInboxPage(): JSX.Element {
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      await window.pinmind.sourceItems.delete(id);
+      await window.acmind.sourceItems.delete(id);
       addToast('已删除', 'success');
       void loadItems();
       if (selectedItem?.id === id) {
@@ -85,12 +85,12 @@ export function CaptureInboxPage(): JSX.Element {
   const handleCollect = useCallback(async (type: 'clipboard' | 'file' | 'screenshot' | 'audio') => {
     try {
       if (type === 'clipboard') {
-        await window.pinmind.capture.collectClipboard();
+        await window.acmind.capture.collectClipboard();
         addToast('已从剪贴板收集', 'success');
       } else if (type === 'file') {
-        await window.pinmind.capture.collectFile({ filePath: '' });
+        await window.acmind.capture.collectFile({ filePath: '' });
       } else if (type === 'screenshot') {
-        await window.pinmind.capture.takeScreenshot();
+        await window.acmind.capture.takeScreenshot();
         addToast('截图已收集', 'success');
       } else if (type === 'audio') {
         addToast('录音功能开发中', 'info');
@@ -253,7 +253,7 @@ export function CaptureInboxPage(): JSX.Element {
               <CaptureItemDetail
                 item={selectedItem as unknown as CaptureItem}
                 onUpdate={async (id, patch) => {
-                  await window.pinmind.sourceItems.delete(id);
+                  await window.acmind.sourceItems.delete(id);
                   return selectedItem as unknown as CaptureItem;
                 }}
                 onDelete={async (id) => {

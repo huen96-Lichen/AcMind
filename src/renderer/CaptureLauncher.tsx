@@ -48,8 +48,8 @@ export function CaptureLauncher(): JSX.Element {
     let cancelled = false;
 
     const load = async () => {
-      const state = await window.pinmind.capture.getRecordingState();
-      const launcherVisualState = await window.pinmind.capture.getLauncherVisualState();
+      const state = await window.acmind.capture.getRecordingState();
+      const launcherVisualState = await window.acmind.capture.getLauncherVisualState();
       if (!cancelled) {
         setRecordingState(state);
         setVisualState(launcherVisualState);
@@ -57,10 +57,10 @@ export function CaptureLauncher(): JSX.Element {
     };
 
     void load();
-    const unsubscribe = window.pinmind.capture.onRecordingState((state) => {
+    const unsubscribe = window.acmind.capture.onRecordingState((state) => {
       setRecordingState(state);
     });
-    const unsubscribeLauncherState = window.pinmind.capture.onLauncherVisualState((state) => {
+    const unsubscribeLauncherState = window.acmind.capture.onLauncherVisualState((state) => {
       setVisualState(state);
     });
 
@@ -85,11 +85,11 @@ export function CaptureLauncher(): JSX.Element {
       if (!dragStartedRef.current && distance >= DRAG_THRESHOLD) {
         dragStartedRef.current = true;
         setIsDragging(true);
-        window.pinmind.capture.launcherDragStart(pointerStart.screenX, pointerStart.screenY);
+        window.acmind.capture.launcherDragStart(pointerStart.screenX, pointerStart.screenY);
       }
 
       if (dragStartedRef.current) {
-        window.pinmind.capture.launcherDragMove(event.screenX, event.screenY);
+        window.acmind.capture.launcherDragMove(event.screenX, event.screenY);
       }
     };
 
@@ -100,13 +100,13 @@ export function CaptureLauncher(): JSX.Element {
       }
 
       if (dragStartedRef.current) {
-        void window.pinmind.capture.launcherDragEnd(event.screenX, event.screenY);
+        void window.acmind.capture.launcherDragEnd(event.screenX, event.screenY);
       } else {
         if (recordingState.active) {
-          window.pinmind.capture.requestRecordingStop();
+          window.acmind.capture.requestRecordingStop();
         } else {
           setIsStartingCapture(true);
-          void window.pinmind.capture.takeScreenshot().finally(() => {
+          void window.acmind.capture.takeScreenshot().finally(() => {
             setIsStartingCapture(false);
           });
         }
@@ -124,7 +124,7 @@ export function CaptureLauncher(): JSX.Element {
       }
 
       if (dragStartedRef.current) {
-        void window.pinmind.capture.launcherDragEnd(event.screenX, event.screenY);
+        void window.acmind.capture.launcherDragEnd(event.screenX, event.screenY);
       }
 
       pointerStartRef.current = null;
@@ -148,7 +148,7 @@ export function CaptureLauncher(): JSX.Element {
     if (recordingState.active || isDragging || isStartingCapture) {
       return;
     }
-    void window.pinmind.capture.toggleHub();
+    void window.acmind.capture.toggleHub();
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {

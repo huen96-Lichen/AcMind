@@ -12,11 +12,11 @@ interface BottomRuntimeBarProps {
 
 export function BottomRuntimeBar({ snapshot }: BottomRuntimeBarProps): JSX.Element {
   const settings = snapshot.settings;
-  const storageRoot = settings?.storageRoot ?? '~/Documents/PinMind';
+  const storageRoot = settings?.storageRoot ?? '~/Documents/AcMind';
 
   return (
     <footer
-      className="pinmind-runtime-bar flex items-center gap-3 px-4"
+      className="acmind-runtime-bar flex items-center gap-3 px-4"
       style={{
         height: '44px',
         background: 'var(--pm-bg-bottombar)',
@@ -71,7 +71,7 @@ function RuntimeItem({
 }
 
 function shortenPath(value: string): string {
-  if (!value) return '~/Documents/PinMind';
+  if (!value) return '~/Documents/AcMind';
   if (value.startsWith('~/')) return value;
   if (value.startsWith('/Users/')) {
     const parts = value.split('/');

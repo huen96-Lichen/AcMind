@@ -1,4 +1,4 @@
-// PinMind Capture Adapters Tests
+// AcMind Capture Adapters Tests
 // V2.1 Phase 7: Unit tests for clipboardTextAdapter, webpageAdapter, fileAdapter, captureRegistry
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -14,7 +14,7 @@ import os from 'node:os';
 // Test fixtures
 // ---------------------------------------------------------------------------
 
-const TEST_DIR = path.join(os.tmpdir(), 'pinmind-capture-test-' + Date.now());
+const TEST_DIR = path.join(os.tmpdir(), 'acmind-capture-test-' + Date.now());
 
 beforeEach(() => {
   mkdirSync(TEST_DIR, { recursive: true });

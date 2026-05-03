@@ -127,7 +127,7 @@ function isHighValue(item: CaptureItem, sourceItem?: SourceItem): boolean {
   }
   // Check tags
   const tags = sourceItem?.tags ?? [];
-  const highValueTags = ['PinMind', 'Acore', '项目', '产品', '设计', 'idea', 'todo'];
+  const highValueTags = ['AcMind', 'Acore', '项目', '产品', '设计', 'idea', 'todo'];
   if (tags.some(t => highValueTags.some(hvt => t.toLowerCase().includes(hvt.toLowerCase())))) return true;
   // Check if has meaningful title (not just "文本收集")
   if (item.title && item.title.length > 10 && !item.title.startsWith('文本收集')) return true;
@@ -492,7 +492,7 @@ export function useDailyKnowledgeFlow() {
 
   /** 忽略/关闭指定错误记录 */
   const dismissError = useCallback(async (errorId: string) => {
-    await window.pinmind.errors.dismiss(errorId);
+    await window.acmind.errors.dismiss(errorId);
   }, []);
 
   return {

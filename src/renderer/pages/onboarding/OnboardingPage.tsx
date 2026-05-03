@@ -19,12 +19,12 @@ const STEPS: Array<{ key: OnboardingStep; label: string }> = [
   { key: 'done', label: '完成' },
 ];
 
-const TEST_NOTE = `# PinMind 试运行笔记
+const TEST_NOTE = `# AcMind 试运行笔记
 
 这是一条由布置向导生成的测试内容。
 
 目标：
-- 确认 PinMind 可以把内容放进收件箱
+- 确认 AcMind 可以把内容放进收件箱
 - 后续可以一键整理成可收藏笔记
 - 最终送入资料库，成为长期可用的知识资产
 `;
@@ -49,8 +49,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
   useEffect(() => {
     async function load(): Promise<void> {
       const [nextSettings, nextPermissions] = await Promise.all([
-        window.pinmind.settings.get(),
-        window.pinmind.permissions.getStatus('settings-return'),
+        window.acmind.settings.get(),
+        window.acmind.permissions.getStatus('settings-return'),
       ]);
       setSettings(nextSettings);
       setVaultPath(nextSettings.vault.vaultPath);
@@ -64,7 +64,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
     async function loadLocalModels(): Promise<void> {
       setScanningModels(true);
       try {
-        const models = await window.pinmind.providers.scanLocal();
+        const models = await window.acmind.providers.scanLocal();
         setLocalModels(models);
         if (models.length > 0) {
           setLocalModelId(models[0].name);
@@ -100,7 +100,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
   const refreshPermissions = async () => {
     setBusy(true);
     try {
-      const snapshot = await window.pinmind.permissions.refresh('manual-refresh');
+      const snapshot = await window.acmind.permissions.refresh('manual-refresh');
       setPermissions(snapshot);
       setStatus('权限状态已刷新');
     } finally {
@@ -127,9 +127,9 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
         capabilities: ['rename', 'summarize', 'classify', 'tag', 'valueScore', 'cleanSuggest'],
       };
 
-      await window.pinmind.providers.add(provider);
+      await window.acmind.providers.add(provider);
       const providers = [provider, ...(settings.providers ?? []).filter((item) => item.id !== provider.id)];
-      const updated = await window.pinmind.settings.update({
+      const updated = await window.acmind.settings.update({
         providers,
         defaultTier: provider.tier,
       });
@@ -144,7 +144,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
   };
 
   const pickVault = async () => {
-    const path = await window.pinmind.vault.pickFolder();
+    const path = await window.acmind.vault.pickFolder();
     if (path) {
       setVaultPath(path);
       setStatus('已选择知识库');
@@ -155,12 +155,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
     if (!settings) return;
     setBusy(true);
     try {
-      const result = vaultPath ? await window.pinmind.vault.validatePath(vaultPath) : { valid: false, message: '请先选择知识库' };
+      const result = vaultPath ? await window.acmind.vault.validatePath(vaultPath) : { valid: false, message: '请先选择知识库' };
       if (!result.valid) {
         setStatus(result.message);
         return;
       }
-      const updated = await window.pinmind.settings.update({
+      const updated = await window.acmind.settings.update({
         vault: {
           ...settings.vault,
           vaultPath,
@@ -180,12 +180,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
   const createTestNote = async () => {
     setBusy(true);
     try {
-      if (typeof window.pinmind.captureItems?.create !== 'function') {
-        throw new Error('当前版本未加载试运行接口，请重新启动 PinMind 后再试。');
+      if (typeof window.acmind.captureItems?.create !== 'function') {
+        throw new Error('当前版本未加载试运行接口，请重新启动 AcMind 后再试。');
       }
-      await window.pinmind.captureItems.create({
+      await window.acmind.captureItems.create({
         type: 'text',
-        title: 'PinMind 试运行笔记',
+        title: 'AcMind 试运行笔记',
         rawText: TEST_NOTE,
         userNote: '布置向导生成的试运行内容',
       });
@@ -201,7 +201,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
   const finish = async () => {
     setBusy(true);
     try {
-      await window.pinmind.settings.update({ hasCompletedOnboarding: true });
+      await window.acmind.settings.update({ hasCompletedOnboarding: true });
       onComplete();
     } finally {
       setBusy(false);
@@ -211,7 +211,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
   const skipSetup = async () => {
     setBusy(true);
     try {
-      await window.pinmind.settings.update({ hasCompletedOnboarding: true });
+      await window.acmind.settings.update({ hasCompletedOnboarding: true });
       onComplete();
     } finally {
       setBusy(false);
@@ -228,14 +228,14 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[color:var(--pm-bg-canvas)] p-6">
-      <main className="pinmind-window-panel grid w-full max-w-[980px] overflow-hidden lg:grid-cols-[260px_minmax(0,1fr)]">
+      <main className="acmind-window-panel grid w-full max-w-[980px] overflow-hidden lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="border-r border-[color:var(--pm-border-subtle)] bg-white/60 p-5">
           <div className="mb-6 flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand-primary)]">
               <PinStackIcon name="ai-workspace" size={18} />
             </span>
             <div>
-              <div className="text-[14px] font-semibold text-[color:var(--pm-text-primary)]">PinMind</div>
+              <div className="text-[14px] font-semibold text-[color:var(--pm-text-primary)]">AcMind</div>
               <div className="text-[11px] text-[color:var(--pm-text-tertiary)]">本地知识整理器</div>
             </div>
           </div>
@@ -261,19 +261,19 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
             {skipPromptOpen ? (
               <div className="flex flex-col gap-2">
                 <p className="text-[11px] leading-5 text-[color:var(--pm-text-tertiary)]">
-                  跳过后会直接进入 PinMind，后续可以在设置里继续补全。
+                  跳过后会直接进入 AcMind，后续可以在设置里继续补全。
                 </p>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
+                    className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
                     onClick={() => setSkipPromptOpen(false)}
                   >
                     取消
                   </button>
                   <button
                     type="button"
-                    className="pinmind-btn pinmind-btn-primary motion-button text-[12px]"
+                    className="acmind-btn acmind-btn-primary motion-button text-[12px]"
                     onClick={() => void skipSetup()}
                     disabled={busy}
                   >
@@ -284,7 +284,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
             ) : (
               <button
                 type="button"
-                className="pinmind-btn pinmind-btn-ghost motion-button text-[12px]"
+                className="acmind-btn acmind-btn-ghost motion-button text-[12px]"
                 onClick={() => setSkipPromptOpen(true)}
               >
                 跳过设置
@@ -297,7 +297,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
           {step === 'welcome' && (
             <StepFrame
               eyebrow="开始布置"
-              title="把信息丢进来，剩下交给 PinMind"
+              title="把信息丢进来，剩下交给 AcMind"
               description="这次只配置最少的东西：权限、模型、知识库输出位置。完成后，你就可以复制内容、截图，然后一键整理成可收藏笔记。"
               status={status}
               actions={<PrimaryButton onClick={goNext}>开始布置</PrimaryButton>}
@@ -313,7 +313,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
           {step === 'permissions' && (
             <StepFrame
               eyebrow="权限检查"
-              title="确认 PinMind 能捕获内容"
+              title="确认 AcMind 能捕获内容"
               description="剪贴板用于自动收集文本，屏幕录制用于截图。缺权限时可以稍后补，但首次体验会不完整。"
               status={status}
               actions={
@@ -328,12 +328,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
                   <FeatureCard title="暂无权限回报" body="可以先继续，之后在设置里重新检查。" />
                 ) : (
                   permissionItems.map((item) => (
-                    <div key={item.key} className="pinmind-card-surface flex items-center justify-between gap-3 p-3">
+                    <div key={item.key} className="acmind-card-surface flex items-center justify-between gap-3 p-3">
                       <div>
                         <div className="text-[12px] font-semibold text-[color:var(--pm-text-primary)]">{item.title}</div>
                         <div className="mt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">{item.message}</div>
                       </div>
-                      <span className="pinmind-badge">{item.state}</span>
+                      <span className="acmind-badge">{item.state}</span>
                     </div>
                   ))
                 )}
@@ -347,7 +347,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
           {step === 'ai' && (
             <StepFrame
               eyebrow="模型来源"
-              title="选择 PinMind 用哪种方式整理内容"
+              title="选择 AcMind 用哪种方式整理内容"
               description="新手推荐本地 Ollama。没有本地模型时，也可以先保存默认配置，后续在设置里更换。"
               status={hasProvider ? '已经有模型来源，可直接继续或覆盖默认方案' : status}
               actions={
@@ -379,10 +379,10 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
               {aiChoice === 'local' ? (
                 <div className="grid gap-3">
                   <label className="block">
-                    <span className="pinmind-field-label">已安装模型</span>
+                    <span className="acmind-field-label">已安装模型</span>
                     <div className="mt-1 flex flex-col gap-2 md:flex-row md:items-center">
                       <select
-                        className="pinmind-field pinmind-field-select min-w-0 flex-1 px-3 text-[13px]"
+                        className="acmind-field acmind-field-select min-w-0 flex-1 px-3 text-[13px]"
                         value={localModelId}
                         onChange={(e) => setLocalModelId(e.target.value)}
                       >
@@ -397,11 +397,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
                       </select>
                       <button
                         type="button"
-                        className="pinmind-btn pinmind-btn-secondary motion-button"
+                        className="acmind-btn acmind-btn-secondary motion-button"
                         onClick={async () => {
                           setScanningModels(true);
                           try {
-                            const models = await window.pinmind.providers.scanLocal();
+                            const models = await window.acmind.providers.scanLocal();
                             setLocalModels(models);
                             if (models.length > 0) {
                               setLocalModelId((current) => models.some((model) => model.name === current) ? current : models[0].name);
@@ -417,7 +417,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
                       </button>
                     </div>
                   </label>
-                  <div className="pinmind-card-surface p-3 text-[12px] leading-5 text-[color:var(--pm-text-secondary)]">
+                  <div className="acmind-card-surface p-3 text-[12px] leading-5 text-[color:var(--pm-text-secondary)]">
                     本地模式会自动使用已经安装好的 Ollama 模型，不需要再填写服务地址。
                   </div>
                 </div>
@@ -436,7 +436,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
             <StepFrame
               eyebrow="知识库输出"
               title="选择笔记最终送到哪里"
-              description="选择你的知识库文件夹。PinMind 会默认写入收件箱文件夹，避免打乱现有笔记结构。"
+              description="选择你的知识库文件夹。AcMind 会默认写入收件箱文件夹，避免打乱现有笔记结构。"
               status={hasVault ? '已选择知识库' : status}
               actions={
                 <>
@@ -459,10 +459,10 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
               actions={<PrimaryButton onClick={createTestNote} disabled={busy}>{busy ? '生成中...' : '生成测试笔记'}</PrimaryButton>}
             >
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-                <pre className="pinmind-card-surface min-h-[240px] whitespace-pre-wrap p-4 text-[12px] leading-6 text-[color:var(--pm-text-secondary)]">{TEST_NOTE}</pre>
-                <div className="pinmind-card-surface flex min-h-[240px] flex-col gap-4 p-4">
+                <pre className="acmind-card-surface min-h-[240px] whitespace-pre-wrap p-4 text-[12px] leading-6 text-[color:var(--pm-text-secondary)]">{TEST_NOTE}</pre>
+                <div className="acmind-card-surface flex min-h-[240px] flex-col gap-4 p-4">
                   <div>
-                    <p className="pinmind-section-eyebrow">试运行检查</p>
+                    <p className="acmind-section-eyebrow">试运行检查</p>
                     <h3 className="mt-2 text-[16px] font-semibold text-[color:var(--pm-text-primary)]">这一步会验证什么</h3>
                   </div>
                   <div className="flex flex-1 flex-col gap-3">
@@ -471,7 +471,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
                     <InfoRow title="下一步动作" body="完成后回到首页继续整理，再确认入库到资料库。" />
                   </div>
                   <div className="rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-[rgba(248,246,241,0.8)] px-3 py-2 text-[11px] leading-5 text-[color:var(--pm-text-secondary)]">
-                    如果按钮提示接口未加载，请完全退出并重新打开 PinMind，再重试一次。
+                    如果按钮提示接口未加载，请完全退出并重新打开 AcMind，再重试一次。
                   </div>
                 </div>
               </div>
@@ -484,7 +484,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
               title="现在可以开始整理你的信息了"
               description="下一步进入首页：复制文本或截图，点整理，确认后入库到资料库。"
               status="布置已完成"
-              actions={<PrimaryButton onClick={finish} disabled={busy}>{busy ? '进入中...' : '进入 PinMind'}</PrimaryButton>}
+              actions={<PrimaryButton onClick={finish} disabled={busy}>{busy ? '进入中...' : '进入 AcMind'}</PrimaryButton>}
             >
               <div className="grid gap-3 md:grid-cols-3">
                 <FeatureCard title="1. 丢进来" body="复制、截图或稍后手动捕获。" />
@@ -517,7 +517,7 @@ function StepFrame({
   return (
     <div className="flex min-h-full flex-col">
       <div className="mb-6">
-        <p className="pinmind-section-eyebrow">{eyebrow}</p>
+        <p className="acmind-section-eyebrow">{eyebrow}</p>
         <h1 className="mt-2 text-[24px] font-semibold text-[color:var(--pm-text-primary)]">{title}</h1>
         <p className="mt-3 max-w-2xl text-[13px] leading-6 text-[color:var(--pm-text-secondary)]">{description}</p>
       </div>
@@ -532,7 +532,7 @@ function StepFrame({
 
 function FeatureCard({ title, body }: { title: string; body: string }): JSX.Element {
   return (
-    <div className="pinmind-card-surface p-4">
+    <div className="acmind-card-surface p-4">
       <div className="text-[13px] font-semibold text-[color:var(--pm-text-primary)]">{title}</div>
       <div className="mt-2 text-[12px] leading-5 text-[color:var(--pm-text-secondary)]">{body}</div>
     </div>
@@ -553,7 +553,7 @@ function ChoiceCard({ active, title, body, onClick }: { active: boolean; title: 
     <button
       type="button"
       onClick={onClick}
-      className="pinmind-card-surface motion-button p-4 text-left"
+      className="acmind-card-surface motion-button p-4 text-left"
       style={{
         borderColor: active ? 'var(--pm-brand-primary)' : undefined,
         background: active ? 'color-mix(in srgb, var(--pm-brand-soft) 58%, white 42%)' : undefined,
@@ -580,10 +580,10 @@ function Field({
 }): JSX.Element {
   return (
     <label className="block">
-      <span className="pinmind-field-label">{label}</span>
+      <span className="acmind-field-label">{label}</span>
       <input
         type={type}
-        className="pinmind-field mt-1 w-full"
+        className="acmind-field mt-1 w-full"
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
@@ -594,7 +594,7 @@ function Field({
 
 function PrimaryButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }): JSX.Element {
   return (
-    <button type="button" className="pinmind-btn pinmind-btn-primary motion-button" onClick={onClick} disabled={disabled}>
+    <button type="button" className="acmind-btn acmind-btn-primary motion-button" onClick={onClick} disabled={disabled}>
       {children}
     </button>
   );
@@ -602,7 +602,7 @@ function PrimaryButton({ children, onClick, disabled }: { children: React.ReactN
 
 function SecondaryButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }): JSX.Element {
   return (
-    <button type="button" className="pinmind-btn pinmind-btn-secondary motion-button" onClick={onClick} disabled={disabled}>
+    <button type="button" className="acmind-btn acmind-btn-secondary motion-button" onClick={onClick} disabled={disabled}>
       {children}
     </button>
   );

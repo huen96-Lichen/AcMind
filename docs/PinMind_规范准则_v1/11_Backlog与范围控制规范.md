@@ -1,8 +1,8 @@
-# PinMind Backlog 与范围控制规范 v1
+# AcMind Backlog 与范围控制规范 v1
 
 ## 1. 为什么需要 Backlog
 
-PinMind 很容易扩展出大量方向：
+AcMind 很容易扩展出大量方向：
 
 - 截图
 - OCR

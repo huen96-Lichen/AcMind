@@ -1,4 +1,4 @@
-// PinMind Base Content Processing Strategy
+// AcMind Base Content Processing Strategy
 // Phase 8.1: 所有策略的公共基类，提供默认实现和工具方法
 
 import type { SourceType } from '../../../shared/types';

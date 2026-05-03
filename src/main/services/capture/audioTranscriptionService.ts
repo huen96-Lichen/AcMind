@@ -1,4 +1,4 @@
-// PinMind Audio Transcription Service
+// AcMind Audio Transcription Service
 // Phase 10: 管理音频转写任务的提交、状态追踪、回填和重试
 //
 // 职责：
@@ -170,7 +170,7 @@ class AudioTranscriptionService {
       ? Math.round(options.sampleRate)
       : 16000;
 
-    const tmpDir = path.join(process.cwd(), '.pinmind-tmp');
+    const tmpDir = path.join(process.cwd(), '.acmind-tmp');
     mkdirSync(tmpDir, { recursive: true });
 
     const tmpPath = path.join(tmpDir, `whisper-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.wav`);
@@ -579,7 +579,7 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     filePath: string,
     options?: { language?: string; translate?: boolean; model?: TranscriptionModelSize },
   ): Promise<string | null> {
-    const tmpDir = path.join(process.cwd(), '.pinmind-tmp');
+    const tmpDir = path.join(process.cwd(), '.acmind-tmp');
     mkdirSync(tmpDir, { recursive: true });
 
     try {

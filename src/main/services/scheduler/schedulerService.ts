@@ -1,4 +1,4 @@
-// PinMind Scheduler Service
+// AcMind Scheduler Service
 // Provides scheduled task automation for distillation, export, and cleanup.
 // Calls existing pipelines (distillPipeline, obsidianExporter) without modifying them.
 

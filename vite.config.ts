@@ -24,7 +24,14 @@ export default defineConfig({
   },
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'src/renderer/index.html'),
+        capsule: path.resolve(__dirname, 'src/renderer/capsule.html'),
+        'pinned-image': path.resolve(__dirname, 'src/renderer/pinned-image.html'),
+      },
+    },
   },
   server: {
     port: 5173,

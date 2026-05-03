@@ -1,4 +1,4 @@
-// PinMind Markdown Builder
+// AcMind Markdown Builder
 // Builds complete Markdown documents from DistilledOutput + SourceItem
 // Phase 0: Now reads templates from OutputSpecService (with fallback)
 
@@ -71,7 +71,7 @@ class MarkdownBuilder {
   }
 
   /**
-   * Build a Markdown document directly from PinMindStandardFields data.
+   * Build a Markdown document directly from AcMindStandardFields data.
    * Used by ContentPipelineService when we don't have DistilledOutput/SourceItem.
    */
   buildFromFields(
@@ -180,7 +180,7 @@ class MarkdownBuilder {
       output_id: distilledOutput.id,
       source_type: sourceItem.source,
       source_app: sourceItem.sourceApp ?? undefined,
-      writer_app: 'PinMind',
+      writer_app: 'AcMind',
       created: fields.captured_at,
       updated: now,
       source_url: sourceUrl,

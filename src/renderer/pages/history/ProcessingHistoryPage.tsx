@@ -527,7 +527,7 @@ function ContentPreviewDialog({
 
   const loadContent = useCallback(async () => {
     try {
-      const result = await window.pinmind.sourceItems.getContent(item.sourceItem.id);
+      const result = await window.acmind.sourceItems.getContent(item.sourceItem.id);
       if (result?.text) {
         setContent(result.text);
       } else if (result?.dataUrl) {
@@ -608,7 +608,7 @@ export function ProcessingHistoryPage(): JSX.Element {
   const handleOpenFile = useCallback(async (item: ProcessingHistoryItem) => {
     if (!item.exportRecord) return;
     try {
-      await window.pinmind.export.openFile(item.exportRecord.id);
+      await window.acmind.export.openFile(item.exportRecord.id);
     } catch {
       addToast('无法打开文件，请检查 Obsidian 仓库路径', 'error');
     }
@@ -619,15 +619,15 @@ export function ProcessingHistoryPage(): JSX.Element {
   }, []);
 
   const handleViewErrors = useCallback((item: ProcessingHistoryItem) => {
-    window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'errors' } }));
+    window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'errors' } }));
   }, []);
 
   const handleRetry = useCallback(async (item: ProcessingHistoryItem) => {
-    if (!window.pinmind?.retry || item.errors.length === 0) return;
+    if (!window.acmind?.retry || item.errors.length === 0) return;
     const latestError = item.errors[0];
     setRetryingId(latestError.error_id);
     try {
-      const result = await window.pinmind.retry.error(latestError.error_id);
+      const result = await window.acmind.retry.error(latestError.error_id);
       if (result.success) {
         addToast(result.user_message, 'success');
       } else {
@@ -652,13 +652,13 @@ export function ProcessingHistoryPage(): JSX.Element {
 
   // Phase 8: Regeneration handler
   const handleRegenerate = useCallback(async (item: ProcessingHistoryItem) => {
-    if (!window.pinmind?.pipeline?.regenerate) {
+    if (!window.acmind?.pipeline?.regenerate) {
       addToast('重新生成功能不可用', 'error');
       return;
     }
     setRegeneratingId(item.sourceItem.id);
     try {
-      const result = await window.pinmind.pipeline.regenerate(item.sourceItem.id, {
+      const result = await window.acmind.pipeline.regenerate(item.sourceItem.id, {
         regenerationTier: 'cloud_standard',
       });
       if (result?.success) {
@@ -679,7 +679,7 @@ export function ProcessingHistoryPage(): JSX.Element {
     if (!item.vkInfo?.external_job_id) return;
     setIngestingJobId(item.vkInfo.external_job_id);
     try {
-      const result = await window.pinmind.vk.manualIngest(item.vkInfo.external_job_id, item.sourceItem.originalId ?? undefined) as any;
+      const result = await window.acmind.vk.manualIngest(item.vkInfo.external_job_id, item.sourceItem.originalId ?? undefined) as any;
       if (result?.success) {
         addToast('手动回填完成', 'success');
       } else {
@@ -697,7 +697,7 @@ export function ProcessingHistoryPage(): JSX.Element {
   const handleResubmit = useCallback(async (item: ProcessingHistoryItem) => {
     if (!item.sourceItem.originalId) return;
     try {
-      const result = await window.pinmind.vk.resubmitJob(item.sourceItem.originalId) as any;
+      const result = await window.acmind.vk.resubmitJob(item.sourceItem.originalId) as any;
       if (result?.success) {
         addToast('重新提交成功', 'success');
       } else {
@@ -790,7 +790,7 @@ export function ProcessingHistoryPage(): JSX.Element {
               description="整理和入库的执行记录将显示在这里。"
               action={{
                 label: '去收集箱',
-                onClick: () => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'capture-inbox' })),
+                onClick: () => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: 'capture-inbox' })),
               }}
             />
           ) : (

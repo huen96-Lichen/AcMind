@@ -1,4 +1,4 @@
-// PinMind Clipboard Text Strategy
+// AcMind Clipboard Text Strategy
 // Phase 8.1: 复制来的文本片段
 
 import type { SourceType } from '../../../../shared/types';

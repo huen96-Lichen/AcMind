@@ -1,4 +1,4 @@
-// PinMind Unified Error Service (V2.1 Phase 6.1)
+// AcMind Unified Error Service (V2.1 Phase 6.1)
 // Centralized error recording, querying, and lifecycle management.
 // All critical failures across the pipeline are converted into ErrorRecords
 // and persisted to SQLite for user-facing error review and developer debugging.

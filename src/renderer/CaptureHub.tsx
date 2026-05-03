@@ -59,7 +59,7 @@ function CaptureHubVkBar(): JSX.Element {
     const intervalMs = 250;
     const begin = Date.now();
     while (Date.now() - begin <= timeoutMs) {
-      const recent = await window.pinmind.records.recent(12);
+      const recent = await window.acmind.records.recent(12);
       const target = recent.find((item) => item.type === 'image' && item.source === 'screenshot' && (item.createdAt ?? 0) >= startedAt - 1000);
       if (target) {
         return target;
@@ -71,7 +71,7 @@ function CaptureHubVkBar(): JSX.Element {
 
   const runCutoutQuickFlow = async () => {
     const startedAt = Date.now();
-    const selectionOk = await window.pinmind.capture.takeScreenshot();
+    const selectionOk = await window.acmind.capture.takeScreenshot();
     if (!selectionOk) {
       throw new Error('截图已取消');
     }
@@ -79,14 +79,14 @@ function CaptureHubVkBar(): JSX.Element {
     if (!screenshotRecord) {
       throw new Error('未找到本次截图记录，请重试');
     }
-    const cutout = await window.pinmind.cutout.processFromRecord(screenshotRecord.id);
-    const saved = await window.pinmind.cutout.saveAsRecord({
+    const cutout = await window.acmind.cutout.processFromRecord(screenshotRecord.id);
+    const saved = await window.acmind.cutout.saveAsRecord({
       recordId: screenshotRecord.id,
       dataUrl: cutout.dataUrl,
       fileNameSuggestion: cutout.fileNameSuggestion,
     });
     setFeedback({ ok: true, text: `抠图完成，已生成透明 PNG 并回写卡片` });
-    void window.pinmind.records.touch(saved.recordId);
+    void window.acmind.records.touch(saved.recordId);
   };
 
   const handleToolClick = (tool: VkQuickTool) => {
@@ -104,7 +104,7 @@ function CaptureHubVkBar(): JSX.Element {
       let result;
       switch (activeTool) {
         case 'convert':
-          result = await window.pinmind.vk.task.create({
+          result = await window.acmind.vk.task.create({
             type: 'convert',
             sourceType: 'file',
             sourcePath: inputValue.trim(),
@@ -112,7 +112,7 @@ function CaptureHubVkBar(): JSX.Element {
           });
           break;
         case 'image':
-          result = await window.pinmind.vk.task.create({
+          result = await window.acmind.vk.task.create({
             type: 'extract',
             sourceType: 'image_url',
             sourceUrl: inputValue.trim(),
@@ -120,7 +120,7 @@ function CaptureHubVkBar(): JSX.Element {
           });
           break;
         case 'pack':
-          result = await window.pinmind.vk.task.create({
+          result = await window.acmind.vk.task.create({
             type: 'extract',
             sourceType: 'folder',
             sourcePath: inputValue.trim(),
@@ -128,7 +128,7 @@ function CaptureHubVkBar(): JSX.Element {
           });
           break;
         case 'web':
-          result = await window.pinmind.vk.task.create({
+          result = await window.acmind.vk.task.create({
             type: 'extract',
             sourceType: 'url',
             sourceUrl: inputValue.trim(),
@@ -136,7 +136,7 @@ function CaptureHubVkBar(): JSX.Element {
           });
           break;
         case 'video':
-          result = await window.pinmind.vk.task.create({
+          result = await window.acmind.vk.task.create({
             type: 'transcribe',
             sourceType: 'video',
             sourcePath: inputValue.trim(),
@@ -331,7 +331,7 @@ export function CaptureHub(): JSX.Element {
     let cancelled = false;
 
     const loadRuntime = async () => {
-      const nextRuntime = await window.pinmind.settings.runtime.get();
+      const nextRuntime = await window.acmind.settings.runtime.get();
       if (cancelled) {
         return;
       }
@@ -341,7 +341,7 @@ export function CaptureHub(): JSX.Element {
     };
 
     const refreshRuntime = async () => {
-      const nextRuntime = await window.pinmind.settings.runtime.get();
+      const nextRuntime = await window.acmind.settings.runtime.get();
       if (cancelled) {
         return;
       }
@@ -350,7 +350,7 @@ export function CaptureHub(): JSX.Element {
     };
 
     const loadPermissions = async (source: PermissionCheckSource) => {
-      const permissions = await window.pinmind.permissions.getStatus(source);
+      const permissions = await window.acmind.permissions.getStatus(source);
       if (cancelled) {
         return;
       }
@@ -363,12 +363,12 @@ export function CaptureHub(): JSX.Element {
     // 页面加载时只检查一次权限
     void loadPermissions('capture-hub');
 
-    const unsubscribeHubShown = window.pinmind.capture.onHubShown(() => {
+    const unsubscribeHubShown = window.acmind.capture.onHubShown(() => {
       // Capture Hub 再次显示时只刷新运行时设置状态，不覆盖用户手动选择的截图模式
       void refreshRuntime();
     });
 
-    const unsubscribePermissionUpdate = window.pinmind.permissions.onStatusUpdated((snapshot) => {
+    const unsubscribePermissionUpdate = window.acmind.permissions.onStatusUpdated((snapshot) => {
       if (cancelled) {
         return;
       }
@@ -393,7 +393,7 @@ export function CaptureHub(): JSX.Element {
     : '尚未获取权限状态。';
 
   const refreshPermissionStatus = async (source: PermissionCheckSource = 'manual-refresh', traceId?: string) => {
-    const snapshot = await window.pinmind.permissions.refresh(source, traceId);
+    const snapshot = await window.acmind.permissions.refresh(source, traceId);
     setPermissionSnapshot(snapshot);
     setScreenPermission(snapshot.items?.find((item) => item.key === 'screenCapture') ?? null);
   };
@@ -406,7 +406,7 @@ export function CaptureHub(): JSX.Element {
 
     const reportHeight = () => {
       const rect = panel.getBoundingClientRect();
-      window.pinmind.capture.reportHubHeight(Math.ceil(rect.height + 16));
+      window.acmind.capture.reportHubHeight(Math.ceil(rect.height + 16));
     };
 
     reportHeight();
@@ -431,7 +431,7 @@ export function CaptureHub(): JSX.Element {
 
     const reportHeight = () => {
       const rect = panel.getBoundingClientRect();
-      window.pinmind.capture.reportHubHeight(Math.ceil(rect.height + 16));
+      window.acmind.capture.reportHubHeight(Math.ceil(rect.height + 16));
     };
 
     const fastTimer = window.setTimeout(reportHeight, 72);
@@ -446,7 +446,7 @@ export function CaptureHub(): JSX.Element {
   const startFreeCapture = async () => {
     setBusyAction('free');
     try {
-      await window.pinmind.capture.takeScreenshot();
+      await window.acmind.capture.takeScreenshot();
     } finally {
       setBusyAction(null);
     }
@@ -455,7 +455,7 @@ export function CaptureHub(): JSX.Element {
   const startFixedCapture = async (size: CaptureSizeOption) => {
     setBusyAction('fixed');
     try {
-      await window.pinmind.capture.takeFixedScreenshot(size);
+      await window.acmind.capture.takeFixedScreenshot(size);
     } finally {
       setBusyAction(null);
     }
@@ -492,7 +492,7 @@ export function CaptureHub(): JSX.Element {
       >
         <header className="pinstack-window-header drag-region -mx-5 -mt-3 mb-2 flex items-start justify-between gap-3 px-5 pb-2.5 pt-2.5">
           <div className="min-w-0 pl-0.5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--ps-text-tertiary)]">PinMind</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--ps-text-tertiary)]">AcMind</div>
             <h2 className="mt-0.5 text-[13px] font-semibold text-[color:var(--ps-text-primary)]">轻量截图工作面板</h2>
             <p className="mt-0.5 text-[10px] font-normal text-[color:var(--ps-text-secondary)]">{panelLabel}</p>
           </div>
@@ -545,7 +545,7 @@ export function CaptureHub(): JSX.Element {
                       type="button"
                       onClick={() => {
                         const traceId = crypto.randomUUID();
-                        void window.pinmind.permissions.openSettings('privacyScreenCapture', traceId);
+                        void window.acmind.permissions.openSettings('privacyScreenCapture', traceId);
                       }}
                       className="pinstack-btn pinstack-btn-secondary motion-button h-7 px-2 text-[10px]"
                     >
@@ -563,7 +563,7 @@ export function CaptureHub(): JSX.Element {
               </div>
             </div>
             <span className="pinstack-badge px-2 py-1 text-[10px]">PNG</span>
-            <PinStackIconButton icon="close" label="关闭截图面板" size="sm" tone="soft" onClick={() => void window.pinmind.capture.hideHub()} />
+            <PinStackIconButton icon="close" label="关闭截图面板" size="sm" tone="soft" onClick={() => void window.acmind.capture.hideHub()} />
           </div>
         </header>
 

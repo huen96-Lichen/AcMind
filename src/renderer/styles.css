@@ -514,7 +514,7 @@
     transform: translateY(-2px);
   }
 
-  .pinmind-page-title {
+  .acmind-page-title {
     font-size: var(--text-page-title);
     font-weight: var(--weight-title);
     line-height: 36px;
@@ -522,7 +522,7 @@
     color: var(--text-title);
   }
 
-  .pinmind-section-title {
+  .acmind-section-title {
     font-size: var(--text-section-title);
     font-weight: 650;
     line-height: 26px;
@@ -530,7 +530,7 @@
     color: var(--text-title);
   }
 
-  .pinmind-stat-number {
+  .acmind-stat-number {
     font-size: var(--text-card-number);
     font-weight: var(--weight-title);
     line-height: 32px;
@@ -538,21 +538,21 @@
     color: var(--text-title);
   }
 
-  .pinmind-list-title {
+  .acmind-list-title {
     font-size: var(--text-list-title);
     font-weight: var(--weight-semibold);
     line-height: 20px;
     color: var(--text-title);
   }
 
-  .pinmind-list-summary {
+  .acmind-list-summary {
     font-size: var(--text-caption);
     font-weight: var(--weight-regular);
     line-height: 18px;
     color: var(--text-muted);
   }
 
-  .pinmind-table-head {
+  .acmind-table-head {
     font-size: var(--text-micro);
     font-weight: var(--weight-medium);
     line-height: 16px;
@@ -561,7 +561,7 @@
     text-transform: uppercase;
   }
 
-  .pinmind-detail-title {
+  .acmind-detail-title {
     font-size: var(--text-section-title);
     font-weight: 650;
     line-height: 26px;
@@ -569,7 +569,7 @@
     color: var(--text-title);
   }
 
-  .pinmind-detail-empty {
+  .acmind-detail-empty {
     border-radius: var(--radius-lg);
     border: 1px solid color-mix(in srgb, var(--border-light) 90%, transparent);
     background: rgba(255, 255, 255, 0.74);
@@ -579,20 +579,20 @@
   }
 
   .motion-popover {
-    animation: pinmind-popover-in var(--motion-fast) var(--ease-decelerate) both;
+    animation: acmind-popover-in var(--motion-fast) var(--ease-decelerate) both;
     will-change: transform, opacity;
   }
 
   .motion-tooltip {
-    animation: pinmind-tooltip-in 150ms var(--ease-decelerate) both;
+    animation: acmind-tooltip-in 150ms var(--ease-decelerate) both;
   }
 
   .motion-toast-enter {
-    animation: pinmind-toast-enter var(--motion-slow) var(--ease-decelerate) both;
+    animation: acmind-toast-enter var(--motion-slow) var(--ease-decelerate) both;
   }
 
   .motion-toast-exit {
-    animation: pinmind-toast-exit var(--motion-base) var(--ease-accelerate) both;
+    animation: acmind-toast-exit var(--motion-base) var(--ease-accelerate) both;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -616,17 +616,17 @@
     border-radius: 999px;
   }
 
-  .pinmind-app-shell {
+  .acmind-app-shell {
     background: linear-gradient(180deg, rgba(251, 251, 252, 0.92), rgba(246, 247, 248, 0.96));
     transition: grid-template-columns 200ms ease;
   }
 
-  .pinmind-shell-main {
+  .acmind-shell-main {
     background: rgba(255, 253, 248, 0.88);
   }
 
   /* ===== Top Bar (product-grade global nav) ===== */
-  .pinmind-topbar {
+  .acmind-topbar {
     height: var(--pm-topbar-height, 64px);
     flex-shrink: 0;
     padding: 0 24px 0 80px; /* 80px for macOS traffic lights safe area */
@@ -639,7 +639,7 @@
   }
 
   /* Brand identity */
-  .pinmind-topbar-brand-icon {
+  .acmind-topbar-brand-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -650,27 +650,27 @@
     color: var(--pm-brand-primary, #F97316);
   }
 
-  .pinmind-topbar-brand-name {
+  .acmind-topbar-brand-name {
     font-size: 14px;
     font-weight: 700;
     color: var(--text-title);
     letter-spacing: -0.01em;
   }
 
-  .pinmind-topbar-separator {
+  .acmind-topbar-separator {
     font-size: 12px;
     color: var(--pm-text-disabled);
     margin: 0 1px;
   }
 
-  .pinmind-topbar-space-name {
+  .acmind-topbar-space-name {
     font-size: 12px;
     font-weight: 500;
     color: var(--text-body);
   }
 
   /* Status summary button */
-  .pinmind-status-summary-btn {
+  .acmind-status-summary-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -689,25 +689,25 @@
     white-space: nowrap;
   }
 
-  .pinmind-status-summary-btn:hover {
+  .acmind-status-summary-btn:hover {
     background: rgba(255, 255, 255, 0.78);
     border-color: color-mix(in srgb, var(--primary-border) 88%, transparent);
     box-shadow: 0 1px 4px rgba(31, 41, 51, 0.06);
   }
 
-  .pinmind-status-summary-dot {
+  .acmind-status-summary-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
-  .pinmind-status-summary-text {
+  .acmind-status-summary-text {
     line-height: 1;
   }
 
   /* Status popover */
-  .pinmind-status-popover {
+  .acmind-status-popover {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
@@ -722,10 +722,10 @@
     box-shadow:
       0 8px 32px rgba(120, 84, 32, 0.08),
       0 2px 8px rgba(120, 84, 32, 0.04);
-    animation: pinmind-popover-in 0.16s ease-out;
+    animation: acmind-popover-in 0.16s ease-out;
   }
 
-  @keyframes pinmind-popover-in {
+  @keyframes acmind-popover-in {
     from {
       opacity: 0;
       transform: translateY(-4px) scale(0.98);
@@ -736,7 +736,7 @@
     }
   }
 
-  .pinmind-status-popover-title {
+  .acmind-status-popover-title {
     font-size: 11px;
     font-weight: 600;
     color: var(--pm-text-tertiary);
@@ -747,13 +747,13 @@
     margin-bottom: 4px;
   }
 
-  .pinmind-status-popover-list {
+  .acmind-status-popover-list {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
 
-  .pinmind-status-popover-item {
+  .acmind-status-popover-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -764,11 +764,11 @@
     transition: background-color 0.12s ease;
   }
 
-  .pinmind-status-popover-item:hover {
+  .acmind-status-popover-item:hover {
     background: rgba(249, 115, 22, 0.04);
   }
 
-  .pinmind-status-popover-icon {
+  .acmind-status-popover-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -780,34 +780,34 @@
     flex-shrink: 0;
   }
 
-  .pinmind-status-popover-check {
+  .acmind-status-popover-check {
     background: #EAF8EF;
     color: #15803D;
   }
 
-  .pinmind-status-popover-warn {
+  .acmind-status-popover-warn {
     background: #FFF4D6;
     color: #B45309;
   }
 
-  .pinmind-status-popover-err {
+  .acmind-status-popover-err {
     background: #FEE2E2;
     color: #DC2626;
   }
 
-  .pinmind-status-popover-label {
+  .acmind-status-popover-label {
     flex: 1;
     min-width: 0;
     font-weight: 500;
   }
 
-  .pinmind-status-popover-detail {
+  .acmind-status-popover-detail {
     font-size: 11px;
     color: var(--pm-text-tertiary);
     flex-shrink: 0;
   }
 
-  .pinmind-status-popover-action {
+  .acmind-status-popover-action {
     font-size: 11px;
     font-weight: 500;
     color: var(--pm-brand-primary, #F97316);
@@ -820,24 +820,24 @@
     flex-shrink: 0;
   }
 
-  .pinmind-status-popover-action:hover {
+  .acmind-status-popover-action:hover {
     background: rgba(249, 115, 22, 0.1);
   }
 
   /* Topbar search area */
-  .pinmind-topbar-search-area {
+  .acmind-topbar-search-area {
     display: flex;
     justify-content: center;
     flex: 1;
     min-width: 0;
   }
 
-  .pinmind-topbar-search {
+  .acmind-topbar-search {
     width: 100%;
     max-width: 480px;
   }
 
-  .pinmind-topbar-search-input {
+  .acmind-topbar-search-input {
     height: 40px !important;
     width: 100% !important;
     border-radius: 14px !important;
@@ -848,13 +848,13 @@
     transition-property: border-color, background-color, box-shadow !important;
   }
 
-  .pinmind-topbar-search-input:focus {
+  .acmind-topbar-search-input:focus {
     border-color: rgba(255, 106, 26, 0.28) !important;
     background: rgba(255, 255, 255, 0.92) !important;
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.08) !important;
   }
 
-  .pinmind-topbar-search-kbd {
+  .acmind-topbar-search-kbd {
     position: absolute;
     right: 12px;
     font-size: 11px;
@@ -864,7 +864,7 @@
   }
 
   /* Topbar icon button */
-  .pinmind-topbar-icon-btn {
+  .acmind-topbar-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -880,13 +880,13 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-topbar-icon-btn:hover {
+  .acmind-topbar-icon-btn:hover {
     background: rgba(255, 106, 26, 0.06);
     color: var(--text-body);
   }
 
   /* Topbar avatar */
-  .pinmind-topbar-avatar {
+  .acmind-topbar-avatar {
     position: relative;
     display: flex;
     align-items: center;
@@ -904,25 +904,25 @@
     overflow: visible;
   }
 
-  .pinmind-topbar-avatar:hover {
+  .acmind-topbar-avatar:hover {
     box-shadow: 0 2px 8px rgba(17, 24, 39, 0.12);
     transform: translateY(-1px);
   }
 
-  .pinmind-topbar-avatar-letter {
+  .acmind-topbar-avatar-letter {
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
   }
 
-  .pinmind-topbar-avatar-logo {
+  .acmind-topbar-avatar-logo {
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
   }
 
-  .pinmind-topbar-avatar-badge {
+  .acmind-topbar-avatar-badge {
     position: absolute;
     top: -1px;
     right: -1px;
@@ -933,7 +933,7 @@
     border: 2px solid rgba(255, 250, 244, 0.9);
   }
 
-  .pinmind-runtime-bar {
+  .acmind-runtime-bar {
     height: var(--pm-bottombar-height, 38px);
     flex-shrink: 0;
     border-top: 1px solid color-mix(in srgb, var(--border-light) 84%, transparent);
@@ -944,26 +944,26 @@
     white-space: nowrap;
   }
 
-  .pinmind-inspector {
+  .acmind-inspector {
     min-width: 0;
     overflow: hidden;
   }
 
-  .pinmind-main-panel {
+  .acmind-main-panel {
     border-radius: var(--pm-radius-floating);
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 92%, transparent);
     background: rgba(255, 255, 255, 0.92);
     box-shadow: 0 10px 24px rgba(17, 24, 39, 0.05);
   }
 
-  .pinmind-window-page {
+  .acmind-window-page {
     height: 100%;
     width: 100%;
     padding: 20px;
     background: var(--main-bg);
   }
 
-  .pinmind-window-panel {
+  .acmind-window-panel {
     height: 100%;
     min-height: 0;
     border-radius: var(--pm-radius-floating);
@@ -976,14 +976,14 @@
     -webkit-backdrop-filter: blur(16px);
   }
 
-  .pinmind-window-header {
+  .acmind-window-header {
     border-bottom: 1px solid color-mix(in srgb, var(--border-light) 82%, transparent);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(251, 251, 252, 0.76));
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
 
-  .pinmind-panel {
+  .acmind-panel {
     border-radius: var(--pm-radius-floating);
     border: 1px solid var(--border-light);
     background: rgba(255, 255, 255, 0.9);
@@ -992,7 +992,7 @@
     -webkit-backdrop-filter: blur(18px);
   }
 
-  .pinmind-panel-soft {
+  .acmind-panel-soft {
     border-radius: var(--pm-radius-card);
     border: 1px solid color-mix(in srgb, var(--border-light) 88%, transparent);
     background: rgba(255, 255, 255, 0.84);
@@ -1001,7 +1001,7 @@
     -webkit-backdrop-filter: blur(14px);
   }
 
-  .pinmind-section-panel {
+  .acmind-section-panel {
     border-radius: var(--pm-radius-card);
     border: 1px solid color-mix(in srgb, var(--border-light) 88%, transparent);
     background: rgba(255, 255, 255, 0.9);
@@ -1010,20 +1010,20 @@
     -webkit-backdrop-filter: blur(18px);
   }
 
-  .pinmind-card-surface {
+  .acmind-card-surface {
     border-radius: var(--radius-l2);
     border: 1px solid var(--border-light);
     background: rgba(255, 255, 255, 0.9);
     box-shadow: var(--pm-shadow-card);
   }
 
-  .pinmind-card-surface.is-selected {
+  .acmind-card-surface.is-selected {
     border-color: rgba(255,106,26,0.32);
     background: #FFF1E8;
     box-shadow: inset 3px 0 0 #FF6A1A;
   }
 
-  .pinmind-toolbar-surface {
+  .acmind-toolbar-surface {
     border-radius: var(--pm-radius-card);
     border: 1px solid color-mix(in srgb, var(--border-light) 82%, transparent);
     background: rgba(255, 255, 255, 0.94);
@@ -1032,7 +1032,7 @@
     -webkit-backdrop-filter: blur(12px);
   }
 
-  .pinmind-btn {
+  .acmind-btn {
     border-radius: var(--pm-radius-button);
     min-height: 36px;
     display: inline-flex;
@@ -1049,19 +1049,19 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-btn-primary {
+  .acmind-btn-primary {
     border-color: var(--primary);
     background: var(--primary);
     color: #fff;
     box-shadow: var(--shadow-button);
   }
 
-  .pinmind-btn-primary:hover {
+  .acmind-btn-primary:hover {
     background: var(--primary-hover);
     box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
   }
 
-  .pinmind-btn-secondary {
+  .acmind-btn-secondary {
     border-color: var(--primary-border);
     background: rgba(255, 255, 255, 0.88);
     color: var(--text-title);
@@ -1069,28 +1069,28 @@
     border-radius: var(--pm-radius-button);
   }
 
-  .pinmind-btn-secondary:hover {
+  .acmind-btn-secondary:hover {
     background: #fff;
     border-color: var(--primary);
   }
 
-  .pinmind-btn-ghost {
+  .acmind-btn-ghost {
     border-color: transparent;
     background: rgba(255, 255, 255, 0);
     color: color-mix(in srgb, var(--pm-text-secondary) 90%, transparent);
     box-shadow: none;
   }
 
-  .pinmind-btn-ghost:hover {
+  .acmind-btn-ghost:hover {
     background: rgba(255, 255, 255, 0.9);
     color: color-mix(in srgb, var(--text-title) 82%, transparent);
   }
 
-  .pinmind-btn-danger {
+  .acmind-btn-danger {
     color: color-mix(in srgb, var(--pm-status-danger) 88%, #7f1d1d 12%);
   }
 
-  .pinmind-field {
+  .acmind-field {
     min-height: 36px;
     padding: 0 14px;
     border-radius: var(--pm-radius-input);
@@ -1106,18 +1106,18 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-field::placeholder {
+  .acmind-field::placeholder {
     color: var(--pm-text-placeholder, #B9C0CC);
   }
 
-  .pinmind-field:focus {
+  .acmind-field:focus {
     border-color: color-mix(in srgb, var(--primary) 36%, white 64%);
     background: rgba(255, 255, 255, 1);
     box-shadow:
       0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
   }
 
-  .pinmind-badge {
+  .acmind-badge {
     display: inline-flex;
     align-items: center;
     border-radius: var(--pm-radius-badge);
@@ -1128,37 +1128,37 @@
     line-height: 1.4;
   }
 
-  .pinmind-badge-pending {
+  .acmind-badge-pending {
     background: var(--pm-brand-soft);
     color: var(--pm-brand-text);
     border-color: var(--pm-brand-border);
   }
 
-  .pinmind-badge-processing {
+  .acmind-badge-processing {
     background: var(--pm-info-bg);
     color: var(--pm-info-text);
     border-color: var(--pm-info-border);
   }
 
-  .pinmind-badge-completed {
+  .acmind-badge-completed {
     background: var(--pm-success-bg);
     color: var(--pm-success-text);
     border-color: var(--pm-success-border);
   }
 
-  .pinmind-badge-failed {
+  .acmind-badge-failed {
     background: var(--pm-danger-bg);
     color: var(--pm-danger-text);
     border-color: var(--pm-danger-border);
   }
 
-  .pinmind-badge-mock {
+  .acmind-badge-mock {
     background: var(--pm-bg-subtle);
     color: var(--pm-text-secondary);
     border-color: var(--pm-border);
   }
 
-  .pinmind-dropdown-shell {
+  .acmind-dropdown-shell {
     border-radius: var(--radius-l2);
     border: 1px solid color-mix(in srgb, var(--border-light) 88%, transparent);
     background: rgba(255, 255, 255, 0.98);
@@ -1167,7 +1167,7 @@
     -webkit-backdrop-filter: blur(14px);
   }
 
-  .pinmind-dropdown-item {
+  .acmind-dropdown-item {
     min-height: 34px;
     border-radius: var(--radius-control);
     padding: 0 12px;
@@ -1178,13 +1178,13 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-dropdown-item:hover {
+  .acmind-dropdown-item:hover {
     background: rgba(255, 255, 255, 0.82);
     color: color-mix(in srgb, var(--pm-text-primary) 92%, transparent);
   }
 
   /* ===== Sidebar Nav Item — Warm Focus v2 ===== */
-  .pinmind-sidebar-item {
+  .acmind-sidebar-item {
     border-radius: 6px;
     border: 1px solid transparent;
     background: transparent;
@@ -1203,12 +1203,12 @@
     position: relative;
   }
 
-  .pinmind-sidebar-item:hover {
+  .acmind-sidebar-item:hover {
     background: var(--pm-bg-hover);
     color: var(--text-title);
   }
 
-  .pinmind-sidebar-item.is-active {
+  .acmind-sidebar-item.is-active {
     background: #FFF1E8;
     color: #ff6b2b;
     font-weight: 600;
@@ -1216,7 +1216,7 @@
   }
 
   /* Active left accent bar */
-  .pinmind-sidebar-item.is-active::before {
+  .acmind-sidebar-item.is-active::before {
     content: "";
     position: absolute;
     left: -8px;
@@ -1228,7 +1228,7 @@
     background: #ff6b2b;
   }
 
-  .pinmind-sidebar-icon {
+  .acmind-sidebar-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1238,16 +1238,16 @@
     transition: color 150ms ease;
   }
 
-  .pinmind-sidebar-item:hover .pinmind-sidebar-icon {
+  .acmind-sidebar-item:hover .acmind-sidebar-icon {
     color: var(--text-body);
   }
 
-  .pinmind-sidebar-icon.is-active {
+  .acmind-sidebar-icon.is-active {
     color: #ff6b2b;
   }
 
   /* ===== Sidebar Badge ===== */
-  .pinmind-sidebar-badge {
+  .acmind-sidebar-badge {
     min-width: 20px;
     height: 20px;
     padding: 0 6px;
@@ -1266,7 +1266,7 @@
   .badge-warning { background: #FFF4D6; color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); }
 
   /* ===== Sidebar User Card ===== */
-  .pinmind-user-card {
+  .acmind-user-card {
     min-height: 64px;
     height: 64px;
     padding: 12px;
@@ -1275,12 +1275,12 @@
     border: 1px solid var(--border-light);
     transition: background-color 150ms ease;
   }
-  .pinmind-user-card:hover {
+  .acmind-user-card:hover {
     background: rgba(255, 255, 255, 0.82);
   }
 
   /* ===== Sidebar AI Status Card ===== */
-  .pinmind-ai-status-card {
+  .acmind-ai-status-card {
     padding: 14px;
     border-radius: var(--pm-radius-card);
     background: rgba(255, 255, 255, 0.84);
@@ -1297,15 +1297,15 @@
     user-select: text;
   }
 
-  .pinmind-card-enter {
-    animation: pinmind-card-enter var(--motion-base) var(--ease-standard) both;
+  .acmind-card-enter {
+    animation: acmind-card-enter var(--motion-base) var(--ease-standard) both;
   }
 
-  .pinmind-card-leave {
-    animation: pinmind-card-leave var(--motion-base) var(--ease-accelerate) forwards;
+  .acmind-card-leave {
+    animation: acmind-card-leave var(--motion-base) var(--ease-accelerate) forwards;
   }
 
-  .pinmind-subpanel {
+  .acmind-subpanel {
     border-radius: var(--pm-radius-card);
     border: 1px solid color-mix(in srgb, var(--pm-border-default) 88%, transparent);
     background: rgba(255, 255, 255, 0.96);
@@ -1314,7 +1314,7 @@
     -webkit-backdrop-filter: blur(14px);
   }
 
-  .pinmind-subpanel-soft {
+  .acmind-subpanel-soft {
     border-radius: var(--pm-radius-card);
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 88%, transparent);
     background: rgba(251, 251, 250, 0.92);
@@ -1323,13 +1323,13 @@
     -webkit-backdrop-filter: blur(12px);
   }
 
-  .pinmind-subpanel-section {
+  .acmind-subpanel-section {
     border-radius: var(--pm-radius-input);
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 90%, transparent);
     background: rgba(255, 255, 255, 0.86);
   }
 
-  .pinmind-control {
+  .acmind-control {
     border-radius: var(--pm-radius-input);
     border: 1px solid color-mix(in srgb, var(--pm-border-default) 84%, transparent);
     background: rgba(255, 255, 255, 0.92);
@@ -1337,7 +1337,7 @@
     box-shadow: 0 1px 2px rgba(120, 84, 32, 0.03);
   }
 
-  .pinmind-control-quiet {
+  .acmind-control-quiet {
     border-radius: var(--pm-radius-input);
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 88%, transparent);
     background: rgba(251, 251, 250, 0.92);
@@ -1345,7 +1345,7 @@
     box-shadow: none;
   }
 
-  .pinmind-icon-button {
+  .acmind-icon-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1353,46 +1353,46 @@
     border: 1px solid transparent;
   }
 
-  .pinmind-icon-button-ghost {
+  .acmind-icon-button-ghost {
     background: transparent;
     color: color-mix(in srgb, var(--pm-text-secondary) 92%, transparent);
   }
 
-  .pinmind-icon-button-ghost:hover {
+  .acmind-icon-button-ghost:hover {
     background: rgba(255, 255, 255, 0.84);
     color: color-mix(in srgb, var(--pm-text-primary) 84%, transparent);
   }
 
-  .pinmind-icon-button-soft {
+  .acmind-icon-button-soft {
     border-color: color-mix(in srgb, var(--pm-border-subtle) 88%, transparent);
     background: rgba(255, 255, 255, 0.9);
     color: color-mix(in srgb, var(--pm-text-secondary) 92%, transparent);
   }
 
-  .pinmind-icon-button-soft:hover {
+  .acmind-icon-button-soft:hover {
     color: color-mix(in srgb, var(--pm-text-primary) 86%, transparent);
   }
 
-  .pinmind-icon-button-accent {
+  .acmind-icon-button-accent {
     border-color: color-mix(in srgb, var(--pm-brand-primary) 18%, transparent);
     background: color-mix(in srgb, var(--pm-brand-soft) 92%, white 8%);
     color: var(--pm-brand-primary);
   }
 
-  .pinmind-icon-button-accent:hover {
+  .acmind-icon-button-accent:hover {
     background: color-mix(in srgb, var(--pm-brand-soft) 88%, white 12%);
   }
 
-  .pinmind-icon-button-danger {
+  .acmind-icon-button-danger {
     background: rgba(201, 75, 75, 0.08);
     color: var(--pm-status-danger);
   }
 
-  .pinmind-icon-button-danger:hover {
+  .acmind-icon-button-danger:hover {
     background: rgba(201, 75, 75, 0.12);
   }
 
-  .pinmind-section-eyebrow {
+  .acmind-section-eyebrow {
     margin-bottom: 4px;
     font-size: 11px;
     font-weight: 600;
@@ -1401,14 +1401,14 @@
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-section-title {
+  .acmind-section-title {
     margin: 0;
     font-size: 16px;
     line-height: 1.16;
     color: color-mix(in srgb, var(--pm-text-primary) 94%, transparent);
   }
 
-  .pinmind-section-description {
+  .acmind-section-description {
     margin: 6px 0 0;
     font-size: 13px;
     line-height: 1.45;
@@ -1416,17 +1416,17 @@
   }
 
   /* Section Header (replaces eyebrow + title duplication) */
-  .pinmind-section-header {
+  .acmind-section-header {
     margin-bottom: 18px;
   }
-  .pinmind-section-header h3 {
+  .acmind-section-header h3 {
     margin: 0;
     font-size: 17px;
     line-height: 24px;
     font-weight: 650;
     color: var(--pm-text-primary);
   }
-  .pinmind-section-header p {
+  .acmind-section-header p {
     margin: 2px 0 0;
     font-size: 13px;
     line-height: 18px;
@@ -1434,13 +1434,13 @@
   }
 
   /* Field hint (e.g. character count) */
-  .pinmind-field-hint {
+  .acmind-field-hint {
     font-size: 12px;
     line-height: 16px;
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-field-label {
+  .acmind-field-label {
     display: block;
     font-size: 12px;
     font-weight: 600;
@@ -1448,7 +1448,7 @@
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-field-help {
+  .acmind-field-help {
     display: block;
     margin-top: 4px;
     font-size: 13px;
@@ -1459,14 +1459,14 @@
   /* ===== Settings Panel ===== */
 
   /* ── Settings Page Grid Layout ── */
-  .pinmind-settings-layout {
+  .acmind-settings-layout {
     display: grid;
     grid-template-columns: 220px 1fr;
     min-height: 100%;
   }
 
   /* ── Settings Sidebar ── */
-  .pinmind-settings-sidebar {
+  .acmind-settings-sidebar {
     display: flex;
     flex-direction: column;
     border-right: none;
@@ -1475,7 +1475,7 @@
     overflow: hidden;
   }
 
-  .pinmind-settings-nav {
+  .acmind-settings-nav {
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -1483,17 +1483,17 @@
     /* Hide scrollbar in nav, sidebar handles it */
     scrollbar-width: none;
   }
-  .pinmind-settings-nav::-webkit-scrollbar {
+  .acmind-settings-nav::-webkit-scrollbar {
     display: none;
   }
 
   /* ── Settings Content Area ── */
-  .pinmind-settings-content {
+  .acmind-settings-content {
     min-width: 0;
     background: var(--pm-bg-app, #FAFAF9);
   }
 
-  .pinmind-settings-content-inner {
+  .acmind-settings-content-inner {
     width: 100%;
     max-width: 840px;
     padding: 16px 28px 120px;
@@ -1692,7 +1692,7 @@
     cursor: pointer;
   }
 
-  .pinmind-field-select {
+  .acmind-field-select {
     appearance: none;
     -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23918c84' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
@@ -1777,7 +1777,7 @@
   }
 
   /* ===== Inbox Layout ===== */
-  .pinmind-inbox-layout {
+  .acmind-inbox-layout {
     display: flex;
     flex-direction: row;
     height: 100%;
@@ -1786,7 +1786,7 @@
     overflow: hidden;
   }
 
-  .pinmind-inbox-list {
+  .acmind-inbox-list {
     width: 400px;
     min-width: 320px;
     max-width: 480px;
@@ -1797,12 +1797,12 @@
     flex-shrink: 0;
   }
 
-  .pinmind-inbox-list-scroll {
+  .acmind-inbox-list-scroll {
     flex: 1;
     min-height: 0;
   }
 
-  .pinmind-inbox-count {
+  .acmind-inbox-count {
     padding: 6px 14px 4px;
     font-size: 11px;
     font-weight: 500;
@@ -1810,7 +1810,7 @@
     border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 50%, transparent);
   }
 
-  .pinmind-inbox-detail {
+  .acmind-inbox-detail {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -1818,13 +1818,13 @@
     background: rgba(255, 255, 255, 0.4);
   }
 
-  .pinmind-detail-empty {
+  .acmind-detail-empty {
     align-items: center;
     justify-content: center;
   }
 
   /* ===== Filter Bar ===== */
-  .pinmind-filter-bar {
+  .acmind-filter-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1833,7 +1833,7 @@
     border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 60%, transparent);
   }
 
-  .pinmind-filter-btn {
+  .acmind-filter-btn {
     border-radius: 12px;
     border: 1px solid transparent;
     background: transparent;
@@ -1850,12 +1850,12 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-filter-btn:hover {
+  .acmind-filter-btn:hover {
     background: rgba(255, 255, 255, 0.72);
     color: color-mix(in srgb, var(--pm-text-primary) 82%, transparent);
   }
 
-  .pinmind-filter-btn.is-active {
+  .acmind-filter-btn.is-active {
     background: color-mix(in srgb, var(--pm-brand-soft) 88%, white 12%);
     border-color: color-mix(in srgb, var(--pm-brand-primary) 16%, transparent);
     color: var(--pm-brand-primary);
@@ -1863,20 +1863,20 @@
   }
 
   /* ===== Search Input ===== */
-  .pinmind-search-wrapper {
+  .acmind-search-wrapper {
     position: relative;
     display: flex;
     align-items: center;
   }
 
-  .pinmind-search-icon {
+  .acmind-search-icon {
     position: absolute;
     left: 8px;
     color: var(--pm-text-tertiary);
     pointer-events: none;
   }
 
-  .pinmind-search-input {
+  .acmind-search-input {
     height: 36px;
     width: 140px;
     border-radius: var(--pm-radius-input);
@@ -1891,11 +1891,11 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-search-input::placeholder {
+  .acmind-search-input::placeholder {
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-search-input:focus {
+  .acmind-search-input:focus {
     border-color: color-mix(in srgb, var(--pm-brand-primary) 36%, white 64%);
     background: rgba(255, 255, 255, 1);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-primary) 14%, transparent);
@@ -2252,7 +2252,7 @@
   }
 
   /* ===== Source Item Card ===== */
-  .pinmind-source-card {
+  .acmind-source-card {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -2268,26 +2268,26 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-source-card:hover {
+  .acmind-source-card:hover {
     background: rgba(255, 255, 255, 0.92);
     border-color: color-mix(in srgb, var(--pm-border-default) 72%, transparent);
     box-shadow: 0 2px 8px rgba(120, 84, 32, 0.04);
   }
 
-  .pinmind-source-card.is-selected {
+  .acmind-source-card.is-selected {
     background: color-mix(in srgb, var(--pm-brand-soft) 80%, white 20%);
     border-color: color-mix(in srgb, var(--pm-brand-primary) 22%, transparent);
     box-shadow: 0 4px 12px rgba(249, 115, 22, 0.08);
   }
 
-  .pinmind-source-card-header {
+  .acmind-source-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
 
-  .pinmind-source-card-app {
+  .acmind-source-card-app {
     font-size: 11px;
     font-weight: 500;
     color: var(--pm-text-secondary);
@@ -2297,22 +2297,22 @@
     white-space: nowrap;
   }
 
-  .pinmind-type-badge {
+  .acmind-type-badge {
     font-size: 10px;
     padding: 2px 6px;
   }
 
-  .pinmind-source-card-time {
+  .acmind-source-card-time {
     font-size: 10px;
     color: var(--pm-text-tertiary);
     white-space: nowrap;
   }
 
-  .pinmind-source-card-body {
+  .acmind-source-card-body {
     min-height: 0;
   }
 
-  .pinmind-source-card-text {
+  .acmind-source-card-text {
     margin: 0;
     font-size: 12px;
     line-height: 1.5;
@@ -2324,12 +2324,12 @@
     word-break: break-word;
   }
 
-  .pinmind-source-card-thumbnail-wrapper {
+  .acmind-source-card-thumbnail-wrapper {
     display: flex;
     align-items: center;
   }
 
-  .pinmind-source-card-thumbnail-placeholder {
+  .acmind-source-card-thumbnail-placeholder {
     display: flex;
     align-items: center;
     padding: 6px 8px;
@@ -2344,7 +2344,7 @@
   /* ===== Image Source Card (distinct visual treatment) ===== */
 
   /* Image card layout: horizontal flex with thumbnail + content + badges */
-  .pinmind-image-card-layout {
+  .acmind-image-card-layout {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -2352,7 +2352,7 @@
   }
 
   /* Image card warm gradient background */
-  .pinmind-image-card {
+  .acmind-image-card {
     background: linear-gradient(
       135deg,
       rgba(255, 248, 241, 0.88),
@@ -2362,7 +2362,7 @@
     padding: 10px 12px;
   }
 
-  .pinmind-image-card:hover {
+  .acmind-image-card:hover {
     background: linear-gradient(
       135deg,
       rgba(255, 244, 232, 0.94),
@@ -2372,7 +2372,7 @@
     box-shadow: 0 4px 16px rgba(120, 72, 24, 0.06);
   }
 
-  .pinmind-image-card.is-selected {
+  .acmind-image-card.is-selected {
     background: linear-gradient(
       135deg,
       rgba(255, 239, 224, 0.96),
@@ -2383,12 +2383,12 @@
   }
 
   /* Text card explicit style (keeps clean white look) */
-  .pinmind-text-card {
+  .acmind-text-card {
     background: rgba(255, 255, 255, 0.7);
   }
 
   /* Thumbnail */
-  .pinmind-image-card-thumbnail {
+  .acmind-image-card-thumbnail {
     width: 56px;
     height: 56px;
     border-radius: 14px;
@@ -2398,7 +2398,7 @@
     flex-shrink: 0;
   }
 
-  .pinmind-image-card-thumbnail-fallback {
+  .acmind-image-card-thumbnail-fallback {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2411,7 +2411,7 @@
   }
 
   /* Content area next to thumbnail */
-  .pinmind-image-card-content {
+  .acmind-image-card-content {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -2419,14 +2419,14 @@
     gap: 2px;
   }
 
-  .pinmind-image-card-title-row {
+  .acmind-image-card-title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
 
-  .pinmind-image-card-title {
+  .acmind-image-card-title {
     font-size: 13px;
     font-weight: 600;
     color: var(--pm-text-primary);
@@ -2435,7 +2435,7 @@
     text-overflow: ellipsis;
   }
 
-  .pinmind-image-card-subtitle {
+  .acmind-image-card-subtitle {
     font-size: 11px;
     color: var(--pm-text-tertiary);
     white-space: nowrap;
@@ -2443,7 +2443,7 @@
     text-overflow: ellipsis;
   }
 
-  .pinmind-image-card-path {
+  .acmind-image-card-path {
     font-size: 10px;
     font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
     color: var(--pm-text-quaternary, rgba(107, 114, 128, 0.6));
@@ -2454,7 +2454,7 @@
   }
 
   /* Badges column */
-  .pinmind-image-card-badges {
+  .acmind-image-card-badges {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -2464,7 +2464,7 @@
 
   /* ===== Media Type Badges ===== */
 
-  .pinmind-media-badge {
+  .acmind-media-badge {
     display: inline-flex;
     align-items: center;
     height: 22px;
@@ -2477,28 +2477,28 @@
   }
 
   /* Image media badge (warm orange) */
-  .pinmind-media-badge-image {
+  .acmind-media-badge-image {
     color: #9a4f12;
     background: rgba(255, 122, 26, 0.10);
     border: 1px solid rgba(255, 122, 26, 0.16);
   }
 
   /* Status badge for image cards (warm) */
-  .pinmind-media-badge-status {
+  .acmind-media-badge-status {
     color: #7c3aed;
     background: rgba(124, 58, 237, 0.08);
     border: 1px solid rgba(124, 58, 237, 0.14);
   }
 
   /* Text media badge (cool gray-blue) */
-  .pinmind-media-badge-text {
+  .acmind-media-badge-text {
     color: #526173;
     background: rgba(88, 112, 140, 0.08);
     border: 1px solid rgba(88, 112, 140, 0.12);
   }
 
   /* Status badge for text cards (cool) */
-  .pinmind-media-badge-status-text {
+  .acmind-media-badge-status-text {
     color: #6b7280;
     background: rgba(107, 114, 128, 0.06);
     border: 1px solid rgba(107, 114, 128, 0.10);
@@ -2506,13 +2506,13 @@
 
   /* ===== Detail Panel: Image Preview ===== */
 
-  .pinmind-detail-image-section {
+  .acmind-detail-image-section {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
 
-  .pinmind-detail-image-preview-area {
+  .acmind-detail-image-preview-area {
     width: 100%;
     max-height: 280px;
     border-radius: 18px;
@@ -2531,14 +2531,14 @@
     min-height: 120px;
   }
 
-  .pinmind-detail-image-preview-img {
+  .acmind-detail-image-preview-img {
     width: 100%;
     max-height: 280px;
     object-fit: contain;
     display: block;
   }
 
-  .pinmind-detail-image-loading {
+  .acmind-detail-image-loading {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2547,21 +2547,21 @@
     padding: 40px 20px;
   }
 
-  .pinmind-detail-image-loading-spinner {
+  .acmind-detail-image-loading-spinner {
     display: inline-block;
     width: 20px;
     height: 20px;
     border: 2px solid rgba(120, 96, 72, 0.15);
     border-top-color: rgba(232, 132, 54, 0.6);
     border-radius: 50%;
-    animation: pinmind-spin 0.8s linear infinite;
+    animation: acmind-spin 0.8s linear infinite;
   }
 
-  @keyframes pinmind-spin {
+  @keyframes acmind-spin {
     to { transform: rotate(360deg); }
   }
 
-  .pinmind-detail-image-error {
+  .acmind-detail-image-error {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2571,7 +2571,7 @@
   }
 
   /* File info section below image preview */
-  .pinmind-detail-image-fileinfo {
+  .acmind-detail-image-fileinfo {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -2581,13 +2581,13 @@
     border: 1px solid rgba(120, 96, 72, 0.08);
   }
 
-  .pinmind-detail-image-fileinfo-row {
+  .acmind-detail-image-fileinfo-row {
     display: flex;
     align-items: baseline;
     gap: 10px;
   }
 
-  .pinmind-detail-image-fileinfo-label {
+  .acmind-detail-image-fileinfo-label {
     font-size: 11px;
     font-weight: 500;
     color: var(--pm-text-tertiary);
@@ -2595,14 +2595,14 @@
     flex-shrink: 0;
   }
 
-  .pinmind-detail-image-fileinfo-value {
+  .acmind-detail-image-fileinfo-value {
     font-size: 11px;
     color: var(--pm-text-secondary);
     word-break: break-all;
     user-select: text;
   }
 
-  .pinmind-detail-path-toggle {
+  .acmind-detail-path-toggle {
     background: none;
     border: none;
     color: var(--pm-brand-primary);
@@ -2612,11 +2612,11 @@
     font-weight: 500;
   }
 
-  .pinmind-detail-path-toggle:hover {
+  .acmind-detail-path-toggle:hover {
     text-decoration: underline;
   }
 
-  .pinmind-detail-full-path {
+  .acmind-detail-full-path {
     display: block;
     margin-top: 4px;
     font-size: 10px;
@@ -2627,12 +2627,12 @@
   }
 
   /* ===== Detail Panel ===== */
-  .pinmind-detail-section {
+  .acmind-detail-section {
     border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 50%, transparent);
     padding-bottom: 16px;
   }
 
-  .pinmind-detail-content-text {
+  .acmind-detail-content-text {
     font-size: 13px;
     line-height: 1.65;
     white-space: pre-wrap;
@@ -2644,14 +2644,14 @@
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 50%, transparent);
   }
 
-  .pinmind-detail-image-preview {
+  .acmind-detail-image-preview {
     border-radius: var(--radius-l3);
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 60%, transparent);
     background: color-mix(in srgb, var(--pm-bg-subtle) 40%, transparent);
   }
 
-  .pinmind-detail-image-placeholder {
+  .acmind-detail-image-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2660,19 +2660,19 @@
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-detail-meta-grid {
+  .acmind-detail-meta-grid {
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
 
-  .pinmind-detail-meta-row {
+  .acmind-detail-meta-row {
     display: flex;
     align-items: baseline;
     gap: 12px;
   }
 
-  .pinmind-detail-meta-label {
+  .acmind-detail-meta-label {
     font-size: 11px;
     font-weight: 500;
     color: var(--pm-text-tertiary);
@@ -2680,7 +2680,7 @@
     flex-shrink: 0;
   }
 
-  .pinmind-detail-meta-value {
+  .acmind-detail-meta-value {
     font-size: 12px;
     color: var(--pm-text-primary);
     user-select: text;
@@ -2688,7 +2688,7 @@
   }
 }
 
-@keyframes pinmind-card-enter {
+@keyframes acmind-card-enter {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -2700,7 +2700,7 @@
   }
 }
 
-@keyframes pinmind-card-leave {
+@keyframes acmind-card-leave {
   from {
     opacity: 1;
     transform: scale(1);
@@ -2713,7 +2713,7 @@
 }
 
 /* P2: AI processing breathing animation */
-@keyframes pinmind-pulse-glow {
+@keyframes acmind-pulse-glow {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
   }
@@ -2722,7 +2722,7 @@
   }
 }
 
-@keyframes pinmind-pulse-dot {
+@keyframes acmind-pulse-dot {
   0%, 100% {
     opacity: 1;
   }
@@ -2732,7 +2732,7 @@
 }
 
 /* P2: Inspector panel slide-in */
-@keyframes pinmind-panel-slide-in {
+@keyframes acmind-panel-slide-in {
   from {
     opacity: 0;
     transform: translateX(12px);
@@ -2744,7 +2744,7 @@
 }
 
 /* P2: Stat card count-up shimmer */
-@keyframes pinmind-shimmer {
+@keyframes acmind-shimmer {
   0% {
     background-position: -200% 0;
   }
@@ -2754,32 +2754,32 @@
 }
 
 /* P2: Status badge pulse for "running" state */
-.pinmind-status-running-pulse {
-  animation: pinmind-pulse-glow 2s ease-in-out infinite;
+.acmind-status-running-pulse {
+  animation: acmind-pulse-glow 2s ease-in-out infinite;
 }
 
-.pinmind-status-dot-pulse {
-  animation: pinmind-pulse-dot 1.5s ease-in-out infinite;
+.acmind-status-dot-pulse {
+  animation: acmind-pulse-dot 1.5s ease-in-out infinite;
 }
 
 /* P2: Inspector panel entrance */
-.pinmind-inspector-enter {
-  animation: pinmind-panel-slide-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.acmind-inspector-enter {
+  animation: acmind-panel-slide-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* P2: Card hover micro-interaction enhancement */
-.pinmind-capture-card {
+.acmind-capture-card {
   will-change: transform, box-shadow;
 }
 
 /* P2: Stat card shimmer loading effect */
-.pinmind-stat-shimmer {
+.acmind-stat-shimmer {
   background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.6) 50%, transparent 75%);
   background-size: 200% 100%;
-  animation: pinmind-shimmer 1.5s ease-in-out infinite;
+  animation: acmind-shimmer 1.5s ease-in-out infinite;
 }
 
-@keyframes pinmind-popover-in {
+@keyframes acmind-popover-in {
   from {
     opacity: 0;
     transform: translateY(4px) scale(0.98);
@@ -2791,7 +2791,7 @@
   }
 }
 
-@keyframes pinmind-tooltip-in {
+@keyframes acmind-tooltip-in {
   from {
     opacity: 0;
     transform: translateY(3px);
@@ -2803,7 +2803,7 @@
   }
 }
 
-@keyframes pinmind-toast-enter {
+@keyframes acmind-toast-enter {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -2815,7 +2815,7 @@
   }
 }
 
-@keyframes pinmind-toast-exit {
+@keyframes acmind-toast-exit {
   from {
     opacity: 1;
     transform: translateY(0);
@@ -2829,7 +2829,7 @@
 
 @layer components {
   /* ===== Tab Bar ===== */
-  .pinmind-tab-bar {
+  .acmind-tab-bar {
     display: flex;
     align-items: center;
     gap: 0;
@@ -2841,7 +2841,7 @@
     flex-shrink: 0;
   }
 
-  .pinmind-tab-item {
+  .acmind-tab-item {
     padding: 8px 14px;
     font-size: 13px;
     font-weight: 500;
@@ -2855,19 +2855,19 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-tab-item:hover {
+  .acmind-tab-item:hover {
     color: color-mix(in srgb, var(--pm-text-primary) 82%, transparent);
     background: rgba(255, 255, 255, 0.5);
   }
 
-  .pinmind-tab-item.active {
+  .acmind-tab-item.active {
     color: var(--pm-brand-primary);
     border-bottom-color: var(--pm-brand-primary);
     background: color-mix(in srgb, var(--pm-brand-soft) 68%, white 32%);
   }
 
   /* ===== Provider Card ===== */
-  .pinmind-provider-card {
+  .acmind-provider-card {
     border-radius: var(--radius-lg);
     border: 1px solid color-mix(in srgb, var(--pm-border-default) 78%, transparent);
     background: rgba(255, 255, 255, 0.78);
@@ -2884,25 +2884,25 @@
     overflow: hidden;
   }
 
-  .pinmind-provider-card.is-disabled {
+  .acmind-provider-card.is-disabled {
     opacity: 0.55;
     pointer-events: none;
   }
 
-  .pinmind-provider-card-header {
+  .acmind-provider-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
 
-  .pinmind-provider-card-body {
+  .acmind-provider-card-body {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
 
-  .pinmind-provider-card-actions {
+  .acmind-provider-card-actions {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -2914,13 +2914,13 @@
     min-height: 32px;
   }
 
-  .pinmind-provider-card-actions .pinmind-btn {
+  .acmind-provider-card-actions .acmind-btn {
     white-space: nowrap;
     flex-shrink: 0;
   }
 
   /* ===== Task Queue Row ===== */
-  .pinmind-task-row {
+  .acmind-task-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2934,13 +2934,13 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-task-row:hover {
+  .acmind-task-row:hover {
     background: rgba(255, 255, 255, 0.9);
     border-color: color-mix(in srgb, var(--pm-border-default) 72%, transparent);
   }
 
   /* ===== Status Badge ===== */
-  .pinmind-status-badge {
+  .acmind-status-badge {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
@@ -2973,7 +2973,7 @@
   .status-obsidian { color: #6d28d9; background: #f3eefe; }
 
   /* ===== Distill Compare Layout ===== */
-  .pinmind-distill-compare {
+  .acmind-distill-compare {
     display: flex;
     flex-direction: row;
     gap: 0;
@@ -2987,12 +2987,12 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-distill-compare:hover {
+  .acmind-distill-compare:hover {
     box-shadow: 0 12px 28px rgba(120, 84, 32, 0.07);
   }
 
   /* ===== Export History Row ===== */
-  .pinmind-export-row {
+  .acmind-export-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3006,20 +3006,20 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-export-row:hover {
+  .acmind-export-row:hover {
     background: rgba(255, 255, 255, 0.92);
     border-color: color-mix(in srgb, var(--pm-border-default) 78%, transparent);
   }
 
   /* ===== Vault Config Form ===== */
-  .pinmind-vault-config {
+  .acmind-vault-config {
     display: flex;
     flex-direction: column;
     gap: 16px;
   }
 
   /* ===== Log Viewer ===== */
-  .pinmind-log-viewer {
+  .acmind-log-viewer {
     font-family: 'SF Mono', 'Fira Code', 'Menlo', 'Consolas', monospace;
     font-size: 11px;
     line-height: 1.6;
@@ -3034,18 +3034,18 @@
     word-break: break-all;
   }
 
-  .pinmind-log-line {
+  .acmind-log-line {
     padding: 1px 0;
   }
 
-  .pinmind-log-line:hover {
+  .acmind-log-line:hover {
     background: rgba(255, 255, 255, 0.4);
   }
 
   /* ===== Capture Inbox v0.1 ===== */
 
   /* Shared form elements */
-  .pinmind-input {
+  .acmind-input {
     border-radius: var(--radius-control);
     height: var(--pm-control-height);
     border: 1px solid color-mix(in srgb, var(--pm-border-default) 84%, transparent);
@@ -3059,17 +3059,17 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-input::placeholder {
+  .acmind-input::placeholder {
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-input:focus {
+  .acmind-input:focus {
     border-color: color-mix(in srgb, var(--pm-brand-primary) 36%, white 64%);
     background: rgba(255, 255, 255, 1);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-primary) 14%, transparent);
   }
 
-  .pinmind-textarea {
+  .acmind-textarea {
     border-radius: var(--radius-control);
     border: 1px solid color-mix(in srgb, var(--pm-border-default) 84%, transparent);
     background: rgba(255, 255, 255, 0.96);
@@ -3084,18 +3084,18 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-textarea::placeholder {
+  .acmind-textarea::placeholder {
     color: var(--pm-text-tertiary);
   }
 
-  .pinmind-textarea:focus {
+  .acmind-textarea:focus {
     border-color: color-mix(in srgb, var(--pm-brand-primary) 36%, white 64%);
     background: rgba(255, 255, 255, 1);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-primary) 14%, transparent);
   }
 
   /* Capture Inbox layout */
-  .pinmind-capture-inbox-layout {
+  .acmind-capture-inbox-layout {
     display: flex;
     flex-direction: row;
     height: 100%;
@@ -3104,7 +3104,7 @@
     overflow: hidden;
   }
 
-  .pinmind-capture-inbox-list {
+  .acmind-capture-inbox-list {
     width: 420px;
     min-width: 340px;
     max-width: 500px;
@@ -3115,7 +3115,7 @@
     flex-shrink: 0;
   }
 
-  .pinmind-capture-inbox-toolbar {
+  .acmind-capture-inbox-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3123,7 +3123,7 @@
     border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 50%, transparent);
   }
 
-  .pinmind-capture-inbox-filter {
+  .acmind-capture-inbox-filter {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -3132,7 +3132,7 @@
     overflow-x: auto;
   }
 
-  .pinmind-capture-inbox-count {
+  .acmind-capture-inbox-count {
     padding: 6px 14px 4px;
     font-size: 11px;
     font-weight: 500;
@@ -3140,12 +3140,12 @@
     border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 50%, transparent);
   }
 
-  .pinmind-capture-inbox-list-scroll {
+  .acmind-capture-inbox-list-scroll {
     flex: 1;
     min-height: 0;
   }
 
-  .pinmind-capture-inbox-detail-wrapper {
+  .acmind-capture-inbox-detail-wrapper {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -3154,7 +3154,7 @@
   }
 
   /* Capture Item Card — Product-grade redesign */
-  .pinmind-capture-card {
+  .acmind-capture-card {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -3172,33 +3172,33 @@
     transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .pinmind-capture-card:hover {
+  .acmind-capture-card:hover {
     background: var(--pm-bg-card-hover);
     border-color: var(--pm-border-strong);
     box-shadow: 0 4px 16px rgba(120, 84, 32, 0.06);
     transform: translateY(-1px);
   }
 
-  .pinmind-capture-card.is-selected {
+  .acmind-capture-card.is-selected {
     background: var(--pm-bg-selected);
     border-color: var(--pm-primary-border);
     box-shadow: 0 4px 16px rgba(255, 106, 26, 0.08);
   }
 
-  .pinmind-capture-card-header {
+  .acmind-capture-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
 
-  .pinmind-capture-card-body {
+  .acmind-capture-card-body {
     font-size: 12px;
     line-height: 1.5;
     color: var(--pm-text-secondary);
   }
 
-  .pinmind-capture-card-text {
+  .acmind-capture-card-text {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -3206,7 +3206,7 @@
     text-overflow: ellipsis;
   }
 
-  .pinmind-capture-card-footer {
+  .acmind-capture-card-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3215,7 +3215,7 @@
   }
 
   /* Capture Item Detail */
-  .pinmind-capture-detail {
+  .acmind-capture-detail {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -3224,7 +3224,7 @@
   }
 
   /* Dialog overlay */
-  .pinmind-dialog-overlay {
+  .acmind-dialog-overlay {
     position: fixed;
     inset: 0;
     z-index: 50;
@@ -3236,7 +3236,7 @@
     -webkit-backdrop-filter: blur(4px);
   }
 
-  .pinmind-dialog {
+  .acmind-dialog {
     width: 480px;
     max-width: 90vw;
     max-height: 85vh;
@@ -3534,7 +3534,7 @@
   }
 
   /* ===== Status Capsule (product-ization) ===== */
-  .pinmind-status-capsule {
+  .acmind-status-capsule {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -3552,36 +3552,36 @@
     white-space: nowrap;
   }
 
-  .pinmind-status-capsule:hover {
+  .acmind-status-capsule:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
-  .pinmind-status-capsule.tone-success {
+  .acmind-status-capsule.tone-success {
     background: #EAF8EF;
     color: #15803D;
     border-color: rgba(22, 163, 74, 0.16);
   }
 
-  .pinmind-status-capsule.tone-warning {
+  .acmind-status-capsule.tone-warning {
     background: #FFF4D6;
     color: #B45309;
     border-color: rgba(245, 158, 11, 0.22);
   }
 
-  .pinmind-status-capsule.tone-danger {
+  .acmind-status-capsule.tone-danger {
     background: var(--pm-capsule-danger-bg);
     color: var(--pm-danger-text);
     border-color: var(--pm-capsule-danger-border);
   }
 
-  .pinmind-status-capsule.tone-neutral {
+  .acmind-status-capsule.tone-neutral {
     background: var(--pm-capsule-neutral-bg);
     color: var(--pm-text-secondary);
     border-color: var(--pm-capsule-neutral-border);
   }
 
-  .pinmind-status-capsule-dot {
+  .acmind-status-capsule-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -3589,7 +3589,7 @@
   }
 
   /* ===== Sidebar Group Label ===== */
-  .pinmind-sidebar-group-label {
+  .acmind-sidebar-group-label {
     padding: 12px 10px 4px;
     font-size: 10px;
     font-weight: 600;
@@ -3600,15 +3600,15 @@
   }
 
   /* ===== Runtime Bar Expand/Collapse ===== */
-  .pinmind-runtime-bar.is-collapsed {
+  .acmind-runtime-bar.is-collapsed {
     height: var(--pm-runtime-collapsed-height);
   }
 
-  .pinmind-runtime-bar.is-expanded {
+  .acmind-runtime-bar.is-expanded {
     height: var(--pm-runtime-expanded-height);
   }
 
-  .pinmind-runtime-expand-btn {
+  .acmind-runtime-expand-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3623,13 +3623,13 @@
     transition-duration: var(--motion-fast);
   }
 
-  .pinmind-runtime-expand-btn:hover {
+  .acmind-runtime-expand-btn:hover {
     background: var(--pm-bg-hover);
     color: var(--pm-text-secondary);
   }
 
   /* ===== Export Card ===== */
-  .pinmind-export-card {
+  .acmind-export-card {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -3644,20 +3644,20 @@
     transition-timing-function: var(--ease-standard);
   }
 
-  .pinmind-export-card:hover {
+  .acmind-export-card:hover {
     background: rgba(255, 255, 255, 0.96);
     border-color: color-mix(in srgb, var(--pm-border-default) 72%, transparent);
     box-shadow: 0 4px 12px rgba(120, 84, 32, 0.06);
   }
 
-  .pinmind-export-card.is-selected {
+  .acmind-export-card.is-selected {
     background: color-mix(in srgb, var(--pm-brand-soft) 80%, white 20%);
     border-color: color-mix(in srgb, var(--pm-brand-primary) 22%, transparent);
     box-shadow: 0 4px 12px rgba(249, 115, 22, 0.08);
   }
 
   /* ===== Onboarding Step ===== */
-  .pinmind-onboarding-step {
+  .acmind-onboarding-step {
     display: flex;
     align-items: flex-start;
     gap: 14px;
@@ -3669,11 +3669,11 @@
     transition-duration: var(--motion-base);
   }
 
-  .pinmind-onboarding-step:hover {
+  .acmind-onboarding-step:hover {
     background: rgba(255, 255, 255, 0.96);
   }
 
-  .pinmind-onboarding-step-number {
+  .acmind-onboarding-step-number {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3688,34 +3688,34 @@
   }
 
   /* ===== Setting Group Card ===== */
-  .pinmind-setting-group-card {
+  .acmind-setting-group-card {
     border-radius: 20px;
     border: 1px solid rgba(31, 41, 51, 0.06);
     background: rgba(255, 255, 255, 0.78);
   }
 
-  .pinmind-setting-group-card-header {
+  .acmind-setting-group-card-header {
     min-height: 52px;
     padding: 14px 28px;
     border-bottom: 1px solid rgba(31, 41, 51, 0.06);
   }
 
-  .pinmind-setting-group-card-body {
+  .acmind-setting-group-card-body {
     padding: 4px 0;
   }
 
-  .pinmind-setting-row {
+  .acmind-setting-row {
     /* Layout controlled by .settings-row (two-column grid) */
     transition-property: background-color;
     transition-duration: var(--motion-fast);
   }
 
-  .pinmind-setting-row:hover {
+  .acmind-setting-row:hover {
     background: rgba(255, 253, 248, 0.5);
   }
 
   /* ===== AI Tier Card ===== */
-  .pinmind-tier-card {
+  .acmind-tier-card {
     border-radius: var(--radius-lg);
     border: 1px solid color-mix(in srgb, var(--pm-border-subtle) 70%, transparent);
     background: rgba(255, 255, 255, 0.78);
@@ -3730,18 +3730,18 @@
     overflow: hidden;
   }
 
-  .pinmind-tier-card:hover {
+  .acmind-tier-card:hover {
     border-color: color-mix(in srgb, var(--pm-border-default) 72%, transparent);
     box-shadow: 0 4px 16px rgba(31, 41, 51, 0.05);
   }
 
-  .pinmind-tier-card.tier-active {
+  .acmind-tier-card.tier-active {
     border-color: color-mix(in srgb, var(--pm-brand) 24%, transparent);
     box-shadow: 0 4px 16px rgba(249, 115, 22, 0.08);
   }
 
   /* ===== Save Indicator ===== */
-  .pinmind-save-indicator {
+  .acmind-save-indicator {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -3751,18 +3751,18 @@
     transition: opacity var(--motion-base);
   }
 
-  .pinmind-save-indicator.is-visible {
+  .acmind-save-indicator.is-visible {
     opacity: 1;
   }
 
   /* ===== Pipeline Step (Dashboard) ===== */
-  .pinmind-pipeline {
+  .acmind-pipeline {
     display: flex;
     align-items: center;
     gap: 0;
   }
 
-  .pinmind-pipeline-step {
+  .acmind-pipeline-step {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -3775,18 +3775,18 @@
     transition-duration: var(--motion-base);
   }
 
-  .pinmind-pipeline-step.is-active {
+  .acmind-pipeline-step.is-active {
     background: color-mix(in srgb, var(--pm-brand-soft) 60%, white 40%);
     border-color: color-mix(in srgb, var(--pm-brand-primary) 20%, transparent);
     box-shadow: 0 2px 8px rgba(249, 115, 22, 0.06);
   }
 
-  .pinmind-pipeline-step.is-done {
+  .acmind-pipeline-step.is-done {
     background: color-mix(in srgb, var(--pm-success-bg) 60%, white 40%);
     border-color: color-mix(in srgb, var(--pm-success-border) 40%, transparent);
   }
 
-  .pinmind-pipeline-arrow {
+  .acmind-pipeline-arrow {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3796,18 +3796,18 @@
   }
 
   /* ===== Distillation Workbench ===== */
-  .pinmind-workbench-column {
+  .acmind-workbench-column {
     display: flex;
     flex-direction: column;
     min-height: 0;
     border-right: 1px solid rgba(31, 41, 51, 0.06);
   }
 
-  .pinmind-workbench-column:last-child {
+  .acmind-workbench-column:last-child {
     border-right: none;
   }
 
-  .pinmind-workbench-header {
+  .acmind-workbench-header {
     height: 56px;
     padding: 0 24px;
     border-bottom: 1px solid rgba(31, 41, 51, 0.06);
@@ -3816,13 +3816,13 @@
     align-items: center;
   }
 
-  .pinmind-workbench-header h3 {
+  .acmind-workbench-header h3 {
     font-size: 16px;
     font-weight: 700;
     color: #1F2933;
   }
 
-  .pinmind-workbench-engine-badge {
+  .acmind-workbench-engine-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -3834,7 +3834,7 @@
     color: var(--pm-warning-text);
   }
 
-  .pinmind-workbench-output pre {
+  .acmind-workbench-output pre {
     font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
     font-size: 12px;
     line-height: 1.6;
@@ -3847,7 +3847,7 @@
     overflow: auto;
   }
 
-  .pinmind-workbench-tab {
+  .acmind-workbench-tab {
     padding: 6px 14px;
     font-size: 12px;
     font-weight: 500;
@@ -3857,11 +3857,11 @@
     transition: color var(--motion-fast), border-color var(--motion-fast);
   }
 
-  .pinmind-workbench-tab:hover {
+  .acmind-workbench-tab:hover {
     color: var(--pm-text-secondary);
   }
 
-  .pinmind-workbench-tab.is-active {
+  .acmind-workbench-tab.is-active {
     color: var(--pm-brand);
     border-bottom-color: var(--pm-brand);
   }
@@ -3870,7 +3870,7 @@
 /* ===== AI Distillation Workbench ===== */
 
 /* Markdown preview styling */
-.pinmind-markdown-preview {
+.acmind-markdown-preview {
   font-family: 'SF Mono', 'Fira Code', 'Menlo', 'Consolas', 'Monaco', monospace;
   font-size: 12px;
   line-height: 1.7;
@@ -3885,21 +3885,21 @@
 }
 
 /* Distillation workbench loading spinner */
-.pinmind-distillation-spinner {
+.acmind-distillation-spinner {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--pm-brand) 20%, transparent);
   border-top-color: var(--pm-brand);
-  animation: pinmind-spin 0.8s linear infinite;
+  animation: acmind-spin 0.8s linear infinite;
 }
 
-@keyframes pinmind-spin {
+@keyframes acmind-spin {
   to { transform: rotate(360deg); }
 }
 
 /* Personal Space Panel */
-.pinmind-personal-space-overlay {
+.acmind-personal-space-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.2);
@@ -3908,12 +3908,12 @@
   pointer-events: none;
   transition: opacity var(--motion-base);
 }
-.pinmind-personal-space-overlay.is-visible {
+.acmind-personal-space-overlay.is-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.pinmind-personal-space-panel {
+.acmind-personal-space-panel {
   position: fixed;
   top: 0;
   right: 0;
@@ -3930,25 +3930,25 @@
   display: flex;
   flex-direction: column;
 }
-.pinmind-personal-space-panel.is-visible {
+.acmind-personal-space-panel.is-visible {
   transform: translateX(0);
 }
 
-.pinmind-personal-space-section {
+.acmind-personal-space-section {
   padding: 24px 32px;
   border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 40%, transparent);
 }
-.pinmind-personal-space-section:last-of-type {
+.acmind-personal-space-section:last-of-type {
   border-bottom: none;
 }
 
-.pinmind-personal-space-field {
+.acmind-personal-space-field {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.pinmind-personal-space-field label {
+.acmind-personal-space-field label {
   font-size: 12px;
   line-height: 16px;
   font-weight: 600;
@@ -3956,7 +3956,7 @@
 }
 
 /* Drawer Header */
-.pinmind-drawer-header {
+.acmind-drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3964,7 +3964,7 @@
   border-bottom: 1px solid color-mix(in srgb, var(--pm-border-subtle) 40%, transparent);
   flex-shrink: 0;
 }
-.pinmind-drawer-avatar {
+.acmind-drawer-avatar {
   width: 56px;
   height: 56px;
   border-radius: 18px;
@@ -3977,20 +3977,20 @@
   font-weight: 700;
   flex-shrink: 0;
 }
-.pinmind-drawer-title {
+.acmind-drawer-title {
   margin: 0;
   font-size: var(--pm-font-title-2, 22px);
   line-height: var(--pm-line-title-2, 30px);
   font-weight: 700;
   color: var(--pm-text-primary);
 }
-.pinmind-drawer-subtitle {
+.acmind-drawer-subtitle {
   margin: 2px 0 0;
   font-size: 13px;
   line-height: 18px;
   color: var(--pm-text-secondary);
 }
-.pinmind-drawer-close-btn {
+.acmind-drawer-close-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4004,13 +4004,13 @@
   flex-shrink: 0;
   transition: background-color 0.15s, color 0.15s;
 }
-.pinmind-drawer-close-btn:hover {
+.acmind-drawer-close-btn:hover {
   background: var(--pm-bg-hover);
   color: var(--pm-text-secondary);
 }
 
 /* Avatar Editor Card */
-.pinmind-avatar-editor-card {
+.acmind-avatar-editor-card {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -4020,7 +4020,7 @@
   border: 1px solid rgba(234, 186, 140, 0.22);
   margin-bottom: 16px;
 }
-.pinmind-avatar-preview {
+.acmind-avatar-preview {
   width: 56px;
   height: 56px;
   border-radius: 18px;
@@ -4033,14 +4033,14 @@
   font-weight: 700;
   flex-shrink: 0;
 }
-.pinmind-avatar-editor-title {
+.acmind-avatar-editor-title {
   font-size: 14px;
   line-height: 20px;
   font-weight: 600;
   color: var(--pm-text-primary);
   margin: 0;
 }
-.pinmind-avatar-editor-desc {
+.acmind-avatar-editor-desc {
   font-size: 12px;
   line-height: 17px;
   color: var(--pm-text-tertiary);
@@ -4048,19 +4048,19 @@
 }
 
 /* Setting Row — unified with .settings-row */
-.pinmind-setting-row {
+.acmind-setting-row {
   /* Layout controlled by .settings-row (two-column grid) */
 }
-.pinmind-setting-row:last-child {
+.acmind-setting-row:last-child {
   border-bottom: none;
 }
-.pinmind-setting-label {
+.acmind-setting-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--pm-text-secondary);
   white-space: nowrap;
 }
-.pinmind-setting-value {
+.acmind-setting-value {
   font-size: 13px;
   line-height: 18px;
   color: var(--pm-text-primary);
@@ -4068,14 +4068,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pinmind-setting-actions {
+.acmind-setting-actions {
   display: flex;
   gap: 12px;
   flex-shrink: 0;
 }
 
 /* Drawer Footer */
-.pinmind-drawer-footer {
+.acmind-drawer-footer {
   position: sticky;
   bottom: 0;
   display: flex;
@@ -4090,7 +4090,7 @@
 }
 
 /* Profile Card in Sidebar */
-.pinmind-profile-card-title {
+.acmind-profile-card-title {
   font-size: 15px;
   line-height: 21px;
   font-weight: 650;
@@ -4100,7 +4100,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pinmind-profile-card-subtitle {
+.acmind-profile-card-subtitle {
   font-size: 12px;
   line-height: 17px;
   color: var(--pm-text-tertiary);
@@ -4110,7 +4110,7 @@
   white-space: nowrap;
 }
 
-.pinmind-status-dot {
+.acmind-status-dot {
   position: absolute;
   top: -1px;
   right: -1px;
@@ -4121,7 +4121,7 @@
 }
 
 /* ===== Detail Drawer (medium mode) ===== */
-.pinmind-detail-drawer-backdrop {
+.acmind-detail-drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(31, 41, 51, 0.12);
@@ -4130,12 +4130,12 @@
   transition: opacity var(--motion-base);
   pointer-events: none;
 }
-.pinmind-detail-drawer-backdrop.is-visible {
+.acmind-detail-drawer-backdrop.is-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.pinmind-detail-drawer {
+.acmind-detail-drawer {
   position: fixed;
   top: 56px;
   right: 0;
@@ -4152,12 +4152,12 @@
   display: flex;
   flex-direction: column;
 }
-.pinmind-detail-drawer.is-visible {
+.acmind-detail-drawer.is-visible {
   transform: translateX(0);
 }
 
 /* ===== Detail Modal (small mode) ===== */
-.pinmind-detail-modal-overlay {
+.acmind-detail-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(31, 41, 51, 0.24);
@@ -4166,12 +4166,12 @@
   transition: opacity var(--motion-base);
   pointer-events: none;
 }
-.pinmind-detail-modal-overlay.is-visible {
+.acmind-detail-modal-overlay.is-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.pinmind-detail-modal {
+.acmind-detail-modal {
   position: fixed;
   top: 56px;
   left: 0;
@@ -4185,7 +4185,7 @@
   display: flex;
   flex-direction: column;
 }
-.pinmind-detail-modal.is-visible {
+.acmind-detail-modal.is-visible {
   transform: translateY(0);
 }
 

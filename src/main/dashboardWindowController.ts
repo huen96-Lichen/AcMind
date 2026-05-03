@@ -41,7 +41,7 @@ export function createDashboardWindowController(
       height: DEFAULT_HEIGHT,
       minWidth: MIN_WIDTH,
       minHeight: MIN_HEIGHT,
-      title: 'PinMind',
+      title: 'AcMind',
       icon: createBrandNativeImage(),
       show: false,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',

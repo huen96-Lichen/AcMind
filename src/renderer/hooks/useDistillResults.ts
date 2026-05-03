@@ -24,13 +24,13 @@ export function useDistillResults(): UseDistillResultsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const loadOutputs = useCallback(async () => {
-    if (!window.pinmind) {
+    if (!window.acmind) {
       setLoading(false);
       return;
     }
     try {
       setError(null);
-      const result = await window.pinmind.distilledOutputs.list({ reviewStatus: 'pending' });
+      const result = await window.acmind.distilledOutputs.list({ reviewStatus: 'pending' });
       setOutputs(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -47,8 +47,8 @@ export function useDistillResults(): UseDistillResultsReturn {
 
   // Listen for records.changed events
   useEffect(() => {
-    if (!window.pinmind) return;
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    if (!window.acmind) return;
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadOutputs();
     });
     return unsubscribe;
@@ -58,7 +58,7 @@ export function useDistillResults(): UseDistillResultsReturn {
     async (outputId: string): Promise<boolean> => {
       try {
         setError(null);
-        await window.pinmind.distilledOutputs.review(outputId, 'approve');
+        await window.acmind.distilledOutputs.review(outputId, 'approve');
         await loadOutputs();
         return true;
       } catch (err) {
@@ -74,7 +74,7 @@ export function useDistillResults(): UseDistillResultsReturn {
     async (outputId: string): Promise<boolean> => {
       try {
         setError(null);
-        await window.pinmind.distilledOutputs.review(outputId, 'discard');
+        await window.acmind.distilledOutputs.review(outputId, 'discard');
         await loadOutputs();
         return true;
       } catch (err) {

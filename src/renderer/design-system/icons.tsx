@@ -205,7 +205,7 @@ export function PinStackIconButton({
       type={type}
       aria-label={label}
       title={label}
-      className={`pinmind-icon-button pinmind-icon-button-${tone} motion-button ${sizeClass} disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ''}`}
+      className={`acmind-icon-button acmind-icon-button-${tone} motion-button ${sizeClass} disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ''}`}
       {...rest}
     >
       <PinStackIcon name={icon} size={size === 'sm' ? 15 : 16} />

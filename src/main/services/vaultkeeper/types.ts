@@ -1,8 +1,8 @@
 // VaultKeeper Adapter Types
-// Phase 9: 定义 PinMind 与 VaultKeeper 外部服务的通信协议类型边界
+// Phase 9: 定义 AcMind 与 VaultKeeper 外部服务的通信协议类型边界
 //
 // 设计原则：
-// - PinMind 不做复杂解析引擎
+// - AcMind 不做复杂解析引擎
 // - Adapter 不负责 Markdown 渲染、Obsidian 写入、UI
 // - VKJobResult 的 extracted_text / transcript_text / parsed_markdown
 //   与 ComplexFileMetadata 同名字段一一对应，便于回填
@@ -133,7 +133,7 @@ export interface VKHealthStatus {
 // Adapter 接口
 // ---------------------------------------------------------------------------
 
-/** VaultKeeper Adapter 接口 — PinMind 与 VaultKeeper 的唯一通信边界 */
+/** VaultKeeper Adapter 接口 — AcMind 与 VaultKeeper 的唯一通信边界 */
 export interface IVaultKeeperAdapter {
   /** 检查 VaultKeeper 是否可用（不抛异常） */
   checkHealth(): Promise<VKHealthStatus>;

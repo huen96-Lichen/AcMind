@@ -1,4 +1,4 @@
-// PinMind WebpageAdapter
+// AcMind WebpageAdapter
 // V2.1 Phase 7.1: Captures webpage URL and content into a CaptureRecord.
 // V2.1 Phase 7.4: Enhanced with domain and input_mode metadata.
 

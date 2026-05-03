@@ -1,4 +1,4 @@
-// PinMind Conflict Handler
+// AcMind Conflict Handler
 // Handles file conflicts when exporting to Obsidian vault
 
 import path from 'node:path';

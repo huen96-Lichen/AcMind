@@ -1,4 +1,4 @@
-// PinMind TierRouter Unit Tests
+// AcMind TierRouter Unit Tests
 // Tests for the tier routing logic with mocked storage
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

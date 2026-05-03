@@ -36,3 +36,6 @@ Thumbs.db
 
 # User data (Obsidian vault)
 ~/PinMind/
+
+# Reference source code (not part of AcMind build)
+临时文件夹/

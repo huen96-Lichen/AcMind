@@ -1,4 +1,4 @@
-// PinMind Strategy Processor
+// AcMind Strategy Processor
 // Phase 8.1-8.6: 桥接策略系统与内容处理管线
 //
 // 职责：

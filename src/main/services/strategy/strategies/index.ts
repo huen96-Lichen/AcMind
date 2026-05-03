@@ -1,4 +1,4 @@
-// PinMind Strategy Exports
+// AcMind Strategy Exports
 // Phase 8.1: 导出所有具体策略
 
 export { ManualTextStrategy } from './manualTextStrategy';

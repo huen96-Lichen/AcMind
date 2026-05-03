@@ -1,4 +1,4 @@
-// PinMind Audio Strategy
+// AcMind Audio Strategy
 // Phase 10: 语音笔记蒸馏策略
 // 使用 transcript_text 作为输入，通过 voice_note_zh_v1 Prompt Profile 生成语音笔记
 //
@@ -25,7 +25,7 @@ export class AudioStrategy extends BaseStrategy {
 
     if (hasTranscript) {
       // Phase 10: 语音专用 Prompt - 使用 voice_note_distillation 策略
-      return `你是 PinMind 的语音笔记整理助手。
+      return `你是 AcMind 的语音笔记整理助手。
 你的任务是把用户的语音转写文本整理成清晰、克制、可长期保存的中文 Markdown 笔记。
 
 ## 你必须遵守的规则
@@ -67,7 +67,7 @@ ${this.buildOutputFormat()}`;
     }
 
     // Phase 10: 无转写时生成占位记录，绝不伪造 transcript
-    return `你是 PinMind 的笔记助手。用户保存了一段音频，但尚未完成转写。
+    return `你是 AcMind 的笔记助手。用户保存了一段音频，但尚未完成转写。
 
 ## 任务
 

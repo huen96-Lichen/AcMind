@@ -46,14 +46,14 @@ export function useCaptureItems(): UseCaptureItemsReturn {
   // ── Load items from backend ──
 
   const loadItems = useCallback(async () => {
-    if (!window.pinmind) {
+    if (!window.acmind) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setError(null);
-      const items = await window.pinmind.captureItems.list({});
+      const items = await window.acmind.captureItems.list({});
       setAllItems(items);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -72,8 +72,8 @@ export function useCaptureItems(): UseCaptureItemsReturn {
   // ── Listen for captureItems.changed events ──
 
   useEffect(() => {
-    if (!window.pinmind) return;
-    const unsubscribe = window.pinmind.onCaptureItemsChanged(() => {
+    if (!window.acmind) return;
+    const unsubscribe = window.acmind.onCaptureItemsChanged(() => {
       void loadItems();
     });
     return unsubscribe;
@@ -118,7 +118,7 @@ export function useCaptureItems(): UseCaptureItemsReturn {
       imageMimeType?: string;
       imageOriginalName?: string;
     }): Promise<CaptureItem> => {
-      const item = await window.pinmind.captureItems.create(data);
+      const item = await window.acmind.captureItems.create(data);
       // The captureItems.changed event will trigger a refresh
       return item;
     },
@@ -129,7 +129,7 @@ export function useCaptureItems(): UseCaptureItemsReturn {
 
   const updateItem = useCallback(
     async (id: string, patch: Partial<CaptureItem>): Promise<CaptureItem> => {
-      const updated = await window.pinmind.captureItems.update(id, patch);
+      const updated = await window.acmind.captureItems.update(id, patch);
       // Update selected item if it matches
       if (selectedItem?.id === id) {
         setSelectedItem(updated);
@@ -144,7 +144,7 @@ export function useCaptureItems(): UseCaptureItemsReturn {
 
   const deleteItem = useCallback(
     async (id: string): Promise<boolean> => {
-      const result = await window.pinmind.captureItems.delete(id);
+      const result = await window.acmind.captureItems.delete(id);
       if (selectedItem?.id === id) {
         setSelectedItem(null);
       }
@@ -158,7 +158,7 @@ export function useCaptureItems(): UseCaptureItemsReturn {
 
   const exportMarkdown = useCallback(
     async (ids: string[]): Promise<string[]> => {
-      return await window.pinmind.captureItems.exportMarkdown(ids);
+      return await window.acmind.captureItems.exportMarkdown(ids);
     },
     [],
   );

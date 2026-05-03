@@ -36,8 +36,8 @@ export function createBrandNativeImage(): Electron.NativeImage {
 
 function loadTrayIcon(): Electron.NativeImage {
   const representations = [
-    { fileName: 'pinmind-menubar-template.png', scaleFactor: 1 },
-    { fileName: 'pinmind-menubar-template@2x.png', scaleFactor: 2 },
+    { fileName: 'acmind-menubar-template.png', scaleFactor: 1 },
+    { fileName: 'acmind-menubar-template@2x.png', scaleFactor: 2 },
   ];
 
   const icon = nativeImage.createEmpty();
@@ -77,11 +77,11 @@ export interface TrayControllerOptions {
 export function createTrayController(options: TrayControllerOptions): Tray {
   const icon = loadTrayIcon();
   const tray = new Tray(icon);
-  tray.setToolTip('PinMind');
+  tray.setToolTip('AcMind');
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Show PinMind',
+      label: 'Show AcMind',
       click: () => options.onToggleWindow(),
     },
     {

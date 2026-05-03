@@ -15,7 +15,7 @@ function ExportStatusBadge({ status }: { status: ExportRecord['status'] }): JSX.
   const config = STATUS_CONFIG[status];
   return (
     <span
-      className="pinmind-status-badge"
+      className="acmind-status-badge"
       data-status={status}
       style={{
         color: config.color,
@@ -48,7 +48,7 @@ function ExportRow({ record, onRevealInVault, onRetry }: ExportRowProps): JSX.El
   };
 
   return (
-    <div className="pinmind-export-row">
+    <div className="acmind-export-row">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <span
           className="text-[12px] font-medium truncate"
@@ -69,7 +69,7 @@ function ExportRow({ record, onRevealInVault, onRetry }: ExportRowProps): JSX.El
           {record.status === 'success' && (
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-secondary motion-button"
+              className="acmind-btn acmind-btn-secondary motion-button"
               style={{ height: 28, fontSize: 11, paddingInline: 8 }}
               onClick={() => onRevealInVault(record.id)}
             >
@@ -79,7 +79,7 @@ function ExportRow({ record, onRevealInVault, onRetry }: ExportRowProps): JSX.El
           {record.status === 'failed' && (
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-primary motion-button"
+              className="acmind-btn acmind-btn-primary motion-button"
               style={{ height: 28, fontSize: 11, paddingInline: 8 }}
               onClick={() => onRetry(record.id)}
             >
@@ -104,7 +104,7 @@ export function ExportHistory(): JSX.Element {
 
   const handleRevealInVault = async (recordId: string) => {
     try {
-      await window.pinmind.export.revealInVault(recordId);
+      await window.acmind.export.revealInVault(recordId);
     } catch {
       // Silently fail
     }
@@ -113,12 +113,12 @@ export function ExportHistory(): JSX.Element {
   const handleRetry = async (recordId: string) => {
     try {
       const record = recordById.get(recordId);
-      if (record?.sourceItemId && window.pinmind?.pipeline) {
-        await window.pinmind.pipeline.retryExport(record.sourceItemId);
+      if (record?.sourceItemId && window.acmind?.pipeline) {
+        await window.acmind.pipeline.retryExport(record.sourceItemId);
         return;
       }
 
-      await window.pinmind.export.retry(recordId);
+      await window.acmind.export.retry(recordId);
     } catch {
       // Silently fail
     }

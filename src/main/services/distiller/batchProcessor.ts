@@ -1,4 +1,4 @@
-// PinMind Batch Processor
+// AcMind Batch Processor
 // Processes multiple distill tasks with concurrency control and progress tracking
 
 import crypto from 'node:crypto';

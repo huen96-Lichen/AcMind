@@ -1,0 +1,36 @@
+{
+  "id": "acmind-default",
+  "name": "AcMind Default Markdown",
+  "schema_version": "0.2",
+  "description": "AcMind 默认 Markdown 输出格式，适合 Obsidian 和长期本地知识库维护。",
+  "frontmatter_style": "yaml",
+  "field_mapping": {
+    "schema_version": "schema_version",
+    "title": "title",
+    "summary": "summary",
+    "tags": "tags",
+    "category": "category",
+    "source": "source",
+    "captured_at": "captured_at",
+    "project": "project",
+    "status": "status",
+    "confidence": "confidence"
+  },
+  "filename_pattern": "{{captured_at_filename}} - {{title}}.md",
+  "date_format": "YYYY-MM-DD HH:mm",
+  "filename_date_format": "YYYY-MM-DD HH-mm",
+  "show_summary_quote": true,
+  "show_raw_content": false,
+  "title_heading_level": 1,
+  "sanitize_filename": true,
+  "forbidden_filename_chars": ["/", "\\", ":", "*", "?", "\"", "<", ">", "|"],
+  "default_values": {
+    "schema_version": "0.2",
+    "tags": [],
+    "category": "未分类",
+    "source": "manual",
+    "project": "默认",
+    "status": "collected",
+    "confidence": 0.5
+  }
+}

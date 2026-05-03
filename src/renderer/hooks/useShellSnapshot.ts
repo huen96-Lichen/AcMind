@@ -15,7 +15,7 @@ export interface ShellSnapshot {
 
 /** Check if the Electron preload bridge is available */
 function isBridgeAvailable(): boolean {
-  return typeof window !== 'undefined' && window.pinmind != null;
+  return typeof window !== 'undefined' && window.acmind != null;
 }
 
 export function useShellSnapshot(): ShellSnapshot {
@@ -37,12 +37,12 @@ export function useShellSnapshot(): ShellSnapshot {
     try {
       setError(null);
       const [nextSettings, nextStats, nextClipboard, nextPermissions, nextVault, nextItems] = await Promise.all([
-        window.pinmind.settings.get(),
-        window.pinmind.storage.getStats(),
-        window.pinmind.clipboard.getStatus(),
-        window.pinmind.permissions.getStatus('renderer-query'),
-        window.pinmind.vault.getConfig(),
-        window.pinmind.sourceItems.list({ limit: 6 }),
+        window.acmind.settings.get(),
+        window.acmind.storage.getStats(),
+        window.acmind.clipboard.getStatus(),
+        window.acmind.permissions.getStatus('renderer-query'),
+        window.acmind.vault.getConfig(),
+        window.acmind.sourceItems.list({ limit: 6 }),
       ]);
 
       setSettings(nextSettings);
@@ -64,7 +64,7 @@ export function useShellSnapshot(): ShellSnapshot {
 
   useEffect(() => {
     if (!isBridgeAvailable()) return;
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void refresh();
     });
     return unsubscribe;
@@ -72,7 +72,7 @@ export function useShellSnapshot(): ShellSnapshot {
 
   useEffect(() => {
     if (!isBridgeAvailable()) return;
-    const unsubscribe = window.pinmind.permissions.onStatusUpdated((snapshot) => {
+    const unsubscribe = window.acmind.permissions.onStatusUpdated((snapshot) => {
       setPermissions(snapshot);
     });
     return unsubscribe;

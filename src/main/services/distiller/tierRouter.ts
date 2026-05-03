@@ -1,4 +1,4 @@
-// PinMind Tier Router
+// AcMind Tier Router
 // Routes distillation operations to appropriate AI provider tiers
 // Falls back to mockDistiller when no real provider is available
 
@@ -18,6 +18,7 @@ const OPERATION_TIER_MAP: Record<AiOperation, AiTier> = {
   tag: 'local_light',
   valueScore: 'local_light',
   cleanSuggest: 'local_light',
+  prefilter: 'local_light',
 };
 
 // ---------------------------------------------------------------------------

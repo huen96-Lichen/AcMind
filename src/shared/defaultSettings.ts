@@ -4,7 +4,7 @@ import { DEFAULT_USER_PROFILE, DEFAULT_USER_PREFERENCES, DEFAULT_MODEL_STRATEGY_
 import { DEFAULT_OBSIDIAN_DOCUMENTS_ROOT } from './markdownSpec';
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  storageRoot: '~/PinMind',
+  storageRoot: '~/AcMind',
   pollIntervalMs: 500,
   autoCapture: true,
   hasCompletedOnboarding: false,
@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultTier: 'local_light',
   vault: {
     vaultPath: DEFAULT_OBSIDIAN_DOCUMENTS_ROOT,
-    defaultFolder: '00_Inbox/PinMind',
+    defaultFolder: '00_Inbox/AcMind',
     template: '',
     pathRule: 'category_date',
     conflictStrategy: 'rename',

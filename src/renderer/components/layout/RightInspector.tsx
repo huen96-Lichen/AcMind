@@ -33,7 +33,7 @@ export function RightInspector({ activeView, snapshot, onNavigate }: RightInspec
     <aside className="flex h-full w-[380px] min-w-[360px] max-w-[420px] flex-col border-l border-[color:var(--border-light)] bg-[color:var(--pm-bg-panel)] backdrop-blur-[20px]">
       <div className="shrink-0 flex items-center justify-between border-b border-[color:var(--border-light)] px-5 py-4">
         <div className="min-w-0">
-          <p className="pinmind-section-eyebrow">详情面板</p>
+          <p className="acmind-section-eyebrow">详情面板</p>
           <h3 className="truncate text-[18px] font-[650] leading-[26px] text-[color:var(--text-title)]">
             {selectedItem ? (selectedItem.title || '未命名内容') : '选择一条内容查看详情'}
           </h3>
@@ -44,7 +44,7 @@ export function RightInspector({ activeView, snapshot, onNavigate }: RightInspec
         {selectedItem ? (
           <button
             type="button"
-            className="pinmind-topbar-icon-btn"
+            className="acmind-topbar-icon-btn"
             aria-label="关闭"
             onClick={() => onNavigate('capture-inbox')}
           >
@@ -53,13 +53,13 @@ export function RightInspector({ activeView, snapshot, onNavigate }: RightInspec
         ) : null}
       </div>
 
-      <div className="pinmind-tab-bar">
+      <div className="acmind-tab-bar">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`pinmind-tab-item motion-button ${activeTab === tab.key ? 'active' : ''}`}
+            className={`acmind-tab-item motion-button ${activeTab === tab.key ? 'active' : ''}`}
           >
             {tab.label}
           </button>
@@ -84,14 +84,14 @@ export function RightInspector({ activeView, snapshot, onNavigate }: RightInspec
           <div className="flex gap-2">
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-primary motion-button flex-1 text-[12px]"
+              className="acmind-btn acmind-btn-primary motion-button flex-1 text-[12px]"
               onClick={() => onNavigate('edit', { id: selectedItem.id })}
             >
               去整理
             </button>
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
+              className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
               onClick={() => onNavigate('edit', { id: selectedItem.id })}
             >
               确认入库
@@ -153,7 +153,7 @@ function DetailTab({ item, onNavigate }: { item: CaptureItem; onNavigate: RightI
             </p>
             <div className="flex flex-wrap gap-2">
               {suggestTags(item).map((tag) => (
-                <span key={tag} className="pinmind-badge" style={{ background: 'var(--pm-brand-soft)', color: 'var(--pm-brand-text)', borderColor: 'var(--pm-brand-border)' }}>
+                <span key={tag} className="acmind-badge" style={{ background: 'var(--pm-brand-soft)', color: 'var(--pm-brand-text)', borderColor: 'var(--pm-brand-border)' }}>
                   #{tag}
                 </span>
               ))}
@@ -166,21 +166,21 @@ function DetailTab({ item, onNavigate }: { item: CaptureItem; onNavigate: RightI
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-primary motion-button text-[12px]"
+            className="acmind-btn acmind-btn-primary motion-button text-[12px]"
             onClick={() => onNavigate('edit', { id: item.id })}
           >
             去整理
           </button>
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
+            className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
             onClick={() => onNavigate('edit', { id: item.id })}
           >
             整理后输出
           </button>
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
+            className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
             onClick={() => window.open(item.sourceUrl || 'about:blank', '_blank')}
             disabled={!item.sourceUrl}
           >
@@ -188,7 +188,7 @@ function DetailTab({ item, onNavigate }: { item: CaptureItem; onNavigate: RightI
           </button>
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
+            className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(summary);
@@ -234,7 +234,7 @@ function AiResultTab({ item }: { item: CaptureItem }): JSX.Element {
             状态
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="pinmind-status-badge" style={{ color: 'var(--pm-status-info)', borderColor: 'color-mix(in srgb, var(--pm-status-info) 30%, transparent)', background: 'color-mix(in srgb, var(--pm-status-info) 8%, transparent)' }}>
+            <span className="acmind-status-badge" style={{ color: 'var(--pm-status-info)', borderColor: 'color-mix(in srgb, var(--pm-status-info) 30%, transparent)', background: 'color-mix(in srgb, var(--pm-status-info) 8%, transparent)' }}>
               {formatStatus(item.status)}
             </span>
             <span className="text-[11px] text-[color:var(--pm-text-tertiary)]">
@@ -290,9 +290,9 @@ function EmptyInspector({ activeView }: { activeView: string }): JSX.Element {
 
 function InspectorCard({ title, eyebrow, children }: { title: string; eyebrow: string; children: ReactNode }): JSX.Element {
   return (
-    <section className="pinmind-section-panel flex flex-col gap-3 p-4">
+    <section className="acmind-section-panel flex flex-col gap-3 p-4">
       <div>
-        <p className="pinmind-section-eyebrow">{eyebrow}</p>
+        <p className="acmind-section-eyebrow">{eyebrow}</p>
         <h4 className="text-[16px] font-[650] leading-[24px] text-[color:var(--text-title)]">{title}</h4>
       </div>
       {children}

@@ -68,7 +68,7 @@ describe('outputSpecService', () => {
     it('returns active profile from fallback', () => {
       outputSpecService.init('');
       const profile = outputSpecService.getActiveProfile();
-      expect(profile.id).toBe('pinmind-default');
+      expect(profile.id).toBe('acmind-default');
       expect(profile.frontmatter_style).toBe('yaml');
       expect(profile.filename_pattern).toContain('{{title}}');
     });
@@ -79,7 +79,7 @@ describe('outputSpecService', () => {
       expect(info.loaded).toBe(true);
       expect(info.profileCount).toBeGreaterThanOrEqual(1);
       expect(info.templateCount).toBeGreaterThanOrEqual(1);
-      expect(info.activeProfileId).toBe('pinmind-default');
+      expect(info.activeProfileId).toBe('acmind-default');
     });
   });
 

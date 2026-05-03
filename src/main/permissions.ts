@@ -309,7 +309,7 @@ function getAccessibilityStatus(context: PermissionSnapshotBuildContext, checked
       key: 'accessibility',
       title: '辅助功能权限',
       state: 'requires-restart',
-      message: '已检测到你刚处理过辅助功能权限。若刷新后仍未生效，请重启 PinMind。',
+      message: '已检测到你刚处理过辅助功能权限。若刷新后仍未生效，请重启 AcMind。',
       settingsTarget: 'privacyAccessibility',
       checkedAt,
       actionLabel: '刷新状态'
@@ -557,7 +557,7 @@ async function getScreenCaptureStatus(
 
   if (screenshotUsable) {
     const message = installLocationStable
-      ? '已检测到截图能力可用，但系统权限状态仍未同步。可以继续截图；若状态长期不更新，请刷新或重启 PinMind。'
+      ? '已检测到截图能力可用，但系统权限状态仍未同步。可以继续截图；若状态长期不更新，请刷新或重启 AcMind。'
       : installLocationMessage ??
         '已检测到自带截图能力可用，但当前运行实例可能不是系统已授权的那个。建议复制到 /Applications 后重启。';
     return createPermissionItem({
@@ -602,7 +602,7 @@ async function getScreenCaptureStatus(
         key: 'screenCapture',
         title: '屏幕录制权限',
         state: 'requires-restart',
-        message: '已检测到权限可能已变更。请先刷新；若仍未生效，请重启 PinMind。',
+        message: '已检测到权限可能已变更。请先刷新；若仍未生效，请重启 AcMind。',
         settingsTarget: 'privacyScreenCapture',
         checkedAt,
         actionLabel: '刷新状态',
@@ -755,7 +755,7 @@ function resolveInstanceMismatch(
   }
 
   const executableLooksLikeElectron = /Electron\.app/i.test(appMeta.executablePath);
-  const bundleIdLooksUnexpected = appMeta.bundleId !== 'com.pinmind.app';
+  const bundleIdLooksUnexpected = appMeta.bundleId !== 'com.acmind.app';
   const devRuntime = !appMeta.isPackaged || appMeta.isDev;
   if (!executableLooksLikeElectron && !bundleIdLooksUnexpected && !devRuntime) {
     return { suspected: false };
@@ -763,7 +763,7 @@ function resolveInstanceMismatch(
 
   return {
     suspected: true,
-    message: '当前运行实例可能不是系统中已授权的 PinMind.app，请确认实例一致后重试。'
+    message: '当前运行实例可能不是系统中已授权的 AcMind.app，请确认实例一致后重试。'
   };
 }
 

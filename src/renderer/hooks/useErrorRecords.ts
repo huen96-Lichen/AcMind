@@ -20,14 +20,14 @@ export function useErrorRecords(
   const [error, setError] = useState<string | null>(null);
 
   const loadRecords = useCallback(async () => {
-    if (!window.pinmind?.errors) {
+    if (!window.acmind?.errors) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setError(null);
-      const items = await window.pinmind.errors.list({
+      const items = await window.acmind.errors.list({
         status: filter?.status,
         errorType: filter?.errorType,
         limit: filter?.limit ?? 100,
@@ -45,22 +45,22 @@ export function useErrorRecords(
   }, [loadRecords]);
 
   const resolve = useCallback(async (errorId: string): Promise<boolean> => {
-    if (!window.pinmind?.errors) return false;
-    const ok = await window.pinmind.errors.resolve(errorId);
+    if (!window.acmind?.errors) return false;
+    const ok = await window.acmind.errors.resolve(errorId);
     if (ok) void loadRecords();
     return ok;
   }, [loadRecords]);
 
   const dismiss = useCallback(async (errorId: string): Promise<boolean> => {
-    if (!window.pinmind?.errors) return false;
-    const ok = await window.pinmind.errors.dismiss(errorId);
+    if (!window.acmind?.errors) return false;
+    const ok = await window.acmind.errors.dismiss(errorId);
     if (ok) void loadRecords();
     return ok;
   }, [loadRecords]);
 
   const clearResolved = useCallback(async (): Promise<number> => {
-    if (!window.pinmind?.errors) return 0;
-    const count = await window.pinmind.errors.clearResolved();
+    if (!window.acmind?.errors) return 0;
+    const count = await window.acmind.errors.clearResolved();
     if (count > 0) void loadRecords();
     return count;
   }, [loadRecords]);

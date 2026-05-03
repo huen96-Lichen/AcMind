@@ -1,4 +1,4 @@
-// PinMind Export False-Success Prevention Tests
+// AcMind Export False-Success Prevention Tests
 // 验证 ExportRecord.error 字段存在，以及 status 分支逻辑正确
 
 import { describe, it, expect } from 'vitest';

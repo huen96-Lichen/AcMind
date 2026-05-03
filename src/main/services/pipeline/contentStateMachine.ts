@@ -1,4 +1,4 @@
-// PinMind ContentStateMachine
+// AcMind ContentStateMachine
 // Phase 2: State machine for content lifecycle management.
 // Ensures stable state transitions, prevents duplicate exports,
 // and tracks all state changes for debugging and recovery.

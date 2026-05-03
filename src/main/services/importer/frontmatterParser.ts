@@ -1,4 +1,4 @@
-// PinMind Frontmatter Parser
+// AcMind Frontmatter Parser
 // Parses YAML frontmatter from Markdown files (Obsidian format)
 
 export class FrontmatterParser {

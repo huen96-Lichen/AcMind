@@ -1,4 +1,4 @@
-// PinMind DOCX Strategy
+// AcMind DOCX Strategy
 // Phase 8.1: DOCX 占位或解析后内容
 
 import type { SourceType } from '../../../../shared/types';

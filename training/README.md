@@ -1,14 +1,14 @@
-# pinmind-trainer contract
+# acmind-trainer contract
 
-PinMind 主应用只通过文件契约对接训练仓。训练仓不驻留在 Electron 主进程里。
+AcMind 主应用只通过文件契约对接训练仓。训练仓不驻留在 Electron 主进程里。
 
 ## Required commands
 
 ```bash
-pinmind-trainer snapshot validate <manifest>
-pinmind-trainer train sft <manifest> --base-model <model>
-pinmind-trainer eval <run-or-artifact> <eval-manifest>
-pinmind-trainer package ollama <artifact>
+acmind-trainer snapshot validate <manifest>
+acmind-trainer train sft <manifest> --base-model <model>
+acmind-trainer eval <run-or-artifact> <eval-manifest>
+acmind-trainer package ollama <artifact>
 ```
 
 ## Snapshot layout
@@ -51,7 +51,7 @@ The training job should emit:
 - `artifact.json`
 - `Modelfile`
 
-## Import back into PinMind
+## Import back into AcMind
 
 Use the `trainingRuns.importResult` IPC entry to register:
 

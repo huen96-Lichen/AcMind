@@ -207,7 +207,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
       return;
     }
     let cancelled = false;
-    window.pinmind.captureItems.readImage(item.filePath).then((result) => {
+    window.acmind.captureItems.readImage(item.filePath).then((result) => {
       if (cancelled) return;
       if (result.ok && result.dataUrl) {
         setThumbUrl(result.dataUrl);
@@ -225,7 +225,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
     let cancelled = false;
     const load = async () => {
       try {
-        const lineage = await window.pinmind.sourceItems.getDistillStatus(item.id);
+        const lineage = await window.acmind.sourceItems.getDistillStatus(item.id);
         if (cancelled) return;
         const total = lineage.aiTasks.length;
         const done = lineage.aiTasks.filter((t) => t.status === 'done').length;
@@ -252,7 +252,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
   const handleRetry = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     // Reset capture item status to pending so it can be distilled again
-    window.pinmind.captureItems.update(item.id, { status: 'pending' }).then(() => {
+    window.acmind.captureItems.update(item.id, { status: 'pending' }).then(() => {
       onDistill?.(item.id);
     }).catch(() => {
       // If update fails, try distilling directly
@@ -264,9 +264,9 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
     e.stopPropagation();
     setNavigating(true);
     // Navigate to edit page with the source item
-    window.pinmind.sourceItems.getByCaptureItemId(item.id).then((sourceItem) => {
+    window.acmind.sourceItems.getByCaptureItemId(item.id).then((sourceItem) => {
       if (sourceItem) {
-        window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'edit', itemId: sourceItem.id } }));
+        window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'edit', itemId: sourceItem.id } }));
       } else {
         setNavigating(false);
       }
@@ -283,7 +283,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
     <button
       type="button"
       onClick={onClick}
-      className={`pinmind-capture-card motion-button ${isSelected ? 'is-selected' : ''}`}
+      className={`acmind-capture-card motion-button ${isSelected ? 'is-selected' : ''}`}
     >
       {/* ── Left Area ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: '1', minWidth: 0 }}>
@@ -397,7 +397,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
             <button
               type="button"
               onClick={handleDistill}
-              className="pinmind-btn pinmind-btn-ghost motion-button"
+              className="acmind-btn acmind-btn-ghost motion-button"
               style={{ color: 'var(--pm-primary)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               title="整理"
             >
@@ -409,7 +409,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
             <button
               type="button"
               onClick={handleRetry}
-              className="pinmind-btn pinmind-btn-ghost motion-button"
+              className="acmind-btn acmind-btn-ghost motion-button"
               style={{ color: 'var(--pm-warning)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               title="重新整理"
             >
@@ -422,7 +422,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
               type="button"
               onClick={handleViewResult}
               disabled={navigating}
-              className="pinmind-btn pinmind-btn-ghost motion-button"
+              className="acmind-btn acmind-btn-ghost motion-button"
               style={{ color: 'var(--pm-primary)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               title="查看整理结果"
             >
@@ -433,7 +433,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
           <button
             type="button"
             onClick={handleDelete}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: 'var(--pm-error)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
             title="删除"
           >

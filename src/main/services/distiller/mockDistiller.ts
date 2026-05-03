@@ -1,4 +1,4 @@
-// PinMind Mock Distiller
+// AcMind Mock Distiller
 // Returns fixed-format results after a simulated delay for testing
 // [Mock Fallback] Phase 1: 所有操作均返回结构化结果，确保业务链路可闭环
 
@@ -99,6 +99,17 @@ export const mockDistiller = {
       case 'cleanSuggest':
         output = {
           cleanSuggestion: 'keep',
+        };
+        break;
+
+      case 'prefilter':
+        output = {
+          suggestedTitle: '[Mock] ' + mockTitle(content),
+          valueScore: 50,
+          duplicateScore: 0,
+          suggestedAction: 'keep_pinned',
+          reason: '[Mock] 模拟预筛结果，建议保留。',
+          tags: ['mock', '待整理'],
         };
         break;
 

@@ -1,4 +1,4 @@
-// PinMind VideoAdapter (Stub)
+// AcMind VideoAdapter (Stub)
 // V2.1 Phase 7.1: Placeholder for video capture into a CaptureRecord.
 // Will be fully implemented when video capture is integrated.
 

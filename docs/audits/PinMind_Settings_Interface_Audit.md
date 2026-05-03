@@ -1,8 +1,8 @@
-# PinMind 设置页与接口盘点报告
+# AcMind 设置页与接口盘点报告
 
 ## 1. 审计结论摘要
 
-PinMind 当前的设置相关能力，绝大多数已经是真实可用的，但它们被拆散在多个层级里：
+AcMind 当前的设置相关能力，绝大多数已经是真实可用的，但它们被拆散在多个层级里：
 
 - 设置页本身是一个真实的配置入口，入口文件在 `src/renderer/pages/settings/SettingsPage.tsx:56`。
 - 设置页二级导航是同一个文件里的 `SETTINGS_CATEGORIES`，不是独立路由。
@@ -73,52 +73,52 @@ Settings 页的真实可用能力主要集中在：
 
 | 接口名 | main 侧位置 | preload 暴露名 | renderer 调用位置 | 入参 | 出参 | 当前是否被使用 |
 |---|---|---|---|---|---|---|
-| `settings.get` | `src/main/ipc.ts:76` | `window.pinmind.settings.get` | `src/renderer/App.tsx:70`、`src/renderer/pages/settings/SettingsPage.tsx:87`、`src/renderer/hooks/useShellSnapshot.ts:40` | 无 | `AppSettings` | yes |
-| `settings.update` | `src/main/ipc.ts:81` | `window.pinmind.settings.update` | `src/renderer/pages/settings/SettingsPage.tsx:125`、`src/renderer/components/layout/PersonalSpacePanel.tsx:68`、`src/renderer/pages/onboarding/OnboardingPage.tsx:132` | `Partial<AppSettings>` | `AppSettings` | yes |
-| `settings.runtime.get` | `src/main/ipc.ts:1283` | `window.pinmind.settings.runtime.get` | `src/renderer/CaptureHub.tsx:332`、`src/renderer/CaptureHub.tsx:342` | 无 | `RuntimeSettings` | yes |
-| `app.getVersion` | `src/main/ipc.ts:93` | `window.pinmind.app.getVersion` | 少量页面可能调用，未见设置页直接使用 | 无 | `string` | unclear |
-| `app.openStorageRoot` | `src/main/ipc.ts:109` | `window.pinmind.app.openStorageRoot` | `SettingsPage.tsx:332`、`SettingsPage.tsx:426`、`PersonalSpacePanel.tsx:97` | 无 | `boolean` | yes |
-| `storage.getStats` | `src/main/ipc.ts:126` | `window.pinmind.storage.getStats` | `src/renderer/hooks/useShellSnapshot.ts:41` | 无 | `StorageStats` | yes |
-| `providers.list` | `src/main/ipc.ts:328` | `window.pinmind.providers.list` | `SettingsPage.tsx:107`、`AiConsolePage.tsx:587`、`OnboardingPage.tsx:67` | 无 | `ProviderConfig[]` | yes |
-| `providers.add` | `src/main/ipc.ts:340` | `window.pinmind.providers.add` | `SettingsPage.tsx:233`、`AiConsolePage.tsx:617`、`OnboardingPage.tsx:130` | `ProviderConfig` | `ProviderConfig` | yes |
-| `providers.update` | `src/main/ipc.ts:354` | `window.pinmind.providers.update` | `SettingsPage.tsx:162`、`SettingsPage.tsx:231`、`AiConsolePage.tsx:621` | `id`, `patch` | `ProviderConfig` | yes |
-| `providers.delete` | `src/main/ipc.ts:373` | `window.pinmind.providers.delete` | `SettingsPage.tsx:194`、`AiConsolePage.tsx:626` | `id` | `void` | yes |
-| `providers.scanLocal` | `src/main/ipc.ts:386` | `window.pinmind.providers.scanLocal` | `OnboardingPage.tsx:67` | 无 | `{ name, size, modifiedAt }[]` | yes |
-| `providers.testConnection` | `src/main/ipc.ts:422` | `window.pinmind.providers.testConnection` | `SettingsPage.tsx:212`、`AiConsolePage.tsx:631` | `providerId` | `{ ok, latencyMs, error? }` | yes |
-| `permissions.getStatus` | `src/main/ipc.ts:1269` | `window.pinmind.permissions.getStatus` | `SettingsPage.tsx:88`、`OnboardingPage.tsx:53`、`useShellSnapshot.ts:43` | `PermissionCheckSource` | `PermissionStatusSnapshot` | yes |
-| `permissions.refresh` | `src/main/ipc.ts:1272` | `window.pinmind.permissions.refresh` | `SettingsPage.tsx:781`、`OnboardingPage.tsx:103` | `PermissionCheckSource`、`traceId?` | `PermissionStatusSnapshot` | yes |
-| `permissions.openSettings` | `src/main/ipc.ts:1275` | `window.pinmind.permissions.openSettings` | `SettingsPage.tsx:776` | `target`、`traceId?` | `void` | yes |
-| `vault.getConfig` | `src/main/ipc.ts:734` | `window.pinmind.vault.getConfig` | `useShellSnapshot.ts:44` | 无 | `VaultConfig` | yes |
-| `vault.updateConfig` | `src/main/ipc.ts:746` | `window.pinmind.vault.updateConfig` | `PersonalSpacePanel.tsx:143`、`OnboardingPage.tsx:163` | `Partial<VaultConfig>` | `VaultConfig` | yes |
-| `vault.validatePath` | `src/main/ipc.ts:759` | `window.pinmind.vault.validatePath` | `SettingsPage.tsx:661`、`OnboardingPage.tsx:158` | `vaultPath` | `{ valid, message }` | yes |
-| `vault.pickFolder` | `src/main/ipc.ts:796` | `window.pinmind.vault.pickFolder` | `SettingsPage.tsx:341`、`SettingsPage.tsx:649`、`OnboardingPage.tsx:147`、`PersonalSpacePanel.tsx:140` | 无 | `string` | yes |
-| `workspace.selectDirectory` | `src/main/ipc.ts:1776` | `window.pinmind.workspace.selectDirectory` | `PersonalSpacePanel.tsx:107` | 无 | `{ success, path? }` | yes |
-| `workspace.openDirectory` | `src/main/ipc.ts:1798` | `window.pinmind.workspace.openDirectory` | `PersonalSpacePanel.tsx:125`、`PersonalSpacePanel.tsx:414` | `dirPath` | `{ success }` | yes |
-| `workspace.testWrite` | `src/main/ipc.ts:1813` | `window.pinmind.workspace.testWrite` | `PersonalSpacePanel.tsx:162` | `dirPath` | `{ success, path?, error? }` | yes |
-| `clipboard.getStatus` | `src/main/ipc.ts:299` | `window.pinmind.clipboard.getStatus` | `useShellSnapshot.ts:42` | 无 | `{ running, enabled }` | yes |
-| `clipboard.toggle` | `src/main/ipc.ts:311` | `window.pinmind.clipboard.toggle` | 当前设置页未直接调用 | `enabled` | `boolean` | unclear |
-| `logger.getLevel` | `src/main/ipc.ts:138` | `window.pinmind.logger.getLevel` | AI / 诊断页可能使用 | 无 | `LogLevel` | unclear |
-| `logger.setLevel` | `src/main/ipc.ts:144` | `window.pinmind.logger.setLevel` | `SettingsPage.tsx:805` | `LogLevel` | `LogLevel` | yes |
-| `logger.read` | `src/main/ipc.ts:605` | `window.pinmind.logger.read` | `AiLogPanel`、日志页相关 | `channel`, `limit?` | `string[]` | yes |
-| `aiTasks.list` | `src/main/ipc.ts:477` | `window.pinmind.aiTasks.list` | `AiConsolePage.tsx`、`useAiTasks` | filter | `AiTask[]` | yes |
-| `aiTasks.cancel` | `src/main/ipc.ts:489` | `window.pinmind.aiTasks.cancel` | `AiConsolePage.tsx:641` | `id` | `boolean` | yes |
-| `aiTasks.retry` | `src/main/ipc.ts:506` | `window.pinmind.aiTasks.retry` | `AiConsolePage.tsx:650` | `id` | `AiTask \| null` | yes |
-| `distill.run` | `src/main/ipc.ts:523` | `window.pinmind.distill.run` | `CaptureInboxPage.tsx:249`、多个蒸馏页面 | `sourceItemIds`, `operations`, `tier?` | `AiTask[]` | yes |
-| `distill.runSingle` | `src/main/ipc.ts:536` | `window.pinmind.distill.runSingle` | 蒸馏工作台 | `sourceItemId`, `operation`, `tier?` | `AiTask` | yes |
-| `distill.batch` | `src/main/ipc.ts:634` | `window.pinmind.distill.batch` | 批量蒸馏场景 | `sourceItemIds`, `operations`, `tier?` | `batchId` | yes |
-| `distill.batchStatus` | `src/main/ipc.ts:648` | `window.pinmind.distill.batchStatus` | 批处理进度页 | `batchId` | `BatchProgress` | yes |
-| `distill.batchCancel` | `src/main/ipc.ts:665` | `window.pinmind.distill.batchCancel` | 批处理进度页 | `batchId` | `boolean` | yes |
-| `distilledOutputs.list` | `src/main/ipc.ts:678` | `window.pinmind.distilledOutputs.list` | export / review 页面 | filter | `DistilledOutput[]` | yes |
-| `distilledOutputs.review` | `src/main/ipc.ts:690` | `window.pinmind.distilledOutputs.review` | review / export flow | `id`, `action`, `data?` | `DistilledOutput` | yes |
-| `knowledgeCards.list/get/...` | `src/main/ipc.ts:946` | `window.pinmind.knowledgeCards.*` | 图谱 / 详情页 | various | various | yes |
-| `graph.get` | `src/main/ipc.ts:994` | `window.pinmind.graph.get` | 图谱页 | filter | `{ cards, edges }` | yes |
-| `datasets.*` | `src/main/ipc.ts:1005` 起 | `window.pinmind.datasets.*` | `AiConsolePage.tsx:599` 等 | various | various | yes |
-| `trainingRuns.*` | `src/main/ipc.ts:1098` 起 | `window.pinmind.trainingRuns.*` | `AiConsolePage.tsx:600`、`601` | various | various | yes |
-| `modelVersions.*` | `src/main/ipc.ts:1180` 起 | `window.pinmind.modelVersions.*` | `AiConsolePage.tsx:601`、`673`、`678` | various | various | yes |
-| `captureItems.*` | `src/main/ipc.ts:1442` 起 | `window.pinmind.captureItems.*` | `CaptureInboxPage.tsx:230`、`OnboardingPage.tsx:183` | various | various | yes |
-| `capture.*` stubs | `src/main/ipc.ts:1245` 起 | `window.pinmind.capture.*` | 录屏 / launcher 相关 | various | various | mostly stub |
-| `workbench.saveMarkdown` | `src/main/ipc.ts:1677` | `window.pinmind.workbench.saveMarkdown` | 蒸馏工作台 | `content`, `filename?` | `{ success, filePath?, filename?, error? }` | yes |
-| `workbench.revealInFinder` | `src/main/ipc.ts:1755` | `window.pinmind.workbench.revealInFinder` | 蒸馏工作台 | `filePath` | `boolean` | yes |
+| `settings.get` | `src/main/ipc.ts:76` | `window.acmind.settings.get` | `src/renderer/App.tsx:70`、`src/renderer/pages/settings/SettingsPage.tsx:87`、`src/renderer/hooks/useShellSnapshot.ts:40` | 无 | `AppSettings` | yes |
+| `settings.update` | `src/main/ipc.ts:81` | `window.acmind.settings.update` | `src/renderer/pages/settings/SettingsPage.tsx:125`、`src/renderer/components/layout/PersonalSpacePanel.tsx:68`、`src/renderer/pages/onboarding/OnboardingPage.tsx:132` | `Partial<AppSettings>` | `AppSettings` | yes |
+| `settings.runtime.get` | `src/main/ipc.ts:1283` | `window.acmind.settings.runtime.get` | `src/renderer/CaptureHub.tsx:332`、`src/renderer/CaptureHub.tsx:342` | 无 | `RuntimeSettings` | yes |
+| `app.getVersion` | `src/main/ipc.ts:93` | `window.acmind.app.getVersion` | 少量页面可能调用，未见设置页直接使用 | 无 | `string` | unclear |
+| `app.openStorageRoot` | `src/main/ipc.ts:109` | `window.acmind.app.openStorageRoot` | `SettingsPage.tsx:332`、`SettingsPage.tsx:426`、`PersonalSpacePanel.tsx:97` | 无 | `boolean` | yes |
+| `storage.getStats` | `src/main/ipc.ts:126` | `window.acmind.storage.getStats` | `src/renderer/hooks/useShellSnapshot.ts:41` | 无 | `StorageStats` | yes |
+| `providers.list` | `src/main/ipc.ts:328` | `window.acmind.providers.list` | `SettingsPage.tsx:107`、`AiConsolePage.tsx:587`、`OnboardingPage.tsx:67` | 无 | `ProviderConfig[]` | yes |
+| `providers.add` | `src/main/ipc.ts:340` | `window.acmind.providers.add` | `SettingsPage.tsx:233`、`AiConsolePage.tsx:617`、`OnboardingPage.tsx:130` | `ProviderConfig` | `ProviderConfig` | yes |
+| `providers.update` | `src/main/ipc.ts:354` | `window.acmind.providers.update` | `SettingsPage.tsx:162`、`SettingsPage.tsx:231`、`AiConsolePage.tsx:621` | `id`, `patch` | `ProviderConfig` | yes |
+| `providers.delete` | `src/main/ipc.ts:373` | `window.acmind.providers.delete` | `SettingsPage.tsx:194`、`AiConsolePage.tsx:626` | `id` | `void` | yes |
+| `providers.scanLocal` | `src/main/ipc.ts:386` | `window.acmind.providers.scanLocal` | `OnboardingPage.tsx:67` | 无 | `{ name, size, modifiedAt }[]` | yes |
+| `providers.testConnection` | `src/main/ipc.ts:422` | `window.acmind.providers.testConnection` | `SettingsPage.tsx:212`、`AiConsolePage.tsx:631` | `providerId` | `{ ok, latencyMs, error? }` | yes |
+| `permissions.getStatus` | `src/main/ipc.ts:1269` | `window.acmind.permissions.getStatus` | `SettingsPage.tsx:88`、`OnboardingPage.tsx:53`、`useShellSnapshot.ts:43` | `PermissionCheckSource` | `PermissionStatusSnapshot` | yes |
+| `permissions.refresh` | `src/main/ipc.ts:1272` | `window.acmind.permissions.refresh` | `SettingsPage.tsx:781`、`OnboardingPage.tsx:103` | `PermissionCheckSource`、`traceId?` | `PermissionStatusSnapshot` | yes |
+| `permissions.openSettings` | `src/main/ipc.ts:1275` | `window.acmind.permissions.openSettings` | `SettingsPage.tsx:776` | `target`、`traceId?` | `void` | yes |
+| `vault.getConfig` | `src/main/ipc.ts:734` | `window.acmind.vault.getConfig` | `useShellSnapshot.ts:44` | 无 | `VaultConfig` | yes |
+| `vault.updateConfig` | `src/main/ipc.ts:746` | `window.acmind.vault.updateConfig` | `PersonalSpacePanel.tsx:143`、`OnboardingPage.tsx:163` | `Partial<VaultConfig>` | `VaultConfig` | yes |
+| `vault.validatePath` | `src/main/ipc.ts:759` | `window.acmind.vault.validatePath` | `SettingsPage.tsx:661`、`OnboardingPage.tsx:158` | `vaultPath` | `{ valid, message }` | yes |
+| `vault.pickFolder` | `src/main/ipc.ts:796` | `window.acmind.vault.pickFolder` | `SettingsPage.tsx:341`、`SettingsPage.tsx:649`、`OnboardingPage.tsx:147`、`PersonalSpacePanel.tsx:140` | 无 | `string` | yes |
+| `workspace.selectDirectory` | `src/main/ipc.ts:1776` | `window.acmind.workspace.selectDirectory` | `PersonalSpacePanel.tsx:107` | 无 | `{ success, path? }` | yes |
+| `workspace.openDirectory` | `src/main/ipc.ts:1798` | `window.acmind.workspace.openDirectory` | `PersonalSpacePanel.tsx:125`、`PersonalSpacePanel.tsx:414` | `dirPath` | `{ success }` | yes |
+| `workspace.testWrite` | `src/main/ipc.ts:1813` | `window.acmind.workspace.testWrite` | `PersonalSpacePanel.tsx:162` | `dirPath` | `{ success, path?, error? }` | yes |
+| `clipboard.getStatus` | `src/main/ipc.ts:299` | `window.acmind.clipboard.getStatus` | `useShellSnapshot.ts:42` | 无 | `{ running, enabled }` | yes |
+| `clipboard.toggle` | `src/main/ipc.ts:311` | `window.acmind.clipboard.toggle` | 当前设置页未直接调用 | `enabled` | `boolean` | unclear |
+| `logger.getLevel` | `src/main/ipc.ts:138` | `window.acmind.logger.getLevel` | AI / 诊断页可能使用 | 无 | `LogLevel` | unclear |
+| `logger.setLevel` | `src/main/ipc.ts:144` | `window.acmind.logger.setLevel` | `SettingsPage.tsx:805` | `LogLevel` | `LogLevel` | yes |
+| `logger.read` | `src/main/ipc.ts:605` | `window.acmind.logger.read` | `AiLogPanel`、日志页相关 | `channel`, `limit?` | `string[]` | yes |
+| `aiTasks.list` | `src/main/ipc.ts:477` | `window.acmind.aiTasks.list` | `AiConsolePage.tsx`、`useAiTasks` | filter | `AiTask[]` | yes |
+| `aiTasks.cancel` | `src/main/ipc.ts:489` | `window.acmind.aiTasks.cancel` | `AiConsolePage.tsx:641` | `id` | `boolean` | yes |
+| `aiTasks.retry` | `src/main/ipc.ts:506` | `window.acmind.aiTasks.retry` | `AiConsolePage.tsx:650` | `id` | `AiTask \| null` | yes |
+| `distill.run` | `src/main/ipc.ts:523` | `window.acmind.distill.run` | `CaptureInboxPage.tsx:249`、多个蒸馏页面 | `sourceItemIds`, `operations`, `tier?` | `AiTask[]` | yes |
+| `distill.runSingle` | `src/main/ipc.ts:536` | `window.acmind.distill.runSingle` | 蒸馏工作台 | `sourceItemId`, `operation`, `tier?` | `AiTask` | yes |
+| `distill.batch` | `src/main/ipc.ts:634` | `window.acmind.distill.batch` | 批量蒸馏场景 | `sourceItemIds`, `operations`, `tier?` | `batchId` | yes |
+| `distill.batchStatus` | `src/main/ipc.ts:648` | `window.acmind.distill.batchStatus` | 批处理进度页 | `batchId` | `BatchProgress` | yes |
+| `distill.batchCancel` | `src/main/ipc.ts:665` | `window.acmind.distill.batchCancel` | 批处理进度页 | `batchId` | `boolean` | yes |
+| `distilledOutputs.list` | `src/main/ipc.ts:678` | `window.acmind.distilledOutputs.list` | export / review 页面 | filter | `DistilledOutput[]` | yes |
+| `distilledOutputs.review` | `src/main/ipc.ts:690` | `window.acmind.distilledOutputs.review` | review / export flow | `id`, `action`, `data?` | `DistilledOutput` | yes |
+| `knowledgeCards.list/get/...` | `src/main/ipc.ts:946` | `window.acmind.knowledgeCards.*` | 图谱 / 详情页 | various | various | yes |
+| `graph.get` | `src/main/ipc.ts:994` | `window.acmind.graph.get` | 图谱页 | filter | `{ cards, edges }` | yes |
+| `datasets.*` | `src/main/ipc.ts:1005` 起 | `window.acmind.datasets.*` | `AiConsolePage.tsx:599` 等 | various | various | yes |
+| `trainingRuns.*` | `src/main/ipc.ts:1098` 起 | `window.acmind.trainingRuns.*` | `AiConsolePage.tsx:600`、`601` | various | various | yes |
+| `modelVersions.*` | `src/main/ipc.ts:1180` 起 | `window.acmind.modelVersions.*` | `AiConsolePage.tsx:601`、`673`、`678` | various | various | yes |
+| `captureItems.*` | `src/main/ipc.ts:1442` 起 | `window.acmind.captureItems.*` | `CaptureInboxPage.tsx:230`、`OnboardingPage.tsx:183` | various | various | yes |
+| `capture.*` stubs | `src/main/ipc.ts:1245` 起 | `window.acmind.capture.*` | 录屏 / launcher 相关 | various | various | mostly stub |
+| `workbench.saveMarkdown` | `src/main/ipc.ts:1677` | `window.acmind.workbench.saveMarkdown` | 蒸馏工作台 | `content`, `filename?` | `{ success, filePath?, filename?, error? }` | yes |
+| `workbench.revealInFinder` | `src/main/ipc.ts:1755` | `window.acmind.workbench.revealInFinder` | 蒸馏工作台 | `filePath` | `boolean` | yes |
 
 ### 3.1 需要特别注意的 stub / 占位接口
 
@@ -150,7 +150,7 @@ Settings 页的真实可用能力主要集中在：
 
 当前项目没有发现 `localStorage`、`electron-store` 或独立的 JSON 配置文件作为主配置源。真实持久化主要有三类：
 
-- SQLite：`storageRoot/pinmind.db`
+- SQLite：`storageRoot/acmind.db`
 - 文件系统：`storageRoot/logs`、`storageRoot/sources`、`storageRoot/captures`、`storageRoot/outputs`
 - 环境变量：`LOCAL_MODEL_ENABLED`、`LOCAL_MODEL_MODE`、`LOCAL_MODEL_NAME`、`OLLAMA_BASE_URL`
 
@@ -158,7 +158,7 @@ Settings 页的真实可用能力主要集中在：
 
 | 配置项 | 默认值 | 存储位置 | 读取位置 | 写入位置 | 是否持久化 | 备注 |
 |---|---|---|---|---|---|---|
-| `storageRoot` | `~/PinMind` | `app_settings.value` JSON | `settings.load()`、`settings.getStorageRoot()` | `settings.update()`、`PersonalSpacePanel`、`OnboardingPage` | yes | 实际会被 `resolveStorageRoot()` 规范化。 |
+| `storageRoot` | `~/AcMind` | `app_settings.value` JSON | `settings.load()`、`settings.getStorageRoot()` | `settings.update()`、`PersonalSpacePanel`、`OnboardingPage` | yes | 实际会被 `resolveStorageRoot()` 规范化。 |
 | `pollIntervalMs` | `500` | `app_settings.value` JSON | `settings.load()`、`captureService.init()` | `settings.update()` | yes | 对应需求里的 `scanInterval`。 |
 | `autoCapture` | `true` | `app_settings.value` JSON | `captureService.init()` | `settings.update()` | yes | 控制剪贴板监听是否启用。 |
 | `hasCompletedOnboarding` | `false` | `app_settings.value` JSON | `App.tsx:70` | `settings.update()` | yes | 控制是否进入 onboarding。 |

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PinMind — VoiceCapturePanel Component
+// AcMind — VoiceCapturePanel Component
 // 语音收集面板：录音后交给主进程导入并转写，完成后回填文本
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -104,7 +104,7 @@ export function VoiceCapturePanel({ onComplete, onCancel }: VoiceCapturePanelPro
 
     try {
       const arrayBuffer = await blob.arrayBuffer();
-      const result = await window.pinmind.voice.importAudioBuffer({
+      const result = await window.acmind.voice.importAudioBuffer({
         data: arrayBuffer,
         mimeType,
         title: '语音收集',
@@ -127,7 +127,7 @@ export function VoiceCapturePanel({ onComplete, onCancel }: VoiceCapturePanelPro
       let latestText = '';
 
       while (Date.now() < deadline) {
-        const status = await window.pinmind.voice.getTranscriptionStatus(captureItemId) as VoiceTranscriptionStatus;
+        const status = await window.acmind.voice.getTranscriptionStatus(captureItemId) as VoiceTranscriptionStatus;
         if (!mountedRef.current || requestId !== activeRequestRef.current) {
           return;
         }
@@ -145,7 +145,7 @@ export function VoiceCapturePanel({ onComplete, onCancel }: VoiceCapturePanelPro
       }
 
       if (!latestText) {
-        const status = await window.pinmind.voice.getTranscriptionStatus(captureItemId) as VoiceTranscriptionStatus;
+        const status = await window.acmind.voice.getTranscriptionStatus(captureItemId) as VoiceTranscriptionStatus;
         latestText = (status.transcriptText || '').trim();
       }
 

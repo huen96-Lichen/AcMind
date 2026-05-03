@@ -20,7 +20,7 @@ export function ImagePreview({ filePath, title, maxHeight = 420 }: ImagePreviewP
 
     (async () => {
       try {
-        const result = await window.pinmind.captureItems.readImage(filePath);
+        const result = await window.acmind.captureItems.readImage(filePath);
         if (!mountedRef.current) return;
         if (result.ok && result.dataUrl) {
           setDataUrl(result.dataUrl);
@@ -63,7 +63,7 @@ export function ImagePreview({ filePath, title, maxHeight = 420 }: ImagePreviewP
             <button
               type="button"
               className="text-[11px] text-[color:var(--pm-brand-primary)] hover:underline"
-              onClick={() => window.pinmind.app.openPath(filePath)}
+              onClick={() => window.acmind.app.openPath(filePath)}
             >
               打开原文件
             </button>
@@ -91,7 +91,7 @@ export function ImagePreview({ filePath, title, maxHeight = 420 }: ImagePreviewP
         <button
           type="button"
           className="shrink-0 text-[11px] text-[color:var(--pm-brand-primary)] hover:underline"
-          onClick={() => window.pinmind.app.openPath(filePath)}
+          onClick={() => window.acmind.app.openPath(filePath)}
         >
           打开原文件
         </button>

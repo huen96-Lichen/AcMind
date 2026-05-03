@@ -1,4 +1,4 @@
-// PinMind Prompt Profile System
+// AcMind Prompt Profile System
 // Phase 8.2: 可维护、可版本化的 Prompt Profile 体系
 //
 // 职责：
@@ -76,7 +76,7 @@ const CONSTRAINTS_BASE = [
 const BUILTIN_PROFILES: PromptProfile[] = [
   // ── manual_text ──────────────────────────────────────────────
   {
-    profile_id: 'pinmind.manual_text.v1',
+    profile_id: 'acmind.manual_text.v1',
     name: '手动输入整理',
     version: '1.0.0',
     source_type: 'manual_text',
@@ -106,7 +106,7 @@ const BUILTIN_PROFILES: PromptProfile[] = [
 
   // ── clipboard_text ───────────────────────────────────────────
   {
-    profile_id: 'pinmind.clipboard_text.v1',
+    profile_id: 'acmind.clipboard_text.v1',
     name: '剪贴板摘录整理',
     version: '1.0.0',
     source_type: 'clipboard_text',
@@ -136,7 +136,7 @@ const BUILTIN_PROFILES: PromptProfile[] = [
 
   // ── webpage ──────────────────────────────────────────────────
   {
-    profile_id: 'pinmind.webpage.v1',
+    profile_id: 'acmind.webpage.v1',
     name: '网页资料整理',
     version: '1.0.0',
     source_type: 'webpage',
@@ -168,7 +168,7 @@ const BUILTIN_PROFILES: PromptProfile[] = [
 
   // ── screenshot ───────────────────────────────────────────────
   {
-    profile_id: 'pinmind.screenshot.ocr.v1',
+    profile_id: 'acmind.screenshot.ocr.v1',
     name: '截图 OCR 整理',
     version: '1.0.0',
     source_type: 'screenshot',
@@ -199,7 +199,7 @@ const BUILTIN_PROFILES: PromptProfile[] = [
 
   // ── audio (with transcript) ──────────────────────────────────
   {
-    profile_id: 'pinmind.audio.transcript.v1',
+    profile_id: 'acmind.audio.transcript.v1',
     name: '音频转写整理',
     version: '1.0.0',
     source_type: 'audio',
@@ -235,7 +235,7 @@ const BUILTIN_PROFILES: PromptProfile[] = [
     version: '1.0.0',
     source_type: 'audio',
     description: 'Phase 10: 语音转写文本的深度整理，去除口癖、修复断句、提取待办',
-    system_prompt: `你是 PinMind 的语音笔记整理助手。
+    system_prompt: `你是 AcMind 的语音笔记整理助手。
 你的任务是把用户的语音转写文本整理成清晰、克制、可长期保存的中文 Markdown 笔记。
 你必须遵守：
 1. 保留原意，不擅自扩写事实。
@@ -283,7 +283,7 @@ body_markdown 建议结构：
 
   // ── video (with transcript) ──────────────────────────────────
   {
-    profile_id: 'pinmind.video.transcript.v1',
+    profile_id: 'acmind.video.transcript.v1',
     name: '视频转写整理',
     version: '1.0.0',
     source_type: 'video',
@@ -314,7 +314,7 @@ body_markdown 建议结构：
 
   // ── file (text files) ────────────────────────────────────────
   {
-    profile_id: 'pinmind.file.text.v1',
+    profile_id: 'acmind.file.text.v1',
     name: '文本文件整理',
     version: '1.0.0',
     source_type: 'file',
@@ -346,7 +346,7 @@ body_markdown 建议结构：
 
   // ── pdf (with parsed markdown) ───────────────────────────────
   {
-    profile_id: 'pinmind.pdf.parsed.v1',
+    profile_id: 'acmind.pdf.parsed.v1',
     name: 'PDF 文档整理',
     version: '1.0.0',
     source_type: 'pdf',
@@ -377,7 +377,7 @@ body_markdown 建议结构：
 
   // ── docx (with parsed markdown) ──────────────────────────────
   {
-    profile_id: 'pinmind.docx.parsed.v1',
+    profile_id: 'acmind.docx.parsed.v1',
     name: 'Word 文档整理',
     version: '1.0.0',
     source_type: 'docx',
@@ -408,7 +408,7 @@ body_markdown 建议结构：
 
   // ── image (with OCR) ─────────────────────────────────────────
   {
-    profile_id: 'pinmind.image.ocr.v1',
+    profile_id: 'acmind.image.ocr.v1',
     name: '图片 OCR 整理',
     version: '1.0.0',
     source_type: 'image',
@@ -439,7 +439,7 @@ body_markdown 建议结构：
 
   // ── default fallback ─────────────────────────────────────────
   {
-    profile_id: 'pinmind.default.v1',
+    profile_id: 'acmind.default.v1',
     name: '通用内容整理',
     version: '1.0.0',
     source_type: 'default',

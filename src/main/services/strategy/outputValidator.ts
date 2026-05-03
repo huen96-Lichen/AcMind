@@ -1,4 +1,4 @@
-// PinMind AI Output Validator
+// AcMind AI Output Validator
 // Phase 8.4: AI 输出结构化校验
 //
 // 职责：

@@ -1,6 +1,6 @@
 // ─── Desktop Muse Capsule Settings ─────────────────────────────────
 // Type definitions and default values for the Desktop Muse Capsule feature.
-// See: PinMind_DesktopMuseCapsule_设计规范_v1.md §14
+// See: AcMind_DesktopMuseCapsule_设计规范_v1.md §14
 
 // ─── Theme Colors ───────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ export type CapsuleDefaultAction = 'inbox' | 'ai-organize' | 'custom-flow';
 
 // ─── Default Destination ────────────────────────────────────────
 
-export type CapsuleDestination = 'pinmind-inbox' | 'obsidian-inbox' | 'project';
+export type CapsuleDestination = 'acmind-inbox' | 'obsidian-inbox' | 'project';
 
 // ─── Capsule State Machine ──────────────────────────────────────
 
@@ -183,7 +183,7 @@ export const DEFAULT_CAPSULE_SETTINGS: DesktopMuseCapsuleSettings = {
   quickCapture: {
     defaultCaptureType: 'text',
     defaultAction: 'inbox',
-    defaultDestination: 'pinmind-inbox',
+    defaultDestination: 'acmind-inbox',
     clearInputAfterCapture: true,
     showNotificationAfterCapture: true,
   },

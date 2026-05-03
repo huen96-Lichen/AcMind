@@ -1,8 +1,8 @@
 import type { DesktopMuseCapsuleSettings } from './capsuleSettings';
 import type { DistilledDocumentType } from './markdownSpec';
 
-// PinMind Core Type Definitions
-// Source: PinMind Phase 0-5 Implementation Plan + Governance Spec
+// AcMind Core Type Definitions
+// Source: AcMind Phase 0-5 Implementation Plan + Governance Spec
 
 // ─── SourceItem ───────────────────────────────────────────────
 // Represents a captured content item (text, image, or URL)
@@ -33,7 +33,7 @@ export interface SourceItem {
 // Represents a single AI processing task against a SourceItem
 
 export type AiTier = 'local_light' | 'cloud_standard' | 'cloud_advanced';
-export type AiOperation = 'rename' | 'summarize' | 'classify' | 'tag' | 'valueScore' | 'cleanSuggest';
+export type AiOperation = 'rename' | 'summarize' | 'classify' | 'tag' | 'valueScore' | 'cleanSuggest' | 'prefilter';
 export type AiTaskStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface AiTask {
@@ -389,6 +389,101 @@ export interface StorageStats {
   exportRecords: number;
 }
 
+// ─── Batch 4: Dashboard Stats ──────────────────────────────────
+
+export interface DashboardStats {
+  todayCollected: number;
+  todayDistilled: number;
+  todayExported: number;
+  inboxPending: number;
+  shelfItems: number;
+  recentItems: SourceItem[];
+  clipboardWatching: boolean;
+  clipboardPaused: boolean;
+  aiProviderReady: boolean;
+  vaultConfigured: boolean;
+  markItDownAvailable: boolean;
+}
+
+export interface CapsuleStatus {
+  clipboardWatching: boolean;
+  shelfItemCount: number;
+  inboxPendingCount: number;
+  backgroundTaskCount: number;
+}
+
+// ─── Batch 5: Health Check ─────────────────────────────────────
+
+export interface HealthCheckResult {
+  ok: boolean;
+  checks: Array<{
+    name: string;
+    ok: boolean;
+    message?: string;
+  }>;
+}
+
+// ─── Batch 6: Knowledge Project ────────────────────────────────
+
+export interface KnowledgeProject {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'paused' | 'archived';
+  color?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProjectItem {
+  id: string;
+  projectId: string;
+  itemType: 'source_item' | 'distilled_output';
+  itemId: string;
+  addedAt: number;
+}
+
+// ─── Batch 6: Tag Summary ──────────────────────────────────────
+
+export interface TagSummary {
+  name: string;
+  count: number;
+  sources: string[]; // which entity types use this tag
+}
+
+// ─── Batch 6: Dataset ──────────────────────────────────────────
+
+export interface Dataset {
+  id: string;
+  name: string;
+  description?: string;
+  purpose: 'fine_tune' | 'rag' | 'evaluation' | 'archive';
+  status: 'draft' | 'ready' | 'exported' | 'archived';
+  itemCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DatasetItem {
+  id: string;
+  datasetId: string;
+  sourceType: 'source_item' | 'distilled_output';
+  sourceId: string;
+  title?: string;
+  content?: string;
+  quality: 'high' | 'medium' | 'low' | 'excluded';
+  privacyLevel: 'private' | 'safe' | 'sensitive';
+  included: boolean;
+  reason?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DatasetExportOptions {
+  format: 'jsonl' | 'markdown_bundle';
+  includeExcluded: boolean;
+}
+
 // ─── Logger types ─────────────────────────────────────────────
 
 export type LogChannel = 'app' | 'ai' | 'export' | 'error' | 'search';
@@ -527,6 +622,13 @@ export const IPC_CHANNELS = {
   // MarkItDown integration
   MARKITDOWN_CONVERT: 'markitdown.convert',
   MARKITDOWN_CHECK: 'markitdown.check',
+  // Phase 3: File Converter
+  FILE_CONVERT: 'fileConverter.convert',
+  FILE_CONVERT_STATUS: 'fileConverter.getStatus',
+  FILE_CONVERT_LIST: 'fileConverter.listJobs',
+  FILE_CONVERT_SAVE_TO_INBOX: 'fileConverter.saveToInbox',
+  FILE_CONVERT_PREVIEW: 'fileConverter.preview',
+  FILE_CONVERT_JOBS_CHANGED: 'fileConverter.jobsChanged',
   // Phase 3: Scheduler
   SCHEDULER_CREATE_TASK: 'scheduler.createTask',
   SCHEDULER_UPDATE_TASK: 'scheduler.updateTask',
@@ -577,6 +679,19 @@ export const IPC_CHANNELS = {
   // V2.1 Phase 7.1: Unified Capture Adapter
   CAPTURE_RECORD: 'capture.record',
   CAPTURE_GET_AVAILABLE_TYPES: 'capture.getAvailableTypes',
+  // Phase 2A: Capture 截图与贴图
+  CAPTURE_START_AREA: 'capture.startAreaCapture',
+  CAPTURE_CANCEL: 'capture.cancelCapture',
+  CAPTURE_PIN_IMAGE: 'capture.pinImage',
+  CAPTURE_SAVE_TO_INBOX: 'capture.saveToInbox',
+  CAPTURE_LIST_RECENT: 'capture.listRecentCaptures',
+  CAPTURE_LIST_PINNED: 'capture.listPinnedImages',
+  CAPTURE_CLOSE_PINNED: 'capture.closePinnedImage',
+  CAPTURE_SCREENSHOTS_CHANGED: 'capture.screenshotsChanged',
+  CAPTURE_PINNED_CHANGED: 'capture.pinnedChanged',
+  // Phase 2B: OCR
+  CAPTURE_OCR_EXTRACT: 'capture.ocrExtract',
+  CAPTURE_OCR_SAVE_TO_INBOX: 'capture.ocrSaveToInbox',
   // V2.1 Phase 7.2: Clipboard text capture
   CAPTURE_COLLECT_CLIPBOARD: 'capture.collectClipboard',
   // V2.1 Phase 7.3: Screenshot capture
@@ -605,8 +720,114 @@ export const IPC_CHANNELS = {
   VOICE_GET_WATCH_STATE: 'voice.getWatchState',
   VOICE_RETRY_TRANSCRIPTION: 'voice.retryTranscription',
   VOICE_GET_TRANSCRIPTION_STATUS: 'voice.getTranscriptionStatus',
+  // V2.1 Phase 10: Voice dictation & polish
+  VOICE_GET_DICTATION_GUIDE: 'voice.getDictationGuide',
+  VOICE_POLISH_TRANSCRIPT: 'voice.polishTranscript',
+  VOICE_CREATE_PIN_FROM_TRANSCRIPT: 'voice.createPinFromTranscript',
   // Phase 12.6: Local Diagnostics Export
   DIAGNOSTICS_EXPORT: 'diagnostics.export',
+
+  // ─── Pin Pool ────────────────────────────────────────────────
+  PIN_POOL_LIST: 'pinPool.list',
+  PIN_POOL_GET: 'pinPool.get',
+  PIN_POOL_CREATE_FROM_CAPTURE: 'pinPool.createFromCapture',
+  PIN_POOL_CREATE_FROM_TEXT: 'pinPool.createFromText',
+  PIN_POOL_PREFILTER: 'pinPool.prefilter',
+  PIN_POOL_PROMOTE_TO_INBOX: 'pinPool.promoteToInbox',
+  PIN_POOL_UPDATE: 'pinPool.update',
+  PIN_POOL_IGNORE: 'pinPool.ignore',
+  PIN_POOL_DELETE: 'pinPool.delete',
+  PIN_POOL_CHANGED: 'pinPool.changed',
+
+  // ─── Phase 0: AcMind 模块 IPC 边界 ──────────────────────────
+
+  // clipboard.*
+  CLIPBOARD_LIST_ITEMS: 'clipboard.listItems',
+  CLIPBOARD_GET_ITEM: 'clipboard.getItem',
+  CLIPBOARD_PIN_ITEM: 'clipboard.pinItem',
+  CLIPBOARD_UNPIN_ITEM: 'clipboard.unpinItem',
+  CLIPBOARD_DELETE_ITEM: 'clipboard.deleteItem',
+  CLIPBOARD_SAVE_TO_INBOX: 'clipboard.saveToInbox',
+  CLIPBOARD_ITEMS_CHANGED: 'clipboard.itemsChanged',
+  CLIPBOARD_SEARCH_ITEMS: 'clipboard.searchItems',
+  CLIPBOARD_COPY_ITEM: 'clipboard.copyItem',
+  CLIPBOARD_CLEAR_HISTORY: 'clipboard.clearHistory',
+  CLIPBOARD_PAUSE: 'clipboard.pause',
+  CLIPBOARD_RESUME: 'clipboard.resume',
+  CLIPBOARD_IS_PAUSED: 'clipboard.isPaused',
+
+  // shelf.*
+  SHELF_LIST_ITEMS: 'shelf.listItems',
+  SHELF_GET_ITEM: 'shelf.getItem',
+  SHELF_ADD_FILES: 'shelf.addFiles',
+  SHELF_ADD_TEXT: 'shelf.addText',
+  SHELF_REMOVE_ITEM: 'shelf.removeItem',
+  SHELF_SAVE_TO_INBOX: 'shelf.saveToInbox',
+  SHELF_ITEMS_CHANGED: 'shelf.itemsChanged',
+
+  // aiRuntime.*
+  AI_RUNTIME_LIST_ACTIONS: 'aiRuntime.listActions',
+  AI_RUNTIME_GET_ACTION: 'aiRuntime.getAction',
+  AI_RUNTIME_CREATE_ACTION: 'aiRuntime.createAction',
+  AI_RUNTIME_UPDATE_ACTION: 'aiRuntime.updateAction',
+  AI_RUNTIME_DELETE_ACTION: 'aiRuntime.deleteAction',
+  AI_RUNTIME_RUN_ACTION: 'aiRuntime.runAction',
+  AI_RUNTIME_LIST_JOBS: 'aiRuntime.listJobs',
+  AI_RUNTIME_GET_JOB: 'aiRuntime.getJob',
+  AI_RUNTIME_CANCEL_JOB: 'aiRuntime.cancelJob',
+  AI_RUNTIME_JOB_CHANGED: 'aiRuntime.jobChanged',
+  AI_RUNTIME_HEALTH_CHECK: 'aiRuntime.healthCheck',
+
+  // ─── distilledNotes.* ────────────────────────────────────────
+  DISTILLED_NOTES_LIST: 'distilledNotes.list',
+  DISTILLED_NOTES_GET: 'distilledNotes.get',
+  DISTILLED_NOTES_CREATE: 'distilledNotes.create',
+  DISTILLED_NOTES_UPDATE: 'distilledNotes.update',
+  DISTILLED_NOTES_DELETE: 'distilledNotes.delete',
+
+  // ─── vaultSearch.* ───────────────────────────────────────────
+  VAULT_SEARCH: 'vaultSearch.search',
+
+  // ─── voiceDictionary.* ───────────────────────────────────────
+  VOICE_DICTIONARY_LIST: 'voiceDictionary.list',
+  VOICE_DICTIONARY_ADD: 'voiceDictionary.add',
+  VOICE_DICTIONARY_DELETE: 'voiceDictionary.delete',
+  VOICE_DICTIONARY_TOGGLE: 'voiceDictionary.toggle',
+
+  // ─── asr.* ───────────────────────────────────────────────────
+  ASR_GET_STATUS: 'asr.getStatus',
+  ASR_TRANSCRIBE: 'asr.transcribe',
+
+  // ─── Batch 4: Dashboard / Capsule / Utilities ────────────────
+  DASHBOARD_GET_STATS: 'dashboard.getStats',
+  CAPSULE_GET_STATUS: 'capsule.getStatus',
+
+  // ─── Batch 5: Health Check ──────────────────────────────────
+  HEALTH_CHECK: 'health.check',
+
+  // ─── Batch 6: Knowledge Projects ────────────────────────────
+  PROJECTS_LIST: 'projects.list',
+  PROJECTS_GET: 'projects.get',
+  PROJECTS_CREATE: 'projects.create',
+  PROJECTS_UPDATE: 'projects.update',
+  PROJECTS_DELETE: 'projects.delete',
+  PROJECTS_ADD_ITEM: 'projects.addItem',
+  PROJECTS_REMOVE_ITEM: 'projects.removeItem',
+
+  // ─── Batch 6: Tags ──────────────────────────────────────────
+  TAGS_LIST: 'tags.list',
+  TAGS_MERGE: 'tags.merge',
+  TAGS_RENAME: 'tags.rename',
+  TAGS_DELETE: 'tags.delete',
+
+  // ─── Batch 6: Datasets ─────────────────────────────────────
+  DATASETS_V2_CREATE: 'datasets.v2.create',
+  DATASETS_V2_LIST: 'datasets.v2.list',
+  DATASETS_V2_GET: 'datasets.v2.get',
+  DATASETS_V2_ADD_ITEMS: 'datasets.v2.addItems',
+  DATASETS_V2_UPDATE_ITEM: 'datasets.v2.updateItem',
+  DATASETS_V2_EXPORT: 'datasets.v2.export',
+  DATASETS_V2_DELETE: 'datasets.v2.delete',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
@@ -616,6 +837,7 @@ export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
 export interface SourceItemListFilter {
   status?: SourceItemStatus;
   type?: SourceItemType;
+  source?: SourceItemSource;
   limit?: number;
   offset?: number;
 }
@@ -888,12 +1110,16 @@ export interface RecordItem {
 export type SourceType =
   | 'manual_text'
   | 'clipboard_text'
+  | 'clipboard_image'
   | 'screenshot'
+  | 'pinned_image'
   | 'webpage'
   | 'file'
   | 'image'
   | 'audio'
   | 'video'
+  | 'ocr_text'
+  | 'system_context'
   // V2.1 Phase 7.6: VaultKeeper reserved source types
   | 'pdf'
   | 'docx'
@@ -1126,6 +1352,16 @@ export interface ScannedVaultFile {
   skipReason?: string;
 }
 
+export interface VaultSearchResult {
+  relativePath: string;
+  fileName: string;
+  title: string;
+  snippet: string;
+  matchCount: number;
+  fileSize: number;
+  modifiedAt: number;
+}
+
 export interface ImportOptions {
   vaultPath: string;
   folderPath?: string;
@@ -1141,4 +1377,301 @@ export interface ImportResult {
   skipped: number;
   failed: number;
   errors: Array<{ filePath: string; error: string }>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 0: AcMind 统一数据对象
+// 以下类型定义 AcMind 中枢的统一数据模型。
+// 现有类型（SourceItem, AiTask, DistilledOutput 等）保持不变，
+// 新增类型用于补齐模块边界。
+//
+// ─── 新旧类型映射关系（Phase 0.5 文档化）──────────────────────────────────
+//
+// AcMind 目标对象          当前等价/承接对象         映射策略
+// ─────────────────────── ─────────────────────── ──────────────────────────
+// ProcessJob              AiTask                  ProcessJob 是更广义的统一任务模型
+//                                                 （支持 ocr/asr/markitdown/distill 等），
+//                                                 AiTask 仅覆盖 AI 推理任务。
+//                                                 当前阶段：ProcessJob 类型已定义，
+//                                                 ai_tasks 表继续承接 AI 任务。
+//                                                 Phase 2 拆 process_jobs 表。
+//
+// DistilledNote           DistilledOutput         DistilledNote 支持多源聚合
+//                                                 （sourceItemIds: string[]），
+//                                                 DistilledOutput 仅单源。
+//                                                 当前阶段：DistilledNote 类型已定义，
+//                                                 distilled_outputs 表继续承接。
+//                                                 Phase 2 拆 distilled_notes 表。
+//
+// ShelfItem               pin_pool_items (legacy) ShelfItem 是新命名，
+//                                                 pin_pool_items 是旧表。
+//                                                 当前阶段：shelf_items 表已创建（v14），
+//                                                 pin_pool_items 保留兼容。
+//
+// ClipboardItem           SourceItem (clipboard)  ClipboardItem 专用于剪贴板历史，
+//                                                 当前由 SourceItem.source='clipboard'
+//                                                 + clipboard.* IPC 承接。
+//                                                 当前阶段：clipboard_items 表已创建（v14）。
+//
+// AssetFile               SourceItem.contentPath  AssetFile 独立管理资产文件元数据，
+//                                                 当前由 SourceItem.contentPath 字段临时承接。
+//                                                 当前阶段：asset_files 表已创建（v14）。
+//
+// AIAction                ProviderConfig +        AIAction 定义用户可触发的 AI 动作，
+//                         AppSettings 相关字段    当前由 ProviderConfig / prompt profile
+//                                                 相关结构分散承接。
+//                                                 当前阶段：ai_actions 表已创建（v14）。
+//
+// ─── 原则 ─────────────────────────────────────────────────────────────────
+// - 不为满足名字而制造重复平行模型
+// - 旧类型继续使用，新类型逐步接管
+// - UI 开发时优先使用新类型，旧类型标记为 @legacy
+// - Phase 1/2 再逐步拆表和迁移
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── AssetFile ────────────────────────────────────────────────
+// 图片、截图、音频、PDF、DOCX 等资产文件
+
+export type AssetFileKind =
+  | 'image'
+  | 'audio'
+  | 'video'
+  | 'pdf'
+  | 'docx'
+  | 'html'
+  | 'markdown'
+  | 'other';
+
+export interface AssetFile {
+  id: string;
+  sourceItemId?: string;
+  kind: AssetFileKind;
+  originalName?: string;
+  localPath: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  sha256?: string;
+  createdAt: number;
+  metadata?: Record<string, unknown>;
+}
+
+// ─── ClipboardItem ────────────────────────────────────────────
+// 剪贴板历史记录
+
+export type ClipboardContentType = 'text' | 'image' | 'file' | 'url' | 'rich_text';
+
+export interface ClipboardItem {
+  id: string;
+  sourceItemId?: string;
+  contentType: ClipboardContentType;
+  text?: string;
+  assetFileIds?: string[];
+  sourceApp?: string;
+  isSensitive?: boolean;
+  isPinned?: boolean;
+  createdAt: number;
+}
+
+// ─── ShelfItem ────────────────────────────────────────────────
+// 文件临时架项目
+
+export type ShelfItemOrigin = 'drag_drop' | 'capture' | 'clipboard' | 'manual';
+export type ShelfItemStatus = 'temporary' | 'saved_to_inbox' | 'processed' | 'removed';
+
+export interface ShelfItem {
+  id: string;
+  sourceItemId?: string;
+  assetFileIds: string[];
+  label?: string;
+  origin?: ShelfItemOrigin;
+  status: ShelfItemStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ─── ProcessJob ───────────────────────────────────────────────
+// AI / 转换 / OCR / 转写任务（统一任务模型，与现有 AiTask 互补）
+
+export type ProcessJobType =
+  | 'ocr'
+  | 'asr'
+  | 'markitdown'
+  | 'distill'
+  | 'summarize'
+  | 'tag'
+  | 'export';
+
+export type ProcessJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+export interface ProcessJob {
+  id: string;
+  type: ProcessJobType;
+  sourceItemId?: string;
+  assetFileIds?: string[];
+  status: ProcessJobStatus;
+  progress?: number;
+  errorMessage?: string;
+  createdAt: number;
+  updatedAt: number;
+  startedAt?: number;
+  completedAt?: number;
+  metadata?: Record<string, unknown>;
+}
+
+// ─── ProcessedContent (AI 处理输出结构) ────────────────────────
+// 从 strategy/types.ts 提升到 shared，供 preload 桥接使用
+
+export interface ProcessedContent {
+  title: string;
+  summary: string;
+  tags: string[];
+  body_markdown: string;
+  suggested_folder: string;
+  quality_flags: string[];
+}
+
+// ─── DistilledNote ────────────────────────────────────────────
+// AI 整理后的结构化笔记（与现有 DistilledOutput 互补，支持多源聚合）
+
+export interface DistilledNote {
+  id: string;
+  sourceItemIds: string[];
+  title: string;
+  summary: string;
+  tags: string[];
+  suggestedFolder?: string;
+  bodyMarkdown: string;
+  qualityFlags: string[];
+  modelProvider?: string;
+  modelName?: string;
+  createdAt: number;
+  updatedAt: number;
+  metadata?: Record<string, unknown>;
+}
+
+// ─── AIAction ─────────────────────────────────────────────────
+// 选中文字 / 截图 / 剪贴板后的 AI 动作定义
+
+export type AIActionType =
+  | 'summarize'
+  | 'rewrite'
+  | 'translate'
+  | 'extract_todos'
+  | 'to_markdown'
+  | 'save_to_inbox'
+  | 'custom';
+
+export interface AIAction {
+  id: string;
+  name: string;
+  inputTypes: SourceType[];
+  actionType: AIActionType;
+  promptProfileId?: string;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ─── PinItem (Pin Pool) ───────────────────────────────────────
+// Pin Pool 中的条目，用于快速 pin 住内容后预筛/提升到 inbox
+
+export type PinItemSourceType =
+  | 'clipboard_text'
+  | 'clipboard_image'
+  | 'screenshot'
+  | 'manual_text'
+  | 'file'
+  | 'pdf'
+  | 'docx'
+  | 'audio'
+  | 'webpage'
+  | 'image';
+
+export type PinItemStatus = 'pinned' | 'promoted' | 'ignored' | 'deleted';
+
+export interface PinItem {
+  id: string;
+  captureItemId: string;
+  originalId: string;
+  sourceType: PinItemSourceType;
+  title: string;
+  previewText?: string;
+  rawText?: string;
+  rawFilePath?: string;
+  status: PinItemStatus;
+  createdAt: number;
+  pinnedAt: number;
+  updatedAt: number;
+  prefilterResult?: Record<string, unknown>;
+}
+
+export interface PinItemListFilter {
+  status?: PinItemStatus;
+  sourceType?: PinItemSourceType;
+  limit?: number;
+  offset?: number;
+}
+
+// ─── Voice Types (Phase 10) ───────────────────────────────────
+
+export type VoiceSessionPhase = 'idle' | 'listening' | 'processing' | 'done' | 'error';
+
+export type VoicePolishMode = 'raw' | 'light' | 'structured' | 'formal';
+
+export interface VoiceDictionaryEntry {
+  id: string;
+  phrase: string;
+  note?: string;
+  enabled: boolean;
+  hits: number;
+  createdAt: number;
+}
+
+export interface VoicePolishRequest {
+  transcript: string;
+  mode?: VoicePolishMode;
+  dictionary?: VoiceDictionaryEntry[];
+}
+
+export interface VoicePolishResult {
+  rawTranscript: string;
+  finalText: string;
+  mode: VoicePolishMode;
+  usedDictionary: string[];
+  warning?: string;
+}
+
+export interface VoiceCreatePinRequest {
+  transcript: string;
+  polishedText?: string;
+  title?: string;
+  sourceApp?: string;
+}
+
+// ── Phase 2A: Pinned Image ────────────────────────────────────────
+
+export interface PinnedImage {
+  id: string;
+  filePath: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  sourceItemId?: string;
+  createdAt: number;
+}
+
+export interface CaptureSnapshot {
+  id: string;
+  filePath: string;
+  sourceItemId?: string;
+  ocrText?: string;
+  createdAt: number;
+}
+
+export interface OcrResult {
+  text: string;
+  confidence?: number;
+  language?: string;
+  error?: string;
 }

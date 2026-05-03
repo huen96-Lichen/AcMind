@@ -1,4 +1,4 @@
-# PinMind Phase 1 — 项目交接文档
+# AcMind Phase 1 — 项目交接文档
 
 > 版本: 0.2.1 | 日期: 2026-04-29
 
@@ -6,7 +6,7 @@
 
 ## 1. 项目概述
 
-PinMind 是一个 **本地优先的 AI 记忆蒸馏器**（Local-first AI Memory Distiller），核心链路：
+AcMind 是一个 **本地优先的 AI 记忆蒸馏器**（Local-first AI Memory Distiller），核心链路：
 
 ```
 手动输入 → source_items → ai_tasks → distill → distilled_outputs → 审阅编辑 → 导出 Markdown → export_records

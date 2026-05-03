@@ -1,8 +1,8 @@
 // ============================================================
-// PinMind AI 蒸馏工作台 v2.0 — 子视图页面
+// AcMind AI 蒸馏工作台 v2.0 — 子视图页面
 // ============================================================
 // 作为 DistillPage 的子视图，提供 "输入 → 配置 → 输出" 体验。
-// 使用 PinMind Native Workspace 设计系统组件。
+// 使用 AcMind Native Workspace 设计系统组件。
 // ============================================================
 
 import { useState, useCallback, useRef } from 'react';
@@ -122,7 +122,7 @@ export function DistillationWorkbench(): JSX.Element {
     if (!result) return;
     try {
       await navigator.clipboard.writeText(result.markdown);
-      window.dispatchEvent(new CustomEvent('pinmind:toast', {
+      window.dispatchEvent(new CustomEvent('acmind:toast', {
         detail: { message: '已复制到剪贴板', type: 'success' },
       }));
     } catch {
@@ -135,7 +135,7 @@ export function DistillationWorkbench(): JSX.Element {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      window.dispatchEvent(new CustomEvent('pinmind:toast', {
+      window.dispatchEvent(new CustomEvent('acmind:toast', {
         detail: { message: '已复制到剪贴板', type: 'success' },
       }));
     }
@@ -159,20 +159,20 @@ export function DistillationWorkbench(): JSX.Element {
     if (!result) return;
     setIsSaving(true);
     try {
-      const response = await window.pinmind.workbench.saveMarkdown({ content: result.markdown });
+      const response = await window.acmind.workbench.saveMarkdown({ content: result.markdown });
       if (response.success && response.filePath) {
         setSavedFilePath(response.filePath);
-        window.dispatchEvent(new CustomEvent('pinmind:toast', {
+        window.dispatchEvent(new CustomEvent('acmind:toast', {
           detail: { message: `已保存到 ${response.filePath}`, type: 'success' },
         }));
       } else {
-        window.dispatchEvent(new CustomEvent('pinmind:toast', {
+        window.dispatchEvent(new CustomEvent('acmind:toast', {
           detail: { message: `保存失败: ${response.error || '未知错误'}`, type: 'error' },
         }));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : '保存失败';
-      window.dispatchEvent(new CustomEvent('pinmind:toast', {
+      window.dispatchEvent(new CustomEvent('acmind:toast', {
         detail: { message: `保存失败: ${message}`, type: 'error' },
       }));
     } finally {
@@ -184,10 +184,10 @@ export function DistillationWorkbench(): JSX.Element {
   const handleRevealInFinder = useCallback(async () => {
     if (!savedFilePath) return;
     try {
-      await window.pinmind.workbench.revealInFinder(savedFilePath);
+      await window.acmind.workbench.revealInFinder(savedFilePath);
     } catch (err) {
       const message = err instanceof Error ? err.message : '打开失败';
-      window.dispatchEvent(new CustomEvent('pinmind:toast', {
+      window.dispatchEvent(new CustomEvent('acmind:toast', {
         detail: { message: `打开失败: ${message}`, type: 'error' },
       }));
     }

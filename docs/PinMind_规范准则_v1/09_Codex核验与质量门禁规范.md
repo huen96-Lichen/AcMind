@@ -1,8 +1,8 @@
-# PinMind Codex 核验与质量门禁规范 v1
+# AcMind Codex 核验与质量门禁规范 v1
 
 ## 1. Codex 的定位
 
-Codex 是 PinMind 项目的：
+Codex 是 AcMind 项目的：
 
 - 验收官
 - 代码审计者
