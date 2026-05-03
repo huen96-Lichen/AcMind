@@ -1,0 +1,12 @@
+{
+  "name": "pinmind-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pinmind-trainer": "./bin/pinmind-trainer.mjs"
+  },
+  "scripts": {
+    "validate": "node ./bin/pinmind-trainer.mjs snapshot validate ./examples/sample-snapshot/manifest.json"
+  }
+}

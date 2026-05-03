@@ -1,0 +1,1 @@
+{"exampleId":"ex_001","capability":"summary","input":{"sourceItemId":"src_001","text":"A short article about local models."},"teacherOutput":{"summary":"Local models can run offline."},"targetOutput":{"summary":"Local models run offline."},"metadata":{"sourceItemId":"src_001","knowledgeCardId":"card_001","provider":"ollama","model":"llama3","reviewedAt":1714284000}}

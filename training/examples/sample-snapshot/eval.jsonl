@@ -1,0 +1,1 @@
+{"exampleId":"ex_002","capability":"classify","input":{"sourceItemId":"src_002","text":"A note about task queues."},"teacherOutput":{"category":"engineering"},"targetOutput":{"category":"engineering"},"metadata":{"sourceItemId":"src_002","knowledgeCardId":"card_002","provider":"ollama","model":"llama3","reviewedAt":1714284000}}

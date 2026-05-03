@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+release/
+coverage/
+
+# Logs and runtime data
+logs/
+data/
+*.log
+
+# Databases and local caches
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.code-workspace
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Local assistant / tool state
+.trae/
+
+# User data (Obsidian vault)
+~/PinMind/

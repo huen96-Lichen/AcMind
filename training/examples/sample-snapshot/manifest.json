@@ -1,0 +1,19 @@
+{
+  "id": "snapshot_sample_001",
+  "name": "Sample Snapshot",
+  "description": "Minimal sample snapshot for trainer validation",
+  "manifestPath": "",
+  "splitConfig": {
+    "trainRatio": 0.8,
+    "evalRatio": 0.2
+  },
+  "counts": {
+    "total": 2,
+    "train": 1,
+    "eval": 1
+  },
+  "status": "frozen",
+  "createdAt": 1714284000,
+  "frozenAt": 1714284000,
+  "exportedAt": 1714284000
+}
