@@ -1,4 +1,4 @@
-// PinMind Obsidian Exporter
+// AcMind Obsidian Exporter
 // Core export logic: generates Markdown, writes to vault, creates ExportRecords
 //
 // Safety guarantees:
@@ -366,7 +366,7 @@ class ObsidianExporter {
       output_id: params.distilledOutput.id,
       source_type: params.sourceItem.source,
       source_app: params.sourceItem.sourceApp ?? undefined,
-      writer_app: 'PinMind',
+      writer_app: 'AcMind',
       created: new Date(params.sourceItem.createdAt * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, ''),
       updated: now,
     };

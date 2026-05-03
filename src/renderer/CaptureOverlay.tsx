@@ -173,7 +173,7 @@ export function CaptureOverlay(): JSX.Element {
 
       setIsSubmitting(true);
       try {
-        await window.pinmind.capture.takeRegionScreenshot(nextSelection);
+        await window.acmind.capture.takeRegionScreenshot(nextSelection);
       } finally {
         setIsSubmitting(false);
       }
@@ -190,18 +190,18 @@ export function CaptureOverlay(): JSX.Element {
       setContextMenu(null);
       try {
         if (action === 'copy') {
-          await window.pinmind.capture.takeRegionScreenshotCopy(selection);
+          await window.acmind.capture.takeRegionScreenshotCopy(selection);
           return;
         }
         if (action === 'save') {
-          await window.pinmind.capture.takeRegionScreenshotSave(selection);
+          await window.acmind.capture.takeRegionScreenshotSave(selection);
           return;
         }
         if (action === 'saveAs') {
-          await window.pinmind.capture.takeRegionScreenshotSaveAs(selection);
+          await window.acmind.capture.takeRegionScreenshotSaveAs(selection);
           return;
         }
-        await window.pinmind.capture.takeRegionScreenshotPin(selection);
+        await window.acmind.capture.takeRegionScreenshotPin(selection);
       } finally {
         setIsSubmitting(false);
       }
@@ -227,7 +227,7 @@ export function CaptureOverlay(): JSX.Element {
       }
       inFlight = true;
       try {
-        const color = await window.pinmind.capture.getColorAtPosition(x, y);
+        const color = await window.acmind.capture.getColorAtPosition(x, y);
         if (/^#[0-9A-F]{6}$/i.test(color)) {
           setPickedColor(color);
           lastSampleCursorRef.current = { x, y };
@@ -249,7 +249,7 @@ export function CaptureOverlay(): JSX.Element {
   const copyPickedColor = useCallback(async () => {
     if (pickedColor === '#------') return;
     try {
-      await window.pinmind.capture.ignoreNextCopy();
+      await window.acmind.capture.ignoreNextCopy();
       await navigator.clipboard.writeText(pickedColor);
     } catch {
       // 复制失败静默处理
@@ -264,7 +264,7 @@ export function CaptureOverlay(): JSX.Element {
 
       if (event.key === 'Escape') {
         event.preventDefault();
-        void window.pinmind.capture.cancelRegionScreenshot();
+        void window.acmind.capture.cancelRegionScreenshot();
         return;
       }
 
@@ -330,7 +330,7 @@ export function CaptureOverlay(): JSX.Element {
     const loadSession = async () => {
       setIsLoadingSession(true);
       try {
-        const next = await window.pinmind.capture.getSelectionSession();
+        const next = await window.acmind.capture.getSelectionSession();
         if (!cancelled) {
           setSession(next);
           setDragStart(null);
@@ -754,7 +754,7 @@ export function CaptureOverlay(): JSX.Element {
             </button>
             <button
               type="button"
-              onClick={() => void window.pinmind.capture.cancelRegionScreenshot()}
+              onClick={() => void window.acmind.capture.cancelRegionScreenshot()}
               className="h-7 rounded-lg border border-white/20 px-2.5 text-[12px] font-medium text-white/85 transition-colors hover:bg-white/10"
             >
               取消
@@ -787,7 +787,7 @@ export function CaptureOverlay(): JSX.Element {
               onClick={() => void runQuickAction('save')}
               className="mt-0.5 block h-8 w-full rounded-lg px-2 text-left text-[12px] text-white/90 transition-colors hover:bg-white/12"
             >
-              保存到 PinMind
+              保存到 AcMind
             </button>
             <button
               type="button"

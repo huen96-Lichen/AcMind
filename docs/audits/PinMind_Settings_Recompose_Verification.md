@@ -1,4 +1,4 @@
-# PinMind Settings 信息架构重编排核验报告
+# AcMind Settings 信息架构重编排核验报告
 
 ## 1. 核验结论
 

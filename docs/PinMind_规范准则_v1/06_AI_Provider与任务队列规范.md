@@ -1,8 +1,8 @@
-# PinMind AI Provider 与任务队列规范 v1
+# AcMind AI Provider 与任务队列规范 v1
 
 ## 1. 设计目标
 
-PinMind 的 AI 系统必须做到：
+AcMind 的 AI 系统必须做到：
 
 - 可插拔
 - 可降级

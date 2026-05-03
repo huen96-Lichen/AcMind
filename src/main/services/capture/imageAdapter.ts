@@ -1,4 +1,4 @@
-// PinMind ImageAdapter
+// AcMind ImageAdapter
 // V2.1 Phase 7.1: Captures an image file into a CaptureRecord.
 
 import { createHash } from 'node:crypto';

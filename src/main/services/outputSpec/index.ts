@@ -1,4 +1,4 @@
-// PinMind OutputSpec Service
+// AcMind OutputSpec Service
 // Phase 0: Entry point for the output specification service
 
 export { outputSpecService } from './outputSpecService';

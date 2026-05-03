@@ -478,21 +478,21 @@ export function ErrorReviewPage(): JSX.Element {
   const handleAction = useCallback(async (record: ErrorRecord, action: string) => {
     switch (action) {
       case 'go-settings':
-        window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'settings' } }));
+        window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'settings' } }));
         break;
       case 'go-export':
-        window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'export' } }));
+        window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'export' } }));
         break;
       case 'retry-process':
       case 'retry-export':
       case 'retry-capture': {
-        if (!window.pinmind?.retry) {
+        if (!window.acmind?.retry) {
           addToast('重试功能不可用', 'error');
           return;
         }
         setRetryingId(record.error_id);
         try {
-          const result = await window.pinmind.retry.error(record.error_id);
+          const result = await window.acmind.retry.error(record.error_id);
           if (result.success) {
             addToast(result.user_message, 'success');
           } else {

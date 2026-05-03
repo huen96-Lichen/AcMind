@@ -81,7 +81,7 @@ function DetailPanel({ row, onClose, onRetry }: DetailPanelProps): JSX.Element {
       setLineage({ sourceItem: row.sourceItem ?? null, distilledOutput: row.output ?? null });
       return;
     }
-    window.pinmind.export
+    window.acmind.export
       .getWithLineage(row.record.id)
       .then((result) => {
         setLineage({
@@ -110,7 +110,7 @@ function DetailPanel({ row, onClose, onRetry }: DetailPanelProps): JSX.Element {
   const handleOpenInObsidian = async () => {
     if (row.record) {
       try {
-        await window.pinmind.export.revealInVault(row.record.id);
+        await window.acmind.export.revealInVault(row.record.id);
       } catch {
         // ignore
       }
@@ -342,7 +342,7 @@ function DetailPanel({ row, onClose, onRetry }: DetailPanelProps): JSX.Element {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'settings', tab: 'advanced-logs' } }))}
+                    onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'settings', tab: 'advanced-logs' } }))}
                   >
                     查看日志
                   </Button>
@@ -537,8 +537,8 @@ export function ExportPage(): JSX.Element {
     try {
       setError(null);
       setLoading(true);
-      const distilledItems = await window.pinmind.sourceItems.list({ status: 'distilled' });
-      const acceptedOutputs = (await window.pinmind.distilledOutputs.list({}))
+      const distilledItems = await window.acmind.sourceItems.list({ status: 'distilled' });
+      const acceptedOutputs = (await window.acmind.distilledOutputs.list({}))
         .filter((output) => output.reviewStatus === 'accepted' || output.reviewStatus === 'edited');
 
       const mapped = await Promise.all(
@@ -575,7 +575,7 @@ export function ExportPage(): JSX.Element {
   }, [loadExportableItems]);
 
   useEffect(() => {
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadExportableItems();
     });
     return unsubscribe;
@@ -681,7 +681,7 @@ export function ExportPage(): JSX.Element {
     if (selectedIds.size === 0) return;
     try {
       // Phase 1: 导出前检查 vault path 是否已设置
-      const appSettings = await window.pinmind.settings.get();
+      const appSettings = await window.acmind.settings.get();
       const vaultPath = appSettings?.vault?.vaultPath;
       if (!vaultPath) {
         setError('写入路径未设置，请先在设置中配置 Obsidian Vault 路径');
@@ -693,7 +693,7 @@ export function ExportPage(): JSX.Element {
       const ids = Array.from(selectedIds);
 
       // V2.1: 优先走 pipeline retry（逐条自动整理 + 写入）
-      if (window.pinmind?.pipeline) {
+      if (window.acmind?.pipeline) {
         let succeeded = 0;
         let failed = 0;
         let firstError = '';
@@ -702,7 +702,7 @@ export function ExportPage(): JSX.Element {
           // 尝试通过 exportRecord 找到 sourceItemId
           const record = exportRecords.find((r: { distilledOutputId: string }) => r.distilledOutputId === id);
           if (record?.sourceItemId) {
-            const result = await window.pinmind.pipeline.retryExport(record.sourceItemId);
+            const result = await window.acmind.pipeline.retryExport(record.sourceItemId);
             if (result.success) {
               succeeded++;
             } else {
@@ -712,7 +712,7 @@ export function ExportPage(): JSX.Element {
           } else {
             // 无 sourceItemId，回退到 legacy 单条写入
             try {
-              const legacyRecord = await window.pinmind.export.single(id);
+              const legacyRecord = await window.acmind.export.single(id);
               if (legacyRecord.status === 'success' || legacyRecord.status === 'conflict') {
                 succeeded++;
               } else {
@@ -748,7 +748,7 @@ export function ExportPage(): JSX.Element {
       }
 
       // Fallback: legacy export.batch
-      const records = await window.pinmind.export.batch(ids);
+      const records = await window.acmind.export.batch(ids);
 
       // Phase 1: 根据 records.status 汇总结果，杜绝 false-success
       const succeeded = records.filter((r) => r.status === 'success').length;
@@ -814,8 +814,8 @@ export function ExportPage(): JSX.Element {
     try {
       // V2.1: 优先走 pipeline retry（自动重新整理 + 写入）
       const record = exportRecords.find((r: { id: string }) => r.id === recordId);
-      if (record?.sourceItemId && window.pinmind?.pipeline) {
-        const result = await window.pinmind.pipeline.retryExport(record.sourceItemId);
+      if (record?.sourceItemId && window.acmind?.pipeline) {
+        const result = await window.acmind.pipeline.retryExport(record.sourceItemId);
         if (result.success) {
           await refreshRecords();
           return;
@@ -823,7 +823,7 @@ export function ExportPage(): JSX.Element {
         // Pipeline retry failed, fall through to legacy retry
       }
       // Fallback: legacy export retry
-      await window.pinmind.export.retry(recordId);
+      await window.acmind.export.retry(recordId);
       await refreshRecords();
     } catch {
       // ignore
@@ -832,7 +832,7 @@ export function ExportPage(): JSX.Element {
 
   const handleRevealInVault = async (recordId: string) => {
     try {
-      await window.pinmind.export.revealInVault(recordId);
+      await window.acmind.export.revealInVault(recordId);
     } catch {
       // ignore
     }
@@ -849,12 +849,12 @@ export function ExportPage(): JSX.Element {
   if (activeTab === 'vault-config') {
     return (
       <PageShell>
-        <div className="pinmind-tab-bar">
+        <div className="acmind-tab-bar">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
-              className={`pinmind-tab-item ${activeTab === tab.key ? 'active' : ''}`}
+              className={`acmind-tab-item ${activeTab === tab.key ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.key)}
             >
               {tab.label}
@@ -872,12 +872,12 @@ export function ExportPage(): JSX.Element {
   if (activeTab === 'history') {
     return (
       <PageShell>
-        <div className="pinmind-tab-bar">
+        <div className="acmind-tab-bar">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
-              className={`pinmind-tab-item ${activeTab === tab.key ? 'active' : ''}`}
+              className={`acmind-tab-item ${activeTab === tab.key ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.key)}
             >
               {tab.label}
@@ -998,7 +998,7 @@ export function ExportPage(): JSX.Element {
                   action={{
                     label: '去收集箱',
                     onClick: () =>
-                      window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'capture-inbox' })),
+                      window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: 'capture-inbox' })),
                   }}
                 />
               </div>
@@ -1010,7 +1010,7 @@ export function ExportPage(): JSX.Element {
                   return (
                     <div
                       key={row.id}
-                      className={`pinmind-export-card motion-interactive ${selectedRow?.id === row.id ? 'is-selected' : ''}`}
+                      className={`acmind-export-card motion-interactive ${selectedRow?.id === row.id ? 'is-selected' : ''}`}
                       onClick={() => setSelectedRow(selectedRow?.id === row.id ? null : row)}
                     >
                       {/* Top row: checkbox + title + status + actions */}

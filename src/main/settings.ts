@@ -39,7 +39,7 @@ class SettingsService {
     try {
       const raw = storage.getSetting(SETTINGS_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<AppSettings>;
+        const parsed = this.migrateLegacyIdentifiers(JSON.parse(raw) as Partial<AppSettings>);
         this.cachedSettings = this.mergeWithDefaults(parsed);
         logger.info('app', 'settings', 'load', 'Settings loaded from storage');
       } else {
@@ -121,6 +121,24 @@ class SettingsService {
    */
   getVaultKeeperSettings(): VaultKeeperSettings {
     return this.load().vaultkeeper ?? DEFAULT_SETTINGS.vaultkeeper;
+  }
+
+  /**
+   * Migrate legacy pinmind-* identifiers to acmind-* equivalents.
+   */
+  private migrateLegacyIdentifiers(partial: Partial<AppSettings>): Partial<AppSettings> {
+    // Migrate legacy 'pinmind-inbox' → 'acmind-inbox' in capsule settings
+    const dest = partial.capsule?.quickCapture?.defaultDestination as string | undefined;
+    if (dest === 'pinmind-inbox') {
+      return {
+        ...partial,
+        capsule: {
+          ...partial.capsule,
+          quickCapture: { ...partial.capsule!.quickCapture!, defaultDestination: 'acmind-inbox' },
+        } as AppSettings['capsule'],
+      };
+    }
+    return partial;
   }
 
   /**

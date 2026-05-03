@@ -1,4 +1,4 @@
-// PinMind Unknown File Strategy
+// AcMind Unknown File Strategy
 // Phase 8.1: 未知文件类型的兜底策略
 
 import type { SourceType } from '../../../../shared/types';

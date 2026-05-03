@@ -40,7 +40,7 @@ export function CapsuleEdgeHidden({ edge }: CapsuleEdgeHiddenProps): JSX.Element
   }, []);
 
   const handleClick = useCallback(() => {
-    window.pinmind?.capsule?.expand?.();
+    window.acmind?.capsule?.expand?.();
   }, []);
 
   const horizontal = edge === 'bottom';
@@ -63,7 +63,7 @@ export function CapsuleEdgeHidden({ edge }: CapsuleEdgeHiddenProps): JSX.Element
       {isPeeking ? (
         <div className="capsule-edge-hidden-content">
           <PeekIcon />
-          <span>PinMind</span>
+          <span>AcMind</span>
         </div>
       ) : (
         <div className="capsule-edge-hidden-rail">

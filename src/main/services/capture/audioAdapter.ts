@@ -1,4 +1,4 @@
-// PinMind AudioAdapter (Stub)
+// AcMind AudioAdapter (Stub)
 // V2.1 Phase 7.1: Placeholder for audio capture into a CaptureRecord.
 // Will be fully implemented when audio capture is integrated.
 

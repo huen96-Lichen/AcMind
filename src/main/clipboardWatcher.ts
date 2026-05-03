@@ -40,6 +40,8 @@ class ClipboardWatcher {
   private skippedTickCount = 0;
   private onNewContent: OnNewContentCallback | null = null;
   private enabled = true;
+  private ignoreNextCount = 0;
+  private paused = false;
 
   /**
    * Start polling the clipboard at the configured interval.
@@ -116,6 +118,39 @@ class ClipboardWatcher {
     return this.enabled;
   }
 
+  /**
+   * Skip the next N clipboard changes. Useful when the app itself writes to clipboard
+   * (e.g., screenshot color picker, internal copy operations).
+   */
+  ignoreNextCopy(count = 1): void {
+    this.ignoreNextCount += count;
+    logger.info('app', 'clipboardWatcher', 'ignoreNextCopy', `Will skip next ${this.ignoreNextCount} clipboard change(s)`);
+  }
+
+  /**
+   * Temporarily pause clipboard capture without stopping the poll timer.
+   * During pause, hash state is still updated so we don't re-capture old content on resume.
+   */
+  pause(): void {
+    this.paused = true;
+    logger.info('app', 'clipboardWatcher', 'pause', 'Clipboard capture paused');
+  }
+
+  /**
+   * Resume clipboard capture after a pause.
+   */
+  resume(): void {
+    this.paused = false;
+    logger.info('app', 'clipboardWatcher', 'resume', 'Clipboard capture resumed');
+  }
+
+  /**
+   * Check if clipboard capture is paused.
+   */
+  isPaused(): boolean {
+    return this.paused;
+  }
+
   // -------------------------------------------------------------------------
   // Private: polling tick
   // -------------------------------------------------------------------------
@@ -139,6 +174,15 @@ class ClipboardWatcher {
       const textHash = this.hashText(text);
       if (textHash && textHash !== this.lastTextHash) {
         this.lastTextHash = textHash;
+        // If paused or ignoring, update hash but skip callback
+        if (this.paused) {
+          return;
+        }
+        if (this.ignoreNextCount > 0) {
+          this.ignoreNextCount--;
+          logger.info('app', 'clipboardWatcher', 'tick', `Ignored clipboard text change, ${this.ignoreNextCount} remaining`);
+          return;
+        }
         if (this.enabled && this.onNewContent) {
           await this.onNewContent({ type: 'text', text, contentHash: textHash });
         }
@@ -151,6 +195,13 @@ class ClipboardWatcher {
         const imageHash = this.hashImageBuffer(png);
         if (imageHash && imageHash !== this.lastImageHash) {
           this.lastImageHash = imageHash;
+          if (this.paused) {
+            return;
+          }
+          if (this.ignoreNextCount > 0) {
+            this.ignoreNextCount--;
+            return;
+          }
           if (this.enabled && this.onNewContent) {
             await this.onNewContent({ type: 'image', image, contentHash: imageHash });
           }

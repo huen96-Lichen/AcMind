@@ -1,8 +1,8 @@
-# PinMind Trae 任务模板
+# AcMind Trae 任务模板
 
 > 使用方式：每次交给 Trae 新任务时，复制本模板并填写。
 
-# PinMind vX.X.X 任务说明
+# AcMind vX.X.X 任务说明
 
 ## 一、任务目标
 

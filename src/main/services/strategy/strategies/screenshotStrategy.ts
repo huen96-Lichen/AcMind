@@ -1,4 +1,4 @@
-// PinMind Screenshot Strategy
+// AcMind Screenshot Strategy
 // Phase 8.1: 截图占位或后续 OCR 结果
 
 import type { SourceType } from '../../../../shared/types';

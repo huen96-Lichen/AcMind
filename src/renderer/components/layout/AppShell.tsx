@@ -34,14 +34,14 @@ export function AppShell({ activeView, onNavigate, children }: AppShellProps): J
   // Listen for personal space open event
   useEffect(() => {
     const handler = () => setShowPersonalSpace(true);
-    window.addEventListener('pinmind:open-personal-space', handler);
-    return () => window.removeEventListener('pinmind:open-personal-space', handler);
+    window.addEventListener('acmind:open-personal-space', handler);
+    return () => window.removeEventListener('acmind:open-personal-space', handler);
   }, []);
 
   useEffect(() => {
     const handler = () => setSidebarForcedOpen((current) => !current);
-    window.addEventListener('pinmind:toggle-sidebar', handler);
-    return () => window.removeEventListener('pinmind:toggle-sidebar', handler);
+    window.addEventListener('acmind:toggle-sidebar', handler);
+    return () => window.removeEventListener('acmind:toggle-sidebar', handler);
   }, []);
 
   // Sidebar visibility: hidden in compact and small modes
@@ -67,7 +67,7 @@ export function AppShell({ activeView, onNavigate, children }: AppShellProps): J
   return (
     <ToastProvider>
       <SelectedItemContext.Provider value={{ selectedItem, setSelectedItem }}>
-        <div className="flex h-full w-full flex-col overflow-hidden pinmind-app-shell">
+        <div className="flex h-full w-full flex-col overflow-hidden acmind-app-shell">
           <TopBar
             snapshot={snapshot}
             onRefresh={snapshot.refresh}
@@ -83,7 +83,7 @@ export function AppShell({ activeView, onNavigate, children }: AppShellProps): J
             </div>
 
             {/* Main content area */}
-            <ScrollContainer className="pinmind-window-page min-h-0 overflow-y-auto">
+            <ScrollContainer className="acmind-window-page min-h-0 overflow-y-auto">
               {children}
             </ScrollContainer>
 

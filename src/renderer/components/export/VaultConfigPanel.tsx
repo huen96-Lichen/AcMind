@@ -15,7 +15,7 @@ export function VaultConfigPanel(): JSX.Element {
   const loadConfig = useCallback(async () => {
     try {
       setError(null);
-      const settings = await window.pinmind.settings.get();
+      const settings = await window.acmind.settings.get();
       setConfig(settings.vault);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -36,7 +36,7 @@ export function VaultConfigPanel(): JSX.Element {
 
   const handlePickFolder = async () => {
     try {
-      const path = await window.pinmind.vault.pickFolder();
+      const path = await window.acmind.vault.pickFolder();
       if (path) {
         updateField('vaultPath', path);
       }
@@ -50,7 +50,7 @@ export function VaultConfigPanel(): JSX.Element {
     try {
       setSaving(true);
       setError(null);
-      await window.pinmind.vault.updateConfig(config);
+      await window.acmind.vault.updateConfig(config);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -62,7 +62,7 @@ export function VaultConfigPanel(): JSX.Element {
     if (!config?.vaultPath) return;
     try {
       setValidating(true);
-      const result = await window.pinmind.vault.validatePath(config.vaultPath);
+      const result = await window.acmind.vault.validatePath(config.vaultPath);
       setValidationResult(result);
     } catch (err) {
       setValidationResult({
@@ -108,7 +108,7 @@ export function VaultConfigPanel(): JSX.Element {
   return (
     <ScrollContainer>
       <div className="p-4">
-        <div className="pinmind-vault-config flex flex-col gap-5">
+        <div className="acmind-vault-config flex flex-col gap-5">
           {/* Error */}
           {error && (
             <div
@@ -125,18 +125,18 @@ export function VaultConfigPanel(): JSX.Element {
 
           {/* Vault Path */}
           <div>
-            <label className="pinmind-field-label">知识库路径</label>
+            <label className="acmind-field-label">知识库路径</label>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="text"
-                className="pinmind-field flex-1"
+                className="acmind-field flex-1"
                 value={config.vaultPath}
                 onChange={(e) => updateField('vaultPath', e.target.value)}
                 placeholder="选择或输入知识库路径"
               />
               <button
                 type="button"
-                className="pinmind-btn pinmind-btn-secondary motion-button"
+                className="acmind-btn acmind-btn-secondary motion-button"
                 onClick={handlePickFolder}
               >
                 选择
@@ -156,21 +156,21 @@ export function VaultConfigPanel(): JSX.Element {
 
           {/* Default Folder */}
           <div>
-                <label className="pinmind-field-label">默认文件夹</label>
+                <label className="acmind-field-label">默认文件夹</label>
             <input
               type="text"
-              className="pinmind-field w-full mt-1"
+              className="acmind-field w-full mt-1"
               value={config.defaultFolder}
               onChange={(e) => updateField('defaultFolder', e.target.value)}
-              placeholder="PinMind"
+              placeholder="AcMind"
             />
           </div>
 
           {/* Path Rule */}
           <div>
-            <label className="pinmind-field-label">路径规则</label>
+            <label className="acmind-field-label">路径规则</label>
             <select
-              className="pinmind-field pinmind-field-select w-full mt-1"
+              className="acmind-field acmind-field-select w-full mt-1"
               value={config.pathRule}
               onChange={(e) =>
                 updateField(
@@ -187,9 +187,9 @@ export function VaultConfigPanel(): JSX.Element {
 
           {/* Conflict Strategy */}
           <div>
-            <label className="pinmind-field-label">冲突策略</label>
+            <label className="acmind-field-label">冲突策略</label>
             <select
-              className="pinmind-field pinmind-field-select w-full mt-1"
+              className="acmind-field acmind-field-select w-full mt-1"
               value={config.conflictStrategy}
               onChange={(e) =>
                 updateField(
@@ -207,14 +207,14 @@ export function VaultConfigPanel(): JSX.Element {
           {/* Auto Frontmatter */}
           <div className="flex items-center justify-between">
             <div>
-              <label className="pinmind-field-label">自动 frontmatter</label>
+              <label className="acmind-field-label">自动 frontmatter</label>
               <p className="text-[11px] mt-0.5" style={{ color: 'var(--pm-text-tertiary)' }}>
                 写入时自动补充 YAML frontmatter
               </p>
             </div>
             <button
               type="button"
-              className={`pinmind-icon-button motion-toggle ${config.autoFrontmatter ? 'pinmind-icon-button-accent' : 'pinmind-icon-button-soft'}`}
+              className={`acmind-icon-button motion-toggle ${config.autoFrontmatter ? 'acmind-icon-button-accent' : 'acmind-icon-button-soft'}`}
               onClick={() => updateField('autoFrontmatter', !config.autoFrontmatter)}
               role="switch"
               aria-checked={config.autoFrontmatter}
@@ -242,7 +242,7 @@ export function VaultConfigPanel(): JSX.Element {
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-secondary motion-button"
+              className="acmind-btn acmind-btn-secondary motion-button"
               onClick={handleValidate}
               disabled={!config.vaultPath || validating}
             >
@@ -250,7 +250,7 @@ export function VaultConfigPanel(): JSX.Element {
             </button>
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-primary motion-button"
+              className="acmind-btn acmind-btn-primary motion-button"
               onClick={handleSave}
               disabled={saving}
             >

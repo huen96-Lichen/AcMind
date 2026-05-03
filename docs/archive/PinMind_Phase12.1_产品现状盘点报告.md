@@ -1,4 +1,4 @@
-# PinMind Phase 12.1 产品现状盘点报告
+# AcMind Phase 12.1 产品现状盘点报告
 
 > 生成日期：2026-05-01  
 > 盘点范围：Phase 1-11 全部前端页面、入口、流程、组件、状态、mock 数据  
@@ -8,7 +8,7 @@
 
 ## 0. 摘要结论
 
-当前 PinMind 已具备可运行的主链路：文本收集、文件解析、AI 蒸馏、Obsidian 导出、搜索、错误回看、设置与胶囊入口均已形成产品雏形。但产品体验仍处于“功能堆叠完成、信息架构尚未收敛”的阶段。
+当前 AcMind 已具备可运行的主链路：文本收集、文件解析、AI 蒸馏、Obsidian 导出、搜索、错误回看、设置与胶囊入口均已形成产品雏形。但产品体验仍处于“功能堆叠完成、信息架构尚未收敛”的阶段。
 
 最需要先处理的不是继续加功能，而是清理不可用入口、统一导航命名、打通搜索和蒸馏链路，并把默认页改成用户能立即理解的工作台。
 
@@ -69,7 +69,7 @@
 | P2-3 | 胶囊硬编码标签 | 接入用户自定义标签 | 胶囊 |
 | P2-4 | qualityFallback 降级无提示 | 在 UI 中显示降级提示 | distill |
 | P2-5 | 导出进度不明确 | 增加导出进度或状态指示 | export |
-| P2-6 | 视觉风格未完全统一 | 按 PinMind_UI设计规范收敛色彩、字体、间距 | 全局 |
+| P2-6 | 视觉风格未完全统一 | 按 AcMind_UI设计规范收敛色彩、字体、间距 | 全局 |
 | P2-7 | PersonalSpacePanel 与 Settings 重叠 | 精简个人空间面板 | 个人空间 |
 
 ---
@@ -139,7 +139,7 @@
 | TopBar 搜索框 | `readOnly`，用户无法输入 | 接入真实搜索或打开搜索面板 |
 | 通知铃铛 | 跳转日志，语义不匹配 | 更换图标或改为通知页 |
 | RightInspector “去二级整理” / “整理后输出” | 两个按钮都进入 edit(id) | 合并或明确差异 |
-| Tray 菜单 | Show PinMind / Settings / Quit 为英文 | 本地化为中文 |
+| Tray 菜单 | Show AcMind / Settings / Quit 为英文 | 本地化为中文 |
 | 胶囊“语音输入” | 当前不可用 | 隐藏或标记“即将推出” |
 
 ---
@@ -383,7 +383,7 @@
 | 9 | qualityFallback 占位内容 | `src/main/services/strategy/qualityFallback.ts` | critical 时生成占位 ProcessedContent | 中：用户不知道降级 | UI 显示降级提示 |
 | 10 | 非文本结构占位 | `src/main/services/pipeline/contentPipelineService.ts` | `buildNonTextStructured()` confidence 仅 0.3 | 低：非文本处理质量低 | 显示低置信度 |
 | 11 | TopBar 搜索框 | `src/renderer/components/layout/TopBar.tsx` | `readOnly`，未接入搜索 | 中：点击无反应 | 接入 Search |
-| 12 | Tray 菜单英文 | `src/main/tray.ts` | Show PinMind / Settings / Quit | 低：中文体验不佳 | 本地化 |
+| 12 | Tray 菜单英文 | `src/main/tray.ts` | Show AcMind / Settings / Quit | 低：中文体验不佳 | 本地化 |
 | 13 | ExportHistory 静默吞错 | `src/renderer/components/export/ExportHistory.tsx` | `loadRecords()` catch 为空 | 中：失败不可见 | 加 Toast 或错误状态 |
 
 ---

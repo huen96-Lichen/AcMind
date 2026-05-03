@@ -1,14 +1,16 @@
-// PinMind Import Queue
+// AcMind Import Queue
 // Manages async import task execution with progress tracking
 
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import type { ImportTask, ImportOptions } from '../../../shared/types';
+import type { ImportTask, ImportOptions, PinItem } from '../../../shared/types';
+import { IPC_CHANNELS } from '../../../shared/types';
 import { storage } from '../../storage';
 import { logger } from '../../logger';
 import { vaultScanner } from './vaultScanner';
+import { BrowserWindow } from 'electron';
 
 export class ImportQueue {
   private currentTask: ImportTask | null = null;
@@ -120,6 +122,32 @@ export class ImportQueue {
           };
 
           storage.insertSourceItem(sourceItem);
+
+          // Phase 8: Also create PinItem so imported file enters Pin Pool
+          const now = Math.floor(Date.now() / 1000);
+          const pinSourceType: PinItem['sourceType'] = file.relativePath.endsWith('.pdf') ? 'pdf'
+            : file.relativePath.endsWith('.docx') ? 'docx'
+            : 'file';
+          const pin: PinItem = {
+            id: crypto.randomUUID(),
+            captureItemId: '',
+            originalId: sourceItem.id,
+            sourceType: pinSourceType,
+            title: file.title || path.basename(file.relativePath),
+            previewText: content.slice(0, 180),
+            rawText: content.slice(0, 2000),
+            status: 'pinned',
+            createdAt: now,
+            pinnedAt: now,
+            updatedAt: now,
+          };
+          storage.insertPinItem(pin);
+          for (const win of BrowserWindow.getAllWindows()) {
+            if (!win.isDestroyed()) {
+              win.webContents.send(IPC_CHANNELS.PIN_POOL_CHANGED, { action: 'created', id: pin.id, timestamp: now });
+            }
+          }
+
           this.incrementCounter(task.id, 'importedCount');
         } catch (err) {
           this.incrementCounter(task.id, 'failedCount');

@@ -38,14 +38,14 @@ export function useSourceItems(): UseSourceItemsReturn {
   // ── Load items from backend ──
 
   const loadItems = useCallback(async () => {
-    if (!window.pinmind) {
+    if (!window.acmind) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setError(null);
-      const items = await window.pinmind.sourceItems.list({});
+      const items = await window.acmind.sourceItems.list({});
       setAllItems(items);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -64,8 +64,8 @@ export function useSourceItems(): UseSourceItemsReturn {
   // ── Listen for records.changed events ──
 
   useEffect(() => {
-    if (!window.pinmind) return;
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    if (!window.acmind) return;
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadItems();
     });
     return unsubscribe;
@@ -86,7 +86,7 @@ export function useSourceItems(): UseSourceItemsReturn {
       if (!q) {
         // Reset to full list
         try {
-          const items = await window.pinmind.sourceItems.list({});
+          const items = await window.acmind.sourceItems.list({});
           setAllItems(items);
           setError(null);
         } catch (err) {
@@ -94,7 +94,7 @@ export function useSourceItems(): UseSourceItemsReturn {
         }
       } else {
         try {
-          const results = await window.pinmind.sourceItems.search(q);
+          const results = await window.acmind.sourceItems.search(q);
           setAllItems(results);
           setError(null);
         } catch (err) {
@@ -119,7 +119,7 @@ export function useSourceItems(): UseSourceItemsReturn {
   const deleteItem = useCallback(
     async (id: string): Promise<boolean> => {
       try {
-        await window.pinmind.sourceItems.delete(id);
+        await window.acmind.sourceItems.delete(id);
         if (selectedItem?.id === id) {
           setSelectedItem(null);
         }

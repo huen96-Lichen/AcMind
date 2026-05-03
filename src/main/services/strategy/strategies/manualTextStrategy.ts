@@ -1,4 +1,4 @@
-// PinMind Manual Text Strategy
+// AcMind Manual Text Strategy
 // Phase 8.1: 用户主动输入的想法、笔记、计划
 
 import type { SourceType } from '../../../../shared/types';

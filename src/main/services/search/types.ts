@@ -24,5 +24,7 @@ export interface SearchResult {
     tags?: string[];
     createdAt: number;
     status?: string;
+    exportRecordIds?: string[];
+    exportRecordCount?: number;
   };
 }

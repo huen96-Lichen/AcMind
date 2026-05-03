@@ -1,4 +1,4 @@
-// PinMind Image Strategy
+// AcMind Image Strategy
 // Phase 8.1: 图片占位或 OCR 结果（与 screenshot 类似但语义不同）
 
 import type { SourceType } from '../../../../shared/types';

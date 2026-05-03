@@ -99,7 +99,7 @@ const SETTINGS_GROUPS: SettingsGroupDef[] = [
     categories: [
       { key: 'obsidian', title: 'Obsidian', icon: 'edit' },
       { key: 'path-storage', title: '路径与存储', icon: 'duplicate' },
-      { key: 'export-rules', title: '入库规则', icon: 'text', disabled: true, disabledLabel: '主要配置在 Obsidian 页面完成' },
+      { key: 'export-rules', title: '入库规则', icon: 'text' },
     ],
   },
   {
@@ -123,8 +123,8 @@ const SETTINGS_GROUPS: SettingsGroupDef[] = [
     collapsed: true,
     categories: [
       { key: 'advanced-logs', title: '日志', icon: 'sb-settings' },
-      { key: 'advanced-data', title: '数据维护', icon: 'duplicate', disabled: true, disabledLabel: '开发中' },
-      { key: 'advanced-dev', title: '开发者选项', icon: 'settings', disabled: true, disabledLabel: '开发中' },
+      { key: 'advanced-data', title: '数据维护', icon: 'duplicate' },
+      { key: 'advanced-dev', title: '开发者选项', icon: 'settings' },
     ],
   },
 ];
@@ -196,8 +196,8 @@ export function SettingsPage(): JSX.Element {
     async function load(): Promise<void> {
       try {
         const [nextSettings, nextPermissions] = await Promise.all([
-          window.pinmind.settings.get(),
-          window.pinmind.permissions.getStatus('settings-return'),
+          window.acmind.settings.get(),
+          window.acmind.permissions.getStatus('settings-return'),
         ]);
         setSettings(nextSettings);
         setPermissions(nextPermissions);
@@ -214,10 +214,10 @@ export function SettingsPage(): JSX.Element {
 
   useEffect(() => {
     async function loadProviders(): Promise<void> {
-      if (!window.pinmind) return;
+      if (!window.acmind) return;
       setProvidersLoading(true);
       try {
-        const nextProviders = await window.pinmind.providers.list();
+        const nextProviders = await window.acmind.providers.list();
         setProviders(nextProviders);
       } catch {
         addToast('加载模型来源失败', 'error');
@@ -237,8 +237,8 @@ export function SettingsPage(): JSX.Element {
 
       try {
         const [models, status] = await Promise.all([
-          window.pinmind.whisper.getModels(),
-          window.pinmind.whisper.getStatus(),
+          window.acmind.whisper.getModels(),
+          window.acmind.whisper.getStatus(),
         ]);
         setWhisperModels(models as WhisperModelRow[]);
         setWhisperRuntime(status as WhisperRuntimeStatus);
@@ -256,7 +256,7 @@ export function SettingsPage(): JSX.Element {
 
       setSaving(true);
       try {
-        const updated = await window.pinmind.settings.update(patch);
+        const updated = await window.acmind.settings.update(patch);
         setSettings(updated);
         setSavedAt(Date.now());
         addToast('设置已自动保存', 'success');
@@ -287,7 +287,7 @@ export function SettingsPage(): JSX.Element {
   const handleLogLevelChange = useCallback(
     async (nextLevel: LogLevel) => {
       try {
-        await window.pinmind.logger.setLevel(nextLevel);
+        await window.acmind.logger.setLevel(nextLevel);
       } catch {
         addToast('运行时日志级别切换失败', 'error');
         return;
@@ -301,7 +301,7 @@ export function SettingsPage(): JSX.Element {
     if (!settings) return;
     setSaving(true);
     try {
-      await window.pinmind.settings.update({
+      await window.acmind.settings.update({
         ...settings,
         defaultTier: defaultStrategy as AppSettings['defaultTier'],
       });
@@ -319,8 +319,8 @@ export function SettingsPage(): JSX.Element {
       const provider = providers.find((item) => item.id === id);
       if (!provider) return;
       try {
-        const nextProviders = await window.pinmind.providers.update(id, { enabled: !provider.enabled });
-        const refreshedProviders = await window.pinmind.providers.list();
+        const nextProviders = await window.acmind.providers.update(id, { enabled: !provider.enabled });
+        const refreshedProviders = await window.acmind.providers.list();
         setProviders(refreshedProviders);
         const updated = await updateSetting({ providers: refreshedProviders });
         if (updated) {
@@ -351,8 +351,8 @@ export function SettingsPage(): JSX.Element {
       if (!confirmed) return;
 
       try {
-        await window.pinmind.providers.delete(providerId);
-        const refreshedProviders = await window.pinmind.providers.list();
+        await window.acmind.providers.delete(providerId);
+        const refreshedProviders = await window.acmind.providers.list();
         setProviders(refreshedProviders);
         const updated = await updateSetting({ providers: refreshedProviders });
         if (updated) {
@@ -369,7 +369,7 @@ export function SettingsPage(): JSX.Element {
   const handleTestProvider = useCallback(
     async (providerId: string) => {
       try {
-        const result = await window.pinmind.providers.testConnection(providerId);
+        const result = await window.acmind.providers.testConnection(providerId);
         addToast(
           result.ok
             ? `连接成功，延迟 ${result.latencyMs} ms`
@@ -386,8 +386,8 @@ export function SettingsPage(): JSX.Element {
   const refreshWhisperModels = useCallback(async () => {
     try {
       const [models, status] = await Promise.all([
-        window.pinmind.whisper.getModels(),
-        window.pinmind.whisper.getStatus(),
+        window.acmind.whisper.getModels(),
+        window.acmind.whisper.getStatus(),
       ]);
       setWhisperModels(models as WhisperModelRow[]);
       setWhisperRuntime(status as WhisperRuntimeStatus);
@@ -399,7 +399,7 @@ export function SettingsPage(): JSX.Element {
   const handleDownloadWhisperModel = useCallback(
     async (modelSize: WhisperModelRow['size']) => {
       try {
-        await window.pinmind.whisper.downloadModel(modelSize);
+        await window.acmind.whisper.downloadModel(modelSize);
         await refreshWhisperModels();
         addToast(`已下载 ${modelSize} 模型到本地`, 'success');
       } catch (error) {
@@ -412,7 +412,7 @@ export function SettingsPage(): JSX.Element {
   const handleDeleteWhisperModel = useCallback(
     async (modelSize: WhisperModelRow['size']) => {
       try {
-        await window.pinmind.whisper.deleteModel(modelSize);
+        await window.acmind.whisper.deleteModel(modelSize);
         await refreshWhisperModels();
         addToast(`已删除 ${modelSize} 模型缓存`, 'success');
       } catch (error) {
@@ -427,11 +427,11 @@ export function SettingsPage(): JSX.Element {
       try {
         const exists = providers.some((item) => item.id === provider.id);
         if (exists) {
-          await window.pinmind.providers.update(provider.id, provider);
+          await window.acmind.providers.update(provider.id, provider);
         } else {
-          await window.pinmind.providers.add(provider);
+          await window.acmind.providers.add(provider);
         }
-        const refreshedProviders = await window.pinmind.providers.list();
+        const refreshedProviders = await window.acmind.providers.list();
         setProviders(refreshedProviders);
         const updated = await updateSetting({ providers: refreshedProviders });
         if (updated) {
@@ -477,23 +477,23 @@ export function SettingsPage(): JSX.Element {
   }
 
   return (
-    <div className="pinmind-settings-layout">
+    <div className="acmind-settings-layout">
       {/* ─── Left: Category List ─────────────────────────── */}
-      <aside className="pinmind-settings-sidebar">
+      <aside className="acmind-settings-sidebar">
         <div className="px-4 pt-5 pb-3">
-          <h2 className="pinmind-page-title">
+          <h2 className="acmind-page-title">
             设置
           </h2>
           <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
-            调整 PinMind 的工作方式
+            调整 AcMind 的工作方式
           </p>
-          <div className="pinmind-save-indicator is-visible" style={savedAt ? { opacity: 1 } : { opacity: 0 }}>
+          <div className="acmind-save-indicator is-visible" style={savedAt ? { opacity: 1 } : { opacity: 0 }}>
             <PinStackIcon name="check" size={12} />
             <span>已保存</span>
           </div>
         </div>
 
-        <nav className="pinmind-settings-nav">
+        <nav className="acmind-settings-nav">
             {SETTINGS_GROUPS.map((group) => {
               const isCollapsed = collapsedGroups.has(group.key);
               return (
@@ -554,13 +554,13 @@ export function SettingsPage(): JSX.Element {
         </aside>
 
         {/* ─── Right: Detail Panel ─────────────────────────── */}
-        <main className="pinmind-settings-content">
-          <div className="pinmind-settings-content-inner">
+        <main className="acmind-settings-content">
+          <div className="acmind-settings-content-inner">
             {/* ── General ─────────────────────────────────── */}
             {activeCategory === 'general' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">通用</h3>
+                  <h3 className="acmind-page-title">通用</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
                     启动偏好与捕获行为。
                   </p>
@@ -568,7 +568,7 @@ export function SettingsPage(): JSX.Element {
 
                 {/* 启动与后台 */}
                 <SettingGroupCard title="启动" description="应用启动方式。" icon="all">
-                  <SettingsRow label="开机启动" description="登录后自动启动 PinMind。">
+                  <SettingsRow label="开机启动" description="登录后自动启动 AcMind。">
                     <ToggleSwitch
                       checked={settings.launchAtLogin}
                       onChange={(checked) => void updateSetting({ launchAtLogin: checked })}
@@ -623,7 +623,7 @@ export function SettingsPage(): JSX.Element {
               <div className="flex flex-col gap-5">
                 <div className="mt-7 flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="pinmind-page-title">
+                    <h3 className="acmind-page-title">
                       AI 模型
                     </h3>
                     <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
@@ -895,7 +895,7 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'ai-default-tier' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">默认层级与回退策略</h3>
+                  <h3 className="acmind-page-title">默认层级与回退策略</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
                     新任务的默认模型强度。Provider 管理请前往「模型管理」。
                   </p>
@@ -962,14 +962,14 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'path-storage' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">路径与存储</h3>
+                  <h3 className="acmind-page-title">路径与存储</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
                     本地数据目录与扫描行为配置。
                   </p>
                 </div>
 
                 {/* 本地数据目录 */}
-                <SettingGroupCard title="本地数据目录" description="PinMind 所有数据的存储位置。" icon="duplicate">
+                <SettingGroupCard title="本地数据目录" description="AcMind 所有数据的存储位置。" icon="duplicate">
                   <div className="settings-row">
                     <div className="settings-row-copy">
                       <div className="settings-row-title">当前路径</div>
@@ -982,7 +982,7 @@ export function SettingsPage(): JSX.Element {
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => window.pinmind.app.openStorageRoot()}
+                          onClick={() => window.acmind.app.openStorageRoot()}
                         >
                           打开
                         </Button>
@@ -990,7 +990,7 @@ export function SettingsPage(): JSX.Element {
                           variant="secondary"
                           size="sm"
                           onClick={async () => {
-                            const folder = await window.pinmind.vault.pickFolder();
+                            const folder = await window.acmind.vault.pickFolder();
                             if (folder) {
                               await updateSetting({ storageRoot: folder });
                             }
@@ -1051,7 +1051,7 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'obsidian' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">Obsidian</h3>
+                  <h3 className="acmind-page-title">Obsidian</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
                     整理后内容保存到哪个资料库。
                   </p>
@@ -1077,7 +1077,7 @@ export function SettingsPage(): JSX.Element {
                           variant="secondary"
                           size="sm"
                           onClick={async () => {
-                            const folder = await window.pinmind.vault.pickFolder();
+                            const folder = await window.acmind.vault.pickFolder();
                             if (folder) {
                               await updateSetting({ vault: { ...settings.vault, vaultPath: folder } });
                             }
@@ -1089,7 +1089,7 @@ export function SettingsPage(): JSX.Element {
                           variant="secondary"
                           size="sm"
                           onClick={async () => {
-                            const result = await window.pinmind.vault.validatePath(settings.vault.vaultPath);
+                            const result = await window.acmind.vault.validatePath(settings.vault.vaultPath);
                             addToast(result.message, result.valid ? 'success' : 'warning');
                           }}
                         >
@@ -1164,7 +1164,7 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'export-rules' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">入库规则</h3>
+                  <h3 className="acmind-page-title">入库规则</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
                     只读预览 · 主要配置在「Obsidian」中完成
                   </p>
@@ -1201,7 +1201,7 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'appearance' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">外观</h3>
+                  <h3 className="acmind-page-title">外观</h3>
                   <p className="mt-1 text-[13px] leading-5 text-[color:var(--pm-text-secondary)]">
                     主题与外观偏好。
                   </p>
@@ -1228,7 +1228,7 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'privacy' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">隐私与本地优先</h3>
+                  <h3 className="acmind-page-title">隐私与本地优先</h3>
                   <p className="mt-1 text-[13px] leading-5 text-[color:var(--pm-text-secondary)]">
                     macOS 权限状态。
                   </p>
@@ -1247,12 +1247,12 @@ export function SettingsPage(): JSX.Element {
                           key={item.key}
                           item={item}
                           onOpenSettings={() =>
-                            void window.pinmind.permissions.openSettings(
+                            void window.acmind.permissions.openSettings(
                               item.settingsTarget ?? 'system-preferences',
                             )
                           }
                           onRefresh={async () => {
-                            const snapshot = await window.pinmind.permissions.refresh('manual-refresh');
+                            const snapshot = await window.acmind.permissions.refresh('manual-refresh');
                             setPermissions(snapshot);
                           }}
                         />
@@ -1267,7 +1267,7 @@ export function SettingsPage(): JSX.Element {
             {activeCategory === 'advanced-logs' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">日志</h3>
+                  <h3 className="acmind-page-title">日志</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
                     日志级别与运行时配置。
                   </p>
@@ -1292,40 +1292,190 @@ export function SettingsPage(): JSX.Element {
               </div>
             )}
 
-            {/* ── Advanced Data (disabled) ─────────────────── */}
+            {/* ── Advanced Data ─────────────────────────────── */}
             {activeCategory === 'advanced-data' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">数据维护</h3>
+                  <h3 className="acmind-page-title">数据维护</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
-                    数据库维护和备份功能正在开发中。
+                    管理本地数据、清理缓存、导出备份。危险操作需要二次确认。
                   </p>
                 </div>
-                <SettingGroupCard title="数据维护" description="该功能尚未实现。" icon="duplicate">
-                  <EmptyState
-                    icon={'🔧'}
-                    title="开发中"
-                    description="后续版本提供。"
-                  />
+                <SettingGroupCard title="数据目录" description="查看和管理 AcMind 数据存储位置" icon="duplicate">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>数据目录</span>
+                      <code className="text-[12px] px-2 py-0.5 rounded" style={{ background: 'var(--pm-bg-surface-soft, rgba(0,0,0,0.04))' }}>
+                        {settings?.storageRoot || '未配置'}
+                      </code>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await window.acmind.app.openPath(settings?.storageRoot || '');
+                        } catch (e) {
+                          addToast('无法打开数据目录', 'error');
+                        }
+                      }}
+                    >
+                      打开数据目录
+                    </Button>
+                  </div>
+                </SettingGroupCard>
+
+                <SettingGroupCard title="数据清理" description="清理不需要的临时数据" icon="duplicate">
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        if (!window.confirm('确定要清理 Clipboard 历史记录吗？此操作不可撤销。')) return;
+                        try {
+                          await window.acmind.clipboard.clearHistory();
+                          addToast('Clipboard 历史已清理', 'success');
+                        } catch (e) {
+                          addToast('清理失败', 'error');
+                        }
+                      }}
+                    >
+                      清理 Clipboard 历史
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        if (!window.confirm('确定要清理 Shelf 临时项吗？此操作不可撤销。')) return;
+                        try {
+                          const items = await window.acmind.shelf.listItems();
+                          for (const item of (items.items || [])) {
+                            try { await window.acmind.shelf.removeItem(item.id); } catch { /* skip */ }
+                          }
+                          addToast('Shelf 已清理', 'success');
+                        } catch (e) {
+                          addToast('清理失败', 'error');
+                        }
+                      }}
+                    >
+                      清理 Shelf 临时项
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        if (!window.confirm('确定要清理已解决的错误记录吗？')) return;
+                        try {
+                          await window.acmind.errors.clearResolved();
+                          addToast('已清理错误记录', 'success');
+                        } catch (e) {
+                          addToast('清理失败', 'error');
+                        }
+                      }}
+                    >
+                      清理已解决错误
+                    </Button>
+                  </div>
+                </SettingGroupCard>
+
+                <SettingGroupCard title="数据备份" description="导出数据库备份和设置" icon="duplicate">
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await (window.acmind.settings as any).exportBackup();
+                          addToast('备份已导出', 'success');
+                        } catch (e) {
+                          addToast('备份导出失败', 'error');
+                        }
+                      }}
+                    >
+                      导出备份
+                    </Button>
+                  </div>
                 </SettingGroupCard>
               </div>
             )}
 
-            {/* ── Advanced Dev (disabled) ──────────────────── */}
+            {/* ── Advanced Dev ──────────────────────────────── */}
             {activeCategory === 'advanced-dev' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="pinmind-page-title">开发者选项</h3>
+                  <h3 className="acmind-page-title">开发者选项</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
-                    开发者工具和调试选项正在开发中。
+                    诊断信息和调试工具。仅在需要排查问题时使用。
                   </p>
                 </div>
-                <SettingGroupCard title="开发者选项" description="该功能尚未实现。" icon="settings">
-                  <EmptyState
-                    icon={'🛠'}
-                    title="开发中"
-                    description="后续版本提供。当前可在 AI 控制台查看运行时信息。"
-                  />
+                <SettingGroupCard title="应用信息" description="当前版本和运行环境" icon="settings">
+                  <div className="flex flex-col gap-2 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    <div className="flex justify-between">
+                      <span>版本</span>
+                      <span>{(window as any).__ACMIND_VERSION__ || '未知'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>平台</span>
+                      <span>{navigator.platform || '未知'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>数据目录</span>
+                      <span className="truncate max-w-[200px]">{settings?.storageRoot || '未知'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Electron</span>
+                      <span>{navigator.userAgent.includes('Electron') ? '是' : '否'}</span>
+                    </div>
+                  </div>
+                </SettingGroupCard>
+
+                <SettingGroupCard title="诊断" description="复制诊断信息用于问题排查" icon="settings">
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          const stats = await window.acmind.dashboard.getStats();
+                          const info = [
+                            `AcMind Diagnostics`,
+                            `Version: ${(window as any).__ACMIND_VERSION__ || 'unknown'}`,
+                            `Platform: ${navigator.platform}`,
+                            `DataDir: ${settings?.storageRoot || 'unknown'}`,
+                            `TodayCollected: ${stats?.todayCollected ?? '?'}`,
+                            `InboxPending: ${stats?.inboxPending ?? '?'}`,
+                            `ClipboardWatching: ${stats?.clipboardWatching ? 'yes' : 'no'}`,
+                            `AIProviderReady: ${stats?.aiProviderReady ? 'yes' : 'no'}`,
+                            `VaultConfigured: ${stats?.vaultConfigured ? 'yes' : 'no'}`,
+                          ].join('\n');
+                          await navigator.clipboard.writeText(info);
+                          addToast('诊断信息已复制到剪贴板', 'success');
+                        } catch (e) {
+                          addToast('获取诊断信息失败', 'error');
+                        }
+                      }}
+                    >
+                      复制诊断信息
+                    </Button>
+                  </div>
+                </SettingGroupCard>
+
+                <SettingGroupCard title="日志" description="查看应用日志" icon="settings">
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await window.acmind.app.openPath(settings?.storageRoot || '');
+                        } catch (e) {
+                          addToast('无法打开日志目录', 'error');
+                        }
+                      }}
+                    >
+                      打开日志目录
+                    </Button>
+                  </div>
                 </SettingGroupCard>
               </div>
             )}
@@ -1400,7 +1550,7 @@ function CapsuleSettingsPanel({
   return (
     <div className="flex flex-col gap-5">
       <div className="mt-7">
-                  <h3 className="pinmind-page-title">
+                  <h3 className="acmind-page-title">
                     收集入口
                   </h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
@@ -1412,7 +1562,7 @@ function CapsuleSettingsPanel({
       <SettingGroupCard title="入口开关" icon="duplicate">
         <SettingsRow
           label="启用桌面灵感入口"
-          description="开启后，PinMind 会在桌面显示一个可快速记录灵感的小胶囊。"
+          description="开启后，AcMind 会在桌面显示一个可快速记录灵感的小胶囊。"
         >
           <ToggleSwitch
             checked={capsule.enabled}
@@ -1431,7 +1581,7 @@ function CapsuleSettingsPanel({
             }
           />
         </SettingsRow>
-        <SettingsRow label="启动 PinMind 后自动显示" description="打开应用后自动显示胶囊。">
+        <SettingsRow label="启动 AcMind 后自动显示" description="打开应用后自动显示胶囊。">
           <ToggleSwitch
             checked={capsule.startup.showOnAppLaunch}
             onChange={(checked) =>
@@ -1460,7 +1610,7 @@ function CapsuleSettingsPanel({
       {/* ── 外观设置卡片 ──────────────────────────────── */}
       <SettingGroupCard title="外观设置" description="自定义胶囊的视觉样式。" icon="text">
           {/* 主题色 */}
-          <div className="pinmind-setting-row settings-row">
+          <div className="acmind-setting-row settings-row">
             <div className="settings-row-copy">
               <div className="settings-row-title">主题色</div>
               <div className="settings-row-desc">选择胶囊的主题颜色。</div>
@@ -1862,7 +2012,7 @@ function CapsuleSettingsPanel({
               }
               className="pm-ds-input min-w-[180px]"
             >
-              <option value="pinmind-inbox">PinMind 收集箱</option>
+              <option value="acmind-inbox">AcMind 收集箱</option>
               <option value="obsidian-inbox">Obsidian Inbox</option>
               <option value="project">指定项目</option>
             </select>
@@ -2089,7 +2239,7 @@ function SettingsRow({
   children: React.ReactNode;
 }): JSX.Element {
   return (
-    <div className="pinmind-setting-row settings-row">
+    <div className="acmind-setting-row settings-row">
       <div className="settings-row-copy">
         <div className="settings-row-title">{label}</div>
         {description ? <div className="settings-row-desc">{description}</div> : null}

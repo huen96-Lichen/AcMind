@@ -2,10 +2,18 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
-const SERVICE_PREFIX = 'com.pinmind.ai';
+
+// Canonical app identity — aligned with package.json build.appId
+const SERVICE_PREFIX = 'com.acore.acmind';
+/** @deprecated Legacy Keychain prefix used before identity unification */
+const LEGACY_SERVICE_PREFIX = 'com.acmind.ai';
 
 function buildServiceName(provider: string): string {
   return `${SERVICE_PREFIX}.${provider.toLowerCase()}`;
+}
+
+function buildLegacyServiceName(provider: string): string {
+  return `${LEGACY_SERVICE_PREFIX}.${provider.toLowerCase()}`;
 }
 
 async function runSecurity(args: string[]): Promise<{ stdout: string; stderr: string }> {
@@ -31,10 +39,27 @@ export async function loadCloudApiKey(provider: string): Promise<string | null> 
     const value = stdout.trim();
     return value ? value : null;
   } catch (error) {
-    if (isNotFoundError(error)) {
-      return null;
+    if (!isNotFoundError(error)) {
+      throw error;
     }
-    throw error;
+    // Migration: try legacy prefix, migrate to new prefix if found
+    const legacyService = buildLegacyServiceName(provider);
+    try {
+      const { stdout } = await runSecurity(['find-generic-password', '-s', legacyService, '-a', 'apiKey', '-w']);
+      const value = stdout.trim();
+      if (value) {
+        // Migrate: write under new prefix (don't delete old — user can clean up manually)
+        try {
+          await saveCloudApiKey(provider, value);
+        } catch {
+          // Ignore migration write failure — value is still readable from legacy
+        }
+        return value;
+      }
+    } catch {
+      // Legacy key not found either
+    }
+    return null;
   }
 }
 

@@ -1,4 +1,4 @@
-// PinMind TaskQueue Unit Tests
+// AcMind TaskQueue Unit Tests
 // Tests for the in-memory task queue (no mocks needed)
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

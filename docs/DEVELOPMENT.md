@@ -5,7 +5,7 @@
 ```bash
 # 1. 克隆仓库
 git clone <repo-url>
-cd PinMindV2.0
+cd AcMindV2.0
 
 # 2. 安装依赖
 npm install
@@ -145,4 +145,4 @@ GitHub Actions 在 push/PR 到 main 时自动运行：
 
 ### 数据库损坏
 
-SQLite 数据库位于 `{storageRoot}/pinmind.db`。如遇损坏，删除该文件后重启应用会自动重建。
+SQLite 数据库位于 `{storageRoot}/acmind.db`。如遇损坏，删除该文件后重启应用会自动重建。

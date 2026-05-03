@@ -1,4 +1,4 @@
-// PinMind Distillation Prompt Templates
+// AcMind Distillation Prompt Templates
 // Prompt templates for each distillation operation
 
 import type { AiOperation } from '../../../shared/types';
@@ -6,7 +6,7 @@ import {
   DEFAULT_DISTILLED_CATEGORY,
   DEFAULT_DISTILLED_LINKS,
   DEFAULT_DISTILLED_TYPE,
-  PINMIND_MARKDOWN_SPEC_DIR,
+  ACMIND_MARKDOWN_SPEC_DIR,
 } from '../../../shared/markdownSpec';
 
 // ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ import {
 
 const PROMPT_TEMPLATES: Record<AiOperation, string> = {
   rename: '为以下内容生成一个简洁清晰的标题：\n\n{content}',
-  summarize: `你是 PinMind 的本地蒸馏器。请严格遵守 Markdown 中文规范包：${PINMIND_MARKDOWN_SPEC_DIR}
+  summarize: `你是 AcMind 的本地蒸馏器。请严格遵守 Markdown 中文规范包：${ACMIND_MARKDOWN_SPEC_DIR}
 
 请把用户原始内容整理为可导入 Obsidian 的结构化结果。只输出 JSON，不要输出解释、Markdown 代码围栏或额外文字。
 
@@ -44,6 +44,29 @@ JSON 结构必须是：
   tag: '为以下内容生成3-5个标签：\n\n{content}',
   valueScore: '评估以下内容的价值分数（1-10分），1=低价值可清理，10=高价值需保留：\n\n{content}',
   cleanSuggest: '判断以下内容是否应该保留、合并或清理：\n\n{content}',
+  prefilter: `你是 AcMind 的 Pin Pool 预筛器。用户刚刚 pin 住了一段内容，你需要快速评估它的价值并给出建议。
+
+请只输出 JSON，不要输出解释、Markdown 代码围栏或额外文字。
+
+JSON 结构必须是：
+{
+  "suggestedTitle": "15-35 个中文字符的标题",
+  "valueScore": 1-100 的整数（1=低价值可清理，100=高价值需立即处理）,
+  "duplicateScore": 0-100 的整数（基于内容判断是否有重复/冗余信号）,
+  "suggestedAction": "promote_to_inbox | ignore | merge | keep_pinned",
+  "reason": "不超过 50 个中文字符的理由",
+  "tags": ["3-5 个中文标签，不要带 #"]
+}
+
+评估维度：
+- 信息密度：是否有具体事实、数据、决策、行动项
+- 时效性：是否需要近期处理
+- 可操作性：是否包含可执行的计划或灵感
+- 唯一性：是否与常见内容重复
+
+原始内容：
+
+{content}`,
 };
 
 // ---------------------------------------------------------------------------

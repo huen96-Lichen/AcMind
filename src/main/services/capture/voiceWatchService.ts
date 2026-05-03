@@ -1,4 +1,4 @@
-// PinMind Voice Watch Service
+// AcMind Voice Watch Service
 // Phase 10: 监听本地/iCloud文件夹，自动导入新增音频文件
 //
 // 职责：

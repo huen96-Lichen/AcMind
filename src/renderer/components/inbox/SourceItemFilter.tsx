@@ -29,7 +29,7 @@ export function SourceItemFilter({
   onSearchChange,
 }: SourceItemFilterProps): JSX.Element {
   return (
-    <div className="pinmind-filter-bar">
+    <div className="acmind-filter-bar">
       {/* Filter buttons */}
       <div className="flex items-center gap-1">
         {FILTER_OPTIONS.map((option) => {
@@ -39,7 +39,7 @@ export function SourceItemFilter({
               key={option.key}
               type="button"
               onClick={() => onFilterChange(option.key)}
-              className={`pinmind-filter-btn motion-button ${isActive ? 'is-active' : ''}`}
+              className={`acmind-filter-btn motion-button ${isActive ? 'is-active' : ''}`}
             >
               {option.label}
             </button>
@@ -48,9 +48,9 @@ export function SourceItemFilter({
       </div>
 
       {/* Search input */}
-      <div className="pinmind-search-wrapper">
+      <div className="acmind-search-wrapper">
         <svg
-          className="pinmind-search-icon"
+          className="acmind-search-icon"
           width="14"
           height="14"
           viewBox="0 0 14 14"
@@ -74,7 +74,7 @@ export function SourceItemFilter({
         </svg>
         <input
           type="text"
-          className="pinmind-search-input"
+          className="acmind-search-input"
           placeholder="搜索内容..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}

@@ -70,7 +70,7 @@ function DistillProgressSection({ captureItemId }: { captureItemId: string }): J
     setLoading(true);
     const load = async () => {
       try {
-        const result = await window.pinmind.sourceItems.getDistillStatus(captureItemId);
+        const result = await window.acmind.sourceItems.getDistillStatus(captureItemId);
         if (!cancelled) setLineage(result);
       } catch {
         // Ignore errors, show nothing
@@ -86,8 +86,8 @@ function DistillProgressSection({ captureItemId }: { captureItemId: string }): J
 
   if (loading && !lineage) {
     return (
-      <div className="pinmind-detail-section mb-4">
-        <h4 className="pinmind-field-label mb-2">整理进度</h4>
+      <div className="acmind-detail-section mb-4">
+        <h4 className="acmind-field-label mb-2">整理进度</h4>
         <p className="text-[12px]" style={{ color: 'var(--pm-text-tertiary)' }}>加载中...</p>
       </div>
     );
@@ -102,8 +102,8 @@ function DistillProgressSection({ captureItemId }: { captureItemId: string }): J
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   return (
-    <div className="pinmind-detail-section mb-4">
-      <h4 className="pinmind-field-label mb-2">整理进度</h4>
+    <div className="acmind-detail-section mb-4">
+      <h4 className="acmind-field-label mb-2">整理进度</h4>
       <div className="flex flex-col gap-2">
         {/* Progress bar */}
         <div
@@ -177,7 +177,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
       setImageError(null);
       setImageDataUrl(null);
       try {
-        const result = await window.pinmind.captureItems.readImage(item.filePath);
+        const result = await window.acmind.captureItems.readImage(item.filePath);
         if (cancelled) return;
         if (result.ok && result.dataUrl) {
           setImageDataUrl(result.dataUrl);
@@ -246,7 +246,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
 
   if (!item) {
     return (
-      <div className="pinmind-capture-detail pinmind-detail-empty">
+      <div className="acmind-capture-detail acmind-detail-empty">
         <div className="flex flex-col items-center justify-center h-full gap-3">
           <svg
             width="40"
@@ -272,7 +272,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
   const statusOptions = getStatusOptions(item.status);
 
   return (
-    <div className="pinmind-capture-detail">
+    <div className="acmind-capture-detail">
       <ScrollContainer className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
@@ -284,7 +284,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="pinmind-btn pinmind-btn-ghost pinmind-btn-danger motion-button text-[12px]"
+                className="acmind-btn acmind-btn-ghost acmind-btn-danger motion-button text-[12px]"
               >
                 删除
               </button>
@@ -297,7 +297,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="pinmind-btn pinmind-btn-primary motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-primary motion-button text-[12px]"
                   style={{
                     background: 'var(--pm-status-danger)',
                     borderColor: 'var(--pm-status-danger)',
@@ -309,7 +309,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="pinmind-btn pinmind-btn-ghost motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-ghost motion-button text-[12px]"
                 >
                   取消
                 </button>
@@ -319,24 +319,24 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
         </div>
 
         {/* Title */}
-        <div className="pinmind-detail-section mb-4">
-          <h4 className="pinmind-field-label mb-2">标题</h4>
+        <div className="acmind-detail-section mb-4">
+          <h4 className="acmind-field-label mb-2">标题</h4>
           <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>
             {item.title || '未命名碎片'}
           </p>
         </div>
 
         {/* Content */}
-        <div className="pinmind-detail-section mb-4">
+        <div className="acmind-detail-section mb-4">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="pinmind-field-label">
+            <h4 className="acmind-field-label">
               {item.type === 'link' ? '链接地址' : item.type === 'image' ? '图片信息' : item.type === 'audio' ? '转写内容' : '原文内容'}
             </h4>
             {item.type !== 'image' && (item.rawText || item.sourceUrl) ? (
               <button
                 type="button"
                 onClick={handleCopyRawText}
-                className="pinmind-btn pinmind-btn-ghost motion-button text-[11px] px-2 py-1"
+                className="acmind-btn acmind-btn-ghost motion-button text-[11px] px-2 py-1"
                 style={{ color: copied ? 'var(--pm-status-success)' : 'var(--pm-brand-primary)' }}
               >
                 {copied ? '已复制 ✓' : '复制原文'}
@@ -358,7 +358,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 <div className="mt-3">
                   <p className="text-[11px] mb-1" style={{ color: 'var(--pm-text-tertiary)' }}>摘要</p>
                   <div
-                    className="pinmind-detail-content-text text-[13px]"
+                    className="acmind-detail-content-text text-[13px]"
                     style={{ color: 'var(--pm-text-primary)' }}
                   >
                     {item.rawText}
@@ -367,7 +367,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
               ) : null}
             </div>
           ) : item.type === 'image' ? (
-            <div className="pinmind-detail-image-preview">
+            <div className="acmind-detail-image-preview">
               {imageError ? (
                 <div
                   className="flex flex-col items-center justify-center py-6 rounded-lg"
@@ -416,8 +416,8 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 {item.filePath && (
                   <button
                     type="button"
-                    onClick={() => { void window.pinmind.app.openPath(item.filePath); }}
-                    className="pinmind-btn pinmind-btn-ghost motion-button text-[11px] px-2 py-1"
+                    onClick={() => { void window.acmind.app.openPath(item.filePath); }}
+                    className="acmind-btn acmind-btn-ghost motion-button text-[11px] px-2 py-1"
                     style={{ color: 'var(--pm-brand-primary)' }}
                   >
                     打开录音
@@ -429,7 +429,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 <div>
                   <p className="text-[11px] mb-1" style={{ color: 'var(--pm-text-tertiary)' }}>转写文本</p>
                   <div
-                    className="pinmind-detail-content-text text-[13px] whitespace-pre-wrap"
+                    className="acmind-detail-content-text text-[13px] whitespace-pre-wrap"
                     style={{ color: 'var(--pm-text-primary)' }}
                   >
                     {item.rawText}
@@ -456,13 +456,13 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 <button
                   type="button"
                   onClick={() => {
-                    void window.pinmind.voice.retryTranscription(item.id).then((result: { success: boolean; jobId?: string; error?: string; engineUnavailable?: boolean }) => {
+                    void window.acmind.voice.retryTranscription(item.id).then((result: { success: boolean; jobId?: string; error?: string; engineUnavailable?: boolean }) => {
                       if (result.engineUnavailable) {
                         alert('需要配置转写引擎');
                       }
                     });
                   }}
-                  className="pinmind-btn pinmind-btn-ghost motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-ghost motion-button text-[12px]"
                   style={{ color: 'var(--pm-status-warning)' }}
                 >
                   重试转写
@@ -471,7 +471,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
             </div>
           ) : (
             <div
-              className="pinmind-detail-content-text text-[13px] whitespace-pre-wrap"
+              className="acmind-detail-content-text text-[13px] whitespace-pre-wrap"
               style={{ color: 'var(--pm-text-primary)' }}
             >
               {item.rawText || '无内容'}
@@ -480,14 +480,14 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
         </div>
 
         {/* User Note */}
-        <div className="pinmind-detail-section mb-4">
+        <div className="acmind-detail-section mb-4">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="pinmind-field-label">备注</h4>
+            <h4 className="acmind-field-label">备注</h4>
             {!editingNote ? (
               <button
                 type="button"
                 onClick={handleStartEditNote}
-                className="pinmind-btn pinmind-btn-ghost motion-button text-[11px] px-2 py-1"
+                className="acmind-btn acmind-btn-ghost motion-button text-[11px] px-2 py-1"
                 style={{ color: 'var(--pm-brand-primary)' }}
               >
                 编辑
@@ -500,7 +500,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 value={noteValue}
                 onChange={(e) => setNoteValue(e.target.value)}
                 placeholder="添加备注..."
-                className="pinmind-textarea text-[13px]"
+                className="acmind-textarea text-[13px]"
                 rows={3}
                 autoFocus
               />
@@ -508,7 +508,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                 <button
                   type="button"
                   onClick={() => setEditingNote(false)}
-                  className="pinmind-btn pinmind-btn-ghost motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-ghost motion-button text-[12px]"
                 >
                   取消
                 </button>
@@ -516,7 +516,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                   type="button"
                   onClick={handleSaveNote}
                   disabled={savingNote}
-                  className="pinmind-btn pinmind-btn-primary motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-primary motion-button text-[12px]"
                 >
                   {savingNote ? '保存中...' : '保存'}
                 </button>
@@ -530,8 +530,8 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
         </div>
 
         {/* Status */}
-        <div className="pinmind-detail-section mb-4">
-          <h4 className="pinmind-field-label mb-2">状态</h4>
+        <div className="acmind-detail-section mb-4">
+          <h4 className="acmind-field-label mb-2">状态</h4>
           <div className="flex items-center gap-2">
             <span
               className="text-[12px] px-2 py-1 rounded-md font-medium"
@@ -548,7 +548,7 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
                   key={opt.value}
                   type="button"
                   onClick={() => handleStatusChange(opt.value)}
-                  className="pinmind-btn pinmind-btn-ghost motion-button text-[11px] px-2 py-1"
+                  className="acmind-btn acmind-btn-ghost motion-button text-[11px] px-2 py-1"
                 >
                   {opt.label}
                 </button>
@@ -561,9 +561,9 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
         {item.status === 'distilling' && <DistillProgressSection captureItemId={item.id} />}
 
         {/* Metadata */}
-        <div className="pinmind-detail-section">
-          <h4 className="pinmind-field-label mb-3">元数据</h4>
-          <div className="pinmind-detail-meta-grid">
+        <div className="acmind-detail-section">
+          <h4 className="acmind-field-label mb-3">元数据</h4>
+          <div className="acmind-detail-meta-grid">
             <MetaRow label="类型" value={getTypeLabel(item.type)} />
             <MetaRow label="状态" value={getStatusLabel(item.status)} />
             <MetaRow label="收集时间" value={formatTimestamp(item.capturedAt)} />
@@ -581,9 +581,9 @@ export function CaptureItemDetail({ item, onUpdate, onDelete }: CaptureItemDetai
 
 function MetaRow({ label, value }: { label: string; value: string }): JSX.Element {
   return (
-    <div className="pinmind-detail-meta-row">
-      <span className="pinmind-detail-meta-label">{label}</span>
-      <span className="pinmind-detail-meta-value" style={{ color: 'var(--pm-text-primary)' }}>
+    <div className="acmind-detail-meta-row">
+      <span className="acmind-detail-meta-label">{label}</span>
+      <span className="acmind-detail-meta-value" style={{ color: 'var(--pm-text-primary)' }}>
         {value}
       </span>
     </div>

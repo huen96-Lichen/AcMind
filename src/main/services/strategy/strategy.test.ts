@@ -1,4 +1,4 @@
-// PinMind Strategy System Tests
+// AcMind Strategy System Tests
 // Phase 8.1-8.6: 完整测试覆盖
 
 import { describe, it, expect } from 'vitest';
@@ -250,7 +250,7 @@ describe('Phase 8.2 - PromptProfileRegistry', () => {
   it('should return default profile for unknown source_type', () => {
     // @ts-expect-error Testing unregistered type
     const profile = promptProfileRegistry.getProfile('nonexistent');
-    expect(profile.profile_id).toBe('pinmind.default.v1');
+    expect(profile.profile_id).toBe('acmind.default.v1');
     expect(profile.source_type).toBe('default');
   });
 
@@ -268,7 +268,7 @@ describe('Phase 8.2 - PromptProfileRegistry', () => {
   });
 
   it('should support profile versioning via getProfileById', () => {
-    const profile = promptProfileRegistry.getProfileById('pinmind.manual_text.v1');
+    const profile = promptProfileRegistry.getProfileById('acmind.manual_text.v1');
     expect(profile).toBeDefined();
     expect(profile!.version).toBe('1.0.0');
   });
@@ -282,7 +282,7 @@ describe('Phase 8.2 - PromptProfileRegistry', () => {
     expect(userPrompt).toContain('测试内容');
     expect(userPrompt).toContain('输出格式');
     expect(userPrompt).toContain('约束条件');
-    expect(profileId).toBe('pinmind.manual_text.v1');
+    expect(profileId).toBe('acmind.manual_text.v1');
   });
 
   it('webpage profile should include source_url in prompt', () => {
@@ -607,7 +607,7 @@ describe('StrategyProcessor - Integration', () => {
     expect(result.directOutput).toBeNull();
     expect(result.prompt).toContain('我的想法');
     expect(result.routingDecision.tier).toBe('cloud_standard');
-    expect(result.profileId).toBe('pinmind.manual_text.v1');
+    expect(result.profileId).toBe('acmind.manual_text.v1');
   });
 
   it('should prepare processing for unknown_file with direct output', () => {
@@ -626,7 +626,7 @@ describe('StrategyProcessor - Integration', () => {
     const raw = { title: '标题', summary: '摘要', tags: ['tag'], body_markdown: '正文', suggested_folder: 'Inbox', quality_flags: [] };
     const result = strategyProcessor.processAiOutput(raw, input, {
       model_tier: 'cloud_standard', provider: 'openai', model_name: 'gpt-4o',
-      prompt_profile_id: 'pinmind.manual_text.v1', prompt_profile_version: '1.0.0',
+      prompt_profile_id: 'acmind.manual_text.v1', prompt_profile_version: '1.0.0',
       status: 'success',
     });
     expect(result.content.title).toBe('标题');
@@ -643,7 +643,7 @@ describe('StrategyProcessor - Integration', () => {
     const raw = { title: '', summary: '', tags: 'invalid', body_markdown: '', suggested_folder: '', quality_flags: ['model_unavailable', 'body_empty', 'title_missing'] };
     const result = strategyProcessor.processAiOutput(raw, input, {
       model_tier: 'cloud_standard', provider: 'openai', model_name: 'gpt-4o',
-      prompt_profile_id: 'pinmind.manual_text.v1', prompt_profile_version: '1.0.0',
+      prompt_profile_id: 'acmind.manual_text.v1', prompt_profile_version: '1.0.0',
       status: 'success',
     });
     expect(result.usedFallback).toBe(true);

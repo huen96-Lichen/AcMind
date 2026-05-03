@@ -6,7 +6,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pinmind: {
+        acmind: {
           app: 'var(--pm-bg-app)',
           window: 'var(--pm-bg-window)',
           sidebar: 'var(--pm-bg-sidebar)',
@@ -79,10 +79,10 @@ const config: Config = {
       },
       boxShadow: {
         glass: '0 18px 34px rgba(0, 0, 0, 0.16)',
-        pinmindXs: '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
-        pinmindSm: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
-        pinmindMd: '0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)',
-        pinmindLg: '0 24px 64px rgba(0, 0, 0, 0.16), 0 8px 20px rgba(0, 0, 0, 0.08)'
+        acmindXs: '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
+        acmindSm: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+        acmindMd: '0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)',
+        acmindLg: '0 24px 64px rgba(0, 0, 0, 0.16), 0 8px 20px rgba(0, 0, 0, 0.08)'
       },
       backdropBlur: {
         xs: '2px'

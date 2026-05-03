@@ -95,6 +95,7 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
   const [linkValue, setLinkValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [inlineMessage, setInlineMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
   const headerSubtitle = useMemo(() => '把想法先放进来', []);
 
   const collapseCapsule = useCallback(() => {
-    window.pinmind?.capsule?.collapse?.();
+    window.acmind?.capsule?.collapse?.();
   }, []);
 
   const showMessage = useCallback((type: 'success' | 'error', text: string) => {
@@ -126,12 +127,9 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
 
     setSubmitting(true);
     try {
-      await window.pinmind.captureItems.create({
-        type: 'text',
-        title: content.split('\n')[0]?.slice(0, 50) || '文字内容',
-        rawText: content,
-      });
-      showMessage('success', '已收集到收集箱');
+      // Batch 4 Phase 6: Text → SourceItem → Inbox
+      await window.acmind.sourceItems.createText(content);
+      showMessage('success', '已保存到 Inbox');
       window.setTimeout(() => collapseCapsule(), 700);
       setTextValue('');
     } catch (error) {
@@ -150,13 +148,13 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
 
     setSubmitting(true);
     try {
-      await window.pinmind.captureItems.create({
-        type: 'link',
-        title: '网页链接',
-        rawText: content,
-        sourceUrl: content,
+      // Batch 4 Phase 6: Link → SourceItem → Inbox (use capture.record for URL)
+      await window.acmind.capture.record({
+        sourceType: 'webpage',
+        url: content,
+        title: content,
       });
-      showMessage('success', '已收集到收集箱');
+      showMessage('success', '已保存到 Inbox');
       window.setTimeout(() => collapseCapsule(), 700);
       setLinkValue('');
     } catch (error) {
@@ -172,7 +170,7 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
       collapseCapsule();
       window.setTimeout(async () => {
         try {
-          await window.pinmind.capture.takeScreenshot();
+          await window.acmind.capture.takeScreenshot();
         } catch (error) {
           if (mountedRef.current) {
             showMessage('error', error instanceof Error ? error.message : '截图失败');
@@ -208,12 +206,16 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
   const handleVoiceComplete = useCallback(async (transcribedText: string) => {
     setSubmitting(true);
     try {
-      await window.pinmind.captureItems.create({
-        type: 'text',
-        title: transcribedText.split('\n')[0]?.slice(0, 50) || '语音内容',
-        rawText: transcribedText,
+      // Phase 6: Voice → Pin Pool (use existing voice.createPinFromTranscript)
+      const result = await window.acmind.voice.createPinFromTranscript({
+        transcript: transcribedText,
+        title: transcribedText.split('\n')[0]?.slice(0, 50) || '语音灵感',
       });
-      showMessage('success', '已收集到收集箱');
+      if (result.success) {
+        showMessage('success', '已 Pin 到 Pin Pool');
+      } else {
+        showMessage('error', result.error || '语音 Pin 创建失败');
+      }
       window.setTimeout(() => collapseCapsule(), 700);
     } catch (error) {
       showMessage('error', error instanceof Error ? error.message : '收集失败');
@@ -237,6 +239,52 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
     }
   }, [handleCollect]);
 
+  // ── Batch 4 Phase 6: Drag-drop support ──
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const text = e.dataTransfer.getData('text/plain');
+    const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/x-moz-url');
+    const files = Array.from(e.dataTransfer.files);
+
+    try {
+      if (files.length > 0) {
+        // File drop → Shelf or Inbox
+        for (const file of files) {
+          const filePath = (file as File & { path?: string }).path;
+          if (filePath) {
+            await window.acmind.shelf.addFiles([filePath], file.name);
+          }
+        }
+        showMessage('success', `已添加 ${files.length} 个文件到 Shelf`);
+      } else if (url) {
+        // URL drop → Inbox
+        await window.acmind.capture.record({ sourceType: 'webpage', url, title: url });
+        showMessage('success', '链接已保存到 Inbox');
+      } else if (text) {
+        // Text drop → Inbox
+        await window.acmind.sourceItems.createText(text);
+        showMessage('success', '文本已保存到 Inbox');
+      }
+    } catch (error) {
+      showMessage('error', error instanceof Error ? error.message : '拖放失败');
+    }
+  }, [showMessage]);
+
   const stateClass = capsuleState === 'saving'
     ? 'state-saving'
     : capsuleState === 'success'
@@ -250,7 +298,12 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
             : 'state-idle';
 
   return (
-    <div className={`capsule-panel capsule-panel-collect ${stateClass}`}>
+    <div
+      className={`capsule-panel capsule-panel-collect ${stateClass} ${isDragOver ? 'is-drag-over' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="capsule-header capsule-header-collect">
         <div className="capsule-header-main">
           <div className="panel-title-row">
@@ -363,6 +416,26 @@ export function CapsuleExpanded({ capsuleState = 'expanded' }: CapsuleExpandedPr
         <div className={`capsule-collect-toast ${inlineMessage.type}`}>
           <StatusIcon state={inlineMessage.type === 'success' ? 'success' : 'error'} />
           <span>{inlineMessage.text}</span>
+        </div>
+      )}
+
+      {/* Batch 4 Phase 6: Drag-drop overlay */}
+      {isDragOver && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(255, 107, 43, 0.08)',
+            border: '2px dashed rgba(255, 107, 43, 0.4)',
+            borderRadius: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            pointerEvents: 'none',
+          }}
+        >
+          <span style={{ color: '#ff6b2b', fontSize: 13, fontWeight: 600 }}>释放以收集</span>
         </div>
       )}
     </div>

@@ -9,7 +9,7 @@ describe('markdownBuilder', () => {
     source: 'manual',
     contentPath: '/tmp/src-1.txt',
     previewText: '这是原始收集内容，用于测试。',
-    sourceApp: 'PinMind',
+    sourceApp: 'AcMind',
     createdAt: 1714442400,
     status: 'inbox',
   };
@@ -21,14 +21,14 @@ describe('markdownBuilder', () => {
     suggestedTitle: 'Acore 母品牌与产品体系说明',
     summary: '这是一句总结。',
     category: '产品规范',
-    tags: ['PinMind', 'Obsidian'],
+    tags: ['AcMind', 'Obsidian'],
     contentMarkdown: '# 正文\n\n这里是正文。',
     confidence: 0.92,
     reviewStatus: 'accepted',
     createdAt: 1714442400,
   };
 
-  it('renders the default PinMind structure', () => {
+  it('renders the default AcMind structure', () => {
     const markdown = markdownBuilder.build(distilledOutput, sourceItem);
 
     expect(markdown).toContain('schema_version: "0.2"');

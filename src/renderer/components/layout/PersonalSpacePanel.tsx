@@ -34,7 +34,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
 
     async function load() {
       try {
-        const s = await window.pinmind.settings.get();
+        const s = await window.acmind.settings.get();
         if (cancelled) return;
         setSettings(s);
         setProfileDraft({ ...DEFAULT_USER_PROFILE, ...s.profile });
@@ -65,8 +65,8 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
     setSaveMessage(null);
     try {
       await Promise.all([
-        window.pinmind.settings.update({ profile: profileDraft }),
-        window.pinmind.settings.update({ preferences: prefsDraft }),
+        window.acmind.settings.update({ profile: profileDraft }),
+        window.acmind.settings.update({ preferences: prefsDraft }),
       ]);
       setSaveMessage('已保存');
       setTimeout(() => setSaveMessage(null), 2000);
@@ -94,7 +94,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
   // Open data directory
   const handleOpenDataDir = useCallback(async () => {
     try {
-      await window.pinmind.app.openStorageRoot();
+      await window.acmind.app.openStorageRoot();
     } catch {
       // ignore
     }
@@ -104,10 +104,10 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
   const handleSelectDataDir = useCallback(async () => {
     setSelectingDir(true);
     try {
-      const result = await window.pinmind.workspace.selectDirectory();
+      const result = await window.acmind.workspace.selectDirectory();
       if (result.success && result.path) {
         const newPath: string = result.path;
-        await window.pinmind.settings.update({ storageRoot: newPath });
+        await window.acmind.settings.update({ storageRoot: newPath });
         setSettings(prev => prev ? { ...prev, storageRoot: newPath } : prev);
         showToast('数据目录已更新');
       }
@@ -122,7 +122,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
   const handleOpenDir = useCallback(async (dirPath: string) => {
     setOpeningDir(true);
     try {
-      const result = await window.pinmind.workspace.openDirectory(dirPath);
+      const result = await window.acmind.workspace.openDirectory(dirPath);
       if (!result.success) {
         showToast('无法打开目录');
       }
@@ -137,10 +137,10 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
   const handleSelectVault = useCallback(async () => {
     setSelectingVault(true);
     try {
-      const result = await window.pinmind.workspace.selectDirectory();
+      const result = await window.acmind.workspace.selectDirectory();
       if (result.success && result.path) {
         const newPath: string = result.path;
-        await window.pinmind.vault.updateConfig({ vaultPath: newPath });
+        await window.acmind.vault.updateConfig({ vaultPath: newPath });
         setSettings(prev => prev ? { ...prev, vault: { ...prev.vault, vaultPath: newPath } } : prev);
         showToast('Vault 路径已更新');
       }
@@ -159,7 +159,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
     }
     setTestingWrite(true);
     try {
-      const result = await window.pinmind.workspace.testWrite(dirPath);
+      const result = await window.acmind.workspace.testWrite(dirPath);
       if (result.success) {
         showToast('写入测试通过');
       } else {
@@ -199,28 +199,28 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
 
       {/* Overlay */}
       <div
-        className={`pinmind-personal-space-overlay ${visible ? 'is-visible' : ''}`}
+        className={`acmind-personal-space-overlay ${visible ? 'is-visible' : ''}`}
         onClick={onClose}
       />
 
       {/* Panel */}
-      <div ref={panelRef} className="pinmind-personal-space-panel">
+      <div ref={panelRef} className="acmind-personal-space-panel">
         {/* ── Header ── */}
-        <div className="pinmind-drawer-header">
+        <div className="acmind-drawer-header">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="pinmind-drawer-avatar">
+            <div className="acmind-drawer-avatar">
               {avatarInitial}
             </div>
             <div className="min-w-0">
-              <h2 className="pinmind-drawer-title">设置你的空间</h2>
-              <p className="pinmind-drawer-subtitle">
+              <h2 className="acmind-drawer-title">设置你的空间</h2>
+              <p className="acmind-drawer-subtitle">
                 完成个人资料、工作空间和 Obsidian 连接
               </p>
             </div>
           </div>
           <button
             type="button"
-            className="pinmind-drawer-close-btn"
+            className="acmind-drawer-close-btn"
             onClick={onClose}
             title="关闭"
           >
@@ -231,24 +231,24 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
         {/* ── Scrollable Content ── */}
         <ScrollContainer className="flex-1 min-h-0">
           {/* Section 1: 个人资料 */}
-          <div className="pinmind-personal-space-section">
-            <div className="pinmind-section-header">
+          <div className="acmind-personal-space-section">
+            <div className="acmind-section-header">
               <h3>个人资料</h3>
               <p>头像、名称和身份标签</p>
             </div>
 
             {/* Avatar Editor Card */}
-            <div className="pinmind-avatar-editor-card">
-              <div className="pinmind-avatar-preview">
+            <div className="acmind-avatar-editor-card">
+              <div className="acmind-avatar-preview">
                 {avatarInitial}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="pinmind-avatar-editor-title">头像将显示为姓名首字</p>
-                <p className="pinmind-avatar-editor-desc">点击后可上传图片或选择默认图标</p>
+                <p className="acmind-avatar-editor-title">头像将显示为姓名首字</p>
+                <p className="acmind-avatar-editor-desc">点击后可上传图片或选择默认图标</p>
               </div>
               <button
                 type="button"
-                className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                className="acmind-btn acmind-btn-ghost text-[12px]"
                 style={{ height: 28, padding: '0 10px', flexShrink: 0 }}
               >
                 更换头像
@@ -256,11 +256,11 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Display Name */}
-            <div className="pinmind-personal-space-field" style={{ marginBottom: 16 }}>
+            <div className="acmind-personal-space-field" style={{ marginBottom: 16 }}>
               <label>显示名称</label>
               <input
                 type="text"
-                className="pinmind-field"
+                className="acmind-field"
                 value={profileDraft.displayName}
                 onChange={e => setProfileDraft(prev => ({ ...prev, displayName: e.target.value }))}
                 placeholder="输入你的名称"
@@ -269,14 +269,14 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Bio */}
-            <div className="pinmind-personal-space-field" style={{ marginBottom: 16 }}>
+            <div className="acmind-personal-space-field" style={{ marginBottom: 16 }}>
               <div className="flex items-center justify-between">
                 <label>个人简介</label>
-                <span className="pinmind-field-hint">{profileDraft.bio?.length ?? 0}/80</span>
+                <span className="acmind-field-hint">{profileDraft.bio?.length ?? 0}/80</span>
               </div>
               <input
                 type="text"
-                className="pinmind-field"
+                className="acmind-field"
                 value={profileDraft.bio ?? ''}
                 onChange={e => {
                   if (e.target.value.length <= 80) {
@@ -289,11 +289,11 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Workspace Name */}
-            <div className="pinmind-personal-space-field" style={{ marginBottom: 16 }}>
+            <div className="acmind-personal-space-field" style={{ marginBottom: 16 }}>
               <label>工作空间名称</label>
               <input
                 type="text"
-                className="pinmind-field"
+                className="acmind-field"
                 value={profileDraft.workspaceName}
                 onChange={e => setProfileDraft(prev => ({ ...prev, workspaceName: e.target.value }))}
                 placeholder="我的第二大脑"
@@ -302,7 +302,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Role Tags */}
-            <div className="pinmind-personal-space-field">
+            <div className="acmind-personal-space-field">
               <label>角色标签</label>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {profileDraft.roleTags.map(tag => (
@@ -327,7 +327,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
-                    className="pinmind-field text-[12px]"
+                    className="acmind-field text-[12px]"
                     style={{ height: 28, width: 80, padding: '0 8px' }}
                     value={newTag}
                     onChange={e => setNewTag(e.target.value)}
@@ -348,22 +348,22 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
           </div>
 
           {/* Section 2: 工作空间 */}
-          <div className="pinmind-personal-space-section">
-            <div className="pinmind-section-header">
+          <div className="acmind-personal-space-section">
+            <div className="acmind-section-header">
               <h3>工作空间</h3>
               <p>数据目录、Obsidian Vault 和 AI 层级</p>
             </div>
 
             {/* Data Directory */}
-            <div className="pinmind-setting-row">
-              <span className="pinmind-setting-label">数据目录</span>
-              <span className="pinmind-setting-value">
+            <div className="acmind-setting-row">
+              <span className="acmind-setting-label">数据目录</span>
+              <span className="acmind-setting-value">
                 {settings?.storageRoot || '未配置'}
               </span>
-              <div className="pinmind-setting-actions">
+              <div className="acmind-setting-actions">
                 <button
                   type="button"
-                  className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                  className="acmind-btn acmind-btn-ghost text-[12px]"
                   style={{ height: 28, padding: '0 10px' }}
                   onClick={() => settings?.storageRoot && handleTestWrite(settings.storageRoot)}
                   disabled={testingWrite}
@@ -372,7 +372,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
                 </button>
                 <button
                   type="button"
-                  className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                  className="acmind-btn acmind-btn-ghost text-[12px]"
                   style={{ height: 28, padding: '0 10px' }}
                   onClick={handleSelectDataDir}
                   disabled={selectingDir}
@@ -381,7 +381,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
                 </button>
                 <button
                   type="button"
-                  className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                  className="acmind-btn acmind-btn-ghost text-[12px]"
                   style={{ height: 28, padding: '0 10px' }}
                   onClick={() => settings?.storageRoot && handleOpenDir(settings.storageRoot)}
                   disabled={openingDir || !settings?.storageRoot}
@@ -392,15 +392,15 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Obsidian Vault */}
-            <div className="pinmind-setting-row">
-              <span className="pinmind-setting-label">Obsidian Vault</span>
-              <span className="pinmind-setting-value">
+            <div className="acmind-setting-row">
+              <span className="acmind-setting-label">Obsidian Vault</span>
+              <span className="acmind-setting-value">
                 {settings?.vault?.vaultPath || '未配置'}
               </span>
-              <div className="pinmind-setting-actions">
+              <div className="acmind-setting-actions">
                 <button
                   type="button"
-                  className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                  className="acmind-btn acmind-btn-ghost text-[12px]"
                   style={{ height: 28, padding: '0 10px' }}
                   onClick={handleSelectVault}
                   disabled={selectingVault}
@@ -409,7 +409,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
                 </button>
                 <button
                   type="button"
-                  className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                  className="acmind-btn acmind-btn-ghost text-[12px]"
                   style={{ height: 28, padding: '0 10px' }}
                   onClick={() => settings?.vault?.vaultPath && handleOpenDir(settings.vault.vaultPath)}
                   disabled={openingDir || !settings?.vault?.vaultPath}
@@ -420,17 +420,17 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Default Tier */}
-            <div className="pinmind-setting-row">
-              <span className="pinmind-setting-label">默认 AI 层级</span>
-              <span className="pinmind-setting-value">
+            <div className="acmind-setting-row">
+              <span className="acmind-setting-label">默认 AI 层级</span>
+              <span className="acmind-setting-value">
                 {settings?.defaultTier ?? 'local_light'}
               </span>
-              <div className="pinmind-setting-actions">
+              <div className="acmind-setting-actions">
                 <button
                   type="button"
-                  className="pinmind-btn pinmind-btn-ghost text-[12px]"
+                  className="acmind-btn acmind-btn-ghost text-[12px]"
                   style={{ height: 28, padding: '0 10px' }}
-                  onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'settings', tab: 'ai' } }))}
+                  onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'settings', tab: 'ai' } }))}
                 >
                   前往 AI 控制台
                 </button>
@@ -439,17 +439,17 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
           </div>
 
           {/* Section 3: 偏好设置 */}
-          <div className="pinmind-personal-space-section">
-            <div className="pinmind-section-header">
+          <div className="acmind-personal-space-section">
+            <div className="acmind-section-header">
               <h3>偏好设置</h3>
               <p>主题、密度和起始页</p>
             </div>
 
             {/* Theme Mode */}
-            <div className="pinmind-personal-space-field" style={{ marginBottom: 16 }}>
+            <div className="acmind-personal-space-field" style={{ marginBottom: 16 }}>
               <label>主题模式</label>
               <select
-                className="pinmind-field"
+                className="acmind-field"
                 value={prefsDraft.themeMode}
                 onChange={e => setPrefsDraft(prev => ({ ...prev, themeMode: e.target.value as UserPreferences['themeMode'] }))}
               >
@@ -460,10 +460,10 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Interface Density */}
-            <div className="pinmind-personal-space-field" style={{ marginBottom: 16 }}>
+            <div className="acmind-personal-space-field" style={{ marginBottom: 16 }}>
               <label>界面密度</label>
               <select
-                className="pinmind-field"
+                className="acmind-field"
                 value={prefsDraft.density}
                 onChange={e => setPrefsDraft(prev => ({ ...prev, density: e.target.value as UserPreferences['density'] }))}
               >
@@ -473,10 +473,10 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             </div>
 
             {/* Default Start Page */}
-            <div className="pinmind-personal-space-field" style={{ marginBottom: 16 }}>
+            <div className="acmind-personal-space-field" style={{ marginBottom: 16 }}>
               <label>默认起始页</label>
               <select
-                className="pinmind-field"
+                className="acmind-field"
                 value={prefsDraft.defaultStartPage}
                 onChange={e => setPrefsDraft(prev => ({ ...prev, defaultStartPage: e.target.value }))}
               >
@@ -509,8 +509,8 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
           </div>
 
           {/* Section 4: 数据安全 */}
-          <div className="pinmind-personal-space-section">
-            <div className="pinmind-section-header">
+          <div className="acmind-personal-space-section">
+            <div className="acmind-section-header">
               <h3>数据安全</h3>
               <p>本地存储与隐私说明</p>
             </div>
@@ -531,7 +531,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
 
             <button
               type="button"
-              className="pinmind-btn pinmind-btn-secondary text-[12px]"
+              className="acmind-btn acmind-btn-secondary text-[12px]"
               style={{ height: 30, padding: '0 12px' }}
               onClick={handleOpenDataDir}
             >
@@ -541,7 +541,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
         </ScrollContainer>
 
         {/* ── Sticky Footer ── */}
-        <div className="pinmind-drawer-footer">
+        <div className="acmind-drawer-footer">
           {saveMessage && (
             <span className="text-[12px] mr-auto" style={{ color: 'var(--pm-status-success, #16A34A)' }}>
               {saveMessage}
@@ -549,14 +549,14 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
           )}
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-ghost"
+            className="acmind-btn acmind-btn-ghost"
             onClick={onClose}
           >
             取消
           </button>
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-primary"
+            className="acmind-btn acmind-btn-primary"
             onClick={handleSaveAll}
             disabled={saving}
           >

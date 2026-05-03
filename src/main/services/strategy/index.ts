@@ -1,4 +1,4 @@
-// PinMind Strategy Module
+// AcMind Strategy Module
 // Phase 8.1-8.6: 内容类型处理策略模块入口
 
 // ── Types ────────────────────────────────────────────────────────

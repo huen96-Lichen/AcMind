@@ -12,9 +12,9 @@ export function SectionHeader({ eyebrow, title, description, action }: SectionHe
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
-        {eyebrow ? <div className="pinmind-section-eyebrow">{eyebrow}</div> : null}
-        <h2 className="pinmind-section-title">{title}</h2>
-        {description ? <p className="pinmind-section-description">{description}</p> : null}
+        {eyebrow ? <div className="acmind-section-eyebrow">{eyebrow}</div> : null}
+        <h2 className="acmind-section-title">{title}</h2>
+        {description ? <p className="acmind-section-description">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -31,9 +31,9 @@ interface SidebarItemProps {
 
 export function SidebarItem({ icon, label, active = false, meta, onClick }: SidebarItemProps): JSX.Element {
   return (
-    <button type="button" onClick={onClick} className={`pinmind-sidebar-item motion-button ${active ? 'is-active' : ''}`}>
+    <button type="button" onClick={onClick} className={`acmind-sidebar-item motion-button ${active ? 'is-active' : ''}`}>
       <span className="flex min-w-0 items-center gap-3">
-        <span className={`pinmind-sidebar-icon ${active ? 'is-active' : ''}`}>
+        <span className={`acmind-sidebar-icon ${active ? 'is-active' : ''}`}>
           <PinStackIcon name={icon} size={16} />
         </span>
         <span className="truncate text-left">{label}</span>
@@ -52,15 +52,15 @@ interface FieldShellProps {
 export function FieldShell({ label, description, children }: FieldShellProps): JSX.Element {
   return (
     <label className="block">
-      <span className="pinmind-field-label">{label}</span>
-      {description ? <span className="pinmind-field-help">{description}</span> : null}
+      <span className="acmind-field-label">{label}</span>
+      {description ? <span className="acmind-field-help">{description}</span> : null}
       <div className="mt-2">{children}</div>
     </label>
   );
 }
 
 export function CardHeaderActions({ children }: { children: ReactNode }): JSX.Element {
-  return <div className="pinmind-card-header-actions">{children}</div>;
+  return <div className="acmind-card-header-actions">{children}</div>;
 }
 
 interface SettingsNavItemProps {
@@ -135,9 +135,9 @@ export function StatusCapsule({ tone, label, onClick }: StatusCapsuleProps): JSX
     <button
       type="button"
       onClick={onClick}
-      className={`pinmind-status-capsule tone-${tone} motion-button`}
+      className={`acmind-status-capsule tone-${tone} motion-button`}
     >
-      <span className="pinmind-status-capsule-dot" style={{ background: dotColor[tone] }} />
+      <span className="acmind-status-capsule-dot" style={{ background: dotColor[tone] }} />
       <span>{label}</span>
     </button>
   );
@@ -154,8 +154,8 @@ interface SettingGroupCardProps {
 
 export function SettingGroupCard({ title, description, icon, children }: SettingGroupCardProps): JSX.Element {
   return (
-    <div className="pinmind-setting-group-card">
-      <div className="pinmind-setting-group-card-header">
+    <div className="acmind-setting-group-card">
+      <div className="acmind-setting-group-card-header">
         <div className="flex items-center gap-2.5">
           {icon && (
             <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand)]">
@@ -168,7 +168,7 @@ export function SettingGroupCard({ title, description, icon, children }: Setting
           </div>
         </div>
       </div>
-      <div className="pinmind-setting-group-card-body">{children}</div>
+      <div className="acmind-setting-group-card-body">{children}</div>
     </div>
   );
 }
@@ -185,9 +185,9 @@ interface OnboardingStepCardProps {
 
 export function OnboardingStepCard({ step, title, description, action, completed }: OnboardingStepCardProps): JSX.Element {
   return (
-    <div className={`pinmind-onboarding-step ${completed ? 'opacity-60' : ''}`}>
+    <div className={`acmind-onboarding-step ${completed ? 'opacity-60' : ''}`}>
       <span
-        className="pinmind-onboarding-step-number"
+        className="acmind-onboarding-step-number"
         style={completed ? { background: 'var(--pm-success-bg)', color: 'var(--pm-success)' } : undefined}
       >
         {completed ? <PinStackIcon name="check" size={14} /> : step}
@@ -198,7 +198,7 @@ export function OnboardingStepCard({ step, title, description, action, completed
         {action && !completed && (
           <button
             type="button"
-            className="pinmind-btn pinmind-btn-ghost motion-button mt-2"
+            className="acmind-btn acmind-btn-ghost motion-button mt-2"
             style={{ height: 28, fontSize: 11, paddingInline: 10 }}
             onClick={action.onClick}
           >

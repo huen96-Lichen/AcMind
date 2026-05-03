@@ -1,4 +1,4 @@
-// PinMind Capture Adapters — Barrel Export
+// AcMind Capture Adapters — Barrel Export
 // V2.1 Phase 7.1: Unified entry point for all capture adapters.
 
 export { captureRegistry } from './captureRegistry';

@@ -1,4 +1,4 @@
-// PinMind Video Strategy
+// AcMind Video Strategy
 // Phase 8.1: 视频占位或转写结果
 
 import type { SourceType } from '../../../../shared/types';

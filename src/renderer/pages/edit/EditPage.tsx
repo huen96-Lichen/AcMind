@@ -58,18 +58,18 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      const directSource = await window.pinmind.sourceItems.get(itemId);
+      const directSource = await window.acmind.sourceItems.get(itemId);
       const captureBridge = directSource?.captureItemId
-        ? await window.pinmind.captureItems.get(directSource.captureItemId)
+        ? await window.acmind.captureItems.get(directSource.captureItemId)
         : null;
-      const captureFallback = directSource ? null : await window.pinmind.captureItems.get(itemId);
+      const captureFallback = directSource ? null : await window.acmind.captureItems.get(itemId);
       const resolvedCapture = captureBridge ?? captureFallback;
       let resolvedSource = directSource;
 
       if (!resolvedSource && resolvedCapture) {
-        resolvedSource = await window.pinmind.sourceItems.getByCaptureItemId(resolvedCapture.id);
+        resolvedSource = await window.acmind.sourceItems.getByCaptureItemId(resolvedCapture.id);
         if (!resolvedSource) {
-          resolvedSource = await window.pinmind.sourceItems.ensureFromCapture(resolvedCapture.id);
+          resolvedSource = await window.acmind.sourceItems.ensureFromCapture(resolvedCapture.id);
         }
       }
 
@@ -130,7 +130,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
     }
     setDistilledLoading(true);
     try {
-      const results = await window.pinmind.distilledOutputs.list({ sourceItemId: lookupId });
+      const results = await window.acmind.distilledOutputs.list({ sourceItemId: lookupId });
       const summarizeResult = results.find((r) => r.operation === 'summarize' || r.contentMarkdown);
       const nextOutput = summarizeResult ?? (results.length > 0 ? results[0] : null);
       setDistilledOutput(nextOutput);
@@ -224,7 +224,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
   // ── Actions ──
 
   const handleBack = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'capture-inbox' }));
+    window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: 'capture-inbox' }));
   }, []);
 
   const handleDistill = useCallback(async () => {
@@ -232,9 +232,9 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
     if (!targetId) return;
     try {
       if (sourceItem) {
-        await window.pinmind.distill.run([targetId], ['summarize']);
+        await window.acmind.distill.run([targetId], ['summarize']);
       } else {
-        await window.pinmind.distill.bridgeAndRun(targetId, ['summarize']);
+        await window.acmind.distill.bridgeAndRun(targetId, ['summarize']);
       }
       addToast('整理任务已提交', 'success');
       // Reload distilled output after a short delay
@@ -248,7 +248,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
     if (editingContent) {
       if (item && captureItemId) {
         try {
-          const updated = await window.pinmind.captureItems.update(captureItemId, {
+          const updated = await window.acmind.captureItems.update(captureItemId, {
             rawText: contentDraft,
           });
           setItem(updated);
@@ -273,7 +273,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
 
     setSavingDistilled(true);
     try {
-      const updated = await window.pinmind.distilledOutputs.review(distilledOutput.id, 'edit', {
+      const updated = await window.acmind.distilledOutputs.review(distilledOutput.id, 'edit', {
         suggestedTitle: titleDraft.trim() || distilledOutput.suggestedTitle,
         summary: summaryDraft.trim() || distilledOutput.summary,
         category: categoryDraft.trim() || distilledOutput.category,
@@ -302,7 +302,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
     }
     setExporting(true);
     try {
-      const appSettings = await window.pinmind.settings.get();
+      const appSettings = await window.acmind.settings.get();
       const vaultPath = appSettings?.vault?.vaultPath;
       if (!vaultPath) {
         addToast('写入路径未设置，请先在设置中配置 Obsidian Vault 路径', 'warning');
@@ -310,8 +310,8 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
       }
 
       // V2.1: 优先走 pipeline retry（自动重新整理 + 写入）
-      if (sourceItem?.id && window.pinmind?.pipeline) {
-        const result = await window.pinmind.pipeline.retryExport(sourceItem.id);
+      if (sourceItem?.id && window.acmind?.pipeline) {
+        const result = await window.acmind.pipeline.retryExport(sourceItem.id);
         if (result.success) {
           addToast(`已写入 Obsidian: ${result.relativePath ?? ''}`, 'success');
           setShowExportPreview(false);
@@ -328,7 +328,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
         : distilledOutput;
       if (!exportableOutput) return;
 
-      const record = await window.pinmind.export.single(exportableOutput.id);
+      const record = await window.acmind.export.single(exportableOutput.id);
 
       switch (record.status) {
         case 'success':
@@ -392,7 +392,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
       return;
     }
     try {
-      await window.pinmind.export.revealInVault(exportRecordId);
+      await window.acmind.export.revealInVault(exportRecordId);
     } catch (err) {
       addToast(err instanceof Error ? err.message : '打开失败', 'error');
     }
@@ -402,7 +402,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
     if (editingTitle) {
       if (item && titleDraft !== item.title && captureItemId) {
         try {
-          const updated = await window.pinmind.captureItems.update(captureItemId, {
+          const updated = await window.acmind.captureItems.update(captureItemId, {
             title: titleDraft,
           });
           setItem(updated);
@@ -508,7 +508,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
       <div className="shrink-0 border-b border-[color:var(--pm-border-subtle)] bg-gradient-to-b from-white/88 to-[rgba(255,249,241,0.78)] backdrop-blur-[8px]">
         {/* Row 1: Back + Title */}
         <div className="flex items-center gap-2.5 px-4 pt-3 pb-1.5">
-          <button type="button" onClick={handleBack} className="pinmind-btn pinmind-btn-ghost motion-button flex items-center gap-1.5 text-[13px]">
+          <button type="button" onClick={handleBack} className="acmind-btn acmind-btn-ghost motion-button flex items-center gap-1.5 text-[13px]">
             <PinStackIcon name="arrow-left" size={14} />
             返回
           </button>
@@ -554,7 +554,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
           </div>
           <div className="flex items-center gap-1.5">
             {!distilledOutput && (
-              <button type="button" onClick={() => void handleDistill()} className="pinmind-btn pinmind-btn-secondary motion-button text-[12px] flex items-center gap-1.5">
+              <button type="button" onClick={() => void handleDistill()} className="acmind-btn acmind-btn-secondary motion-button text-[12px] flex items-center gap-1.5">
                 <PinStackIcon name="spark" size={13} />
                 整理
               </button>
@@ -562,7 +562,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
             <button
               type="button"
               onClick={() => setShowSource((v) => !v)}
-              className={`pinmind-btn motion-button text-[12px] flex items-center gap-1.5 ${showSource ? 'pinmind-btn-primary' : 'pinmind-btn-ghost'}`}
+              className={`acmind-btn motion-button text-[12px] flex items-center gap-1.5 ${showSource ? 'acmind-btn-primary' : 'acmind-btn-ghost'}`}
             >
               <PinStackIcon name="save" size={13} />
               原文
@@ -570,7 +570,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
             <button
               type="button"
               onClick={() => setShowExportPreview((v) => !v)}
-              className={`pinmind-btn motion-button text-[12px] flex items-center gap-1.5 ${showExportPreview ? 'pinmind-btn-primary' : 'pinmind-btn-ghost'}`}
+              className={`acmind-btn motion-button text-[12px] flex items-center gap-1.5 ${showExportPreview ? 'acmind-btn-primary' : 'acmind-btn-ghost'}`}
             >
               <PinStackIcon name="launcher" size={13} />
               输出预览
@@ -580,7 +580,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
               <button
                 type="button"
                 onClick={() => void handleOpenInObsidian()}
-                className="pinmind-btn pinmind-btn-primary motion-button text-[12px] flex items-center gap-1.5"
+                className="acmind-btn acmind-btn-primary motion-button text-[12px] flex items-center gap-1.5"
               >
                 <PinStackIcon name="panel" size={13} />
                 打开 Obsidian 文件
@@ -591,7 +591,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                 type="button"
                 onClick={() => void handleExport()}
                 disabled={exporting}
-                className="pinmind-btn pinmind-btn-primary motion-button text-[12px] flex items-center gap-1.5"
+                className="acmind-btn acmind-btn-primary motion-button text-[12px] flex items-center gap-1.5"
               >
                 <PinStackIcon name="refresh" size={13} />
                 {exporting ? '写入中...' : '重试写入 Obsidian'}
@@ -602,7 +602,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                 type="button"
                 onClick={() => void handleExport()}
                 disabled={exporting}
-                className="pinmind-btn pinmind-btn-secondary motion-button text-[12px] flex items-center gap-1.5"
+                className="acmind-btn acmind-btn-secondary motion-button text-[12px] flex items-center gap-1.5"
               >
                 <PinStackIcon name="check" size={13} />
                 {exporting ? '写入中...' : '写入 Obsidian'}
@@ -636,12 +636,12 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                   </div>
                 )}
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => void handleToggleEditContent()} className={`pinmind-btn motion-button text-[12px] flex items-center gap-1.5 ${editingContent ? 'pinmind-btn-primary' : 'pinmind-btn-secondary'}`}>
+                  <button type="button" onClick={() => void handleToggleEditContent()} className={`acmind-btn motion-button text-[12px] flex items-center gap-1.5 ${editingContent ? 'acmind-btn-primary' : 'acmind-btn-secondary'}`}>
                     <PinStackIcon name="edit" size={12} />
                     {editingContent ? '完成编辑' : '编辑内容'}
                   </button>
                   {item.sourceUrl && (
-                    <button type="button" onClick={handleOpenInBrowser} className="pinmind-btn pinmind-btn-ghost motion-button text-[12px] flex items-center gap-1.5" style={{ color: 'var(--pm-brand-primary)' }}>
+                    <button type="button" onClick={handleOpenInBrowser} className="acmind-btn acmind-btn-ghost motion-button text-[12px] flex items-center gap-1.5" style={{ color: 'var(--pm-brand-primary)' }}>
                       <PinStackIcon name="arrow-right" size={12} /> 在浏览器中打开
                     </button>
                   )}
@@ -686,7 +686,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                   <p className="text-[12px] text-[color:var(--pm-text-tertiary)] text-center max-w-[260px]">
                     点击上方「整理」按钮，AI 将自动生成摘要、标题和标签建议
                   </p>
-                  <button type="button" onClick={() => void handleDistill()} className="pinmind-btn pinmind-btn-secondary motion-button text-[13px] flex items-center gap-1.5">
+                  <button type="button" onClick={() => void handleDistill()} className="acmind-btn acmind-btn-secondary motion-button text-[13px] flex items-center gap-1.5">
                     <PinStackIcon name="spark" size={14} />
                     开始整理
                   </button>
@@ -719,7 +719,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                       value={categoryDraft}
                       onChange={(e) => setCategoryDraft(e.target.value)}
                       className="rounded-[var(--radius-control)] border border-[color:var(--pm-border-subtle)] bg-white/60 px-3 py-2 text-[13px] text-[color:var(--pm-text-primary)] outline-none focus:border-[color:var(--pm-brand-primary)]"
-                      placeholder="00_Inbox/PinMind"
+                      placeholder="00_Inbox/AcMind"
                     />
                   </SectionBlock>
 
@@ -751,7 +751,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                     )}
                     <div className="flex items-center gap-2">
                       <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); }} placeholder="添加标签..." className="flex-1 min-w-0 rounded-[var(--radius-control)] border border-[color:var(--pm-border-subtle)] bg-white/60 px-3 py-1.5 text-[12px] text-[color:var(--pm-text-secondary)] outline-none focus:border-[color:var(--pm-brand-primary)]" />
-                      <button type="button" onClick={handleAddTag} disabled={!newTagInput.trim()} className="pinmind-btn pinmind-btn-ghost motion-button text-[12px] px-2 disabled:opacity-40">添加</button>
+                      <button type="button" onClick={handleAddTag} disabled={!newTagInput.trim()} className="acmind-btn acmind-btn-ghost motion-button text-[12px] px-2 disabled:opacity-40">添加</button>
                     </div>
                   </SectionBlock>
 
@@ -779,11 +779,11 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
 
                   {/* ── Save button ── */}
                   <div className="flex items-center gap-2 pt-2">
-                    <button type="button" onClick={() => void handleSaveDistilledOutput()} disabled={savingDistilled} className="pinmind-btn pinmind-btn-primary motion-button text-[13px] flex items-center gap-1.5">
+                    <button type="button" onClick={() => void handleSaveDistilledOutput()} disabled={savingDistilled} className="acmind-btn acmind-btn-primary motion-button text-[13px] flex items-center gap-1.5">
                       <PinStackIcon name="check" size={14} />
                       {savingDistilled ? '保存中...' : '保存审阅结果'}
                     </button>
-                    <button type="button" onClick={() => void handleCopyMarkdown()} className="pinmind-btn pinmind-btn-ghost motion-button text-[13px] flex items-center gap-1.5">
+                    <button type="button" onClick={() => void handleCopyMarkdown()} className="acmind-btn acmind-btn-ghost motion-button text-[13px] flex items-center gap-1.5">
                       <PinStackIcon name="copy" size={14} />
                       复制 Markdown
                     </button>

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PinMind — Whisper WASM Service
+// AcMind — Whisper WASM Service
 // 本地语音转文字服务，基于 whisper.cpp WebAssembly 构建
 // 在渲染进程中运行，无需原生依赖，跨平台兼容
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -366,7 +366,7 @@ class WhisperService {
 
   private openModelDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('pinmind-whisper-models', 1);
+      const request = indexedDB.open('acmind-whisper-models', 1);
 
       request.onupgradeneeded = () => {
         const db = request.result;

@@ -24,6 +24,14 @@ import type {
   TrainingRun,
   EvalRun,
   ModelVersion,
+  ShelfItem,
+  AIAction,
+  SourceType,
+  AiTaskStatus,
+  PinnedImage,
+  OcrResult,
+  AssetFile,
+  ProcessJob,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/types';
 import type { HybridSearchOptions, SearchResult } from './services/search/types';
@@ -35,17 +43,26 @@ import type { CreateTaskParams, TaskExecutionResult } from './services/scheduler
 import { outputSpecService } from './services/outputSpec';
 import { contentPipeline } from './services/pipeline';
 import { contentStateMachine } from './services/pipeline';
+import { inferFileKind } from '../shared/fileUtils';
 import { storage } from './storage';
 import { settings, resolveStorageRoot } from './settings';
 import { DEFAULT_SETTINGS } from '../shared/defaultSettings';
 import { logger } from './logger';
 import { captureService } from './captureService';
+import { aiActionRunner } from './services/aiHub/aiActionRunner';
+import { aiProviderService } from './services/aiHub/aiProviderService';
+import { vaultScanner } from './services/importer/vaultScanner';
+import { voiceDictionaryStore } from './voice/dictionary';
+import { asrProvider } from './voice/asr';
+import { clipboardWatcher } from './clipboardWatcher';
 import { captureRegistry } from './services/capture';
 import type { CaptureInput } from './services/capture';
 import { errorService } from './errorService';
 import type { PermissionCoordinator } from './permissionCoordinator';
 import { voiceWatchService } from './services/capture/voiceWatchService';
 import { audioTranscriptionService } from './services/capture/audioTranscriptionService';
+import { pinnedImageController } from './pinnedImageController';
+import { ocrService } from './ocrService';
 
 // ---------------------------------------------------------------------------
 // IPC handler registration
@@ -309,7 +326,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
 
   safeHandle(IPC_CHANNELS.SOURCE_ITEMS_CREATE_TEXT, async (_event, text: string) => {
     try {
-      return captureService.captureText(text, 'PinMind 布置向导');
+      return captureService.captureText(text, 'AcMind 布置向导');
     } catch (error) {
       logger.error('error', 'ipc', 'sourceItems.createText', 'Failed to create text source item', {
         error: error instanceof Error ? error.message : String(error),
@@ -1172,28 +1189,6 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       return snapshot;
     } catch (error) {
       logger.error('error', 'ipc', 'datasets.createSnapshot', 'Failed to create dataset snapshot', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  });
-
-  safeHandle(IPC_CHANNELS.DATASETS_LIST, async () => {
-    try {
-      return storage.getDatasetSnapshots();
-    } catch (error) {
-      logger.error('error', 'ipc', 'datasets.list', 'Failed to list dataset snapshots', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  });
-
-  safeHandle(IPC_CHANNELS.DATASETS_GET, async (_event, id: string) => {
-    try {
-      return storage.getDatasetSnapshot(id);
-    } catch (error) {
-      logger.error('error', 'ipc', 'datasets.get', 'Failed to get dataset snapshot', {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -2090,9 +2085,9 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
   });
 
   safeHandle(IPC_CHANNELS.WORKSPACE_TEST_WRITE, async (_event, dirPath: string) => {
-    const testFile = path.join(dirPath, '.pinmind_write_test');
+    const testFile = path.join(dirPath, '.acmind_write_test');
     try {
-      writeFileSync(testFile, 'PinMind write test', 'utf8');
+      writeFileSync(testFile, 'AcMind write test', 'utf8');
       unlinkSync(testFile);
       return { success: true, path: dirPath };
     } catch (error) {
@@ -2261,20 +2256,42 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         const db = storage.db;
         if (!db) throw new Error('Database not initialized');
         const results = keywordSearch.search(db, query, options.topK ?? 20);
-        return results.map((r, index) => ({
-          id: r.itemId,
-          type: (r.itemType === 'source_item' ? 'source_item' : 'distilled_output') as SearchResult['type'],
-          title: r.title,
-          preview: r.snippet,
-          score: r.score,
-          vectorScore: null,
-          keywordScore: r.score,
-          rank: index + 1,
-          source: 'keyword' as const,
-          metadata: {
-            createdAt: 0,
-          },
-        }));
+        return results.map((r, index) => {
+          // Resolve real createdAt from source_items / distilled_outputs
+          let createdAt = 0;
+          if (r.itemType === 'source_item') {
+            const si = storage.getSourceItem(r.itemId);
+            createdAt = si?.createdAt ?? 0;
+          } else {
+            const dos = storage.getDistilledOutputs({}).find(o => o.id === r.itemId);
+            createdAt = dos?.createdAt ?? 0;
+          }
+
+          // Resolve associated ExportRecords
+          let exportRecordIds: string[] = [];
+          if (r.itemType === 'source_item') {
+            exportRecordIds = storage.getExportRecords({ sourceItemId: r.itemId }).map(er => er.id);
+          } else {
+            exportRecordIds = storage.getExportRecords({ distilledOutputId: r.itemId }).map(er => er.id);
+          }
+
+          return {
+            id: r.itemId,
+            type: (r.itemType === 'source_item' ? 'source_item' : 'distilled_output') as SearchResult['type'],
+            title: r.title,
+            preview: r.snippet,
+            score: r.score,
+            vectorScore: null,
+            keywordScore: r.score,
+            rank: index + 1,
+            source: 'keyword' as const,
+            metadata: {
+              createdAt,
+              exportRecordIds,
+              exportRecordCount: exportRecordIds.length,
+            },
+          };
+        });
       } catch (error) {
         logger.error('error', 'ipc', 'search.hybrid', 'Search failed', {
           query,
@@ -2424,6 +2441,141 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       return checkMarkItDownAvailability();
     } catch {
       return false;
+    }
+  });
+
+  // ── Phase 3: File Converter ─────────────────────────────────────
+
+  function notifyJobsChanged(): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send(IPC_CHANNELS.FILE_CONVERT_JOBS_CHANGED, { timestamp: Date.now() });
+      }
+    }
+  }
+
+  safeHandle(IPC_CHANNELS.FILE_CONVERT, async (_event, params: { filePath: string }) => {
+    try {
+      if (!params.filePath) {
+        return { success: false, error: 'filePath is required' };
+      }
+
+      const { convertFileToMarkdown } = await import('./services/parser/markitdownService');
+
+      // Create ProcessJob
+      const jobId = randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      const job: ProcessJob = {
+        id: jobId,
+        type: 'markitdown',
+        status: 'running',
+        progress: 0,
+        createdAt: now,
+        updatedAt: now,
+        startedAt: now,
+        metadata: { filePath: params.filePath },
+      };
+      storage.insertProcessJob(job);
+      notifyJobsChanged();
+
+      // Run conversion
+      const result = await convertFileToMarkdown(params.filePath);
+
+      if (result.success) {
+        storage.updateProcessJob(jobId, {
+          status: 'succeeded',
+          progress: 100,
+          completedAt: Math.floor(Date.now() / 1000),
+          metadata: { filePath: params.filePath, title: result.title, engine: result.engine, charCount: result.markdown?.length },
+        });
+      } else {
+        storage.updateProcessJob(jobId, {
+          status: 'failed',
+          progress: 0,
+          errorMessage: result.error,
+          completedAt: Math.floor(Date.now() / 1000),
+        });
+      }
+      notifyJobsChanged();
+
+      return { success: result.success, jobId, markdown: result.markdown, title: result.title, error: result.error, engine: result.engine };
+    } catch (error) {
+      logger.error('error', 'ipc', 'fileConverter.convert', 'File conversion failed', {
+        filePath: params.filePath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.FILE_CONVERT_STATUS, async (_event, params: { jobId: string }) => {
+    try {
+      const job = storage.getProcessJob(params.jobId);
+      return { success: true, job };
+    } catch (error) {
+      return { success: false, job: null };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.FILE_CONVERT_LIST, async (_event, params?: { limit?: number }) => {
+    try {
+      const jobs = storage.listProcessJobs({ type: 'markitdown', limit: params?.limit ?? 50 });
+      return { success: true, jobs };
+    } catch (error) {
+      return { success: false, jobs: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.FILE_CONVERT_SAVE_TO_INBOX, async (_event, params: { jobId: string; markdown: string; title?: string; filePath?: string }) => {
+    try {
+      if (!params.markdown || !params.markdown.trim()) {
+        return { success: false, error: 'Markdown content is empty' };
+      }
+
+      const sourceItem: SourceItem = {
+        id: randomUUID(),
+        type: 'text',
+        source: 'manual',
+        contentPath: params.filePath || '',
+        previewText: params.markdown.slice(0, 200),
+        status: 'inbox',
+        createdAt: Math.floor(Date.now() / 1000),
+        title: params.title,
+        metadata: { convertedMarkdown: params.markdown },
+      };
+      storage.insertSourceItem(sourceItem);
+
+      // Link job to source item
+      if (params.jobId) {
+        storage.updateProcessJob(params.jobId, { sourceItemId: sourceItem.id });
+      }
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.RECORDS_CHANGED, { action: 'file_converted', id: sourceItem.id, timestamp: Date.now() });
+        }
+      }
+
+      return { success: true, sourceItem };
+    } catch (error) {
+      logger.error('error', 'ipc', 'fileConverter.saveToInbox', 'Failed to save converted file to inbox', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.FILE_CONVERT_PREVIEW, async (_event, params: { filePath: string }) => {
+    try {
+      if (!params.filePath) {
+        return { success: false, error: 'filePath is required' };
+      }
+      const { convertFileToMarkdown } = await import('./services/parser/markitdownService');
+      const result = await convertFileToMarkdown(params.filePath);
+      return { success: result.success, markdown: result.markdown, title: result.title, error: result.error, engine: result.engine };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -2805,7 +2957,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       const captureRecord = captureRegistry.capture({
         sourceType: 'clipboard_text',
         text: trimmed,
-        sourceApp: 'PinMind',
+        sourceApp: 'AcMind',
       });
 
       // 5. Process through pipeline (includes dedup via original_id)
@@ -2882,7 +3034,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         sourceType: 'screenshot',
         buffer: pngBuffer,
         saveDir: screenshotsDir,
-        sourceApp: 'PinMind',
+        sourceApp: 'AcMind',
       });
 
       // 4. Process through pipeline (includes dedup via original_id)
@@ -2973,7 +3125,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         url: url.trim(),
         title: finalTitle || undefined,
         rawText: finalRawText || undefined,
-        sourceApp: 'PinMind',
+        sourceApp: 'AcMind',
         inputMode,
       });
 
@@ -3026,7 +3178,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         sourceType: 'file',
         filePath: filePath.trim(),
         title: title?.trim() || undefined,
-        sourceApp: 'PinMind',
+        sourceApp: 'AcMind',
       });
 
       // 3. Process through pipeline (includes dedup via original_id)
@@ -3400,6 +3552,1326 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       });
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
+  });
+
+  // ── Phase 0: AcMind 模块 IPC 边界 ──────────────────────────────
+
+  // clipboard.*
+  safeHandle(IPC_CHANNELS.CLIPBOARD_LIST_ITEMS, async (_event, params?: { limit?: number; offset?: number }) => {
+    try {
+      const items = storage.listClipboardItems(params?.limit ?? 100, params?.offset ?? 0);
+      return { success: true, items };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.listItems', 'Failed to list clipboard items', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, items: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_GET_ITEM, async (_event, params: { id: string }) => {
+    try {
+      const item = storage.getClipboardItem(params.id);
+      return { success: true, item };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.getItem', 'Failed to get clipboard item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, item: null };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_PIN_ITEM, async (_event, params: { id: string }) => {
+    try {
+      storage.updateClipboardItemPinned(params.id, true);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.pinItem', 'Failed to pin clipboard item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_UNPIN_ITEM, async (_event, params: { id: string }) => {
+    try {
+      storage.updateClipboardItemPinned(params.id, false);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.unpinItem', 'Failed to unpin clipboard item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_DELETE_ITEM, async (_event, params: { id: string }) => {
+    try {
+      storage.deleteClipboardItem(params.id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.deleteItem', 'Failed to delete clipboard item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_SAVE_TO_INBOX, async (_event, params: { id: string }) => {
+    try {
+      const item = storage.getClipboardItem(params.id);
+      if (!item) return { success: false, error: 'Clipboard item not found' };
+
+      // Check if already saved to inbox
+      if (item.sourceItemId) {
+        const existing = storage.getSourceItem(item.sourceItemId);
+        if (existing) {
+          return { success: true, sourceItem: existing, alreadySaved: true };
+        }
+      }
+
+      // Determine SourceItem type based on content
+      let sourceType: SourceItem['type'] = 'text';
+      let contentPath = '';
+      const newId = randomUUID();
+      if (item.contentType === 'url') sourceType = 'url';
+      else if (item.contentType === 'image') {
+        sourceType = 'image';
+        // Resolve contentPath from asset files if available
+        if (item.assetFileIds && item.assetFileIds.length > 0) {
+          const firstAsset = storage.getAssetFile(item.assetFileIds[0]);
+          if (firstAsset?.localPath && existsSync(firstAsset.localPath)) {
+            contentPath = firstAsset.localPath;
+          }
+        }
+      } else if (item.text) {
+        // For text items, materialize content to a file
+        const storageRoot = settings.getStorageRoot();
+        const dateDir = new Date().toISOString().slice(0, 10);
+        const sourcesDir = path.join(storageRoot, 'sources', dateDir);
+        mkdirSync(sourcesDir, { recursive: true });
+        contentPath = path.join(sourcesDir, `${newId}.txt`);
+        writeFileSync(contentPath, item.text, 'utf8');
+      }
+
+      const sourceItem: SourceItem = {
+        id: newId,
+        type: sourceType,
+        source: 'clipboard',
+        contentPath,
+        status: 'inbox',
+        previewText: item.text?.slice(0, 200),
+        originalUrl: item.contentType === 'url' ? item.text : undefined,
+        createdAt: Date.now(),
+      };
+      storage.insertSourceItem(sourceItem);
+
+      // Link ClipboardItem to SourceItem
+      storage.updateClipboardItemSourceItemId(params.id, sourceItem.id);
+
+      // Link asset files to the new SourceItem (for image items)
+      if (item.assetFileIds) {
+        for (const assetFileId of item.assetFileIds) {
+          storage.updateAssetFileSourceItemId(assetFileId, sourceItem.id);
+        }
+      }
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.CLIPBOARD_ITEMS_CHANGED, { timestamp: Date.now() });
+          win.webContents.send(IPC_CHANNELS.RECORDS_CHANGED, { action: 'clipboard_saved', id: sourceItem.id, timestamp: Date.now() });
+        }
+      }
+
+      return { success: true, sourceItem };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.saveToInbox', 'Failed to save clipboard item to inbox', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_SEARCH_ITEMS, async (_event, params: { query: string; contentType?: string }) => {
+    try {
+      if (!params.query || !params.query.trim()) {
+        return { success: true, items: [] };
+      }
+      const items = storage.searchClipboardItems(params.query.trim(), params.contentType);
+      return { success: true, items };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.searchItems', 'Failed to search clipboard items', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, items: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_COPY_ITEM, async (_event, params: { id: string }) => {
+    try {
+      const item = storage.getClipboardItem(params.id);
+      if (!item) return { success: false, error: 'Clipboard item not found' };
+      if (!item.text) return { success: false, error: 'Item has no text content' };
+
+      // Write to system clipboard and tell watcher to ignore the next copy
+      clipboard.writeText(item.text);
+      clipboardWatcher.ignoreNextCopy(1);
+
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.copyItem', 'Failed to copy clipboard item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_CLEAR_HISTORY, async () => {
+    try {
+      storage.clearClipboardItems();
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.CLIPBOARD_ITEMS_CHANGED, { timestamp: Date.now() });
+        }
+      }
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'clipboard.clearHistory', 'Failed to clear clipboard history', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_PAUSE, async () => {
+    try {
+      captureService.pauseClipboard();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_RESUME, async () => {
+    try {
+      captureService.resumeClipboard();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CLIPBOARD_IS_PAUSED, async () => {
+    try {
+      return { success: true, paused: captureService.isClipboardPaused() };
+    } catch (error) {
+      return { success: false, paused: false };
+    }
+  });
+
+  // shelf.*
+  safeHandle(IPC_CHANNELS.SHELF_LIST_ITEMS, async (_event, params?: { status?: string }) => {
+    try {
+      const items = storage.listShelfItems(params?.status as ShelfItem['status'] | undefined);
+      return { success: true, items };
+    } catch (error) {
+      logger.error('error', 'ipc', 'shelf.listItems', 'Failed to list shelf items', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, items: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SHELF_GET_ITEM, async (_event, params: { id: string }) => {
+    try {
+      const item = storage.getShelfItem(params.id);
+      return { success: true, item };
+    } catch (error) {
+      logger.error('error', 'ipc', 'shelf.getItem', 'Failed to get shelf item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, item: null };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SHELF_ADD_FILES, async (_event, params: { filePaths: string[]; label?: string }) => {
+    try {
+      if (!params.filePaths || params.filePaths.length === 0) {
+        return { success: false, error: 'No files provided' };
+      }
+
+      // Create asset files for each file
+      const assetFileIds: string[] = [];
+      for (const filePath of params.filePaths) {
+        const ext = path.extname(filePath).toLowerCase();
+        const kind = inferFileKind(ext);
+        const assetFile: AssetFile = {
+          id: randomUUID(),
+          kind,
+          originalName: filePath.split('/').pop() || filePath,
+          localPath: filePath,
+          createdAt: Date.now(),
+        };
+        storage.insertAssetFile(assetFile);
+        assetFileIds.push(assetFile.id);
+      }
+
+      const label = params.label || params.filePaths.map(p => p.split('/').pop()).join(', ');
+      const item: ShelfItem = {
+        id: randomUUID(),
+        assetFileIds,
+        label,
+        origin: 'drag_drop',
+        status: 'temporary',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      storage.insertShelfItem(item);
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.SHELF_ITEMS_CHANGED, { timestamp: Date.now() });
+        }
+      }
+
+      return { success: true, item };
+    } catch (error) {
+      logger.error('error', 'ipc', 'shelf.addFiles', 'Failed to add files to shelf', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SHELF_ADD_TEXT, async (_event, params: { text: string; label?: string }) => {
+    try {
+      if (!params.text || !params.text.trim()) {
+        return { success: false, error: 'Text is empty' };
+      }
+
+      const item: ShelfItem = {
+        id: randomUUID(),
+        assetFileIds: [],
+        label: params.label ?? params.text.slice(0, 50),
+        origin: 'manual',
+        status: 'temporary',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      storage.insertShelfItem(item);
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.SHELF_ITEMS_CHANGED, { timestamp: Date.now() });
+        }
+      }
+
+      return { success: true, item };
+    } catch (error) {
+      logger.error('error', 'ipc', 'shelf.addText', 'Failed to add text to shelf', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SHELF_REMOVE_ITEM, async (_event, params: { id: string }) => {
+    try {
+      storage.deleteShelfItem(params.id);
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.SHELF_ITEMS_CHANGED, { timestamp: Date.now() });
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'shelf.removeItem', 'Failed to remove shelf item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SHELF_SAVE_TO_INBOX, async (_event, params: { id: string }) => {
+    try {
+      const item = storage.getShelfItem(params.id);
+      if (!item) return { success: false, error: 'Shelf item not found' };
+
+      // Check if already saved
+      if (item.sourceItemId) {
+        const existing = storage.getSourceItem(item.sourceItemId);
+        if (existing) {
+          return { success: true, sourceItem: existing, alreadySaved: true };
+        }
+      }
+
+      // Determine source type based on content
+      let sourceType: SourceItem['type'] = 'text';
+      let contentPath = '';
+      if (item.assetFileIds.length > 0) {
+        // Check first asset to determine type
+        const firstAsset = storage.getAssetFile(item.assetFileIds[0]);
+        if (firstAsset) {
+          if (firstAsset.kind === 'image') sourceType = 'image';
+          else if (firstAsset.kind === 'html') sourceType = 'url';
+          else if (firstAsset.kind === 'pdf' || firstAsset.kind === 'docx' || firstAsset.kind === 'markdown') sourceType = 'text';
+          // Set contentPath to the first asset file so getSourceItemContent() can read it
+          if (firstAsset.localPath && existsSync(firstAsset.localPath)) {
+            contentPath = firstAsset.localPath;
+          }
+        }
+      }
+
+      const sourceItem: SourceItem = {
+        id: randomUUID(),
+        type: sourceType,
+        source: 'manual',
+        contentPath,
+        status: 'inbox',
+        title: item.label,
+        createdAt: Date.now(),
+      };
+      storage.insertSourceItem(sourceItem);
+
+      // Link shelf item to source item
+      storage.updateShelfItemSourceItemId(params.id, sourceItem.id);
+      storage.updateShelfItemStatus(params.id, 'saved_to_inbox');
+
+      // Link all asset files to the new SourceItem
+      for (const assetFileId of item.assetFileIds) {
+        storage.updateAssetFileSourceItemId(assetFileId, sourceItem.id);
+      }
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.SHELF_ITEMS_CHANGED, { timestamp: Date.now() });
+          win.webContents.send(IPC_CHANNELS.RECORDS_CHANGED, { action: 'shelf_saved', id: sourceItem.id, timestamp: Date.now() });
+        }
+      }
+
+      return { success: true, sourceItem };
+    } catch (error) {
+      logger.error('error', 'ipc', 'shelf.saveToInbox', 'Failed to save shelf item to inbox', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ── Phase 2A: capture.* ──────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.CAPTURE_START_AREA, async () => {
+    try {
+      // 触发区域截图：先全屏截图，返回路径供 overlay 使用
+      // 实际区域裁剪由 renderer CaptureOverlay 完成后调用 capture.screenshot
+      const success = await captureService.captureScreenshot();
+      return { success };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.startAreaCapture', 'Failed to start area capture', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_CANCEL, async () => {
+    try {
+      // 取消截图（当前为 stub，实际取消由 renderer overlay 处理）
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_PIN_IMAGE, async (_event, params: { filePath: string; sourceItemId?: string }) => {
+    try {
+      if (!params.filePath) {
+        return { success: false, error: 'filePath is required' };
+      }
+      const pinned = pinnedImageController.pinImage(params.filePath, params.sourceItemId);
+      if (!pinned) {
+        return { success: false, error: 'Failed to pin image' };
+      }
+      return { success: true, pinnedImage: pinned };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.pinImage', 'Failed to pin image', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_SAVE_TO_INBOX, async (_event, params: { id: string }) => {
+    try {
+      const result = pinnedImageController.saveToInbox(params.id);
+      return result;
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.saveToInbox', 'Failed to save pinned image to inbox', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_LIST_RECENT, async (_event, params?: { limit?: number }) => {
+    try {
+      const items = captureService.listRecentCaptures(params?.limit ?? 50);
+      return { success: true, items };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.listRecentCaptures', 'Failed to list recent captures', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, items: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_LIST_PINNED, async () => {
+    try {
+      const pinnedImages = pinnedImageController.listPinnedImages();
+      return { success: true, pinnedImages };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.listPinnedImages', 'Failed to list pinned images', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, pinnedImages: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_CLOSE_PINNED, async (_event, params: { id: string }) => {
+    try {
+      pinnedImageController.closePinnedImage(params.id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.closePinnedImage', 'Failed to close pinned image', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ── Phase 2B: OCR ────────────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.CAPTURE_OCR_EXTRACT, async (_event, params: { imagePath: string; language?: string }) => {
+    try {
+      if (!params.imagePath) {
+        return { success: false, error: 'imagePath is required' };
+      }
+      const result = await ocrService.extractText(params.imagePath, params.language);
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.ocrExtract', 'Failed to extract OCR text', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, text: '', error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CAPTURE_OCR_SAVE_TO_INBOX, async (_event, params: { text: string; sourceImagePath?: string }) => {
+    try {
+      if (!params.text || !params.text.trim()) {
+        return { success: false, error: 'OCR text is empty' };
+      }
+
+      const sourceItem: SourceItem = {
+        id: randomUUID(),
+        type: 'text',
+        source: 'screenshot',
+        contentPath: '',
+        previewText: params.text.slice(0, 200),
+        status: 'inbox',
+        createdAt: Math.floor(Date.now() / 1000),
+        ocrText: params.text,
+      };
+      storage.insertSourceItem(sourceItem);
+
+      // Notify renderer
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.RECORDS_CHANGED, { action: 'ocr_saved', id: sourceItem.id, timestamp: Date.now() });
+        }
+      }
+
+      return { success: true, sourceItem };
+    } catch (error) {
+      logger.error('error', 'ipc', 'capture.ocrSaveToInbox', 'Failed to save OCR text to inbox', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // aiRuntime.*
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_LIST_ACTIONS, async (_event, params?: { enabledOnly?: boolean }) => {
+    try {
+      const actions = storage.listAIActions(params?.enabledOnly ?? false);
+      return { success: true, actions };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.listActions', 'Failed to list AI actions', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, actions: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_GET_ACTION, async (_event, params: { id: string }) => {
+    try {
+      const action = storage.getAIAction(params.id);
+      return { success: true, action };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.getAction', 'Failed to get AI action', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, action: null };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_CREATE_ACTION, async (_event, params: { name: string; inputTypes: SourceType[]; actionType: AIAction['actionType']; promptProfileId?: string }) => {
+    try {
+      const action: AIAction = {
+        id: randomUUID(),
+        name: params.name,
+        inputTypes: params.inputTypes,
+        actionType: params.actionType,
+        promptProfileId: params.promptProfileId,
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      storage.insertAIAction(action);
+      return { success: true, action };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.createAction', 'Failed to create AI action', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_UPDATE_ACTION, async (_event, params: { id: string; updates: Partial<Pick<AIAction, 'name' | 'inputTypes' | 'actionType' | 'promptProfileId' | 'enabled'>> }) => {
+    try {
+      const existing = storage.getAIAction(params.id);
+      if (!existing) return { success: false, error: 'AI action not found' };
+      const updated: AIAction = { ...existing, ...params.updates, updatedAt: Date.now() };
+      storage.updateAIAction(updated);
+      return { success: true, action: updated };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.updateAction', 'Failed to update AI action', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_DELETE_ACTION, async (_event, params: { id: string }) => {
+    try {
+      storage.deleteAIAction(params.id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.deleteAction', 'Failed to delete AI action', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_RUN_ACTION, async (_event, params: { actionId: string; input: string; sourceType?: SourceType }) => {
+    try {
+      const action = storage.getAIAction(params.actionId);
+      if (!action) return { success: false, error: 'AI action not found' };
+      if (!action.enabled) return { success: false, error: 'AI action is disabled' };
+
+      const result = await aiActionRunner.run(action, params.input, params.sourceType);
+
+      // 通知渲染进程任务状态变化
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.AI_RUNTIME_JOB_CHANGED, { timestamp: Date.now() });
+        }
+      }
+
+      return {
+        success: result.success,
+        taskId: result.taskId,
+        content: result.content,
+        rawText: result.rawText,
+        modelCall: result.modelCall,
+        routingReason: result.routingReason,
+        qualityScore: result.qualityScore,
+        usedFallback: result.usedFallback,
+        error: result.error,
+      };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.runAction', 'Failed to run AI action', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_LIST_JOBS, async (_event, params?: { status?: string }) => {
+    try {
+      const tasks = storage.getAiTasks(params?.status ? { status: params.status as AiTaskStatus } : undefined);
+      return { success: true, jobs: tasks };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.listJobs', 'Failed to list AI jobs', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, jobs: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_GET_JOB, async (_event, params: { id: string }) => {
+    try {
+      const task = storage.getAiTask(params.id);
+      return { success: true, job: task };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.getJob', 'Failed to get AI job', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, job: null };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_CANCEL_JOB, async (_event, params: { id: string }) => {
+    try {
+      storage.updateAiTask(params.id, { status: 'cancelled' });
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.cancelJob', 'Failed to cancel AI job', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.AI_RUNTIME_HEALTH_CHECK, async (_event, params: { providerId: string }) => {
+    try {
+      const providers = storage.getProviderConfigs();
+      const provider = providers.find((p) => p.id === params.providerId);
+      if (!provider) return { success: false, error: 'Provider not found' };
+      const result = await aiProviderService.healthCheck(provider);
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('error', 'ipc', 'aiRuntime.healthCheck', 'Health check failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ── Pin Pool ──────────────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_LIST, async (_event, filter?: import('../shared/types').PinItemListFilter) => {
+    try {
+      return storage.listPinItems(filter);
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.list', 'Failed to list pin items', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_GET, async (_event, id: string) => {
+    try {
+      return storage.getPinItem(id);
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.get', 'Failed to get pin item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_CREATE_FROM_TEXT, async (_event, text: string, title?: string) => {
+    try {
+      const { randomUUID: uuid } = await import('node:crypto');
+      const now = Math.floor(Date.now() / 1000);
+      const pin: import('../shared/types').PinItem = {
+        id: uuid(),
+        captureItemId: '',
+        originalId: uuid(),
+        sourceType: 'manual_text',
+        title: title || text.slice(0, 32) || '未命名 Pin',
+        previewText: text.slice(0, 180),
+        rawText: text,
+        status: 'pinned',
+        createdAt: now,
+        pinnedAt: now,
+        updatedAt: now,
+      };
+      storage.insertPinItem(pin);
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.PIN_POOL_CHANGED, { action: 'created', id: pin.id, timestamp: now });
+        }
+      }
+      return pin;
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.createFromText', 'Failed to create pin from text', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_CREATE_FROM_CAPTURE, async (_event, captureItemId: string, overrides?: Partial<import('../shared/types').PinItem>) => {
+    try {
+      const { randomUUID: uuid } = await import('node:crypto');
+      const captureItem = storage.getCaptureItem(captureItemId);
+      if (!captureItem) throw new Error('Capture item not found');
+      const now = Math.floor(Date.now() / 1000);
+      const pin: import('../shared/types').PinItem = {
+        id: uuid(),
+        captureItemId,
+        originalId: captureItemId,
+        sourceType: 'clipboard_text',
+        title: captureItem.title || captureItem.rawText?.slice(0, 32) || '未命名 Pin',
+        previewText: captureItem.rawText?.slice(0, 180),
+        rawText: captureItem.rawText,
+        status: 'pinned',
+        createdAt: now,
+        pinnedAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+      storage.insertPinItem(pin);
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.PIN_POOL_CHANGED, { action: 'created', id: pin.id, timestamp: now });
+        }
+      }
+      return pin;
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.createFromCapture', 'Failed to create pin from capture', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_PREFILTER, async (_event, id: string) => {
+    try {
+      const pin = storage.getPinItem(id);
+      if (!pin) throw new Error('Pin item not found');
+      const content = pin.rawText || pin.previewText || '';
+      const { mockDistiller } = await import('./services/distiller/mockDistiller');
+      const result = await mockDistiller.runTask('prefilter', { content });
+      storage.updatePinItem(id, { prefilterResult: result });
+      const updated = storage.getPinItem(id)!;
+      return { pin: updated, result };
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.prefilter', 'Failed to prefilter pin', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_PROMOTE_TO_INBOX, async (_event, id: string) => {
+    try {
+      const pin = storage.getPinItem(id);
+      if (!pin) throw new Error('Pin item not found');
+      const sourceItem: SourceItem = {
+        id: randomUUID(),
+        type: 'text',
+        source: 'manual',
+        contentPath: '',
+        status: 'inbox',
+        title: pin.title,
+        previewText: pin.previewText,
+        createdAt: Date.now(),
+      };
+      storage.insertSourceItem(sourceItem);
+      storage.updatePinItem(id, { status: 'promoted' });
+      emitRecordsChanged('created', sourceItem.id);
+      return { pin: storage.getPinItem(id)!, sourceItem };
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.promoteToInbox', 'Failed to promote pin to inbox', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_UPDATE, async (_event, id: string, patch: Partial<import('../shared/types').PinItem>) => {
+    try {
+      storage.updatePinItem(id, patch);
+      return storage.getPinItem(id);
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.update', 'Failed to update pin', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_IGNORE, async (_event, id: string) => {
+    try {
+      storage.updatePinItem(id, { status: 'ignored' });
+      return storage.getPinItem(id);
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.ignore', 'Failed to ignore pin', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.PIN_POOL_DELETE, async (_event, id: string) => {
+    try {
+      storage.deletePinItem(id);
+      return true;
+    } catch (error) {
+      logger.error('error', 'ipc', 'pinPool.delete', 'Failed to delete pin', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  });
+
+  // ── Voice Workflow (Phase 10) ─────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.VOICE_GET_DICTATION_GUIDE, async () => {
+    try {
+      return { success: true, guide: '按住录音按钮说话，松开后自动转写并整理。' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.VOICE_POLISH_TRANSCRIPT, async (_event, request: import('../shared/types').VoicePolishRequest) => {
+    try {
+      const { polishTranscriptLocally } = await import('./voice/polish');
+      const result = polishTranscriptLocally(request);
+      return { success: true, result };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voice.polishTranscript', 'Failed to polish transcript', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.VOICE_CREATE_PIN_FROM_TRANSCRIPT, async (_event, request: import('../shared/types').VoiceCreatePinRequest) => {
+    try {
+      const { randomUUID: uuid } = await import('node:crypto');
+      const now = Math.floor(Date.now() / 1000);
+      const text = request.polishedText || request.transcript;
+      const pin: import('../shared/types').PinItem = {
+        id: uuid(),
+        captureItemId: '',
+        originalId: uuid(),
+        sourceType: 'audio',
+        title: request.title || text.slice(0, 32) || '语音 Pin',
+        previewText: text.slice(0, 180),
+        rawText: text,
+        status: 'pinned',
+        createdAt: now,
+        pinnedAt: now,
+        updatedAt: now,
+      };
+      storage.insertPinItem(pin);
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(IPC_CHANNELS.PIN_POOL_CHANGED, { action: 'created', id: pin.id, timestamp: now });
+        }
+      }
+      return { success: true, pin };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voice.createPinFromTranscript', 'Failed to create pin from transcript', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ── DistilledNotes ────────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.DISTILLED_NOTES_LIST, async (_event, params?: { limit?: number; offset?: number }) => {
+    try {
+      const notes = storage.listDistilledNotes(params);
+      return { success: true, notes };
+    } catch (error) {
+      logger.error('error', 'ipc', 'distilledNotes.list', 'Failed to list distilled notes', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, notes: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DISTILLED_NOTES_GET, async (_event, params: { id: string }) => {
+    try {
+      const note = storage.getDistilledNote(params.id);
+      return { success: true, note };
+    } catch (error) {
+      logger.error('error', 'ipc', 'distilledNotes.get', 'Failed to get distilled note', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, note: null };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DISTILLED_NOTES_CREATE, async (_event, params: { note: import('../shared/types').DistilledNote }) => {
+    try {
+      storage.insertDistilledNote(params.note);
+      return { success: true, note: params.note };
+    } catch (error) {
+      logger.error('error', 'ipc', 'distilledNotes.create', 'Failed to create distilled note', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DISTILLED_NOTES_UPDATE, async (_event, params: { id: string; patch: Partial<import('../shared/types').DistilledNote> }) => {
+    try {
+      storage.updateDistilledNote(params.id, params.patch);
+      const note = storage.getDistilledNote(params.id);
+      return { success: true, note };
+    } catch (error) {
+      logger.error('error', 'ipc', 'distilledNotes.update', 'Failed to update distilled note', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DISTILLED_NOTES_DELETE, async (_event, params: { id: string }) => {
+    try {
+      storage.deleteDistilledNote(params.id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'distilledNotes.delete', 'Failed to delete distilled note', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  // ── VaultSearch ───────────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.VAULT_SEARCH, async (_event, params: { keyword: string; folderPath?: string; limit?: number }) => {
+    try {
+      if (!params.keyword || !params.keyword.trim()) {
+        return { success: false, error: 'keyword is required', results: [] };
+      }
+      const vaultPath = storage.getSetting('obsidian_vault_path');
+      if (!vaultPath) {
+        return { success: false, error: 'Vault path not configured', results: [] };
+      }
+      const results = vaultScanner.search(vaultPath, params.keyword, {
+        limit: params.limit ?? 50,
+        folderPath: params.folderPath,
+      });
+      return { success: true, results };
+    } catch (error) {
+      logger.error('error', 'ipc', 'vaultSearch.search', 'Failed to search vault', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, results: [], error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ── Voice Dictionary ───────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.VOICE_DICTIONARY_LIST, async () => {
+    try {
+      const entries = voiceDictionaryStore.list();
+      return { success: true, entries };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voiceDictionary.list', 'Failed to list dictionary', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, entries: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.VOICE_DICTIONARY_ADD, async (_event, params: { phrase: string; note?: string }) => {
+    try {
+      const entry = voiceDictionaryStore.add(params.phrase, params.note);
+      return { success: true, entry };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voiceDictionary.add', 'Failed to add dictionary entry', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.VOICE_DICTIONARY_DELETE, async (_event, params: { id: string }) => {
+    try {
+      voiceDictionaryStore.remove(params.id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voiceDictionary.delete', 'Failed to delete dictionary entry', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.VOICE_DICTIONARY_TOGGLE, async (_event, params: { id: string; enabled: boolean }) => {
+    try {
+      voiceDictionaryStore.toggle(params.id, params.enabled);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voiceDictionary.toggle', 'Failed to toggle dictionary entry', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
+    }
+  });
+
+  // ── ASR Provider ───────────────────────────────────────────────
+
+  safeHandle(IPC_CHANNELS.ASR_GET_STATUS, async () => {
+    try {
+      const status = asrProvider.getStatus();
+      return { success: true, status };
+    } catch (error) {
+      logger.error('error', 'ipc', 'asr.getStatus', 'Failed to get ASR status', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, status: { provider: 'none', configured: false, message: 'Error' } };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.ASR_TRANSCRIBE, async (_event, params: { filePath: string; language?: string; translate?: boolean; prompt?: string }) => {
+    try {
+      const result = await asrProvider.transcribe(params.filePath, {
+        language: params.language,
+        translate: params.translate,
+        prompt: params.prompt,
+      });
+      return { success: result.success, text: result.text, error: result.error, engine: result.engine };
+    } catch (error) {
+      logger.error('error', 'ipc', 'asr.transcribe', 'Failed to transcribe', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, text: '', error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ─── Batch 4: Dashboard Stats ─────────────────────────────────
+  safeHandle(IPC_CHANNELS.DASHBOARD_GET_STATS, async () => {
+    const db = storage.db;
+    if (!db) return null;
+
+    const todayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+
+    const todayCollected = (
+      db.prepare('SELECT COUNT(*) as c FROM source_items WHERE created_at >= ?').get(todayStart) as { c: number }
+    ).c;
+
+    const todayDistilled = (
+      db.prepare('SELECT COUNT(*) as c FROM distilled_outputs WHERE created_at >= ?').get(todayStart) as { c: number }
+    ).c;
+
+    const todayExported = (
+      db.prepare('SELECT COUNT(*) as c FROM export_records WHERE exported_at >= ?').get(todayStart) as { c: number }
+    ).c;
+
+    const inboxPending = (
+      db.prepare("SELECT COUNT(*) as c FROM source_items WHERE status = 'inbox'").get() as { c: number }
+    ).c;
+
+    const shelfItems = (
+      db.prepare("SELECT COUNT(*) as c FROM shelf_items WHERE status = 'temporary'").get() as { c: number }
+    ).c;
+
+    const recentItems = storage.getSourceItems({ limit: 10 });
+
+    let clipboardWatching = false;
+    let clipboardPaused = false;
+    try {
+      clipboardWatching = clipboardWatcher.isEnabled();
+      clipboardPaused = clipboardWatcher.isPaused();
+    } catch { /* ignore */ }
+
+    let aiProviderReady = false;
+    try {
+      const providers = storage.getProviderConfigs();
+      aiProviderReady = providers.some(p => p.enabled);
+    } catch { /* ignore */ }
+
+    let vaultConfigured = false;
+    try {
+      const vaultCfg = storage.getVaultConfig();
+      vaultConfigured = !!vaultCfg?.vaultPath;
+    } catch { /* ignore */ }
+
+    let markItDownAvailable = false;
+    try {
+      const { checkMarkItDownAvailability } = await import('./services/parser/markitdownService');
+      markItDownAvailable = await checkMarkItDownAvailability();
+    } catch { /* ignore */ }
+
+    return {
+      todayCollected,
+      todayDistilled,
+      todayExported,
+      inboxPending,
+      shelfItems,
+      recentItems,
+      clipboardWatching,
+      clipboardPaused,
+      aiProviderReady,
+      vaultConfigured,
+      markItDownAvailable,
+    };
+  });
+
+  // ─── Batch 4: Capsule Status ──────────────────────────────────
+  safeHandle(IPC_CHANNELS.CAPSULE_GET_STATUS, async () => {
+    const db = storage.db;
+    if (!db) return { clipboardWatching: false, shelfItemCount: 0, inboxPendingCount: 0, backgroundTaskCount: 0 };
+
+    const inboxPendingCount = (
+      db.prepare("SELECT COUNT(*) as c FROM source_items WHERE status = 'inbox'").get() as { c: number }
+    ).c;
+
+    const shelfItemCount = (
+      db.prepare("SELECT COUNT(*) as c FROM shelf_items WHERE status = 'temporary'").get() as { c: number }
+    ).c;
+
+    const backgroundTaskCount = (
+      db.prepare("SELECT COUNT(*) as c FROM ai_tasks WHERE status IN ('queued', 'running')").get() as { c: number }
+    ).c;
+
+    let clipboardWatching = false;
+    try {
+      clipboardWatching = clipboardWatcher.isEnabled() && !clipboardWatcher.isPaused();
+    } catch { /* ignore */ }
+
+    return { clipboardWatching, shelfItemCount, inboxPendingCount, backgroundTaskCount };
+  });
+
+  // ─── Batch 5: Health Check ────────────────────────────────────
+  safeHandle(IPC_CHANNELS.HEALTH_CHECK, async () => {
+    const checks: Array<{ name: string; ok: boolean; message?: string }> = [];
+
+    // Database
+    try {
+      const db = storage.db;
+      if (db) {
+        db.prepare('SELECT 1').get();
+        checks.push({ name: '数据库', ok: true });
+      } else {
+        checks.push({ name: '数据库', ok: false, message: '数据库未初始化' });
+      }
+    } catch (e) {
+      checks.push({ name: '数据库', ok: false, message: e instanceof Error ? e.message : '未知错误' });
+    }
+
+    // Data directory
+    try {
+      const fs = await import('fs');
+      const s = settings.load();
+      const dataDir = (s as any).storageRoot || (s as any).dataDir;
+      if (dataDir) {
+        fs.accessSync(dataDir, fs.constants.R_OK | fs.constants.W_OK);
+        checks.push({ name: '数据目录', ok: true });
+      } else {
+        checks.push({ name: '数据目录', ok: false, message: '未配置数据目录' });
+      }
+    } catch (e) {
+      checks.push({ name: '数据目录', ok: false, message: '数据目录不可访问' });
+    }
+
+    // Clipboard watcher
+    try {
+      const enabled = clipboardWatcher.isEnabled();
+      checks.push({ name: '剪贴板监听', ok: enabled, message: enabled ? undefined : '已暂停或未启用' });
+    } catch {
+      checks.push({ name: '剪贴板监听', ok: false, message: '未初始化' });
+    }
+
+    // AI Provider
+    try {
+      const providers = storage.getProviderConfigs();
+      const hasEnabled = providers.some(p => p.enabled);
+      checks.push({ name: 'AI Provider', ok: hasEnabled, message: hasEnabled ? `${providers.filter(p => p.enabled).length} 个已启用` : '无已启用的 Provider' });
+    } catch {
+      checks.push({ name: 'AI Provider', ok: false, message: '无法读取配置' });
+    }
+
+    return { ok: checks.every(c => c.ok), checks };
+  });
+
+  // ─── Batch 6: Knowledge Projects ──────────────────────────────
+  safeHandle(IPC_CHANNELS.PROJECTS_LIST, async () => {
+    return storage.listKnowledgeProjects();
+  });
+
+  safeHandle(IPC_CHANNELS.PROJECTS_CREATE, async (_event, data: { name: string; description?: string; color?: string }) => {
+    return storage.createKnowledgeProject(data);
+  });
+
+  safeHandle(IPC_CHANNELS.PROJECTS_UPDATE, async (_event, data: { id: string; name?: string; description?: string; status?: string; color?: string }) => {
+    return storage.updateKnowledgeProject(data);
+  });
+
+  safeHandle(IPC_CHANNELS.PROJECTS_DELETE, async (_event, { id }: { id: string }) => {
+    return storage.deleteKnowledgeProject(id);
+  });
+
+  safeHandle(IPC_CHANNELS.PROJECTS_ADD_ITEM, async (_event, data: { projectId: string; itemType: string; itemId: string }) => {
+    return storage.addProjectItem(data);
+  });
+
+  safeHandle(IPC_CHANNELS.PROJECTS_REMOVE_ITEM, async (_event, data: { projectId: string; itemId: string }) => {
+    return storage.removeProjectItem(data);
+  });
+
+  // ─── Batch 6: Tags ───────────────────────────────────────────
+  safeHandle(IPC_CHANNELS.TAGS_LIST, async () => {
+    return storage.listTagSummaries();
+  });
+
+  safeHandle(IPC_CHANNELS.TAGS_RENAME, async (_event, data: { oldName: string; newName: string }) => {
+    return storage.renameTag(data);
+  });
+
+  safeHandle(IPC_CHANNELS.TAGS_DELETE, async (_event, { name }: { name: string }) => {
+    return storage.deleteTag(name);
+  });
+
+  // ─── Batch 6: Datasets ───────────────────────────────────────
+  safeHandle(IPC_CHANNELS.DATASETS_V2_CREATE, async (_event, data: { name: string; description?: string; purpose?: string }) => {
+    return storage.createDataset(data);
+  });
+
+  safeHandle(IPC_CHANNELS.DATASETS_V2_LIST, async () => {
+    return storage.listDatasets();
+  });
+
+  safeHandle(IPC_CHANNELS.DATASETS_V2_GET, async (_event, { id }: { id: string }) => {
+    return storage.getDataset(id);
+  });
+
+  safeHandle(IPC_CHANNELS.DATASETS_V2_ADD_ITEMS, async (_event, data: { datasetId: string; items: Array<{ sourceType: string; sourceId: string }> }) => {
+    return storage.addDatasetItems(data);
+  });
+
+  safeHandle(IPC_CHANNELS.DATASETS_V2_UPDATE_ITEM, async (_event, data: { id: string; quality?: string; privacyLevel?: string; included?: boolean; reason?: string }) => {
+    return storage.updateDatasetItem(data);
+  });
+
+  safeHandle(IPC_CHANNELS.DATASETS_V2_EXPORT, async (_event, data: { datasetId: string; format: string; includeExcluded?: boolean }) => {
+    return storage.exportDataset(data);
+  });
+
+  safeHandle(IPC_CHANNELS.DATASETS_V2_DELETE, async (_event, { id }: { id: string }) => {
+    return storage.deleteDataset(id);
   });
 
   logger.info('app', 'ipc', 'register', 'IPC handlers registered', {

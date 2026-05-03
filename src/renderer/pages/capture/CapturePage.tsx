@@ -1,115 +1,374 @@
-import { useState } from 'react';
+/**
+ * CapturePage — 截图与贴图主页面 (Phase 2A + 2B)
+ *
+ * 功能：
+ * - 截图按钮（触发全屏截图）
+ * - 最近截图列表（缩略图 + 操作）
+ * - 已钉图片列表
+ * - 贴图到桌面
+ * - OCR 文字提取
+ * - 保存到 Inbox
+ */
+
+import { useState, useCallback } from 'react';
 import { PinStackIcon } from '../../design-system/icons';
-import { useShellSnapshot } from '../../hooks/useShellSnapshot';
+import {
+  PageShell,
+  PageHeader,
+  Section,
+  Button,
+  Card,
+  StatusBadge,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../../design-system/components';
+import { useCaptures } from '../../hooks/useCaptures';
+import { useToast } from '../../components/shared/ToastViewport';
+import type { SourceItem, PinnedImage } from '../../../shared/types';
 
 export function CapturePage(): JSX.Element {
-  const snapshot = useShellSnapshot();
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string>('准备就绪');
+  const {
+    recentCaptures,
+    pinnedImages,
+    loading,
+    error,
+    takeScreenshot,
+    pinImage,
+    closePinnedImage,
+    savePinnedToInbox,
+    ocrExtract,
+    ocrSaveToInbox,
+    refresh,
+  } = useCaptures();
 
-  const handleCapture = async () => {
-    setBusy(true);
-    setMessage('截图中...');
+  const { addToast } = useToast();
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  // 截图
+  const handleScreenshot = useCallback(async () => {
+    setBusyAction('screenshot');
     try {
-      const ok = await window.pinmind.capture.screenshot();
-      setMessage(ok ? '截图已保存到收集箱' : '截图未完成，请检查权限');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      const ok = await takeScreenshot();
+      addToast(ok ? '截图已保存到收集箱' : '截图未完成，请检查屏幕录制权限', ok ? 'success' : 'error');
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
-  };
+  }, [takeScreenshot, addToast]);
+
+  // 钉图到桌面
+  const handlePinToDesktop = useCallback(async (item: SourceItem) => {
+    if (!item.contentPath) return;
+    setBusyAction(`pin-${item.id}`);
+    try {
+      const pinned = await pinImage(item.contentPath, item.id);
+      addToast(pinned ? '已钉到桌面' : '钉图失败', pinned ? 'success' : 'error');
+    } finally {
+      setBusyAction(null);
+    }
+  }, [pinImage, addToast]);
+
+  // OCR 提取
+  const handleOcr = useCallback(async (item: SourceItem) => {
+    if (!item.contentPath) return;
+    setBusyAction(`ocr-${item.id}`);
+    try {
+      const result = await ocrExtract(item.contentPath);
+      if (result.error) {
+        addToast(`OCR 失败: ${result.error}`, 'error');
+      } else if (!result.text) {
+        addToast('图片中未检测到文字', 'warning');
+      } else {
+        // 复制到剪贴板
+        await navigator.clipboard.writeText(result.text);
+        addToast('OCR 文字已复制到剪贴板', 'success');
+      }
+    } finally {
+      setBusyAction(null);
+    }
+  }, [ocrExtract, addToast]);
+
+  // 保存截图到 Inbox
+  const handleSaveToInbox = useCallback(async (item: SourceItem) => {
+    setBusyAction(`save-${item.id}`);
+    try {
+      // 截图已经是 SourceItem (status=inbox)，这里做确认提示
+      addToast('截图已在收集箱中', 'success');
+    } finally {
+      setBusyAction(null);
+    }
+  }, [addToast]);
+
+  // 关闭贴图
+  const handleClosePinned = useCallback(async (id: string) => {
+    setBusyAction(`close-pinned-${id}`);
+    try {
+      await closePinnedImage(id);
+      addToast('贴图已关闭', 'success');
+    } finally {
+      setBusyAction(null);
+    }
+  }, [closePinnedImage, addToast]);
+
+  // 保存贴图到 Inbox
+  const handleSavePinnedToInbox = useCallback(async (id: string) => {
+    setBusyAction(`save-pinned-${id}`);
+    try {
+      const ok = await savePinnedToInbox(id);
+      addToast(ok ? '已保存到收集箱' : '保存失败', ok ? 'success' : 'error');
+    } finally {
+      setBusyAction(null);
+    }
+  }, [savePinnedToInbox, addToast]);
+
+  if (loading) {
+    return (
+      <PageShell>
+        <LoadingState title="加载截图数据" description="正在获取截图和贴图信息..." />
+      </PageShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageShell>
+        <ErrorState
+          title="加载失败"
+          reason={error}
+          suggestion="请检查应用状态后重试"
+          action={{ label: '重试', onClick: () => void refresh() }}
+        />
+      </PageShell>
+    );
+  }
 
   return (
-    <div className="flex h-full w-full items-center justify-center p-6">
-      <div className="pinmind-window-panel flex w-full max-w-[720px] flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-[color:var(--pm-border-subtle)] px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand-primary)]">
-              <PinStackIcon name="capture" size={18} />
-            </div>
-            <div>
-              <h1 className="text-[18px] font-semibold text-[color:var(--pm-text-primary)]">快速捕获</h1>
-              <p className="text-[12px] text-[color:var(--pm-text-tertiary)]">一键截图，或者回到主工作区继续整理。</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="pinmind-btn pinmind-btn-ghost motion-button text-[12px]"
-            onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'daily-flow' }))}
-          >
-            返回工作台
-          </button>
-        </div>
-
-        <div className="grid gap-4 p-5 md:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
-          <section className="pinmind-panel-soft p-4">
-            <p className="pinmind-section-eyebrow">主操作</p>
-            <h2 className="text-[14px] font-semibold text-[color:var(--pm-text-primary)]">截图并保存</h2>
-            <p className="mt-2 text-[12px] leading-6 text-[color:var(--pm-text-secondary)]">
-              这里不保留占位按钮。点击后会直接执行截图，截图成功后会入库到收集箱。
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleCapture()}
-              className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-[color:var(--pm-brand-primary)] bg-[color:var(--pm-brand-primary)] px-4 text-[13px] font-medium text-white shadow-[0_10px_18px_rgba(232,122,61,0.18)] transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+    <PageShell>
+      <PageHeader
+        title="截图与贴图"
+        description="截图、钉图到桌面、OCR 文字提取"
+        actions={
+          <div className="flex items-center gap-2">
+            <StatusBadge
+              tone={pinnedImages.length > 0 ? 'info' : 'neutral'}
+              label={`${pinnedImages.length} 个贴图`}
+            />
+            <Button
+              variant="primary"
+              leadingIcon={<PinStackIcon name="capture" size={16} />}
+              busy={busyAction === 'screenshot'}
+              onClick={() => void handleScreenshot()}
             >
-              <PinStackIcon name="capture" size={16} />
-              {busy ? '截图中...' : '开始截图'}
-            </button>
-            <p className="mt-3 text-[11px] text-[color:var(--pm-text-tertiary)]">{message}</p>
-          </section>
+              截图
+            </Button>
+          </div>
+        }
+      />
 
-          <section className="pinmind-panel-soft p-4">
-            <p className="pinmind-section-eyebrow">运行状态</p>
-            <div className="flex flex-col gap-2">
-              <RuntimeLine label="剪贴板" value={snapshot.clipboard?.enabled ? '开启' : '关闭'} />
-              <RuntimeLine label="屏幕录制" value={snapshot.permissions?.screenRecording ?? '未知'} />
-              <RuntimeLine label="存储" value={snapshot.settings?.storageRoot ?? '未加载'} />
-              <RuntimeLine label="整理方式" value={formatTier(snapshot.settings?.defaultTier ?? 'local_light')} />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
-                onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'inbox' }))}
-              >
-                打开收件箱
-              </button>
-              <button
-                type="button"
-                className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
-                onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'settings' }))}
-              >
-                打开设置
-              </button>
-            </div>
-          </section>
+      {/* 已钉图片 */}
+      {pinnedImages.length > 0 && (
+        <Section title="已钉图片" description="钉在桌面上的截图">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pinnedImages.map((pinned) => (
+              <PinnedImageCard
+                key={pinned.id}
+                pinned={pinned}
+                busy={busyAction}
+                onClose={() => void handleClosePinned(pinned.id)}
+                onSaveToInbox={() => void handleSavePinnedToInbox(pinned.id)}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* 最近截图 */}
+      <Section
+        title="最近截图"
+        description="截图自动保存到收集箱"
+        action={
+          <Button
+            variant="ghost"
+            size="sm"
+            leadingIcon={<PinStackIcon name="status-running" size={14} />}
+            onClick={() => void refresh()}
+          >
+            刷新
+          </Button>
+        }
+      >
+        {recentCaptures.length === 0 ? (
+          <EmptyState
+            icon={<PinStackIcon name="capture" size={28} />}
+            title="暂无截图"
+            description="点击上方「截图」按钮开始捕获屏幕内容"
+            action={{ label: '开始截图', onClick: () => void handleScreenshot() }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {recentCaptures.map((item) => (
+              <CaptureCard
+                key={item.id}
+                item={item}
+                busy={busyAction}
+                onPinToDesktop={() => void handlePinToDesktop(item)}
+                onOcr={() => void handleOcr(item)}
+                onSaveToInbox={() => void handleSaveToInbox(item)}
+              />
+            ))}
+          </div>
+        )}
+      </Section>
+    </PageShell>
+  );
+}
+
+// ── 截图卡片 ──────────────────────────────────────────────────────
+
+interface CaptureCardProps {
+  item: SourceItem;
+  busy: string | null;
+  onPinToDesktop: () => void;
+  onOcr: () => void;
+  onSaveToInbox: () => void;
+}
+
+function CaptureCard({ item, busy, onPinToDesktop, onOcr, onSaveToInbox }: CaptureCardProps): JSX.Element {
+  const timeStr = new Date(item.createdAt * 1000).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return (
+    <Card variant="interactive" className="flex flex-col gap-3">
+      {/* 缩略图 */}
+      <div className="relative aspect-video overflow-hidden rounded-[8px] bg-[color:var(--pm-surface-muted)]">
+        {item.contentPath ? (
+          <img
+            src={`file://${item.contentPath}`}
+            alt={item.previewText || '截图'}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <PinStackIcon name="image" size={32} />
+          </div>
+        )}
+        <div className="absolute bottom-2 right-2">
+          <StatusBadge tone="success" label={timeStr} dot={false} />
         </div>
       </div>
-    </div>
+
+      {/* 信息 */}
+      <div className="flex items-center justify-between">
+        <span className="truncate text-[12px] text-[color:var(--pm-text-secondary)]">
+          {item.previewText || '屏幕截图'}
+        </span>
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          leadingIcon={<PinStackIcon name="pin-top" size={14} />}
+          busy={busy === `pin-${item.id}`}
+          onClick={onPinToDesktop}
+          title="钉到桌面"
+        >
+          钉图
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          leadingIcon={<PinStackIcon name="text" size={14} />}
+          busy={busy === `ocr-${item.id}`}
+          onClick={onOcr}
+          title="OCR 文字提取"
+        >
+          OCR
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          leadingIcon={<PinStackIcon name="filled-inbox" size={14} />}
+          busy={busy === `save-${item.id}`}
+          onClick={onSaveToInbox}
+          title="已在收集箱"
+        >
+          收集箱
+        </Button>
+      </div>
+    </Card>
   );
 }
 
-function RuntimeLine({ label, value }: { label: string; value: string }): JSX.Element {
+// ── 贴图卡片 ──────────────────────────────────────────────────────
+
+interface PinnedImageCardProps {
+  pinned: PinnedImage;
+  busy: string | null;
+  onClose: () => void;
+  onSaveToInbox: () => void;
+}
+
+function PinnedImageCard({ pinned, busy, onClose, onSaveToInbox }: PinnedImageCardProps): JSX.Element {
+  const timeStr = new Date(pinned.createdAt).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[color:var(--pm-border-subtle)] bg-white/70 px-3 py-2 text-[12px]">
-      <span className="text-[color:var(--pm-text-tertiary)]">{label}</span>
-      <span className="text-[color:var(--pm-text-secondary)]">{value}</span>
-    </div>
-  );
-}
+    <Card variant="selected" className="flex flex-col gap-3">
+      {/* 缩略图 */}
+      <div className="relative aspect-video overflow-hidden rounded-[8px] bg-[color:var(--pm-surface-muted)]">
+        <img
+          src={`file://${pinned.filePath}`}
+          alt="贴图"
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute bottom-2 right-2">
+          <StatusBadge tone="info" label="钉在桌面" dot={false} />
+        </div>
+      </div>
 
-function formatTier(value: string): string {
-  switch (value) {
-    case 'local_light':
-      return '本地轻量';
-    case 'cloud_standard':
-      return '云端标准';
-    case 'cloud_advanced':
-      return '云端高级';
-    default:
-      return value;
-  }
+      {/* 信息 */}
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] text-[color:var(--pm-text-secondary)]">{timeStr}</span>
+        <span className="text-[11px] text-[color:var(--pm-text-tertiary)]">
+          {pinned.width}×{pinned.height}
+        </span>
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          leadingIcon={<PinStackIcon name="filled-inbox" size={14} />}
+          busy={busy === `save-pinned-${pinned.id}`}
+          onClick={onSaveToInbox}
+          title="保存到收集箱"
+        >
+          收集箱
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          leadingIcon={<PinStackIcon name="close" size={14} />}
+          busy={busy === `close-pinned-${pinned.id}`}
+          onClick={onClose}
+          title="关闭贴图"
+        >
+          关闭
+        </Button>
+      </div>
+    </Card>
+  );
 }

@@ -76,7 +76,7 @@ function buildMissingFilePrompt(message: string, deps: FailureFeedbackDeps): Blo
     level: 'warning',
     title: '原文件不存在',
     message,
-      detail: '下一步：检查原文件是否已被移动、删除，或外部磁盘是否已断开。确认无法恢复时，可返回 PinMind 删除这条记录。',
+      detail: '下一步：检查原文件是否已被移动、删除，或外部磁盘是否已断开。确认无法恢复时，可返回 AcMind 删除这条记录。',
     action: {
       label: '打开数据目录',
       run: async () => {
@@ -95,14 +95,14 @@ function classifyFailure(
     case 'capture.screenPermission':
       return buildPermissionPrompt(
         '屏幕录制权限未开启，截图和录屏当前无法使用。',
-        '下一步：打开系统设置 > 隐私与安全性 > 屏幕录制，授权 PinMind 后返回应用并点击“刷新状态”；若仍无效，请重启当前实例后再试。若当前从 DMG 或其他目录运行，请复制到 /Applications 后重启。',
+        '下一步：打开系统设置 > 隐私与安全性 > 屏幕录制，授权 AcMind 后返回应用并点击“刷新状态”；若仍无效，请重启当前实例后再试。若当前从 DMG 或其他目录运行，请复制到 /Applications 后重启。',
         deps
       );
     case 'capture.screenshot.command':
       if (payload.code === 'PERMISSION_REQUIRED') {
         return buildPermissionPrompt(
           '截图失败，当前没有屏幕录制权限。',
-          '下一步：在系统设置里授权 PinMind 的屏幕录制权限，然后重新截图。',
+          '下一步：在系统设置里授权 AcMind 的屏幕录制权限，然后重新截图。',
           deps
         );
       }
@@ -121,7 +121,7 @@ function classifyFailure(
       return {
         kind: 'toast',
         level: 'error',
-        message: '截图保存失败，请检查 ~/PinMind 写入权限后重试。'
+        message: '截图保存失败，请检查 ~/AcMind 写入权限后重试。'
       };
     case 'capture.screenshot.pin':
       return {
@@ -139,7 +139,7 @@ function classifyFailure(
       return {
         kind: 'toast',
         level: 'warning',
-        message: '录屏已保存，但未加入记录列表。可在 PinMind/recordings 中找到原文件。'
+        message: '录屏已保存，但未加入记录列表。可在 AcMind/recordings 中找到原文件。'
       };
     case 'ipc:ocr.fromRecord':
       if (isMissingFile(payload)) {

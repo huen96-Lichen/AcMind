@@ -1,4 +1,4 @@
-// PinMind CaptureAdapter Registry
+// AcMind CaptureAdapter Registry
 // V2.1 Phase 7.1: Central registry for all capture adapters.
 // Provides a single entry point to capture content from any source type.
 

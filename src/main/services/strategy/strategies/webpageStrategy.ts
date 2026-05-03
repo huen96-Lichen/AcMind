@@ -1,4 +1,4 @@
-// PinMind Webpage Strategy
+// AcMind Webpage Strategy
 // Phase 8.1: 网页链接和网页正文
 
 import type { SourceType } from '../../../../shared/types';

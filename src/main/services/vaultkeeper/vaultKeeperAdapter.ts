@@ -1,5 +1,5 @@
 // VaultKeeper Adapter
-// Phase 9: PinMind 与 VaultKeeper 外部服务的真实 HTTP 通信层
+// Phase 9: AcMind 与 VaultKeeper 外部服务的真实 HTTP 通信层
 //
 // 职责边界：
 // - 负责：提交任务、查询状态、获取结果、取消任务、标准化结果/错误

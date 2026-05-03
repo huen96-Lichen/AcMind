@@ -31,6 +31,7 @@ import { taskQueue } from './services/aiHub/taskQueue';
 import { schedulerService } from './services/scheduler/schedulerService';
 import { outputSpecService } from './services/outputSpec';
 import { initAutoUpdater } from './autoUpdater';
+import { voiceDictionaryStore } from './voice';
 
 // ---------------------------------------------------------------------------
 // Process crash recovery
@@ -57,7 +58,7 @@ process.on('unhandledRejection', (reason) => {
 // ---------------------------------------------------------------------------
 
 const appWithState = app as ElectronApp & { isQuitting?: boolean };
-const APP_DISPLAY_NAME = 'PinMind';
+const APP_DISPLAY_NAME = 'AcMind';
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 const preloadPath = path.join(__dirname, '../preload/index.cjs');
@@ -77,7 +78,7 @@ let permissionCoordinator: PermissionCoordinator | null = null;
 // ---------------------------------------------------------------------------
 
 async function bootstrap(): Promise<void> {
-  logger.info('app', 'bootstrap', 'start', 'PinMind starting...');
+  logger.info('app', 'bootstrap', 'start', 'AcMind starting...');
 
   // 1. Resolve the default storage root before SQLite is available.
   const storageRoot = resolveStorageRoot(DEFAULT_SETTINGS.storageRoot);
@@ -112,6 +113,7 @@ async function bootstrap(): Promise<void> {
   // 3. Initialize storage (SQLite)
   try {
     storage.init(storageRoot);
+    voiceDictionaryStore.init(storageRoot);
     // 3a. Initialize error service with the database instance
     const db = storage.getDb();
     if (db) {
@@ -125,13 +127,11 @@ async function bootstrap(): Promise<void> {
 
   // 3b. Initialize OutputSpecService (template pack)
   try {
-    // Spec pack path: look for pinmind_output_spec_pack in the app resources directory
+    // Spec pack path: look for acmind_output_spec_pack in the app resources directory
     // In development, it's at the project root; in production, it's in the app bundle
     const specPackCandidates = [
-      path.join(app.getAppPath(), 'pinmind_output_spec_pack'),
-      path.resolve(process.cwd(), 'pinmind_output_spec_pack'),
-      // User-specified path (for development / custom installs)
-      '/Volumes/White Atlas/03_Projects/PinMindV2.0/pinmind_output_spec_pack',
+      path.join(app.getAppPath(), 'acmind_output_spec_pack'),
+      path.resolve(process.cwd(), 'acmind_output_spec_pack'),
     ];
     const specPackPath = specPackCandidates.find((p) => {
       const { existsSync } = require('node:fs');
@@ -215,7 +215,7 @@ async function bootstrap(): Promise<void> {
       appName: APP_DISPLAY_NAME,
       executablePath: app.getPath('exe'),
       appPath: app.getAppPath(),
-      bundleId: 'com.pinmind.app',
+      bundleId: 'com.acore.acmind',
       isDev,
       isPackaged: app.isPackaged,
     }),
@@ -285,7 +285,7 @@ async function bootstrap(): Promise<void> {
     capsuleController.hide();
   }
 
-  logger.info('app', 'bootstrap', 'complete', 'PinMind ready', {
+  logger.info('app', 'bootstrap', 'complete', 'AcMind ready', {
     captureService: captureService.getClipboardStatus(),
   });
 
@@ -312,7 +312,7 @@ app.on('second-instance', () => {
 
 app.on('before-quit', () => {
   appWithState.isQuitting = true;
-  logger.info('app', 'lifecycle', 'before-quit', 'PinMind shutting down');
+  logger.info('app', 'lifecycle', 'before-quit', 'AcMind shutting down');
   shortcutManager.unregister();
   captureService.stop();
 });

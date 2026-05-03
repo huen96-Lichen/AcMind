@@ -145,15 +145,15 @@ export function useProcessingHistory(): UseProcessingHistoryReturn {
   const [filter, setFilter] = useState<HistoryFilter>('all');
 
   const loadData = useCallback(async () => {
-    if (!window.pinmind) { setLoading(false); return; }
+    if (!window.acmind) { setLoading(false); return; }
     try {
       setLoading(true);
       setLoadError(null);
 
       const [items, exports, errs] = await Promise.all([
-        window.pinmind.sourceItems.list({ limit: 200 }),
-        window.pinmind.export.history({ limit: 200 }),
-        window.pinmind.errors.list({ limit: 200 }),
+        window.acmind.sourceItems.list({ limit: 200 }),
+        window.acmind.export.history({ limit: 200 }),
+        window.acmind.errors.list({ limit: 200 }),
       ]);
 
       setSourceItems(items);
@@ -163,7 +163,7 @@ export function useProcessingHistory(): UseProcessingHistoryReturn {
       // Batch fetch processedAt from content_state_history
       try {
         const ids = items.map((i) => i.id);
-        const patMap = await window.pinmind.pipeline.batchProcessedAt(ids);
+        const patMap = await window.acmind.pipeline.batchProcessedAt(ids);
         setProcessedAtMap(patMap);
       } catch {
         // Non-critical, leave map empty

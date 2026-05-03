@@ -1,4 +1,4 @@
-// PinMind RealDistiller Unit Tests
+// AcMind RealDistiller Unit Tests
 // Tests for parseResponse, mapJsonToOutput, and extractFromPlainText (pure functions)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -164,13 +164,13 @@ describe('RealDistiller', () => {
     });
 
     it('should extract JSON from markdown code block without json tag', () => {
-      const raw = '```\n{"title":"标题","summary":"A brief summary of the content","category":"99_Inbox/待归纳","tags":["ai","pinmind","local"],"type":"distilled-note","contentMarkdown":"# 标题\\n\\nA brief summary of the content"}\n```';
+      const raw = '```\n{"title":"标题","summary":"A brief summary of the content","category":"99_Inbox/待归纳","tags":["ai","acmind","local"],"type":"distilled-note","contentMarkdown":"# 标题\\n\\nA brief summary of the content"}\n```';
       const result = realDistiller.parseResponse('summarize', raw);
       expect(result).toMatchObject({
         suggestedTitle: '标题',
         summary: 'A brief summary of the content',
         category: '99_Inbox/待归纳',
-        tags: ['ai', 'pinmind', 'local'],
+        tags: ['ai', 'acmind', 'local'],
         documentType: 'distilled-note',
         contentMarkdown: '# 标题\n\nA brief summary of the content',
       });
@@ -233,13 +233,13 @@ describe('RealDistiller', () => {
     // -- summarize -----------------------------------------------------------
 
     it('summarize: should map "summary" field', () => {
-      const raw = '{"title":"标题","summary":"This is a summary.","category":"99_Inbox/待归纳","tags":["ai","pinmind","local"],"type":"distilled-note","contentMarkdown":"# 标题\\n\\nThis is a summary."}';
+      const raw = '{"title":"标题","summary":"This is a summary.","category":"99_Inbox/待归纳","tags":["ai","acmind","local"],"type":"distilled-note","contentMarkdown":"# 标题\\n\\nThis is a summary."}';
       const result = realDistiller.parseResponse('summarize', raw);
       expect(result).toMatchObject({
         suggestedTitle: '标题',
         summary: 'This is a summary.',
         category: '99_Inbox/待归纳',
-        tags: ['ai', 'pinmind', 'local'],
+        tags: ['ai', 'acmind', 'local'],
         documentType: 'distilled-note',
         contentMarkdown: '# 标题\n\nThis is a summary.',
       });
@@ -297,9 +297,9 @@ describe('RealDistiller', () => {
     });
 
     it('tag: should discard explanatory prose emitted as tags', () => {
-      const raw = '{"tags":["基于内容","这些标签应涵盖**产品特性","1. **#PinMind核心功能** (最基础","系统架构规划"]}';
+      const raw = '{"tags":["基于内容","这些标签应涵盖**产品特性","1. **#AcMind核心功能** (最基础","系统架构规划"]}';
       const result = realDistiller.parseResponse('tag', raw);
-      expect(result).toEqual({ tags: ['PinMind核心功能', '系统架构规划'] });
+      expect(result).toEqual({ tags: ['AcMind核心功能', '系统架构规划'] });
     });
 
     // -- valueScore ----------------------------------------------------------
@@ -390,7 +390,7 @@ describe('RealDistiller', () => {
 
     it('summarize: should reject plain text because Local Distill MVP requires JSON markdown contract', () => {
       const raw = 'This is the full summary text.';
-      expect(() => realDistiller.parseResponse('summarize', raw)).toThrow('模型未返回符合 PinMind Markdown 规范的 JSON');
+      expect(() => realDistiller.parseResponse('summarize', raw)).toThrow('模型未返回符合 AcMind Markdown 规范的 JSON');
     });
 
     it('classify: should take first line as category', () => {

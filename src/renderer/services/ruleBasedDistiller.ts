@@ -33,13 +33,13 @@ export interface TemplateProvider {
   getSnippet(name: 'rawContentSection' | 'frontmatterBlock'): Promise<string>;
 }
 
-/** Default template provider using window.pinmind.outputSpec IPC bridge */
+/** Default template provider using window.acmind.outputSpec IPC bridge */
 class IpcTemplateProvider implements TemplateProvider {
   async getDistillTemplate(name: 'obsidian' | 'plain' | 'summary'): Promise<string> {
-    return window.pinmind.outputSpec.getDistillTemplate(name);
+    return window.acmind.outputSpec.getDistillTemplate(name);
   }
   async getSnippet(name: 'rawContentSection' | 'frontmatterBlock'): Promise<string> {
-    return window.pinmind.outputSpec.getSnippet(name);
+    return window.acmind.outputSpec.getSnippet(name);
   }
 }
 
@@ -233,7 +233,7 @@ function extractTags(text: string, category: string): string[] {
 
   // 确保至少有3个标签
   if (tags.length < 3) {
-    tags.push('PinMind');
+    tags.push('AcMind');
     tags.push('蒸馏笔记');
   }
 

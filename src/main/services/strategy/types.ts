@@ -1,26 +1,10 @@
-// PinMind Content Processing Strategy Types
+// AcMind Content Processing Strategy Types
 // Phase 8.1-8.6: 定义策略接口、统一输出结构、模型追踪
 
-import type { SourceType } from '../../../shared/types';
+import type { SourceType, ProcessedContent } from '../../../shared/types';
 
-// ---------------------------------------------------------------------------
-// 统一输出结构
-// ---------------------------------------------------------------------------
-
-export interface ProcessedContent {
-  /** 笔记标题 */
-  title: string;
-  /** 内容摘要 */
-  summary: string;
-  /** 标签列表 */
-  tags: string[];
-  /** Obsidian 兼容的 Markdown 正文 */
-  body_markdown: string;
-  /** 建议的 Obsidian 文件夹路径 */
-  suggested_folder: string;
-  /** 质量标记 */
-  quality_flags: string[];
-}
+// Re-export ProcessedContent from shared for backward compatibility
+export type { ProcessedContent };
 
 // ---------------------------------------------------------------------------
 // 策略输入

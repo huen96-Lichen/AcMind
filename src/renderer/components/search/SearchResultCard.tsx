@@ -17,12 +17,15 @@ export interface SearchResult {
     tags?: string[];
     createdAt: number;
     status?: string;
+    exportRecordIds?: string[];
+    exportRecordCount?: number;
   };
 }
 
 interface SearchResultCardProps {
   result: SearchResult;
   onClick?: (id: string) => void;
+  onViewExports?: (id: string) => void;
 }
 
 /* ===== Helpers ===== */
@@ -60,7 +63,7 @@ function formatScore(score: number): string {
 
 /* ===== Component ===== */
 
-export function SearchResultCard({ result, onClick }: SearchResultCardProps): JSX.Element {
+export function SearchResultCard({ result, onClick, onViewExports }: SearchResultCardProps): JSX.Element {
   const sourceStyle = SOURCE_BADGE_STYLES[result.source] ?? SOURCE_BADGE_STYLES.hybrid;
   const typeStyle = TYPE_BADGE_STYLES[result.type] ?? TYPE_BADGE_STYLES.source_item;
 
@@ -212,6 +215,23 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps): JS
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Export record indicator */}
+        {result.metadata.exportRecordCount && result.metadata.exportRecordCount > 0 && (
+          <span
+            className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium cursor-pointer hover:opacity-80"
+            style={{
+              background: 'var(--pm-success-bg)',
+              color: 'var(--pm-success-text)',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewExports?.(result.id);
+            }}
+          >
+            已导出 {result.metadata.exportRecordCount} 条
+          </span>
+        )}
 
         {/* Relative time */}
         <span

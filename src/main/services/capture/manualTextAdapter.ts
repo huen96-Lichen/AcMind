@@ -1,4 +1,4 @@
-// PinMind ManualTextAdapter
+// AcMind ManualTextAdapter
 // V2.1 Phase 7.1: Captures manually entered text into a CaptureRecord.
 
 import { createHash } from 'node:crypto';
@@ -38,7 +38,7 @@ class ManualTextAdapter implements CaptureAdapter<ManualTextInput> {
       raw_text: trimmed,
       title: trimmed.split('\n')[0]?.slice(0, 80) || undefined,
       preview_text: trimmed.length > 200 ? trimmed.slice(0, 200) + '...' : trimmed,
-      source_app: input.sourceApp ?? 'PinMind',
+      source_app: input.sourceApp ?? 'AcMind',
       metadata: {
         textLength: trimmed.length,
         lineCount: trimmed.split('\n').length,

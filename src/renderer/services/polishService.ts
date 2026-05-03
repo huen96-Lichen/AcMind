@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PinMind — Polish Service (独立润色服务)
+// AcMind — Polish Service (独立润色服务)
 // 对语音转写文本进行润色、格式化、风格调整
 // 支持本地规则处理和 AI 增强润色
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -319,7 +319,7 @@ class PolishService {
   }
 
   /**
-   * AI 润色（调用 PinMind 的 AI 提供者）
+   * AI 润色（调用 AcMind 的 AI 提供者）
    */
   private async aiPolish(
     text: string,
@@ -340,9 +340,9 @@ ${customOptions?.targetLanguage ? `目标语言：${customOptions.targetLanguage
     }
 
     try {
-      // 通过 PinMind 的 AI 服务进行润色
+      // 通过 AcMind 的 AI 服务进行润色
       // 使用现有的 providers 和 distill 基础设施
-      const providers = await window.pinmind.providers.list();
+      const providers = await window.acmind.providers.list();
       if (providers.length === 0) {
         throw new Error('未配置 AI 提供者，请先在设置中添加 AI 提供者');
       }
@@ -392,7 +392,7 @@ ${customOptions?.targetLanguage ? `目标语言：${customOptions.targetLanguage
     systemPrompt: string,
     userText: string,
   ): Promise<string> {
-    // ── 通过 PinMind 的 AI 基础设施调用 ──
+    // ── 通过 AcMind 的 AI 基础设施调用 ──
     // 这里使用 fetch 直接调用 AI API（通过主进程代理）
     //
     // 实际实现需要：

@@ -9,8 +9,8 @@
  */
 import { describe, it, expect } from 'vitest';
 
-// Stub window.pinmind so modules that reference it at import time don't crash.
-const pinmindStub: Record<string, unknown> = {
+// Stub window.acmind so modules that reference it at import time don't crash.
+const acmindStub: Record<string, unknown> = {
   app: {
     getPath: async () => '/tmp',
     getVersion: async () => '0.0.0',
@@ -61,13 +61,13 @@ const pinmindStub: Record<string, unknown> = {
 };
 
 // Install stub globally before any module imports.
-(globalThis as Record<string, unknown>).pinmind = pinmindStub;
+(globalThis as Record<string, unknown>).acmind = acmindStub;
 
 // Also provide window for browser-like access patterns.
 if (typeof globalThis.window === 'undefined') {
   (globalThis as Record<string, unknown>).window = globalThis;
 }
-(globalThis.window as Record<string, unknown>).pinmind = pinmindStub;
+(globalThis.window as Record<string, unknown>).acmind = acmindStub;
 
 const pageModules = [
   { name: 'DailyKnowledgeFlowPage', loader: () => import('../pages/daily-flow/DailyKnowledgeFlowPage') },

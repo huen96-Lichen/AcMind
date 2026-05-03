@@ -1,4 +1,4 @@
-// PinMind Real Distiller
+// AcMind Real Distiller
 // Calls actual AI models (Ollama / OpenAI-compatible) for distillation
 
 import type { AiOperation, ProviderConfig } from '../../../shared/types';
@@ -233,7 +233,7 @@ class RealDistiller {
     }
 
     if (operation === 'summarize') {
-      throw new Error('模型未返回符合 PinMind Markdown 规范的 JSON');
+      throw new Error('模型未返回符合 AcMind Markdown 规范的 JSON');
     }
 
     // Fall back to plain-text extraction
@@ -326,6 +326,9 @@ class RealDistiller {
           cleanSuggestion = 'keep';
         }
         return { cleanSuggestion };
+      }
+      case 'prefilter': {
+        return json; // Pass through — caller validates individual fields
       }
       default:
         return json;
@@ -479,6 +482,9 @@ class RealDistiller {
           return { cleanSuggestion: 'merge' as const };
         }
         return { cleanSuggestion: 'keep' as const };
+      }
+      case 'prefilter': {
+        return { suggestedTitle: text.split('\n')[0].slice(0, 35), valueScore: 50, duplicateScore: 0, suggestedAction: 'keep_pinned', reason: '无法解析模型输出', tags: [] };
       }
       default:
         return { raw: text };

@@ -31,7 +31,7 @@ export function DistillReviewPanel({ onRefresh }: DistillReviewPanelProps): JSX.
   const loadSourceItem = useCallback(async (sourceItemId: string) => {
     if (sourceItems.has(sourceItemId)) return;
     try {
-      const item = await window.pinmind.sourceItems.get(sourceItemId);
+      const item = await window.acmind.sourceItems.get(sourceItemId);
       if (item) {
         setSourceItems((prev) => {
           if (prev.has(sourceItemId)) {
@@ -80,7 +80,7 @@ export function DistillReviewPanel({ onRefresh }: DistillReviewPanelProps): JSX.
   const handleSaveEdit = async () => {
     if (!editingId) return;
     try {
-      await window.pinmind.distilledOutputs.review(editingId, 'edit', editData);
+      await window.acmind.distilledOutputs.review(editingId, 'edit', editData);
       setEditingId(null);
       setEditData({});
       await refresh();
@@ -110,22 +110,22 @@ export function DistillReviewPanel({ onRefresh }: DistillReviewPanelProps): JSX.
     try {
       // V2.1: 优先走 pipeline retry（自动整理 + 写入 Obsidian）
       const output = outputs.find((o) => o.id === outputId);
-      if (output?.sourceItemId && window.pinmind?.pipeline) {
-        const result = await window.pinmind.pipeline.retryExport(output.sourceItemId);
+      if (output?.sourceItemId && window.acmind?.pipeline) {
+        const result = await window.acmind.pipeline.retryExport(output.sourceItemId);
         if (result.success) {
           setActionMessage('已写入 Obsidian。');
           onRefresh?.();
-          window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'export' }));
+          window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: 'export' }));
           return;
         }
         // Pipeline retry failed, fall through to legacy export
       }
 
       // Fallback: legacy export.single
-      await window.pinmind.export.single(outputId);
+      await window.acmind.export.single(outputId);
       setActionMessage('已写入 Obsidian。');
       onRefresh?.();
-      window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'export' }));
+      window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: 'export' }));
     } catch (error) {
       setActionMessage(error instanceof Error ? error.message : '写入 Obsidian 失败，请先检查知识库设置。');
       onRefresh?.();
@@ -154,7 +154,7 @@ export function DistillReviewPanel({ onRefresh }: DistillReviewPanelProps): JSX.
             description="先运行批量整理，生成可审阅的 AI 结果。"
             action={{
               label: '去整理',
-              onClick: () => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: 'distill' })),
+              onClick: () => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: 'distill' })),
             }}
           />
         ) : (

@@ -1,4 +1,4 @@
-// PinMind File Strategy
+// AcMind File Strategy
 // Phase 8.1: 本地文件导入
 
 import type { SourceType } from '../../../../shared/types';

@@ -1,4 +1,4 @@
-// PinMind Content Pipeline Service
+// AcMind Content Pipeline Service
 // Phase 1-2: Entry point for the content pipeline and state machine
 
 export { contentPipeline } from './contentPipelineService';

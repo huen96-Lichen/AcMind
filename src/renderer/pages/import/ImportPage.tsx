@@ -23,7 +23,7 @@ export function ImportPage(): JSX.Element {
     try {
       setLoading(true);
       setError(null);
-      const result = await window.pinmind.export.history({});
+      const result = await window.acmind.export.history({});
       setRecords(result);
     } catch (err) {
       setError('加载失败，请稍后重试。');
@@ -37,7 +37,7 @@ export function ImportPage(): JSX.Element {
   }, [loadRecords]);
 
   useEffect(() => {
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadRecords();
     });
     return unsubscribe;
@@ -141,7 +141,7 @@ export function ImportPage(): JSX.Element {
             description="整理后会出现在这里"
             action={{
               label: '去整理',
-              onClick: () => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'distill' } })),
+              onClick: () => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'distill' } })),
             }}
           />
         ) : (
@@ -176,7 +176,7 @@ export function ImportPage(): JSX.Element {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.pinmind.export.revealInVault(record.vaultPath)}
+                      onClick={() => window.acmind.export.revealInVault(record.vaultPath)}
                     >
                       打开文件
                     </Button>
@@ -185,7 +185,7 @@ export function ImportPage(): JSX.Element {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'distill' } }))}
+                      onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'distill' } }))}
                     >
                       重新入库
                     </Button>

@@ -1,4 +1,4 @@
-// PinMind Vault Importer
+// AcMind Vault Importer
 // Unified entry point for Vault import functionality
 
 import type { ImportOptions, ImportTask, ScannedVaultFile } from '../../../shared/types';

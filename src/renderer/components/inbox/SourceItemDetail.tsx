@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AiOperation, SourceItem } from '../../../shared/types';
 import { ScrollContainer } from '../shared/ScrollContainer';
+import { useAI } from '../../hooks/useAI';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -82,7 +83,7 @@ function getDirectory(path: string): string {
 
 /**
  * Shorten path for display in metadata:
- * ~/PinMind/sources/2026-04-27/5f6c0f8d...1266.png
+ * ~/AcMind/sources/2026-04-27/5f6c0f8d...1266.png
  */
 function shortenPath(fullPath: string): string {
   let path = fullPath.replace(/^\/Users\/[^/]+/, '~');
@@ -117,8 +118,8 @@ function ImagePreview({ contentPath }: { contentPath: string }) {
     const loadImage = async () => {
       try {
         const win = window as any;
-        if (win.pinmind?.sourceItems?.readImage) {
-          const result = await win.pinmind.sourceItems.readImage(contentPath);
+        if (win.acmind?.sourceItems?.readImage) {
+          const result = await win.acmind.sourceItems.readImage(contentPath);
           if (mountedRef.current && result) {
             setSrc(result);
             setLoading(false);
@@ -145,17 +146,17 @@ function ImagePreview({ contentPath }: { contentPath: string }) {
   }, [contentPath]);
 
   return (
-    <div className="pinmind-detail-image-section">
+    <div className="acmind-detail-image-section">
       {/* Image Preview Area */}
-      <div className="pinmind-detail-image-preview-area">
+      <div className="acmind-detail-image-preview-area">
         {loading && (
-          <div className="pinmind-detail-image-loading">
-            <span className="pinmind-detail-image-loading-spinner" />
+          <div className="acmind-detail-image-loading">
+            <span className="acmind-detail-image-loading-spinner" />
             <span style={{ color: 'var(--pm-text-tertiary)', fontSize: 12 }}>加载中...</span>
           </div>
         )}
         {loadError && (
-          <div className="pinmind-detail-image-error">
+          <div className="acmind-detail-image-error">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'var(--pm-text-tertiary)' }}>
               <rect x="3" y="3" width="22" height="22" rx="4" stroke="currentColor" strokeWidth="1.4" />
               <circle cx="10" cy="10.5" r="2" stroke="currentColor" strokeWidth="1.2" />
@@ -166,7 +167,7 @@ function ImagePreview({ contentPath }: { contentPath: string }) {
         )}
         {!loading && !loadError && src && (
           <img
-            className="pinmind-detail-image-preview-img"
+            className="acmind-detail-image-preview-img"
             src={src}
             alt="图片预览"
             onError={() => setLoadError(true)}
@@ -175,27 +176,27 @@ function ImagePreview({ contentPath }: { contentPath: string }) {
       </div>
 
       {/* File Info (below preview) */}
-      <div className="pinmind-detail-image-fileinfo">
-        <div className="pinmind-detail-image-fileinfo-row">
-          <span className="pinmind-detail-image-fileinfo-label">文件名</span>
-          <span className="pinmind-detail-image-fileinfo-value font-mono">{getFileName(contentPath)}</span>
+      <div className="acmind-detail-image-fileinfo">
+        <div className="acmind-detail-image-fileinfo-row">
+          <span className="acmind-detail-image-fileinfo-label">文件名</span>
+          <span className="acmind-detail-image-fileinfo-value font-mono">{getFileName(contentPath)}</span>
         </div>
-        <div className="pinmind-detail-image-fileinfo-row">
-          <span className="pinmind-detail-image-fileinfo-label">位置</span>
-          <span className="pinmind-detail-image-fileinfo-value font-mono">{getDirectory(contentPath)}/</span>
+        <div className="acmind-detail-image-fileinfo-row">
+          <span className="acmind-detail-image-fileinfo-label">位置</span>
+          <span className="acmind-detail-image-fileinfo-value font-mono">{getDirectory(contentPath)}/</span>
         </div>
-        <div className="pinmind-detail-image-fileinfo-row">
-          <span className="pinmind-detail-image-fileinfo-label">完整路径</span>
-          <span className="pinmind-detail-image-fileinfo-value">
+        <div className="acmind-detail-image-fileinfo-row">
+          <span className="acmind-detail-image-fileinfo-label">完整路径</span>
+          <span className="acmind-detail-image-fileinfo-value">
             <button
               type="button"
-              className="pinmind-detail-path-toggle"
+              className="acmind-detail-path-toggle"
               onClick={() => setShowFullPath(!showFullPath)}
             >
               {showFullPath ? '收起 ▲' : '点击展开 ▼'}
             </button>
             {showFullPath && (
-              <span className="font-mono pinmind-detail-full-path">{contentPath}</span>
+              <span className="font-mono acmind-detail-full-path">{contentPath}</span>
             )}
           </span>
         </div>
@@ -216,6 +217,11 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
   const [deleting, setDeleting] = useState(false);
   const [distillStatus, setDistillStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [distillMessage, setDistillMessage] = useState<string | null>(null);
+  const [showAiMenu, setShowAiMenu] = useState(false);
+  const [aiRunning, setAiRunning] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const aiMenuRef = useRef<HTMLDivElement>(null);
+  const { actions, runAction } = useAI();
 
   const handleDelete = useCallback(async () => {
     if (!item) return;
@@ -235,7 +241,7 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
     setDistillMessage(null);
 
     try {
-      const tasks = await window.pinmind.distill.run([item.id], DEFAULT_DISTILL_OPERATIONS);
+      const tasks = await window.acmind.distill.run([item.id], DEFAULT_DISTILL_OPERATIONS);
       setDistillStatus('done');
       setDistillMessage(
         tasks.length > 0
@@ -248,11 +254,50 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
     }
   }, [item]);
 
+  // Close AI menu on outside click
+  useEffect(() => {
+    if (!showAiMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (aiMenuRef.current && !aiMenuRef.current.contains(e.target as Node)) {
+        setShowAiMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAiMenu]);
+
+  const handleAiAction = useCallback(async (actionId: string) => {
+    if (!item) return;
+    setShowAiMenu(false);
+    setAiRunning(true);
+    setAiResult(null);
+    try {
+      const input = item.previewText || item.ocrText || item.originalUrl || '';
+      if (!input) {
+        setAiResult('无可用文本内容');
+        return;
+      }
+      const result = await runAction(actionId, input, item.type as any);
+      if (result.success && result.content) {
+        setAiResult(result.content.summary || result.content.body_markdown || 'AI 处理完成');
+      } else {
+        setAiResult(result.error || 'AI 处理失败');
+      }
+    } catch (err) {
+      setAiResult(err instanceof Error ? err.message : 'AI 处理失败');
+    } finally {
+      setAiRunning(false);
+    }
+  }, [item, runAction]);
+
+  // Filter actions applicable to current item type
+  const applicableActions = actions.filter(a => a.enabled && (!a.inputTypes.length || a.inputTypes.includes(item?.type as any)));
+
   // ── Empty state ──
 
   if (!item) {
     return (
-      <div className="pinmind-inbox-detail pinmind-detail-empty">
+      <div className="acmind-inbox-detail acmind-detail-empty">
         <div className="flex flex-col items-center justify-center h-full gap-3">
           <svg
             width="40"
@@ -305,7 +350,7 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
   const contentText = item.previewText || item.ocrText || item.originalUrl || '';
 
   return (
-    <div className="pinmind-inbox-detail">
+    <div className="acmind-inbox-detail">
       <ScrollContainer className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
@@ -317,7 +362,7 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
               {'记录详情'}
             </h3>
             {item.type === 'image' && (
-              <span className="pinmind-media-badge pinmind-media-badge-image">图片</span>
+              <span className="acmind-media-badge acmind-media-badge-image">图片</span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -325,15 +370,46 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
               type="button"
               onClick={() => void handleDistill()}
               disabled={distillStatus === 'running'}
-              className="pinmind-btn pinmind-btn-secondary motion-button text-[12px]"
+              className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
             >
               {distillStatus === 'running' ? '整理中...' : '开始整理'}
             </button>
+            <div className="relative" ref={aiMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowAiMenu(!showAiMenu)}
+                disabled={aiRunning || applicableActions.length === 0}
+                className="acmind-btn acmind-btn-secondary motion-button text-[12px]"
+              >
+                {aiRunning ? '处理中...' : 'AI 动作'}
+              </button>
+              {showAiMenu && applicableActions.length > 0 && (
+                <div
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-lg border py-1 shadow-lg"
+                  style={{
+                    background: 'var(--pm-bg-surface)',
+                    borderColor: 'var(--pm-border-subtle)',
+                  }}
+                >
+                  {applicableActions.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      className="block w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--pm-bg-elevated)]"
+                      style={{ color: 'var(--pm-text-primary)' }}
+                      onClick={() => void handleAiAction(action.id)}
+                    >
+                      {action.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {!confirmDelete ? (
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="pinmind-btn pinmind-btn-ghost pinmind-btn-danger motion-button text-[12px]"
+                className="acmind-btn acmind-btn-ghost acmind-btn-danger motion-button text-[12px]"
               >
                 {'删除'}
               </button>
@@ -346,7 +422,7 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="pinmind-btn pinmind-btn-primary motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-primary motion-button text-[12px]"
                   style={{
                     background: 'var(--pm-status-danger)',
                     borderColor: 'var(--pm-status-danger)',
@@ -358,7 +434,7 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="pinmind-btn pinmind-btn-ghost motion-button text-[12px]"
+                  className="acmind-btn acmind-btn-ghost motion-button text-[12px]"
                 >
                   {'取消'}
                 </button>
@@ -402,16 +478,36 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
           </div>
         )}
 
+        {aiResult && (
+          <div
+            className="mb-5 flex items-start justify-between gap-3 rounded-[8px] border px-3 py-2.5 text-[12px]"
+            style={{
+              borderColor: 'var(--pm-brand)',
+              background: 'var(--pm-brand-soft)',
+              color: 'var(--pm-text-primary)',
+            }}
+          >
+            <span className="min-w-0 flex-1 whitespace-pre-wrap">{aiResult}</span>
+            <button
+              type="button"
+              className="shrink-0 text-[11px] opacity-70 hover:opacity-100"
+              onClick={() => setAiResult(null)}
+            >
+              关闭
+            </button>
+          </div>
+        )}
+
         {/* Content Section */}
-        <div className="pinmind-detail-section mb-5">
-          <h4 className="pinmind-field-label mb-2">
+        <div className="acmind-detail-section mb-5">
+          <h4 className="acmind-field-label mb-2">
             {item.type === 'image' ? '内容预览' : '内容'}
           </h4>
           {item.type === 'image' ? (
             <ImagePreview contentPath={item.contentPath} />
           ) : (
             <div
-              className="pinmind-detail-content-text"
+              className="acmind-detail-content-text"
               style={{ color: 'var(--pm-text-primary)' }}
             >
               {contentText || '无内容'}
@@ -420,11 +516,11 @@ export function SourceItemDetail({ item, onDelete }: SourceItemDetailProps): JSX
         </div>
 
         {/* Metadata */}
-        <div className="pinmind-detail-section">
-          <h4 className="pinmind-field-label mb-3">
+        <div className="acmind-detail-section">
+          <h4 className="acmind-field-label mb-3">
             {'元数据'}
           </h4>
-          <div className="pinmind-detail-meta-grid">
+          <div className="acmind-detail-meta-grid">
             <MetaRow label={'来源应用'} value={item.sourceApp || '-'} />
             <MetaRow label={'捕获方式'} value={getSourceLabel(item.source)} />
             <MetaRow label={'内容类型'} value={getTypeLabel(item.type)} />
@@ -458,10 +554,10 @@ function MetaRow({
   mono?: boolean;
 }): JSX.Element {
   return (
-    <div className="pinmind-detail-meta-row">
-      <span className="pinmind-detail-meta-label">{label}</span>
+    <div className="acmind-detail-meta-row">
+      <span className="acmind-detail-meta-label">{label}</span>
       <span
-        className={`pinmind-detail-meta-value ${mono ? 'font-mono' : ''}`}
+        className={`acmind-detail-meta-value ${mono ? 'font-mono' : ''}`}
         style={{ color: 'var(--pm-text-primary)' }}
       >
         {value}

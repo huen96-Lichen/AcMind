@@ -1,4 +1,4 @@
-# PinMind WORKLOG
+# AcMind WORKLOG
 
 工作记录，按日期追加。
 
@@ -6,7 +6,7 @@
 
 ### Phase 11：个人知识流日常使用闭环
 
-**目标**：让 PinMind 从后台处理器变成每日知识流仪表盘，用户打开即可知道今天知识流发生了什么。
+**目标**：让 AcMind 从后台处理器变成每日知识流仪表盘，用户打开即可知道今天知识流发生了什么。
 
 **新增文件**：
 1. `src/shared/daily-flow-types.ts` — Phase 11 类型定义
@@ -43,12 +43,12 @@
 
 **Phase 11 Round 2 修复**：
 1. `handleFlowAction` 接入真实业务逻辑：
-   - `open_obsidian_file` → `window.pinmind.app.openPath(output_path)`
-   - `open_detail` → dispatch `pinmind:navigate` 到 edit 页
-   - `retry` → `window.pinmind.distill.bridgeAndRun(id, ['summarize'])`
-   - `open_source` → dispatch `pinmind:navigate` 到 capture-inbox
-   - `configure_settings` → dispatch `pinmind:navigate` 到 settings
-   - `ignore` → `window.pinmind.errors.dismiss(errorId)` 关闭关联错误记录
+   - `open_obsidian_file` → `window.acmind.app.openPath(output_path)`
+   - `open_detail` → dispatch `acmind:navigate` 到 edit 页
+   - `retry` → `window.acmind.distill.bridgeAndRun(id, ['summarize'])`
+   - `open_source` → dispatch `acmind:navigate` 到 capture-inbox
+   - `configure_settings` → dispatch `acmind:navigate` 到 settings
+   - `ignore` → `window.acmind.errors.dismiss(errorId)` 关闭关联错误记录
 2. 数据口径对齐：`daily-flow-types.ts` 顶部增加口径映射表
    - CaptureRecord → CaptureItem（capture_items 表）
    - SourceItem → SourceItem（source_items 表）
@@ -63,7 +63,7 @@
 
 ### Phase 10：语音输入与录音工作流产品化
 
-**目标**：让 PinMind 支持低摩擦语音输入，形成录音→转写→整理→Obsidian 完整链路。
+**目标**：让 AcMind 支持低摩擦语音输入，形成录音→转写→整理→Obsidian 完整链路。
 
 **新增文件**：
 1. `src/main/services/capture/voiceWatchService.ts` — 语音监听文件夹服务
@@ -138,7 +138,7 @@
 6. **组件级对齐与 Switch 偏移已修复** — 设置项组件对齐统一，Switch 控件位置正确
 7. **后续只保留 P3 polish 项** — 不进入当前迭代，除非发现明确功能 bug
 
-**下一阶段重点**：PinMind 主链路 — 收集箱 → AI 处理 → 二级整理 → 导出 Obsidian
+**下一阶段重点**：AcMind 主链路 — 收集箱 → AI 处理 → 二级整理 → 导出 Obsidian
 
 ### Phase 2：审阅页产品化（第一轮）
 
@@ -311,7 +311,7 @@
 - 新增 `review_events`、`knowledge_cards`、`knowledge_edges`、`training_examples`、`dataset_snapshots`、`training_runs`、`eval_runs`、`model_versions` 数据模型和对应 IPC/preload 面
 - 新增只读知识图谱页，接入侧边栏与主路由
 - 在 `AI Console` 增加训练侧 tab，用于数据集快照、训练运行、模型版本的展示与基础操作
-- 新增独立 `training/` 目录和 `pinmind-trainer` CLI 骨架，支持 snapshot validate / train / eval / package 的 stub 流程
+- 新增独立 `training/` 目录和 `acmind-trainer` CLI 骨架，支持 snapshot validate / train / eval / package 的 stub 流程
 - 补齐训练样本示例与 trainer contract 文档
 
 ### 验证

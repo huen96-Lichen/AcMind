@@ -10,6 +10,8 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { logger } from '../../logger';
 
 const execFileAsync = promisify(execFile);
@@ -174,4 +176,131 @@ export async function convertUrlToMarkdown(url: string): Promise<MarkItDownResul
  */
 export async function checkMarkItDownAvailability(): Promise<boolean> {
   return isMarkItDownAvailable();
+}
+
+// ─── Phase 3: Local file conversion ─────────────────────────────────────────
+
+const SUPPORTED_EXTENSIONS = new Set([
+  '.pdf', '.docx', '.pptx', '.html', '.htm', '.txt', '.md', '.markdown',
+]);
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+/**
+ * Convert a local file to Markdown.
+ * Tries markitdown CLI first, falls back to built-in parsers.
+ */
+export async function convertFileToMarkdown(filePath: string): Promise<MarkItDownResult> {
+  // Validate file
+  if (!existsSync(filePath)) {
+    return { success: false, error: '文件不存在', engine: 'fallback' };
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  if (!SUPPORTED_EXTENSIONS.has(ext)) {
+    return { success: false, error: `不支持的文件格式: ${ext}`, engine: 'fallback' };
+  }
+
+  // Check file size
+  try {
+    const stat = require('fs').statSync(filePath);
+    if (stat.size > MAX_FILE_SIZE) {
+      return { success: false, error: `文件过大 (${Math.round(stat.size / 1024 / 1024)}MB)，最大支持 50MB`, engine: 'fallback' };
+    }
+  } catch {
+    // ignore stat errors, let the parser handle it
+  }
+
+  // For plain text / markdown, just read the file
+  if (ext === '.txt' || ext === '.md' || ext === '.markdown') {
+    try {
+      const content = readFileSync(filePath, 'utf-8');
+      if (!content.trim()) {
+        return { success: false, error: '文件内容为空', engine: 'fallback' };
+      }
+      const titleMatch = content.match(/^#\s+(.+)$/m);
+      const title = titleMatch ? titleMatch[1].trim() : path.basename(filePath, ext);
+      return { success: true, markdown: content, title, engine: 'fallback' };
+    } catch (err) {
+      return { success: false, error: `读取文件失败: ${err instanceof Error ? err.message : String(err)}`, engine: 'fallback' };
+    }
+  }
+
+  // Try Python markitdown first
+  const pythonAvailable = await isMarkItDownAvailable();
+  if (pythonAvailable) {
+    const result = await convertViaPython(filePath, 60_000); // 60s for local files
+    if (result.success) return result;
+    logger.warn('app', 'markitdown', 'convertFile', 'Python markitdown failed for file, trying fallback', {
+      filePath,
+      error: result.error,
+    });
+  }
+
+  // Fallback to built-in parsers
+  return convertFileViaFallback(filePath, ext);
+}
+
+/**
+ * Fallback: use built-in parsers for local files.
+ */
+async function convertFileViaFallback(filePath: string, ext: string): Promise<MarkItDownResult> {
+  try {
+    if (ext === '.pdf') {
+      const { parsePdf } = await import('./pdfParser');
+      const buffer = readFileSync(filePath);
+      const result = await parsePdf(buffer);
+      if (!result.success || !result.document) {
+        return { success: false, error: result.error || 'PDF 解析失败', engine: 'fallback' };
+      }
+      return {
+        success: true,
+        markdown: result.document.content,
+        title: result.document.title,
+        engine: 'fallback',
+      };
+    }
+
+    if (ext === '.docx') {
+      const { parseDocx } = await import('./docxParser');
+      const buffer = readFileSync(filePath);
+      const result = await parseDocx(buffer);
+      if (!result.success || !result.document) {
+        return { success: false, error: result.error || 'DOCX 解析失败', engine: 'fallback' };
+      }
+      return {
+        success: true,
+        markdown: result.document.content,
+        title: result.document.title,
+        engine: 'fallback',
+      };
+    }
+
+    if (ext === '.html' || ext === '.htm') {
+      // Use webParser for local HTML files
+      const { parseWebpage } = await import('./webParser');
+      const fileUrl = `file://${filePath}`;
+      const result = await parseWebpage(fileUrl);
+      if (!result.success || !result.document) {
+        return { success: false, error: result.error || 'HTML 解析失败', engine: 'fallback' };
+      }
+      return {
+        success: true,
+        markdown: result.document.content,
+        title: result.document.title,
+        engine: 'fallback',
+      };
+    }
+
+    // PPTX: not supported by built-in parsers
+    if (ext === '.pptx') {
+      return { success: false, error: 'PPTX 解析需要安装 Python markitdown (pip install markitdown)', engine: 'fallback' };
+    }
+
+    return { success: false, error: `不支持的文件格式: ${ext}`, engine: 'fallback' };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('app', 'markitdown', 'convertFileFallback', 'Fallback file conversion failed', { filePath, error: message });
+    return { success: false, error: `文件转换失败: ${message}`, engine: 'fallback' };
+  }
 }

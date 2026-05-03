@@ -92,7 +92,7 @@ export function ResultCard({
 
   return (
     <div
-      className="pinmind-source-card motion-button"
+      className="acmind-source-card motion-button"
       style={{
         borderRadius: '14px',
         border: '1px solid rgba(31, 41, 51, 0.06)',
@@ -220,7 +220,7 @@ export function ResultCard({
             type="button"
             onClick={() => onOpenInObsidian(record.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#16A34A', fontSize: '12px', padding: '3px 8px', fontWeight: 500 }}
           >
             <PinStackIcon name="sb-obsidian" size={12} style={{ marginRight: '4px' }} />
@@ -233,7 +233,7 @@ export function ResultCard({
             type="button"
             onClick={() => onRetry(record.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#EF4444', fontSize: '12px', padding: '3px 8px', fontWeight: 500 }}
           >
             重试写入 Obsidian
@@ -245,7 +245,7 @@ export function ResultCard({
             type="button"
             onClick={() => onRetry(record.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#F59E0B', fontSize: '12px', padding: '3px 8px', fontWeight: 500 }}
           >
             重新写入
@@ -257,7 +257,7 @@ export function ResultCard({
           <button
             type="button"
             onClick={() => onViewOriginal(sourceItem.id)}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: 'var(--pm-text-tertiary)', fontSize: '11px', padding: '3px 8px' }}
           >
             查看原文
@@ -268,9 +268,9 @@ export function ResultCard({
           <button
             type="button"
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'edit', itemId: sourceItem.id } }));
+              window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'edit', itemId: sourceItem.id } }));
             }}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: 'var(--pm-text-tertiary)', fontSize: '11px', padding: '3px 8px' }}
           >
             重新生成

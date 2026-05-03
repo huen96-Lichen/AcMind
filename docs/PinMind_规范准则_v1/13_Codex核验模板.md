@@ -1,8 +1,8 @@
-# PinMind Codex 核验模板
+# AcMind Codex 核验模板
 
 > 使用方式：每次 Trae 完成任务后，把任务说明、Trae 交付报告和本模板一起交给 Codex。
 
-# PinMind vX.X.X Codex 核验请求
+# AcMind vX.X.X Codex 核验请求
 
 ## 一、核验目标
 

@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import type {
@@ -24,6 +24,15 @@ import type {
   CaptureItem,
   CaptureItemStatus,
   CaptureItemListFilter,
+  AssetFile,
+  ClipboardItem,
+  ShelfItem,
+  AIAction,
+  PinItem,
+  PinItemListFilter,
+  SourceItemSource,
+  ProcessJob,
+  DistilledNote,
 } from '../shared/types';
 import { logger } from './logger';
 
@@ -31,7 +40,7 @@ import { logger } from './logger';
 // Schema definitions
 // ---------------------------------------------------------------------------
 
-const CURRENT_SCHEMA_VERSION = 13;
+const CURRENT_SCHEMA_VERSION = 18;
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS source_items (
@@ -385,7 +394,21 @@ class StorageService {
   init(storageRoot: string): void {
     this.storageRoot = storageRoot;
 
-    const dbPath = path.join(storageRoot, 'pinmind.db');
+    const dbPath = path.join(storageRoot, 'acmind.db');
+
+    // Migration: rename legacy pinmind.db → acmind.db if it exists and acmind.db doesn't yet
+    const legacyDbPath = path.join(storageRoot, 'pinmind.db');
+    try {
+      if (existsSync(legacyDbPath) && !existsSync(dbPath)) {
+        renameSync(legacyDbPath, dbPath);
+        logger.info('app', 'storage', 'migrate-db', 'Renamed legacy pinmind.db → acmind.db');
+      }
+    } catch (err) {
+      logger.warn('app', 'storage', 'migrate-db', 'Failed to rename legacy DB, will create new', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     this.dbPathValue = dbPath;
 
     this._db = new Database(dbPath);
@@ -736,6 +759,179 @@ class StorageService {
             // Column may already exist, ignore
           }
         }
+        if (currentVersion < 14) {
+          // Phase 0: AcMind 统一数据模型 — 新增 4 张表
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS asset_files (
+              id TEXT PRIMARY KEY,
+              source_item_id TEXT,
+              kind TEXT NOT NULL DEFAULT 'other',
+              original_name TEXT,
+              local_path TEXT NOT NULL DEFAULT '',
+              mime_type TEXT,
+              size_bytes INTEGER,
+              sha256 TEXT,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              metadata TEXT,
+              FOREIGN KEY (source_item_id) REFERENCES source_items(id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_asset_files_source_item_id ON asset_files(source_item_id);
+            CREATE INDEX IF NOT EXISTS idx_asset_files_kind ON asset_files(kind);
+
+            CREATE TABLE IF NOT EXISTS clipboard_items (
+              id TEXT PRIMARY KEY,
+              source_item_id TEXT,
+              content_type TEXT NOT NULL DEFAULT 'text',
+              text TEXT,
+              asset_file_ids TEXT,
+              source_app TEXT,
+              is_sensitive INTEGER NOT NULL DEFAULT 0,
+              is_pinned INTEGER NOT NULL DEFAULT 0,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              FOREIGN KEY (source_item_id) REFERENCES source_items(id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_clipboard_items_created_at ON clipboard_items(created_at);
+            CREATE INDEX IF NOT EXISTS idx_clipboard_items_content_type ON clipboard_items(content_type);
+            CREATE INDEX IF NOT EXISTS idx_clipboard_items_is_pinned ON clipboard_items(is_pinned);
+
+            CREATE TABLE IF NOT EXISTS shelf_items (
+              id TEXT PRIMARY KEY,
+              source_item_id TEXT,
+              asset_file_ids TEXT NOT NULL DEFAULT '[]',
+              label TEXT,
+              origin TEXT,
+              status TEXT NOT NULL DEFAULT 'temporary',
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              FOREIGN KEY (source_item_id) REFERENCES source_items(id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_shelf_items_status ON shelf_items(status);
+            CREATE INDEX IF NOT EXISTS idx_shelf_items_created_at ON shelf_items(created_at);
+
+            CREATE TABLE IF NOT EXISTS ai_actions (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL DEFAULT '',
+              input_types TEXT NOT NULL DEFAULT '[]',
+              action_type TEXT NOT NULL DEFAULT 'custom',
+              prompt_profile_id TEXT,
+              enabled INTEGER NOT NULL DEFAULT 1,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+            );
+            CREATE INDEX IF NOT EXISTS idx_ai_actions_enabled ON ai_actions(enabled);
+
+            CREATE TABLE IF NOT EXISTS pin_pool_items (
+              id TEXT PRIMARY KEY,
+              capture_item_id TEXT NOT NULL DEFAULT '',
+              original_id TEXT NOT NULL DEFAULT '',
+              source_type TEXT NOT NULL DEFAULT 'clipboard_text',
+              title TEXT NOT NULL DEFAULT '',
+              preview_text TEXT,
+              raw_text TEXT,
+              raw_file_path TEXT,
+              status TEXT NOT NULL DEFAULT 'pinned',
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              pinned_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              prefilter_result TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_pin_pool_items_status ON pin_pool_items(status);
+            CREATE INDEX IF NOT EXISTS idx_pin_pool_items_created_at ON pin_pool_items(created_at);
+            CREATE INDEX IF NOT EXISTS idx_pin_pool_items_original_id ON pin_pool_items(original_id);
+          `);
+        }
+
+        // v15: process_jobs table
+        if (currentVersion < 15) {
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS process_jobs (
+              id TEXT PRIMARY KEY,
+              type TEXT NOT NULL DEFAULT 'markitdown',
+              source_item_id TEXT,
+              asset_file_ids TEXT NOT NULL DEFAULT '[]',
+              status TEXT NOT NULL DEFAULT 'queued',
+              progress INTEGER DEFAULT 0,
+              error_message TEXT,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              started_at INTEGER,
+              completed_at INTEGER,
+              metadata TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_process_jobs_status ON process_jobs(status);
+            CREATE INDEX IF NOT EXISTS idx_process_jobs_type ON process_jobs(type);
+            CREATE INDEX IF NOT EXISTS idx_process_jobs_created_at ON process_jobs(created_at);
+          `);
+        }
+
+        if (currentVersion < 16) {
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS distilled_notes (
+              id TEXT PRIMARY KEY,
+              source_item_ids TEXT NOT NULL DEFAULT '[]',
+              title TEXT NOT NULL DEFAULT '',
+              summary TEXT NOT NULL DEFAULT '',
+              tags TEXT NOT NULL DEFAULT '[]',
+              suggested_folder TEXT,
+              body_markdown TEXT NOT NULL DEFAULT '',
+              quality_flags TEXT NOT NULL DEFAULT '[]',
+              model_provider TEXT,
+              model_name TEXT,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              metadata TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_distilled_notes_created_at ON distilled_notes(created_at);
+          `);
+        }
+
+        if (currentVersion < 17) {
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS knowledge_projects (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              status TEXT NOT NULL DEFAULT 'active',
+              color TEXT,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+            );
+            CREATE TABLE IF NOT EXISTS project_items (
+              id TEXT PRIMARY KEY,
+              project_id TEXT NOT NULL REFERENCES knowledge_projects(id) ON DELETE CASCADE,
+              item_type TEXT NOT NULL,
+              item_id TEXT NOT NULL,
+              added_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              UNIQUE(project_id, item_type, item_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_project_items_project ON project_items(project_id);
+            CREATE TABLE IF NOT EXISTS datasets (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              purpose TEXT NOT NULL DEFAULT 'archive',
+              status TEXT NOT NULL DEFAULT 'draft',
+              item_count INTEGER NOT NULL DEFAULT 0,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+            );
+            CREATE TABLE IF NOT EXISTS dataset_items (
+              id TEXT PRIMARY KEY,
+              dataset_id TEXT NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
+              source_type TEXT NOT NULL,
+              source_id TEXT NOT NULL,
+              title TEXT,
+              content TEXT,
+              quality TEXT NOT NULL DEFAULT 'medium',
+              privacy_level TEXT NOT NULL DEFAULT 'private',
+              included INTEGER NOT NULL DEFAULT 1,
+              reason TEXT,
+              created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+              updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+            );
+            CREATE INDEX IF NOT EXISTS idx_dataset_items_dataset ON dataset_items(dataset_id);
+          `);
+        }
 
         db.prepare(
           'INSERT OR REPLACE INTO _migration (version) VALUES (?)',
@@ -744,6 +940,19 @@ class StorageService {
 
       migrate();
       logger.info('app', 'storage', 'migrate', `Migrated from v${currentVersion} to v${CURRENT_SCHEMA_VERSION}`);
+
+      // v18: one-time legacy contentPath migration (runs outside transaction)
+      if (currentVersion < 18) {
+        import('./migrateLegacyContent').then(({ migrateLegacyContentPath }) => {
+          try {
+            migrateLegacyContentPath();
+          } catch (error) {
+            logger.error('app', 'storage', 'migrate', 'v18 legacy content migration failed', {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        });
+      }
     }
 
     // Defensive schema reconciliation. Some older migrations used a non-constant
@@ -988,14 +1197,27 @@ class StorageService {
   // SourceItem CRUD
   // -------------------------------------------------------------------------
 
-  getSourceItems(filter?: { status?: SourceItemStatus; limit?: number; offset?: number }): SourceItem[] {
+  getSourceItems(filter?: { status?: SourceItemStatus; type?: string; source?: SourceItemSource; limit?: number; offset?: number }): SourceItem[] {
     const db = this._db!;
     let sql = 'SELECT * FROM source_items';
     const params: unknown[] = [];
+    const conditions: string[] = [];
 
     if (filter?.status) {
-      sql += ' WHERE status = ?';
+      conditions.push('status = ?');
       params.push(filter.status);
+    }
+    if (filter?.type) {
+      conditions.push('type = ?');
+      params.push(filter.type);
+    }
+    if (filter?.source) {
+      conditions.push('source = ?');
+      params.push(filter.source);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
     }
 
     sql += ' ORDER BY created_at DESC';
@@ -1134,7 +1356,7 @@ class StorageService {
       id: sourceId,
       captureItemId,
       type: sourceType,
-      source: sourceType === 'image' ? 'manual' : 'manual',
+      source: mapCaptureTypeToSource(captureItem.type),
       contentPath,
       contentHash,
       previewText: captureItem.title || contentText.slice(0, 240) || captureItem.userNote || '',
@@ -1942,7 +2164,7 @@ class StorageService {
     });
   }
 
-  getExportRecords(filter?: { sourceItemId?: string; status?: string; limit?: number }): ExportRecord[] {
+  getExportRecords(filter?: { sourceItemId?: string; distilledOutputId?: string; status?: string; limit?: number }): ExportRecord[] {
     const db = this._db!;
     let sql = 'SELECT * FROM export_records';
     const params: unknown[] = [];
@@ -1951,6 +2173,10 @@ class StorageService {
     if (filter?.sourceItemId) {
       conditions.push('source_item_id = ?');
       params.push(filter.sourceItemId);
+    }
+    if (filter?.distilledOutputId) {
+      conditions.push('distilled_output_id = ?');
+      params.push(filter.distilledOutputId);
     }
     if (filter?.status) {
       conditions.push('status = ?');
@@ -2657,6 +2883,837 @@ class StorageService {
 
     const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
     return rows.map(this.rowToDistilledOutput);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Phase 0: AcMind 新表 CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ─── AssetFile ──────────────────────────────────────────────
+
+  insertAssetFile(file: AssetFile): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO asset_files (id, source_item_id, kind, original_name, local_path, mime_type, size_bytes, sha256, created_at, metadata)
+      VALUES (@id, @source_item_id, @kind, @original_name, @local_path, @mime_type, @size_bytes, @sha256, @created_at, @metadata)
+    `).run({
+      id: file.id,
+      source_item_id: file.sourceItemId ?? null,
+      kind: file.kind,
+      original_name: file.originalName ?? null,
+      local_path: file.localPath,
+      mime_type: file.mimeType ?? null,
+      size_bytes: file.sizeBytes ?? null,
+      sha256: file.sha256 ?? null,
+      created_at: file.createdAt,
+      metadata: file.metadata ? JSON.stringify(file.metadata) : null,
+    });
+  }
+
+  getAssetFile(id: string): AssetFile | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM asset_files WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToAssetFile(row) : null;
+  }
+
+  listAssetFilesBySourceItem(sourceItemId: string): AssetFile[] {
+    const db = this._db!;
+    const rows = db.prepare('SELECT * FROM asset_files WHERE source_item_id = ? ORDER BY created_at DESC').all(sourceItemId) as Record<string, unknown>[];
+    return rows.map(this.rowToAssetFile);
+  }
+
+  deleteAssetFile(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM asset_files WHERE id = ?').run(id);
+  }
+
+  updateAssetFileSourceItemId(id: string, sourceItemId: string): void {
+    const db = this._db!;
+    db.prepare('UPDATE asset_files SET source_item_id = ? WHERE id = ?').run(sourceItemId, id);
+  }
+
+  private rowToAssetFile(row: Record<string, unknown>): AssetFile {
+    return {
+      id: row.id as string,
+      sourceItemId: (row.source_item_id as string) ?? undefined,
+      kind: row.kind as AssetFile['kind'],
+      originalName: (row.original_name as string) ?? undefined,
+      localPath: row.local_path as string,
+      mimeType: (row.mime_type as string) ?? undefined,
+      sizeBytes: (row.size_bytes as number) ?? undefined,
+      sha256: (row.sha256 as string) ?? undefined,
+      createdAt: row.created_at as number,
+      metadata: parseJson(row.metadata as string | null, undefined),
+    };
+  }
+
+  // ─── ClipboardItem ──────────────────────────────────────────
+
+  insertClipboardItem(item: ClipboardItem): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO clipboard_items (id, source_item_id, content_type, text, asset_file_ids, source_app, is_sensitive, is_pinned, created_at)
+      VALUES (@id, @source_item_id, @content_type, @text, @asset_file_ids, @source_app, @is_sensitive, @is_pinned, @created_at)
+    `).run({
+      id: item.id,
+      source_item_id: item.sourceItemId ?? null,
+      content_type: item.contentType,
+      text: item.text ?? null,
+      asset_file_ids: item.assetFileIds ? JSON.stringify(item.assetFileIds) : null,
+      source_app: item.sourceApp ?? null,
+      is_sensitive: item.isSensitive ? 1 : 0,
+      is_pinned: item.isPinned ? 1 : 0,
+      created_at: item.createdAt,
+    });
+  }
+
+  getClipboardItem(id: string): ClipboardItem | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM clipboard_items WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToClipboardItem(row) : null;
+  }
+
+  listClipboardItems(limit = 100, offset = 0): ClipboardItem[] {
+    const db = this._db!;
+    const rows = db.prepare('SELECT * FROM clipboard_items ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset) as Record<string, unknown>[];
+    return rows.map(this.rowToClipboardItem);
+  }
+
+  updateClipboardItemPinned(id: string, pinned: boolean): void {
+    const db = this._db!;
+    db.prepare('UPDATE clipboard_items SET is_pinned = ? WHERE id = ?').run(pinned ? 1 : 0, id);
+  }
+
+  deleteClipboardItem(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM clipboard_items WHERE id = ?').run(id);
+  }
+
+  searchClipboardItems(query: string, contentType?: string): ClipboardItem[] {
+    const db = this._db!;
+    const pattern = `%${query}%`;
+    if (contentType && contentType !== 'all') {
+      const rows = db.prepare(
+        'SELECT * FROM clipboard_items WHERE content_type = ? AND text LIKE ? ORDER BY created_at DESC LIMIT 100',
+      ).all(contentType, pattern) as Record<string, unknown>[];
+      return rows.map(this.rowToClipboardItem);
+    }
+    const rows = db.prepare(
+      'SELECT * FROM clipboard_items WHERE text LIKE ? ORDER BY created_at DESC LIMIT 100',
+    ).all(pattern) as Record<string, unknown>[];
+    return rows.map(this.rowToClipboardItem);
+  }
+
+  clearClipboardItems(): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM clipboard_items WHERE is_pinned = 0').run();
+  }
+
+  updateClipboardItemSourceItemId(id: string, sourceItemId: string): void {
+    const db = this._db!;
+    db.prepare('UPDATE clipboard_items SET source_item_id = ? WHERE id = ?').run(sourceItemId, id);
+  }
+
+  private rowToClipboardItem(row: Record<string, unknown>): ClipboardItem {
+    return {
+      id: row.id as string,
+      sourceItemId: (row.source_item_id as string) ?? undefined,
+      contentType: row.content_type as ClipboardItem['contentType'],
+      text: (row.text as string) ?? undefined,
+      assetFileIds: parseJson(row.asset_file_ids as string | null, undefined),
+      sourceApp: (row.source_app as string) ?? undefined,
+      isSensitive: (row.is_sensitive as number) === 1,
+      isPinned: (row.is_pinned as number) === 1,
+      createdAt: row.created_at as number,
+    };
+  }
+
+  // ─── ShelfItem ──────────────────────────────────────────────
+
+  insertShelfItem(item: ShelfItem): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO shelf_items (id, source_item_id, asset_file_ids, label, origin, status, created_at, updated_at)
+      VALUES (@id, @source_item_id, @asset_file_ids, @label, @origin, @status, @created_at, @updated_at)
+    `).run({
+      id: item.id,
+      source_item_id: item.sourceItemId ?? null,
+      asset_file_ids: JSON.stringify(item.assetFileIds),
+      label: item.label ?? null,
+      origin: item.origin ?? null,
+      status: item.status,
+      created_at: item.createdAt,
+      updated_at: item.updatedAt,
+    });
+  }
+
+  getShelfItem(id: string): ShelfItem | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM shelf_items WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToShelfItem(row) : null;
+  }
+
+  listShelfItems(status?: ShelfItem['status']): ShelfItem[] {
+    const db = this._db!;
+    let sql = 'SELECT * FROM shelf_items';
+    const params: unknown[] = [];
+    if (status) {
+      sql += ' WHERE status = ?';
+      params.push(status);
+    }
+    sql += ' ORDER BY created_at DESC';
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return rows.map(this.rowToShelfItem);
+  }
+
+  updateShelfItemStatus(id: string, status: ShelfItem['status']): void {
+    const db = this._db!;
+    db.prepare('UPDATE shelf_items SET status = ?, updated_at = unixepoch() WHERE id = ?').run(status, id);
+  }
+
+  deleteShelfItem(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM shelf_items WHERE id = ?').run(id);
+  }
+
+  updateShelfItemSourceItemId(id: string, sourceItemId: string): void {
+    const db = this._db!;
+    db.prepare('UPDATE shelf_items SET source_item_id = ?, updated_at = unixepoch() WHERE id = ?').run(sourceItemId, id);
+  }
+
+  updateShelfItemLabel(id: string, label: string): void {
+    const db = this._db!;
+    db.prepare('UPDATE shelf_items SET label = ?, updated_at = unixepoch() WHERE id = ?').run(label, id);
+  }
+
+  private rowToShelfItem(row: Record<string, unknown>): ShelfItem {
+    return {
+      id: row.id as string,
+      sourceItemId: (row.source_item_id as string) ?? undefined,
+      assetFileIds: parseJson(row.asset_file_ids as string, []),
+      label: (row.label as string) ?? undefined,
+      origin: (row.origin as ShelfItem['origin']) ?? undefined,
+      status: row.status as ShelfItem['status'],
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+    };
+  }
+
+  // ─── AIAction ───────────────────────────────────────────────
+
+  insertAIAction(action: AIAction): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO ai_actions (id, name, input_types, action_type, prompt_profile_id, enabled, created_at, updated_at)
+      VALUES (@id, @name, @input_types, @action_type, @prompt_profile_id, @enabled, @created_at, @updated_at)
+    `).run({
+      id: action.id,
+      name: action.name,
+      input_types: JSON.stringify(action.inputTypes),
+      action_type: action.actionType,
+      prompt_profile_id: action.promptProfileId ?? null,
+      enabled: action.enabled ? 1 : 0,
+      created_at: action.createdAt,
+      updated_at: action.updatedAt,
+    });
+  }
+
+  getAIAction(id: string): AIAction | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM ai_actions WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToAIAction(row) : null;
+  }
+
+  listAIActions(enabledOnly = false): AIAction[] {
+    const db = this._db!;
+    let sql = 'SELECT * FROM ai_actions';
+    if (enabledOnly) {
+      sql += ' WHERE enabled = 1';
+    }
+    sql += ' ORDER BY created_at DESC';
+    const rows = db.prepare(sql).all() as Record<string, unknown>[];
+    return rows.map(this.rowToAIAction);
+  }
+
+  updateAIAction(action: AIAction): void {
+    const db = this._db!;
+    db.prepare(`
+      UPDATE ai_actions SET
+        name = @name, input_types = @input_types, action_type = @action_type,
+        prompt_profile_id = @prompt_profile_id, enabled = @enabled, updated_at = @updated_at
+      WHERE id = @id
+    `).run({
+      id: action.id,
+      name: action.name,
+      input_types: JSON.stringify(action.inputTypes),
+      action_type: action.actionType,
+      prompt_profile_id: action.promptProfileId ?? null,
+      enabled: action.enabled ? 1 : 0,
+      updated_at: action.updatedAt,
+    });
+  }
+
+  deleteAIAction(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM ai_actions WHERE id = ?').run(id);
+  }
+
+  private rowToAIAction(row: Record<string, unknown>): AIAction {
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      inputTypes: parseJson(row.input_types as string, []),
+      actionType: row.action_type as AIAction['actionType'],
+      promptProfileId: (row.prompt_profile_id as string) ?? undefined,
+      enabled: (row.enabled as number) === 1,
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+    };
+  }
+
+  // ─── Pin Pool (pin_pool_items) ──────────────────────────────
+
+  insertPinItem(pin: PinItem): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO pin_pool_items (id, capture_item_id, original_id, source_type, title, preview_text, raw_text, raw_file_path, status, created_at, pinned_at, updated_at, prefilter_result)
+      VALUES (@id, @capture_item_id, @original_id, @source_type, @title, @preview_text, @raw_text, @raw_file_path, @status, @created_at, @pinned_at, @updated_at, @prefilter_result)
+    `).run({
+      id: pin.id,
+      capture_item_id: pin.captureItemId,
+      original_id: pin.originalId,
+      source_type: pin.sourceType,
+      title: pin.title,
+      preview_text: pin.previewText ?? null,
+      raw_text: pin.rawText ?? null,
+      raw_file_path: pin.rawFilePath ?? null,
+      status: pin.status,
+      created_at: pin.createdAt,
+      pinned_at: pin.pinnedAt,
+      updated_at: pin.updatedAt,
+      prefilter_result: pin.prefilterResult ? JSON.stringify(pin.prefilterResult) : null,
+    });
+  }
+
+  getPinItem(id: string): PinItem | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM pin_pool_items WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToPinItem(row) : null;
+  }
+
+  getPinItemByOriginalId(originalId: string): PinItem | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM pin_pool_items WHERE original_id = ? LIMIT 1').get(originalId) as Record<string, unknown> | undefined;
+    return row ? this.rowToPinItem(row) : null;
+  }
+
+  listPinItems(filter?: PinItemListFilter): PinItem[] {
+    const db = this._db!;
+    let sql = 'SELECT * FROM pin_pool_items';
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (filter?.status) {
+      conditions.push('status = ?');
+      params.push(filter.status);
+    }
+    if (filter?.sourceType) {
+      conditions.push('source_type = ?');
+      params.push(filter.sourceType);
+    }
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY created_at DESC';
+    if (filter?.limit) {
+      sql += ' LIMIT ?';
+      params.push(filter.limit);
+    }
+    if (filter?.offset) {
+      sql += ' OFFSET ?';
+      params.push(filter.offset);
+    }
+
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return rows.map((row) => this.rowToPinItem(row));
+  }
+
+  updatePinItem(id: string, patch: Partial<PinItem>): void {
+    const db = this._db!;
+    const sets: string[] = [];
+    const params: Record<string, unknown> = { id, updated_at: Math.floor(Date.now() / 1000) };
+
+    if (patch.status !== undefined) { sets.push('status = @status'); params.status = patch.status; }
+    if (patch.title !== undefined) { sets.push('title = @title'); params.title = patch.title; }
+    if (patch.previewText !== undefined) { sets.push('preview_text = @preview_text'); params.preview_text = patch.previewText; }
+    if (patch.rawText !== undefined) { sets.push('raw_text = @raw_text'); params.raw_text = patch.rawText; }
+    if (patch.prefilterResult !== undefined) { sets.push('prefilter_result = @prefilter_result'); params.prefilter_result = JSON.stringify(patch.prefilterResult); }
+
+    sets.push('updated_at = @updated_at');
+    db.prepare(`UPDATE pin_pool_items SET ${sets.join(', ')} WHERE id = @id`).run(params);
+  }
+
+  deletePinItem(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM pin_pool_items WHERE id = ?').run(id);
+  }
+
+  private rowToPinItem(row: Record<string, unknown>): PinItem {
+    return {
+      id: row.id as string,
+      captureItemId: (row.capture_item_id as string) ?? '',
+      originalId: (row.original_id as string) ?? '',
+      sourceType: (row.source_type as PinItem['sourceType']) ?? 'clipboard_text',
+      title: (row.title as string) ?? '',
+      previewText: (row.preview_text as string) ?? undefined,
+      rawText: (row.raw_text as string) ?? undefined,
+      rawFilePath: (row.raw_file_path as string) ?? undefined,
+      status: (row.status as PinItem['status']) ?? 'pinned',
+      createdAt: row.created_at as number,
+      pinnedAt: row.pinned_at as number,
+      updatedAt: row.updated_at as number,
+      prefilterResult: row.prefilter_result ? parseJson(row.prefilter_result as string, undefined) : undefined,
+    };
+  }
+
+  // ── ProcessJob CRUD ──────────────────────────────────────────────
+
+  insertProcessJob(job: ProcessJob): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO process_jobs (id, type, source_item_id, asset_file_ids, status, progress, error_message, created_at, updated_at, started_at, completed_at, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      job.id,
+      job.type,
+      job.sourceItemId ?? null,
+      JSON.stringify(job.assetFileIds ?? []),
+      job.status,
+      job.progress ?? 0,
+      job.errorMessage ?? null,
+      job.createdAt,
+      job.updatedAt,
+      job.startedAt ?? null,
+      job.completedAt ?? null,
+      job.metadata ? JSON.stringify(job.metadata) : null,
+    );
+  }
+
+  getProcessJob(id: string): ProcessJob | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM process_jobs WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToProcessJob(row) : null;
+  }
+
+  listProcessJobs(filter?: { type?: string; status?: string; limit?: number }): ProcessJob[] {
+    const db = this._db!;
+    let sql = 'SELECT * FROM process_jobs';
+    const params: unknown[] = [];
+    const conditions: string[] = [];
+
+    if (filter?.type) {
+      conditions.push('type = ?');
+      params.push(filter.type);
+    }
+    if (filter?.status) {
+      conditions.push('status = ?');
+      params.push(filter.status);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    sql += ' ORDER BY created_at DESC';
+
+    if (filter?.limit) {
+      sql += ' LIMIT ?';
+      params.push(filter.limit);
+    }
+
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return rows.map(this.rowToProcessJob);
+  }
+
+  updateProcessJob(id: string, patch: Partial<ProcessJob>): void {
+    const db = this._db!;
+    const sets: string[] = ['updated_at = ?'];
+    const params: unknown[] = [Math.floor(Date.now() / 1000)];
+
+    if (patch.status !== undefined) { sets.push('status = ?'); params.push(patch.status); }
+    if (patch.progress !== undefined) { sets.push('progress = ?'); params.push(patch.progress); }
+    if (patch.errorMessage !== undefined) { sets.push('error_message = ?'); params.push(patch.errorMessage); }
+    if (patch.startedAt !== undefined) { sets.push('started_at = ?'); params.push(patch.startedAt); }
+    if (patch.completedAt !== undefined) { sets.push('completed_at = ?'); params.push(patch.completedAt); }
+    if (patch.sourceItemId !== undefined) { sets.push('source_item_id = ?'); params.push(patch.sourceItemId); }
+    if (patch.assetFileIds !== undefined) { sets.push('asset_file_ids = ?'); params.push(JSON.stringify(patch.assetFileIds)); }
+    if (patch.metadata !== undefined) { sets.push('metadata = ?'); params.push(JSON.stringify(patch.metadata)); }
+
+    params.push(id);
+    db.prepare(`UPDATE process_jobs SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+  }
+
+  deleteProcessJob(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM process_jobs WHERE id = ?').run(id);
+  }
+
+  // ─── DistilledNote ──────────────────────────────────────────────
+
+  insertDistilledNote(note: DistilledNote): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO distilled_notes (id, source_item_ids, title, summary, tags, suggested_folder, body_markdown, quality_flags, model_provider, model_name, created_at, updated_at, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      note.id,
+      JSON.stringify(note.sourceItemIds ?? []),
+      note.title ?? '',
+      note.summary ?? '',
+      JSON.stringify(note.tags ?? []),
+      note.suggestedFolder ?? null,
+      note.bodyMarkdown ?? '',
+      JSON.stringify(note.qualityFlags ?? []),
+      note.modelProvider ?? null,
+      note.modelName ?? null,
+      note.createdAt,
+      note.updatedAt,
+      note.metadata ? JSON.stringify(note.metadata) : null,
+    );
+  }
+
+  getDistilledNote(id: string): DistilledNote | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM distilled_notes WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToDistilledNote(row) : null;
+  }
+
+  listDistilledNotes(filter?: { limit?: number; offset?: number }): DistilledNote[] {
+    const db = this._db!;
+    let sql = 'SELECT * FROM distilled_notes ORDER BY created_at DESC';
+    const params: unknown[] = [];
+
+    if (filter?.limit) {
+      sql += ' LIMIT ?';
+      params.push(filter.limit);
+    }
+    if (filter?.offset) {
+      sql += ' OFFSET ?';
+      params.push(filter.offset);
+    }
+
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return rows.map(this.rowToDistilledNote);
+  }
+
+  updateDistilledNote(id: string, patch: Partial<DistilledNote>): void {
+    const db = this._db!;
+    const sets: string[] = ['updated_at = ?'];
+    const params: unknown[] = [Math.floor(Date.now() / 1000)];
+
+    if (patch.title !== undefined) { sets.push('title = ?'); params.push(patch.title); }
+    if (patch.summary !== undefined) { sets.push('summary = ?'); params.push(patch.summary); }
+    if (patch.tags !== undefined) { sets.push('tags = ?'); params.push(JSON.stringify(patch.tags)); }
+    if (patch.suggestedFolder !== undefined) { sets.push('suggested_folder = ?'); params.push(patch.suggestedFolder); }
+    if (patch.bodyMarkdown !== undefined) { sets.push('body_markdown = ?'); params.push(patch.bodyMarkdown); }
+    if (patch.qualityFlags !== undefined) { sets.push('quality_flags = ?'); params.push(JSON.stringify(patch.qualityFlags)); }
+    if (patch.modelProvider !== undefined) { sets.push('model_provider = ?'); params.push(patch.modelProvider); }
+    if (patch.modelName !== undefined) { sets.push('model_name = ?'); params.push(patch.modelName); }
+    if (patch.sourceItemIds !== undefined) { sets.push('source_item_ids = ?'); params.push(JSON.stringify(patch.sourceItemIds)); }
+    if (patch.metadata !== undefined) { sets.push('metadata = ?'); params.push(JSON.stringify(patch.metadata)); }
+
+    params.push(id);
+    db.prepare(`UPDATE distilled_notes SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+  }
+
+  deleteDistilledNote(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM distilled_notes WHERE id = ?').run(id);
+  }
+
+  private rowToDistilledNote(row: Record<string, unknown>): DistilledNote {
+    return {
+      id: row.id as string,
+      sourceItemIds: parseJson(row.source_item_ids as string, []),
+      title: (row.title as string) ?? '',
+      summary: (row.summary as string) ?? '',
+      tags: parseJson(row.tags as string, []),
+      suggestedFolder: (row.suggested_folder as string) ?? undefined,
+      bodyMarkdown: (row.body_markdown as string) ?? '',
+      qualityFlags: parseJson(row.quality_flags as string, []),
+      modelProvider: (row.model_provider as string) ?? undefined,
+      modelName: (row.model_name as string) ?? undefined,
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+      metadata: row.metadata ? parseJson(row.metadata as string, undefined) : undefined,
+    };
+  }
+
+  private rowToProcessJob(row: Record<string, unknown>): ProcessJob {
+    return {
+      id: row.id as string,
+      type: (row.type as ProcessJob['type']) ?? 'markitdown',
+      sourceItemId: (row.source_item_id as string) ?? undefined,
+      assetFileIds: parseJson(row.asset_file_ids as string, []),
+      status: (row.status as ProcessJob['status']) ?? 'queued',
+      progress: (row.progress as number) ?? 0,
+      errorMessage: (row.error_message as string) ?? undefined,
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+      startedAt: (row.started_at as number) ?? undefined,
+      completedAt: (row.completed_at as number) ?? undefined,
+      metadata: row.metadata ? parseJson(row.metadata as string, undefined) : undefined,
+    };
+  }
+
+  // ─── Batch 6: Knowledge Projects ──────────────────────────────
+
+  createKnowledgeProject(data: { name: string; description?: string; color?: string }): { id: string } {
+    const id = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    this.db!.prepare(
+      'INSERT INTO knowledge_projects (id, name, description, status, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, data.name, data.description || null, 'active', data.color || null, now, now);
+    return { id };
+  }
+
+  listKnowledgeProjects(): any[] {
+    return (this.db!.prepare('SELECT * FROM knowledge_projects ORDER BY updated_at DESC').all() as any[]).map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      status: row.status,
+      color: row.color,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  updateKnowledgeProject(data: { id: string; name?: string; description?: string; status?: string; color?: string }): void {
+    const sets: string[] = ['updated_at = ?'];
+    const vals: any[] = [Math.floor(Date.now() / 1000)];
+    if (data.name !== undefined) { sets.push('name = ?'); vals.push(data.name); }
+    if (data.description !== undefined) { sets.push('description = ?'); vals.push(data.description); }
+    if (data.status !== undefined) { sets.push('status = ?'); vals.push(data.status); }
+    if (data.color !== undefined) { sets.push('color = ?'); vals.push(data.color); }
+    vals.push(data.id);
+    this.db!.prepare(`UPDATE knowledge_projects SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  }
+
+  deleteKnowledgeProject(id: string): void {
+    this.db!.prepare('DELETE FROM project_items WHERE project_id = ?').run(id);
+    this.db!.prepare('DELETE FROM knowledge_projects WHERE id = ?').run(id);
+  }
+
+  addProjectItem(data: { projectId: string; itemType: string; itemId: string }): void {
+    const id = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    this.db!.prepare(
+      'INSERT OR IGNORE INTO project_items (id, project_id, item_type, item_id, added_at) VALUES (?, ?, ?, ?, ?)'
+    ).run(id, data.projectId, data.itemType, data.itemId, now);
+  }
+
+  removeProjectItem(data: { projectId: string; itemId: string }): void {
+    this.db!.prepare('DELETE FROM project_items WHERE project_id = ? AND item_id = ?').run(data.projectId, data.itemId);
+  }
+
+  // ─── Batch 6: Tags ────────────────────────────────────────────
+
+  listTagSummaries(): any[] {
+    const tags: Map<string, { count: number; sources: Set<string> }> = new Map();
+    const addTags = (jsonStr: string | null, source: string) => {
+      if (!jsonStr) return;
+      try {
+        const arr = JSON.parse(jsonStr);
+        if (Array.isArray(arr)) {
+          for (const t of arr) {
+            if (typeof t === 'string' && t.trim()) {
+              const existing = tags.get(t.trim()) || { count: 0, sources: new Set<string>() };
+              existing.count++;
+              existing.sources.add(source);
+              tags.set(t.trim(), existing);
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    for (const row of this.db!.prepare('SELECT tags FROM distilled_outputs WHERE tags IS NOT NULL').all() as any[]) {
+      addTags(row.tags, 'distilled_output');
+    }
+    for (const row of this.db!.prepare('SELECT tags FROM knowledge_cards WHERE tags IS NOT NULL').all() as any[]) {
+      addTags(row.tags, 'knowledge_card');
+    }
+    return Array.from(tags.entries()).map(([name, data]) => ({
+      name,
+      count: data.count,
+      sources: Array.from(data.sources),
+    })).sort((a, b) => b.count - a.count);
+  }
+
+  renameTag(data: { oldName: string; newName: string }): number {
+    let total = 0;
+    const tables = ['distilled_outputs', 'knowledge_cards'];
+    for (const table of tables) {
+      const rows = this.db!.prepare(`SELECT id, tags FROM ${table} WHERE tags LIKE ?`).run(`%"${data.oldName}"%`);
+      const all = this.db!.prepare(`SELECT id, tags FROM ${table} WHERE tags LIKE ?`).all(`%"${data.oldName}"%`) as any[];
+      for (const row of all) {
+        try {
+          const arr = JSON.parse(row.tags);
+          const newArr = arr.map((t: string) => t === data.oldName ? data.newName : t);
+          this.db!.prepare(`UPDATE ${table} SET tags = ? WHERE id = ?`).run(JSON.stringify(newArr), row.id);
+          total++;
+        } catch { /* skip */ }
+      }
+    }
+    return total;
+  }
+
+  deleteTag(name: string): number {
+    let total = 0;
+    const tables = ['distilled_outputs', 'knowledge_cards'];
+    for (const table of tables) {
+      const all = this.db!.prepare(`SELECT id, tags FROM ${table} WHERE tags LIKE ?`).all(`%"${name}"%`) as any[];
+      for (const row of all) {
+        try {
+          const arr: string[] = JSON.parse(row.tags);
+          const newArr = arr.filter((t: string) => t !== name);
+          this.db!.prepare(`UPDATE ${table} SET tags = ? WHERE id = ?`).run(JSON.stringify(newArr), row.id);
+          total++;
+        } catch { /* skip */ }
+      }
+    }
+    return total;
+  }
+
+  // ─── Batch 6: Datasets ────────────────────────────────────────
+
+  createDataset(data: { name: string; description?: string; purpose?: string }): { id: string } {
+    const id = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    this.db!.prepare(
+      'INSERT INTO datasets (id, name, description, purpose, status, item_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)'
+    ).run(id, data.name, data.description || null, data.purpose || 'archive', 'draft', now, now);
+    return { id };
+  }
+
+  listDatasets(): any[] {
+    return (this.db!.prepare('SELECT * FROM datasets ORDER BY updated_at DESC').all() as any[]).map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      purpose: row.purpose,
+      status: row.status,
+      itemCount: row.item_count,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  getDataset(id: string): any | null {
+    const row = this.db!.prepare('SELECT * FROM datasets WHERE id = ?').get(id) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      purpose: row.purpose,
+      status: row.status,
+      itemCount: row.item_count,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  addDatasetItems(data: { datasetId: string; items: Array<{ sourceType: string; sourceId: string }> }): number {
+    const now = Math.floor(Date.now() / 1000);
+    let count = 0;
+    for (const item of data.items) {
+      const id = randomUUID();
+      let title = '';
+      let content = '';
+      if (item.sourceType === 'distilled_output') {
+        const output = this.db!.prepare('SELECT suggested_title, content_markdown FROM distilled_outputs WHERE id = ?').get(item.sourceId) as any;
+        if (output) { title = output.suggested_title || ''; content = output.content_markdown || ''; }
+      } else {
+        const si = this.db!.prepare('SELECT title, preview_text FROM source_items WHERE id = ?').get(item.sourceId) as any;
+        if (si) { title = si.title || ''; content = si.preview_text || ''; }
+      }
+      this.db!.prepare(
+        'INSERT OR IGNORE INTO dataset_items (id, dataset_id, source_type, source_id, title, content, quality, privacy_level, included, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(id, data.datasetId, item.sourceType, item.sourceId, title, content, 'medium', 'private', true, now, now);
+      count++;
+    }
+    this.db!.prepare('UPDATE datasets SET item_count = (SELECT COUNT(*) FROM dataset_items WHERE dataset_id = ?), updated_at = ? WHERE id = ?')
+      .run(data.datasetId, now, data.datasetId);
+    return count;
+  }
+
+  updateDatasetItem(data: { id: string; quality?: string; privacyLevel?: string; included?: boolean; reason?: string }): void {
+    const sets: string[] = ['updated_at = ?'];
+    const vals: any[] = [Math.floor(Date.now() / 1000)];
+    if (data.quality !== undefined) { sets.push('quality = ?'); vals.push(data.quality); }
+    if (data.privacyLevel !== undefined) { sets.push('privacy_level = ?'); vals.push(data.privacyLevel); }
+    if (data.included !== undefined) { sets.push('included = ?'); vals.push(data.included ? 1 : 0); }
+    if (data.reason !== undefined) { sets.push('reason = ?'); vals.push(data.reason); }
+    vals.push(data.id);
+    this.db!.prepare(`UPDATE dataset_items SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  }
+
+  deleteDataset(id: string): void {
+    this.db!.prepare('DELETE FROM dataset_items WHERE dataset_id = ?').run(id);
+    this.db!.prepare('DELETE FROM datasets WHERE id = ?').run(id);
+  }
+
+  async exportDataset(data: { datasetId: string; format: string; includeExcluded?: boolean }): Promise<{ path: string; count: number }> {
+    const items = this.db!.prepare(
+      `SELECT * FROM dataset_items WHERE dataset_id = ?${data.includeExcluded ? '' : ' AND included = 1'}`
+    ).all(data.datasetId) as any[];
+
+    const fs = await import('fs');
+    const path = await import('path');
+    const os = await import('os');
+    const exportDir = path.join(os.tmpdir(), 'acmind-datasets');
+    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+    const dataset = this.getDataset(data.datasetId);
+    const safeName = (dataset?.name || 'dataset').replace(/[^a-zA-Z0-9_\u4e00-\u9fff-]/g, '_');
+    const timestamp = new Date().toISOString().slice(0, 10);
+
+    if (data.format === 'jsonl') {
+      const filePath = path.join(exportDir, `${safeName}_${timestamp}.jsonl`);
+      const lines = items.map(item => JSON.stringify({
+        sourceId: item.source_id,
+        sourceType: item.source_type,
+        title: item.title,
+        content: item.content,
+        quality: item.quality,
+        privacyLevel: item.privacy_level,
+        included: Boolean(item.included),
+      }));
+      fs.writeFileSync(filePath, lines.join('\n'), 'utf-8');
+      return { path: filePath, count: items.length };
+    } else {
+      // markdown bundle
+      const dirPath = path.join(exportDir, `${safeName}_${timestamp}`);
+      if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+      for (const item of items) {
+        const fileName = `${(item.title || item.source_id).replace(/[^a-zA-Z0-9_\u4e00-\u9fff-]/g, '_').slice(0, 80)}.md`;
+        const frontmatter = [
+          '---',
+          `source_id: ${item.source_id}`,
+          `source_type: ${item.source_type}`,
+          `quality: ${item.quality}`,
+          `privacy: ${item.privacy_level}`,
+          '---',
+          '',
+          `# ${item.title || 'Untitled'}`,
+          '',
+          item.content || '',
+        ].join('\n');
+        fs.writeFileSync(path.join(dirPath, fileName), frontmatter, 'utf-8');
+      }
+      return { path: dirPath, count: items.length };
+    }
   }
 }
 

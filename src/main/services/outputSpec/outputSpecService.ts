@@ -1,12 +1,12 @@
-// PinMind OutputSpecService
+// AcMind OutputSpecService
 // Phase 0: Reads output specifications, Markdown templates, frontmatter rules,
-// and tag rules from the pinmind_output_spec_pack directory.
+// and tag rules from the acmind_output_spec_pack directory.
 // All subsequent Markdown output MUST go through this service.
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { PinMindFormatProfile, PinMindStandardFields } from '../../../shared/outputSpec';
-import { DEFAULT_PINMIND_FORMAT_PROFILE, DEFAULT_PINMIND_FIELDS, PINMIND_SCHEMA_VERSION } from '../../../shared/outputSpec';
+import type { AcMindFormatProfile, AcMindStandardFields } from '../../../shared/outputSpec';
+import { DEFAULT_ACMIND_FORMAT_PROFILE, DEFAULT_ACMIND_FIELDS, ACMIND_SCHEMA_VERSION } from '../../../shared/outputSpec';
 import { logger } from '../../logger';
 
 // ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ const FALLBACK_DISTILL_TEMPLATES: Record<DistillTemplateName, string> = {
 {{rawExcerpt}}
 
 ---
-*由 PinMind 默认蒸馏引擎（规则模板）生成*`,
+*由 AcMind 默认蒸馏引擎（规则模板）生成*`,
 
   plain: `# {{title}}
 
@@ -156,7 +156,7 @@ const FALLBACK_DISTILL_TEMPLATES: Record<DistillTemplateName, string> = {
 {{actionItems}}
 
 ---
-*由 PinMind 默认蒸馏引擎（规则模板）生成*`,
+*由 AcMind 默认蒸馏引擎（规则模板）生成*`,
 
   summary: `# {{title}}
 
@@ -191,7 +191,7 @@ title: "{{title}}"
 date: {{date}}
 category: {{category}}
 status: draft
-source: pinmind-distill
+source: acmind-distill
 tags:
 {{tags}}
 ---`,
@@ -213,13 +213,13 @@ const TEMPLATE_FILE_MAP: Record<string, TemplateName> = {
 
 class OutputSpecService {
   private specPackPath: string | null = null;
-  private profiles: Map<string, PinMindFormatProfile> = new Map();
+  private profiles: Map<string, AcMindFormatProfile> = new Map();
   private templates: Map<TemplateName, string> = new Map();
   private distillTemplates: Map<DistillTemplateName, string> = new Map();
   private snippets: Map<SnippetName, string> = new Map();
   private tagRules: TagRules = FALLBACK_TAG_RULES;
   private categoryRules: CategoryRules = FALLBACK_CATEGORY_RULES;
-  private activeProfileId: string = DEFAULT_PINMIND_FORMAT_PROFILE.id;
+  private activeProfileId: string = DEFAULT_ACMIND_FORMAT_PROFILE.id;
   private _loaded = false;
 
   // -------------------------------------------------------------------------
@@ -227,7 +227,7 @@ class OutputSpecService {
   // -------------------------------------------------------------------------
 
   /**
-   * Initialize the service with the path to the pinmind_output_spec_pack directory.
+   * Initialize the service with the path to the acmind_output_spec_pack directory.
    * If the path is invalid or missing, falls back to built-in defaults.
    */
   init(specPackPath: string): void {
@@ -276,24 +276,24 @@ class OutputSpecService {
 
   /**
    * Get the active Format Profile.
-   * Falls back to DEFAULT_PINMIND_FORMAT_PROFILE if not loaded.
+   * Falls back to DEFAULT_ACMIND_FORMAT_PROFILE if not loaded.
    */
-  getActiveProfile(): PinMindFormatProfile {
-    return this.profiles.get(this.activeProfileId) ?? DEFAULT_PINMIND_FORMAT_PROFILE;
+  getActiveProfile(): AcMindFormatProfile {
+    return this.profiles.get(this.activeProfileId) ?? DEFAULT_ACMIND_FORMAT_PROFILE;
   }
 
   /**
    * Get a specific Format Profile by ID.
-   * Falls back to DEFAULT_PINMIND_FORMAT_PROFILE if not found.
+   * Falls back to DEFAULT_ACMIND_FORMAT_PROFILE if not found.
    */
-  getProfile(profileId: string): PinMindFormatProfile {
-    return this.profiles.get(profileId) ?? DEFAULT_PINMIND_FORMAT_PROFILE;
+  getProfile(profileId: string): AcMindFormatProfile {
+    return this.profiles.get(profileId) ?? DEFAULT_ACMIND_FORMAT_PROFILE;
   }
 
   /**
    * Get all loaded Format Profiles.
    */
-  getAllProfiles(): PinMindFormatProfile[] {
+  getAllProfiles(): AcMindFormatProfile[] {
     return Array.from(this.profiles.values());
   }
 
@@ -413,12 +413,12 @@ class OutputSpecService {
   // -------------------------------------------------------------------------
 
   /**
-   * Get default PinMind standard fields (for new content).
+   * Get default AcMind standard fields (for new content).
    */
-  getDefaultFields(): Partial<PinMindStandardFields> {
+  getDefaultFields(): Partial<AcMindStandardFields> {
     const profile = this.getActiveProfile();
     return {
-      ...DEFAULT_PINMIND_FIELDS,
+      ...DEFAULT_ACMIND_FIELDS,
       ...profile.default_values,
       schema_version: profile.schema_version,
     };
@@ -438,7 +438,7 @@ class OutputSpecService {
       profileCount: this.profiles.size,
       templateCount: this.templates.size,
       activeProfileId: this.activeProfileId,
-      schemaVersion: PINMIND_SCHEMA_VERSION,
+      schemaVersion: ACMIND_SCHEMA_VERSION,
     };
   }
 
@@ -455,7 +455,7 @@ class OutputSpecService {
     const profileDir = path.join(this.specPackPath, '03_Format_Profile');
     if (!existsSync(profileDir)) {
       logger.warn('app', 'outputSpec', 'loadProfiles', `Profile directory not found: ${profileDir}`);
-      this.profiles.set(DEFAULT_PINMIND_FORMAT_PROFILE.id, DEFAULT_PINMIND_FORMAT_PROFILE);
+      this.profiles.set(DEFAULT_ACMIND_FORMAT_PROFILE.id, DEFAULT_ACMIND_FORMAT_PROFILE);
       return;
     }
 
@@ -465,7 +465,7 @@ class OutputSpecService {
         if (file.endsWith('.profile.json')) {
           const filePath = path.join(profileDir, file);
           const content = readFileSync(filePath, 'utf8');
-          const profile = JSON.parse(content) as PinMindFormatProfile;
+          const profile = JSON.parse(content) as AcMindFormatProfile;
           this.profiles.set(profile.id, profile);
           logger.debug('app', 'outputSpec', 'loadProfiles', `Loaded profile: ${profile.id}`);
         }
@@ -477,8 +477,8 @@ class OutputSpecService {
     }
 
     // Always ensure the default profile exists
-    if (!this.profiles.has(DEFAULT_PINMIND_FORMAT_PROFILE.id)) {
-      this.profiles.set(DEFAULT_PINMIND_FORMAT_PROFILE.id, DEFAULT_PINMIND_FORMAT_PROFILE);
+    if (!this.profiles.has(DEFAULT_ACMIND_FORMAT_PROFILE.id)) {
+      this.profiles.set(DEFAULT_ACMIND_FORMAT_PROFILE.id, DEFAULT_ACMIND_FORMAT_PROFILE);
     }
   }
 
@@ -604,7 +604,7 @@ class OutputSpecService {
     this.snippets.clear();
 
     // Load default profile
-    this.profiles.set(DEFAULT_PINMIND_FORMAT_PROFILE.id, DEFAULT_PINMIND_FORMAT_PROFILE);
+    this.profiles.set(DEFAULT_ACMIND_FORMAT_PROFILE.id, DEFAULT_ACMIND_FORMAT_PROFILE);
 
     // Load fallback templates
     for (const [name, template] of Object.entries(FALLBACK_TEMPLATES)) {

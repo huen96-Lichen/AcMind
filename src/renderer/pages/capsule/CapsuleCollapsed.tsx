@@ -97,10 +97,10 @@ function CapsuleStateLabel(state: CapsuleVisualState): string {
     case 'error':
       return '出错';
     case 'visible_has_content':
-      return 'PinMind';
+      return 'AcMind';
     case 'visible_idle':
     default:
-      return 'PinMind';
+      return 'AcMind';
   }
 }
 
@@ -123,8 +123,8 @@ export function CapsuleCollapsed({
   const hasBadge = pendingCount > 0;
 
   const handleExpand = useCallback(() => {
-    if (window.pinmind?.capsule?.expand) {
-      window.pinmind.capsule.expand();
+    if (window.acmind?.capsule?.expand) {
+      window.acmind.capsule.expand();
     }
   }, []);
 
@@ -133,7 +133,7 @@ export function CapsuleCollapsed({
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    void window.pinmind?.capture?.takeScreenshot?.();
+    void window.acmind?.capture?.takeScreenshot?.();
   }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -145,8 +145,8 @@ export function CapsuleCollapsed({
       didMove: false,
     };
 
-    if (window.pinmind?.capsule?.startDrag) {
-      window.pinmind.capsule.startDrag(e.screenX, e.screenY);
+    if (window.acmind?.capsule?.startDrag) {
+      window.acmind.capsule.startDrag(e.screenX, e.screenY);
     }
 
     const onMove = (ev: MouseEvent) => {
@@ -156,8 +156,8 @@ export function CapsuleCollapsed({
       if (dx >= MOVE_THRESHOLD || dy >= MOVE_THRESHOLD) {
         dragRef.current.didMove = true;
         setIsDragging(true);
-        if (window.pinmind?.capsule?.dragMove) {
-          window.pinmind.capsule.dragMove(
+        if (window.acmind?.capsule?.dragMove) {
+          window.acmind.capsule.dragMove(
             ev.screenX - dragRef.current.startScreenX,
             ev.screenY - dragRef.current.startScreenY,
           );
@@ -184,8 +184,8 @@ export function CapsuleCollapsed({
         }
       }
 
-      if (window.pinmind?.capsule?.endDrag) {
-        window.pinmind.capsule.endDrag();
+      if (window.acmind?.capsule?.endDrag) {
+        window.acmind.capsule.endDrag();
       }
 
       window.removeEventListener('mousemove', onMove);

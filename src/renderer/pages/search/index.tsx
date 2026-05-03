@@ -51,8 +51,8 @@ export function SearchPage(): JSX.Element {
   useEffect(() => {
     async function loadStatus(): Promise<void> {
       try {
-        if (window.pinmind?.search?.getStatus) {
-          const s = await window.pinmind.search.getStatus();
+        if (window.acmind?.search?.getStatus) {
+          const s = await window.acmind.search.getStatus();
           setStatus(s);
         }
       } catch {
@@ -75,8 +75,8 @@ export function SearchPage(): JSX.Element {
     async function doSearch(): Promise<void> {
       setLoading(true);
       try {
-        if (window.pinmind?.search?.hybrid) {
-          const res = await window.pinmind.search.hybrid(debouncedQuery.trim());
+        if (window.acmind?.search?.hybrid) {
+          const res = await window.acmind.search.hybrid(debouncedQuery.trim());
           if (!cancelled) {
             setResults(Array.isArray(res) ? res : []);
             setSearched(true);
@@ -102,12 +102,12 @@ export function SearchPage(): JSX.Element {
   const handleRebuildIndex = useCallback(async () => {
     setRebuilding(true);
     try {
-      if (window.pinmind?.search?.rebuildFts) {
-        await window.pinmind.search.rebuildFts();
+      if (window.acmind?.search?.rebuildFts) {
+        await window.acmind.search.rebuildFts();
       }
       // Refresh status after rebuild
-      if (window.pinmind?.search?.getStatus) {
-        const s = await window.pinmind.search.getStatus();
+      if (window.acmind?.search?.getStatus) {
+        const s = await window.acmind.search.getStatus();
         setStatus(s);
       }
     } catch (err) {
@@ -120,7 +120,13 @@ export function SearchPage(): JSX.Element {
   const handleResultClick = useCallback((id: string) => {
     // Navigate to edit page with the item id
     window.dispatchEvent(
-      new CustomEvent('pinmind:navigate', { detail: { view: 'edit', itemId: id } }),
+      new CustomEvent('acmind:navigate', { detail: { view: 'edit', itemId: id } }),
+    );
+  }, []);
+
+  const handleViewExports = useCallback((id: string) => {
+    window.dispatchEvent(
+      new CustomEvent('acmind:navigate', { detail: { view: 'exports', sourceItemId: id } }),
     );
   }, []);
 
@@ -185,7 +191,7 @@ export function SearchPage(): JSX.Element {
             {searched && !loading && results.length > 0 ? (
               <div className="flex flex-col gap-3 p-4">
                 {results.map((result) => (
-                  <SearchResultCard key={result.id} result={result} onClick={handleResultClick} />
+                  <SearchResultCard key={result.id} result={result} onClick={handleResultClick} onViewExports={handleViewExports} />
                 ))}
               </div>
             ) : null}

@@ -1,17 +1,17 @@
 import type { DistilledOutput, SourceItem } from '../../../shared/types';
 import type {
-  PinMindFormatProfile,
-  PinMindStandardFields,
+  AcMindFormatProfile,
+  AcMindStandardFields,
 } from '../../../shared/outputSpec';
 import {
-  DEFAULT_PINMIND_FORMAT_PROFILE,
-  buildPinMindFieldsFromContent,
-  buildPinMindFrontmatterData,
+  DEFAULT_ACMIND_FORMAT_PROFILE,
+  buildAcMindFieldsFromContent,
+  buildAcMindFrontmatterData,
   formatCapturedAt,
 } from '../../../shared/outputSpec';
 
 // ---------------------------------------------------------------------------
-// Extended frontmatter options (beyond PinMindStandardFields)
+// Extended frontmatter options (beyond AcMindStandardFields)
 // ---------------------------------------------------------------------------
 
 export interface FrontmatterExtras {
@@ -23,7 +23,7 @@ export interface FrontmatterExtras {
   source_type?: string;
   /** SourceItem.sourceApp — the real origin app (e.g. ChatGPT, Finder, pdf_import) */
   source_app?: string;
-  /** Fixed value: 'PinMind' — the tool that wrote this file */
+  /** Fixed value: 'AcMind' — the tool that wrote this file */
   writer_app?: string;
   /** ISO date string for created time */
   created?: string;
@@ -44,21 +44,21 @@ export function buildStandardFields(
   sourceItem: SourceItem,
   options?: {
     project?: string;
-    status?: PinMindStandardFields['status'];
+    status?: AcMindStandardFields['status'];
     includeRawContent?: boolean;
   },
-): PinMindStandardFields {
-  return buildPinMindFieldsFromContent({
+): AcMindStandardFields {
+  return buildAcMindFieldsFromContent({
     distilledOutput,
     sourceItem,
-    project: options?.project ?? DEFAULT_PINMIND_FORMAT_PROFILE.default_values.project ?? '默认',
+    project: options?.project ?? DEFAULT_ACMIND_FORMAT_PROFILE.default_values.project ?? '默认',
     status: options?.status ?? 'exported',
     includeRawContent: options?.includeRawContent ?? false,
   });
 }
 
 /**
- * Build frontmatter data from PinMindStandardFields + extras.
+ * Build frontmatter data from AcMindStandardFields + extras.
  * This is the centralized entry point — ALL frontmatter generation MUST go through here.
  *
  * Standard fields come from the profile's field_mapping.
@@ -66,12 +66,12 @@ export function buildStandardFields(
  * are always appended after the mapped fields.
  */
 export function buildFrontmatterData(
-  fields: PinMindStandardFields,
-  profile: PinMindFormatProfile = DEFAULT_PINMIND_FORMAT_PROFILE,
+  fields: AcMindStandardFields,
+  profile: AcMindFormatProfile = DEFAULT_ACMIND_FORMAT_PROFILE,
   extras?: FrontmatterExtras,
 ): Record<string, unknown> {
   // 1. Standard fields from profile's field_mapping
-  const data = buildPinMindFrontmatterData(fields, profile);
+  const data = buildAcMindFrontmatterData(fields, profile);
 
   // 2. Append extra traceability fields (always written, not controlled by field_mapping)
   if (extras) {
@@ -87,8 +87,8 @@ export function buildFrontmatterData(
     if (extras.source_app) {
       data['source_app'] = extras.source_app;
     }
-    // writer_app is always 'PinMind' — the tool that wrote this file
-    data['writer_app'] = extras.writer_app ?? 'PinMind';
+    // writer_app is always 'AcMind' — the tool that wrote this file
+    data['writer_app'] = extras.writer_app ?? 'AcMind';
     if (extras.created) {
       data['created'] = extras.created;
     }
@@ -168,8 +168,8 @@ export function buildFrontmatterDataFromRaw(
   if (fields.source_app) {
     data['source_app'] = fields.source_app;
   }
-  // writer_app is always 'PinMind' — the tool that wrote this file
-  data['writer_app'] = fields.writer_app ?? 'PinMind';
+  // writer_app is always 'AcMind' — the tool that wrote this file
+  data['writer_app'] = fields.writer_app ?? 'AcMind';
   if (fields.created) {
     data['created'] = fields.created;
   }

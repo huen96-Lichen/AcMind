@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CapsuleCollapsed } from './CapsuleCollapsed';
 import { CapsuleExpanded } from './CapsuleExpanded';
 import { CapsuleEdgeHidden } from './CapsuleEdgeHidden';
+import type { CapsuleStatus } from '../../../shared/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ export function CapsulePage(): JSX.Element {
   const [capsuleState, setCapsuleState] = useState<CapsuleState>('visible_idle');
   const [edge, setEdge] = useState<'left' | 'right' | 'bottom'>('right');
   const [pendingCount, setPendingCount] = useState(0);
+  const [capsuleStatus, setCapsuleStatus] = useState<CapsuleStatus | null>(null);
 
   // ── Force transparent background on html/body/#root ──
   useEffect(() => {
@@ -56,7 +58,7 @@ export function CapsulePage(): JSX.Element {
 
   // ── Listen for state changes from main process ──
   useEffect(() => {
-    const capsule = (window as unknown as { pinmind?: { capsule?: { onStateChanged?: (cb: (p: CapsuleStatePayload) => void) => () => void } } }).pinmind?.capsule;
+    const capsule = (window as unknown as { acmind?: { capsule?: { onStateChanged?: (cb: (p: CapsuleStatePayload) => void) => () => void } } }).acmind?.capsule;
     if (capsule?.onStateChanged) {
       const unsubscribe = capsule.onStateChanged((payload: CapsuleStatePayload) => {
         setCapsuleState(payload.state as CapsuleState);
@@ -72,13 +74,13 @@ export function CapsulePage(): JSX.Element {
     return undefined;
   }, []);
 
-  // ── Load pending count so the badge reflects the current inbox ──
+  // ── Load pending count + capsule status ──
   useEffect(() => {
     let cancelled = false;
 
-    const loadPendingCount = async () => {
+    const loadData = async () => {
       try {
-        const items = await window.pinmind.sourceItems.list({ status: 'inbox' });
+        const items = await window.acmind.sourceItems.list({ status: 'inbox' });
         if (!cancelled) {
           setPendingCount(items.length);
         }
@@ -87,12 +89,22 @@ export function CapsulePage(): JSX.Element {
           setPendingCount(0);
         }
       }
+
+      // Batch 4: Load capsule status
+      try {
+        const status = await (window as unknown as { acmind: { capsule: { getStatus: () => Promise<CapsuleStatus> } } }).acmind.capsule.getStatus();
+        if (!cancelled) {
+          setCapsuleStatus(status);
+        }
+      } catch {
+        // ignore - capsule status is best-effort
+      }
     };
 
-    void loadPendingCount();
+    void loadData();
 
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
-      void loadPendingCount();
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
+      void loadData();
     });
 
     return () => {

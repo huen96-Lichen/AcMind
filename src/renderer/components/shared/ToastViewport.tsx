@@ -88,7 +88,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }): JSX.
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto motion-toast-enter pinmind-subpanel-section px-4 py-3 border-l-4 ${TYPE_STYLES[toast.type]} flex items-center gap-3 min-w-[280px] max-w-[400px]`}
+            className={`pointer-events-auto motion-toast-enter acmind-subpanel-section px-4 py-3 border-l-4 ${TYPE_STYLES[toast.type]} flex items-center gap-3 min-w-[280px] max-w-[400px]`}
           >
             <span className="text-sm font-bold opacity-70 w-4 text-center flex-shrink-0">
               {TYPE_ICONS[toast.type]}

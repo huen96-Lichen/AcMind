@@ -132,8 +132,8 @@ function ImageThumbnail({ contentPath }: { contentPath: string }) {
     const loadThumbnail = async () => {
       try {
         const win = window as any;
-        if (win.pinmind?.sourceItems?.readImage) {
-          const result = await win.pinmind.sourceItems.readImage(contentPath);
+        if (win.acmind?.sourceItems?.readImage) {
+          const result = await win.acmind.sourceItems.readImage(contentPath);
           if (mountedRef.current && result) {
             setSrc(result);
           }
@@ -156,7 +156,7 @@ function ImageThumbnail({ contentPath }: { contentPath: string }) {
 
   if (loadError || !src) {
     return (
-      <div className="pinmind-image-card-thumbnail pinmind-image-card-thumbnail-fallback">
+      <div className="acmind-image-card-thumbnail acmind-image-card-thumbnail-fallback">
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="2" y="2" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.4" />
           <circle cx="7.5" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.2" />
@@ -168,7 +168,7 @@ function ImageThumbnail({ contentPath }: { contentPath: string }) {
 
   return (
     <img
-      className="pinmind-image-card-thumbnail"
+      className="acmind-image-card-thumbnail"
       src={src}
       alt=""
       onError={() => setLoadError(true)}
@@ -221,7 +221,7 @@ export function SourceItemCard({
     return (
       <div
         onClick={onClick}
-        className={`pinmind-source-card pinmind-image-card motion-button relative ${isSelected ? 'is-selected' : ''}`}
+        className={`acmind-source-card acmind-image-card motion-button relative ${isSelected ? 'is-selected' : ''}`}
         role="button"
         tabIndex={0}
       >
@@ -242,21 +242,21 @@ export function SourceItemCard({
             <span className="text-[10px] leading-none">{isSelected ? '✓' : ''}</span>
           </button>
         )}
-        <div className="pinmind-image-card-layout">
+        <div className="acmind-image-card-layout">
           <ImageThumbnail contentPath={item.contentPath} />
-          <div className="pinmind-image-card-content">
-            <div className="pinmind-image-card-title-row">
-              <span className="pinmind-image-card-title">
+          <div className="acmind-image-card-content">
+            <div className="acmind-image-card-title-row">
+              <span className="acmind-image-card-title">
                 {getSourceLabel(item.source)} · {formatTimeShort(item.createdAt)}
               </span>
-              <span className="pinmind-source-card-time">{getRelativeTime(item.createdAt)}</span>
+              <span className="acmind-source-card-time">{getRelativeTime(item.createdAt)}</span>
             </div>
-            <div className="pinmind-image-card-subtitle">
+            <div className="acmind-image-card-subtitle">
               <StatusBadge item={item} pipelineStage={pipelineStage} />
             </div>
           </div>
-          <div className="pinmind-image-card-badges">
-            <span className="pinmind-media-badge pinmind-media-badge-image">图片</span>
+          <div className="acmind-image-card-badges">
+            <span className="acmind-media-badge acmind-media-badge-image">图片</span>
           </div>
         </div>
       </div>
@@ -269,7 +269,7 @@ export function SourceItemCard({
   return (
     <div
       onClick={onClick}
-      className={`pinmind-source-card pinmind-text-card motion-button relative ${isSelected ? 'is-selected' : ''}`}
+      className={`acmind-source-card acmind-text-card motion-button relative ${isSelected ? 'is-selected' : ''}`}
       style={{ cursor: 'pointer' }}
     >
       {onToggleSelect && (
@@ -290,29 +290,29 @@ export function SourceItemCard({
         </button>
       )}
       {/* Header: type + source + time + status */}
-      <div className="pinmind-source-card-header">
+      <div className="acmind-source-card-header">
         <div className="flex items-center gap-2">
           <span className="text-[12px]">{getTypeIcon(item.type)}</span>
           {item.sourceApp ? (
-            <span className="pinmind-source-card-app">{item.sourceApp}</span>
+            <span className="acmind-source-card-app">{item.sourceApp}</span>
           ) : (
             <span style={{ fontSize: '11px', color: 'var(--pm-text-tertiary)' }}>{getSourceLabel(item.source)}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge item={item} pipelineStage={pipelineStage} />
-          <span className="pinmind-source-card-time">{getRelativeTime(item.createdAt)}</span>
+          <span className="acmind-source-card-time">{getRelativeTime(item.createdAt)}</span>
         </div>
       </div>
 
       {/* Body: title + preview */}
-      <div className="pinmind-source-card-body">
+      <div className="acmind-source-card-body">
         {item.title && (
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#1F2933', margin: '0 0 4px', lineHeight: '18px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {item.title}
           </p>
         )}
-        <p className="pinmind-source-card-text">
+        <p className="acmind-source-card-text">
           {truncateText(previewText, 120) || '无预览内容'}
         </p>
         {/* Tags */}
@@ -353,7 +353,7 @@ export function SourceItemCard({
             type="button"
             onClick={() => onRetryProcess(item.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#EF4444', fontSize: '11px', padding: '2px 6px', fontWeight: 500 }}
           >
             重试整理
@@ -365,7 +365,7 @@ export function SourceItemCard({
             type="button"
             onClick={() => onRetryExport(item.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#EF4444', fontSize: '11px', padding: '2px 6px', fontWeight: 500 }}
           >
             重试写入 Obsidian
@@ -377,7 +377,7 @@ export function SourceItemCard({
             type="button"
             onClick={() => onRetryProcess(item.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#EF4444', fontSize: '11px', padding: '2px 6px', fontWeight: 500 }}
           >
             重试整理
@@ -389,7 +389,7 @@ export function SourceItemCard({
             type="button"
             onClick={() => onRetryExport(item.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#F59E0B', fontSize: '11px', padding: '2px 6px', fontWeight: 500 }}
           >
             重新写入
@@ -410,7 +410,7 @@ export function SourceItemCard({
             type="button"
             onClick={() => onOpenInObsidian(item.id)}
             disabled={actionLoading}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#16A34A', fontSize: '11px', padding: '2px 6px', fontWeight: 500 }}
           >
             打开 Obsidian 文件
@@ -422,9 +422,9 @@ export function SourceItemCard({
           <button
             type="button"
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('pinmind:navigate', { detail: { view: 'edit', itemId: item.id } }));
+              window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'edit', itemId: item.id } }));
             }}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: 'var(--pm-text-tertiary)', fontSize: '11px', padding: '2px 6px' }}
           >
             查看详情
@@ -436,7 +436,7 @@ export function SourceItemCard({
           <button
             type="button"
             onClick={() => onDelete(item.id)}
-            className="pinmind-btn pinmind-btn-ghost motion-button"
+            className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: 'var(--pm-text-tertiary)', fontSize: '11px', padding: '2px 6px', marginLeft: 'auto' }}
           >
             删除

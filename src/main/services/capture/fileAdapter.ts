@@ -1,4 +1,4 @@
-// PinMind FileAdapter
+// AcMind FileAdapter
 // V2.1 Phase 7.1: Captures a file (PDF, DOCX, etc.) into a CaptureRecord.
 // V2.1 Phase 7.5: Enhanced with .txt/.md text reading and richer metadata.
 // V2.1 Phase 7.6: Auto-classify source_type by extension + processing_hint for VaultKeeper.

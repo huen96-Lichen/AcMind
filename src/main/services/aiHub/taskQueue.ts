@@ -1,4 +1,4 @@
-// PinMind AI Task Queue
+// AcMind AI Task Queue
 // FIFO sequential task queue with status change callbacks
 
 import type { AiTask, AiTaskStatus } from '../../../shared/types';

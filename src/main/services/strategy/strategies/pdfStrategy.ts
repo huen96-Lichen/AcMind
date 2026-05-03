@@ -1,4 +1,4 @@
-// PinMind PDF Strategy
+// AcMind PDF Strategy
 // Phase 8.1: PDF 占位或解析后内容
 
 import type { SourceType } from '../../../../shared/types';

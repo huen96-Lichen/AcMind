@@ -1,18 +1,18 @@
 {
-  "name": "pinmind",
-  "version": "0.4.0",
-  "description": "Local-first AI Memory Distiller",
+  "name": "acmind",
+  "version": "0.1.0-alpha",
+  "description": "Local-first desktop AI information hub",
   "main": "main.js",
   "author": "",
   "license": "MIT",
   "scripts": {
     "clean": "rimraf dist",
-    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:main\" \"npm:dev:preload\" \"npm:dev:electron\"",
+    "dev": "node scripts/fix-esbuild-binary.mjs && concurrently -k \"npm:dev:renderer\" \"npm:dev:main\" \"npm:dev:preload\" \"npm:dev:electron\"",
     "dev:renderer": "vite",
     "dev:main": "esbuild src/main/index.ts --bundle --platform=node --format=cjs --external:electron --external:better-sqlite3 --external:jsdom --external:@mozilla/readability --external:dommatrix --external:pdf-parse --external:pdfjs-dist --outfile=dist/main/index.cjs --sourcemap --watch",
     "dev:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload/index.cjs --sourcemap --watch",
     "dev:electron": "wait-on tcp:5173 file:dist/main/index.cjs file:dist/preload/index.cjs && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electronmon dist/main/index.cjs --no-sandbox",
-    "build": "npm run clean && npm run build:main && npm run build:preload && npm run build:renderer",
+    "build": "npm run clean && node scripts/fix-esbuild-binary.mjs && npm run build:main && npm run build:preload && npm run build:renderer",
     "build:main": "esbuild src/main/index.ts --bundle --platform=node --format=cjs --external:electron --external:better-sqlite3 --external:jsdom --external:@mozilla/readability --external:dommatrix --external:pdf-parse --external:pdfjs-dist --outfile=dist/main/index.cjs --minify",
     "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload/index.cjs --minify",
     "build:renderer": "vite build",
@@ -26,8 +26,8 @@
     "test:watch": "vitest",
     "audit:deps": "npm audit --omit=dev",
     "prepare": "husky",
-    "trainer": "node ./training/bin/pinmind-trainer.mjs",
-    "trainer:validate": "node ./training/bin/pinmind-trainer.mjs snapshot validate ./training/examples/sample-snapshot/manifest.json",
+    "trainer": "node ./training/bin/acmind-trainer.mjs",
+    "trainer:validate": "node ./training/bin/acmind-trainer.mjs snapshot validate ./training/examples/sample-snapshot/manifest.json",
     "package": "npm run package:mac:arm64",
     "package:mac:arm64": "npm run build && electron-builder --mac dmg --arm64",
     "package:local": "npm run build && cross-env SKIP_NOTARIZE=1 electron-builder --mac dmg --arm64 -c.mac.identity=null"
@@ -54,6 +54,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@esbuild/linux-arm64": "^0.28.0",
     "@eslint/js": "^9.39.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/dompurify": "^3.0.5",
@@ -72,6 +73,7 @@
     "electron-builder": "^25.1.8",
     "electronmon": "^2.0.2",
     "esbuild": "^0.28.0",
+    "esbuild-linux-arm64": "^0.15.18",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -87,8 +89,8 @@
     "wait-on": "^8.0.3"
   },
   "build": {
-    "appId": "com.pinmind.app",
-    "productName": "PinMind",
+    "appId": "com.acore.acmind",
+    "productName": "AcMind",
     "mac": {
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,

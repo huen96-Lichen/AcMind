@@ -110,10 +110,10 @@ export function useRecording(): UseRecordingReturn {
             if (buffer.byteLength > 0) {
               // ⚠️ capture.saveRecording() 在 preload 中未暴露，录屏数据无法保存到磁盘
               //    当前仅在前端内存中生成 Blob，无法持久化
-              setRecordingFeedback('录屏已保存到 PinMind/recordings。');
+              setRecordingFeedback('录屏已保存到 AcMind/recordings。');
             }
           } catch {
-            setRecordingFeedback('录屏保存失败，请检查 ~/PinMind 写入权限后重试。');
+            setRecordingFeedback('录屏保存失败，请检查 ~/AcMind 写入权限后重试。');
           } finally {
             mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
             mediaStreamRef.current = null;
@@ -138,7 +138,7 @@ export function useRecording(): UseRecordingReturn {
       // ⚠️ capture.markRecordingStarted() 和 capture.hideHub() 在 preload 中未暴露
       setRecordingFeedback('录屏中，点击悬浮按钮即可停止。');
     } catch {
-      setRecordingFeedback('录屏启动失败，请先在系统设置 > 隐私与安全性 > 屏幕录制中授权 PinMind，然后重试。');
+      setRecordingFeedback('录屏启动失败，请先在系统设置 > 隐私与安全性 > 屏幕录制中授权 AcMind，然后重试。');
     } finally {
       window.setTimeout(() => setBusyAction(null), 180);
     }

@@ -1,9 +1,9 @@
 import type { DistilledOutput, SourceItem } from './types';
 import { normalizeTags } from './tagNormalizer';
 
-export const PINMIND_SCHEMA_VERSION = '0.2' as const;
+export const ACMIND_SCHEMA_VERSION = '0.2' as const;
 
-export type PinMindSource =
+export type AcMindSource =
   | 'clipboard'
   | 'screenshot'
   | 'webpage'
@@ -13,7 +13,7 @@ export type PinMindSource =
   | 'image_ocr'
   | 'other';
 
-export type PinMindStatus =
+export type AcMindStatus =
   | 'collected'
   | 'cleaned'
   | 'reviewing'
@@ -21,7 +21,7 @@ export type PinMindStatus =
   | 'exported'
   | 'failed';
 
-export type PinMindStandardFields = {
+export type AcMindStandardFields = {
   schema_version: string;
   title: string;
   summary: string;
@@ -29,20 +29,20 @@ export type PinMindStandardFields = {
   category: string;
   body: string;
   raw_content?: string;
-  source: PinMindSource;
+  source: AcMindSource;
   captured_at: string;
   project: string;
-  status: PinMindStatus;
+  status: AcMindStatus;
   confidence: number;
 };
 
-export type PinMindFormatProfile = {
+export type AcMindFormatProfile = {
   id: string;
   name: string;
   schema_version: string;
   description?: string;
   frontmatter_style: 'yaml';
-  field_mapping: Record<keyof Omit<PinMindStandardFields, 'raw_content' | 'body'>, string>;
+  field_mapping: Record<keyof Omit<AcMindStandardFields, 'raw_content' | 'body'>, string>;
   filename_pattern: string;
   date_format: string;
   filename_date_format: string;
@@ -51,11 +51,11 @@ export type PinMindFormatProfile = {
   title_heading_level: 1 | 2 | 3;
   sanitize_filename: boolean;
   forbidden_filename_chars: string[];
-  default_values: Partial<PinMindStandardFields>;
+  default_values: Partial<AcMindStandardFields>;
 };
 
-export const DEFAULT_PINMIND_FIELDS: Partial<PinMindStandardFields> = {
-  schema_version: PINMIND_SCHEMA_VERSION,
+export const DEFAULT_ACMIND_FIELDS: Partial<AcMindStandardFields> = {
+  schema_version: ACMIND_SCHEMA_VERSION,
   tags: [],
   category: '未分类',
   source: 'manual',
@@ -64,11 +64,11 @@ export const DEFAULT_PINMIND_FIELDS: Partial<PinMindStandardFields> = {
   confidence: 0.5,
 };
 
-export const DEFAULT_PINMIND_FORMAT_PROFILE: PinMindFormatProfile = {
-  id: 'pinmind-default',
-  name: 'PinMind Default Markdown',
-  schema_version: PINMIND_SCHEMA_VERSION,
-  description: 'PinMind 默认 Markdown 输出格式，适合 Obsidian 和长期本地知识库维护。',
+export const DEFAULT_ACMIND_FORMAT_PROFILE: AcMindFormatProfile = {
+  id: 'acmind-default',
+  name: 'AcMind Default Markdown',
+  schema_version: ACMIND_SCHEMA_VERSION,
+  description: 'AcMind 默认 Markdown 输出格式，适合 Obsidian 和长期本地知识库维护。',
   frontmatter_style: 'yaml',
   field_mapping: {
     schema_version: 'schema_version',
@@ -91,7 +91,7 @@ export const DEFAULT_PINMIND_FORMAT_PROFILE: PinMindFormatProfile = {
   sanitize_filename: true,
   forbidden_filename_chars: ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '#'],
   default_values: {
-    schema_version: PINMIND_SCHEMA_VERSION,
+    schema_version: ACMIND_SCHEMA_VERSION,
     tags: [],
     category: '未分类',
     source: 'manual',
@@ -133,12 +133,12 @@ export function formatFilenameDate(timestampSeconds: number): string {
   return `${year}-${month}-${day}_${hour}${minute}`;
 }
 
-export function normalizePinMindFields(
-  input: Partial<PinMindStandardFields>,
+export function normalizeAcMindFields(
+  input: Partial<AcMindStandardFields>,
   now: string,
-): PinMindStandardFields {
+): AcMindStandardFields {
   return {
-    schema_version: input.schema_version ?? PINMIND_SCHEMA_VERSION,
+    schema_version: input.schema_version ?? ACMIND_SCHEMA_VERSION,
     title: input.title?.trim() || '未命名内容',
     summary: input.summary?.trim() || '暂无总结。',
     tags: normalizeTags(input.tags),
@@ -153,13 +153,13 @@ export function normalizePinMindFields(
   };
 }
 
-export function buildPinMindFieldsFromContent(params: {
+export function buildAcMindFieldsFromContent(params: {
   distilledOutput: DistilledOutput;
   sourceItem: SourceItem;
   project?: string;
-  status?: PinMindStatus;
+  status?: AcMindStatus;
   includeRawContent?: boolean;
-}): PinMindStandardFields {
+}): AcMindStandardFields {
   const { distilledOutput, sourceItem } = params;
   const title = (distilledOutput.suggestedTitle ?? sourceItem.previewText ?? '未命名内容').trim() || '未命名内容';
   const summary = (distilledOutput.summary ?? sourceItem.previewText ?? '暂无总结。').trim() || '暂无总结。';
@@ -168,16 +168,16 @@ export function buildPinMindFieldsFromContent(params: {
     ? (sourceItem.previewText ?? sourceItem.ocrText ?? sourceItem.originalUrl ?? '')
     : '';
 
-  return normalizePinMindFields(
+  return normalizeAcMindFields(
     {
-      schema_version: PINMIND_SCHEMA_VERSION,
+      schema_version: ACMIND_SCHEMA_VERSION,
       title,
       summary,
       tags: distilledOutput.tags ?? [],
       category: distilledOutput.category ?? '未分类',
       body: body.trim() || summary,
       raw_content: rawContent,
-      source: mapSourceToPinMindSource(sourceItem.source),
+      source: mapSourceToAcMindSource(sourceItem.source),
       captured_at: formatCapturedAt(sourceItem.createdAt),
       project: params.project ?? '默认',
       status: params.status ?? 'exported',
@@ -187,11 +187,11 @@ export function buildPinMindFieldsFromContent(params: {
   );
 }
 
-export function buildPinMindFrontmatterData(fields: PinMindStandardFields, profile: PinMindFormatProfile = DEFAULT_PINMIND_FORMAT_PROFILE): Record<string, unknown> {
+export function buildAcMindFrontmatterData(fields: AcMindStandardFields, profile: AcMindFormatProfile = DEFAULT_ACMIND_FORMAT_PROFILE): Record<string, unknown> {
   const frontmatter: Record<string, unknown> = {};
 
   for (const [fieldName, frontmatterKey] of Object.entries(profile.field_mapping) as Array<[
-    keyof Omit<PinMindStandardFields, 'raw_content' | 'body'>,
+    keyof Omit<AcMindStandardFields, 'raw_content' | 'body'>,
     string,
   ]>) {
     frontmatter[frontmatterKey] = fields[fieldName];
@@ -200,7 +200,7 @@ export function buildPinMindFrontmatterData(fields: PinMindStandardFields, profi
   return frontmatter;
 }
 
-export function mapSourceToPinMindSource(source: string): PinMindSource {
+export function mapSourceToAcMindSource(source: string): AcMindSource {
   switch (source) {
     case 'clipboard':
     case 'screenshot':

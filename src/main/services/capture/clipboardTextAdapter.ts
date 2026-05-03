@@ -1,4 +1,4 @@
-// PinMind ClipboardTextAdapter
+// AcMind ClipboardTextAdapter
 // V2.1 Phase 7.1: Captures clipboard text content into a CaptureRecord.
 
 import { createHash } from 'node:crypto';

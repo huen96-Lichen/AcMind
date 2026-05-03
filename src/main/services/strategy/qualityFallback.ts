@@ -1,4 +1,4 @@
-// PinMind Quality Fallback & Regeneration
+// AcMind Quality Fallback & Regeneration
 // Phase 8.5: 低质量结果兜底与重新生成机制
 //
 // 职责：

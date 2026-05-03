@@ -24,13 +24,13 @@ export function useExportRecords(): UseExportRecordsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const loadRecords = useCallback(async () => {
-    if (!window.pinmind) {
+    if (!window.acmind) {
       setLoading(false);
       return;
     }
     try {
       setError(null);
-      const result = await window.pinmind.export.history();
+      const result = await window.acmind.export.history();
       setRecords(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -47,8 +47,8 @@ export function useExportRecords(): UseExportRecordsReturn {
 
   // Listen for records.changed events
   useEffect(() => {
-    if (!window.pinmind) return;
-    const unsubscribe = window.pinmind.onRecordsChanged(() => {
+    if (!window.acmind) return;
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
       void loadRecords();
     });
     return unsubscribe;
@@ -61,8 +61,8 @@ export function useExportRecords(): UseExportRecordsReturn {
 
         // V2.1: 优先走 pipeline retry
         const record = records.find((r) => r.distilledOutputId === distilledOutputId);
-        if (record?.sourceItemId && window.pinmind?.pipeline) {
-          const result = await window.pinmind.pipeline.retryExport(record.sourceItemId);
+        if (record?.sourceItemId && window.acmind?.pipeline) {
+          const result = await window.acmind.pipeline.retryExport(record.sourceItemId);
           if (result.success) {
             await loadRecords();
             return true;
@@ -71,7 +71,7 @@ export function useExportRecords(): UseExportRecordsReturn {
         }
 
         // Fallback: legacy export.single
-        await window.pinmind.export.single(distilledOutputId);
+        await window.acmind.export.single(distilledOutputId);
         await loadRecords();
         return true;
       } catch (err) {
@@ -89,12 +89,12 @@ export function useExportRecords(): UseExportRecordsReturn {
         setError(null);
 
         // V2.1: 优先走 pipeline retry（逐条）
-        if (window.pinmind?.pipeline) {
+        if (window.acmind?.pipeline) {
           let allSucceeded = true;
           for (const id of distilledOutputIds) {
             const record = records.find((r) => r.distilledOutputId === id);
             if (record?.sourceItemId) {
-              const result = await window.pinmind.pipeline.retryExport(record.sourceItemId);
+              const result = await window.acmind.pipeline.retryExport(record.sourceItemId);
               if (!result.success) {
                 allSucceeded = false;
                 setError(result.error ?? '批量写入部分失败');
@@ -102,7 +102,7 @@ export function useExportRecords(): UseExportRecordsReturn {
             } else {
               // 无 sourceItemId，走 legacy
               try {
-                await window.pinmind.export.single(id);
+                await window.acmind.export.single(id);
               } catch {
                 allSucceeded = false;
               }
@@ -113,7 +113,7 @@ export function useExportRecords(): UseExportRecordsReturn {
         }
 
         // Fallback: legacy export.batch
-        await window.pinmind.export.batch(distilledOutputIds);
+        await window.acmind.export.batch(distilledOutputIds);
         await loadRecords();
         return true;
       } catch (err) {

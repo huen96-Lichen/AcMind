@@ -1,4 +1,4 @@
-// PinMind Unified Retry Service (V2.1 Phase 6.3)
+// AcMind Unified Retry Service (V2.1 Phase 6.3)
 // Centralized retry orchestration based on ErrorType.
 // Each error type retries from the appropriate pipeline stage,
 // ensuring no data loss, no duplicate overwrites, and full state tracking.

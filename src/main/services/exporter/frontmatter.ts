@@ -1,4 +1,4 @@
-// PinMind YAML Frontmatter Generator
+// AcMind YAML Frontmatter Generator
 // Generates and parses YAML frontmatter blocks for Obsidian notes
 
 // ---------------------------------------------------------------------------
