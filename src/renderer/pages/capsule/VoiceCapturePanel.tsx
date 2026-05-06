@@ -350,6 +350,16 @@ export function VoiceCapturePanel({ onComplete, onCancel }: VoiceCapturePanelPro
             </div>
           </button>
           <span className="voice-record-hint">{statusText}</span>
+          <span className="voice-record-hint" style={{ fontSize: 11, color: 'var(--pm-capsule-text-tertiary)', marginTop: 8 }}>
+            录音后将保存为 Pin
+          </span>
+          <div style={styles.dictationHint}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+              <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M6 10h4M6 14h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <span>语音输入到对话框？按 <kbd style={styles.kbd}>⌥ Space</kbd> 随时开始</span>
+          </div>
         </div>
       )}
 
@@ -445,5 +455,35 @@ export function VoiceCapturePanel({ onComplete, onCancel }: VoiceCapturePanelPro
     </div>
   );
 }
+
+// ─── Styles ─────────────────────────────────────────────────────
+
+const styles: Record<string, React.CSSProperties> = {
+  dictationHint: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '10px 14px',
+    margin: '12px 14px 0',
+    borderRadius: 10,
+    background: 'rgba(0, 0, 0, 0.03)',
+    border: '1px solid rgba(0, 0, 0, 0.06)',
+    fontSize: 11,
+    color: 'var(--pm-capsule-text-tertiary)',
+    lineHeight: 1.4,
+  },
+  kbd: {
+    display: 'inline-block',
+    padding: '1px 5px',
+    borderRadius: 4,
+    background: 'rgba(0, 0, 0, 0.06)',
+    border: '1px solid rgba(0, 0, 0, 0.1)',
+    fontFamily: 'inherit',
+    fontSize: 11,
+    fontWeight: 500,
+    color: 'var(--pm-capsule-text-secondary)',
+  },
+};
 
 export default VoiceCapturePanel;

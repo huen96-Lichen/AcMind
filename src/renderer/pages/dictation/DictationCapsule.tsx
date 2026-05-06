@@ -3,8 +3,8 @@
 // Listens for `dictation:state` IPC events from main process.
 // No outbound IPC — all controls via main process hotkeys.
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import type { DictationCapsulePayload, DictationSessionPhase } from '../../../shared/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { AppSettings, DictationCapsulePayload, DictationSessionPhase } from '../../../shared/types';
 
 // ─── Helpers ────────────────────────────────────────────────────
 
@@ -13,6 +13,72 @@ function formatElapsed(ms: number): string {
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
   return min > 0 ? `${min}:${sec.toString().padStart(2, '0')}` : `${sec}`;
+}
+
+type SpeechRecognitionResultLike = {
+  isFinal: boolean;
+  0: { transcript: string };
+  length: number;
+};
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: SpeechRecognitionResultLike[];
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error?: string; message?: string }) => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionCtorLike = new () => SpeechRecognitionLike;
+
+function normalizeSpeechLanguage(language?: string | null): string {
+  const value = (language ?? '').trim().toLowerCase();
+  if (!value) return 'zh-CN';
+  if (value === 'zh' || value.startsWith('zh-')) return 'zh-CN';
+  if (value === 'en' || value.startsWith('en-')) return 'en-US';
+  if (value === 'ja' || value.startsWith('ja-')) return 'ja-JP';
+  if (value === 'ko' || value.startsWith('ko-')) return 'ko-KR';
+  return (language ?? '').trim() || 'zh-CN';
+}
+
+function getSpeechRecognitionCtor(): SpeechRecognitionCtorLike | null {
+  const globalWindow = window as Window & {
+    SpeechRecognition?: SpeechRecognitionCtorLike;
+    webkitSpeechRecognition?: SpeechRecognitionCtorLike;
+  };
+  return globalWindow.SpeechRecognition ?? globalWindow.webkitSpeechRecognition ?? null;
+}
+
+function splitPreviewChunks(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  if (/\s/.test(trimmed)) {
+    const chunks = trimmed.match(/(\S+\s*)/g);
+    return chunks?.filter(Boolean) ?? [trimmed];
+  }
+
+  const punctuationAware = trimmed.match(/[^，。！？；：、,.!?]+[，。！？；：、,.!?]?/g);
+  if (punctuationAware && punctuationAware.length > 1) {
+    return punctuationAware;
+  }
+
+  const chars = Array.from(trimmed);
+  const chunks: string[] = [];
+  for (let i = 0; i < chars.length; i += 2) {
+    chunks.push(chars.slice(i, i + 2).join(''));
+  }
+  return chunks.length > 0 ? chunks : [trimmed];
 }
 
 // ─── Audio Bars ────────────────────────────────────────────────
@@ -139,9 +205,22 @@ export function DictationCapsule() {
     message: '',
     insertedChars: 0,
     translation: false,
+    previewText: '',
   });
+  const [previewLanguage, setPreviewLanguage] = useState('zh-CN');
+  const [livePreviewText, setLivePreviewText] = useState('');
+  const [previewStatus, setPreviewStatus] = useState<string | null>(null);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
+  const [animatedPreviewText, setAnimatedPreviewText] = useState('');
 
   const animFrameRef = useRef<number>(0);
+  const previewAnimationTimerRef = useRef<number | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const recognitionRestartTimerRef = useRef<number | null>(null);
+  const recognitionShouldRunRef = useRef(false);
+  const sessionPhaseRef = useRef<DictationSessionPhase>('idle');
+  const livePreviewFinalRef = useRef('');
+  const previewRenderSourceRef = useRef('');
 
   // Listen for IPC events from main process
   useEffect(() => {
@@ -154,6 +233,215 @@ export function DictationCapsule() {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    sessionPhaseRef.current = payload.state;
+  }, [payload.state]);
+
+  useEffect(() => {
+    setSpeechRecognitionSupported(Boolean(getSpeechRecognitionCtor()));
+  }, []);
+
+  // Load a reasonable speech-recognition language for preview mode.
+  useEffect(() => {
+    let cancelled = false;
+
+    void window.acmind.settings.get().then((settings: AppSettings) => {
+      if (cancelled) return;
+      const lang = settings.dictation?.workingLanguages?.[0] ?? settings.transcription?.apiLanguage ?? navigator.language;
+      setPreviewLanguage(normalizeSpeechLanguage(lang));
+    }).catch(() => {
+      if (!cancelled) {
+        setPreviewLanguage(normalizeSpeechLanguage(navigator.language));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const previewSourceText = useMemo(() => livePreviewText || payload.previewText || '', [livePreviewText, payload.previewText]);
+
+  useEffect(() => {
+    const target = previewSourceText.trim();
+    if (previewAnimationTimerRef.current) {
+      window.clearTimeout(previewAnimationTimerRef.current);
+      previewAnimationTimerRef.current = null;
+    }
+
+    if (!target) {
+      previewRenderSourceRef.current = '';
+      setAnimatedPreviewText('');
+      return;
+    }
+
+    if (speechRecognitionSupported && payload.state === 'listening' && livePreviewText) {
+      previewRenderSourceRef.current = target;
+      setAnimatedPreviewText(target);
+      return;
+    }
+
+    if (previewRenderSourceRef.current === target) {
+      return;
+    }
+
+    previewRenderSourceRef.current = target;
+
+    const chunks = splitPreviewChunks(target);
+    if (chunks.length <= 1) {
+      setAnimatedPreviewText(target);
+      return;
+    }
+
+    setAnimatedPreviewText('');
+    let index = 0;
+
+    const step = () => {
+      index += 1;
+      setAnimatedPreviewText(chunks.slice(0, index).join(''));
+      if (index < chunks.length) {
+        const delay = index < 4 ? 18 : 26;
+        previewAnimationTimerRef.current = window.setTimeout(step, delay);
+      } else {
+        previewAnimationTimerRef.current = null;
+      }
+    };
+
+    previewAnimationTimerRef.current = window.setTimeout(step, 16);
+
+    return () => {
+      if (previewAnimationTimerRef.current) {
+        window.clearTimeout(previewAnimationTimerRef.current);
+        previewAnimationTimerRef.current = null;
+      }
+    };
+  }, [livePreviewText, payload.previewText, payload.state, previewSourceText, speechRecognitionSupported]);
+
+  const stopRecognition = useCallback((clearPreview = false) => {
+    recognitionShouldRunRef.current = false;
+    if (recognitionRestartTimerRef.current) {
+      window.clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+    if (previewAnimationTimerRef.current) {
+      window.clearTimeout(previewAnimationTimerRef.current);
+      previewAnimationTimerRef.current = null;
+    }
+
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (recognition) {
+      try {
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        recognition.abort();
+      } catch {
+        try {
+          recognition.stop();
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (clearPreview) {
+      livePreviewFinalRef.current = '';
+      setLivePreviewText('');
+      setPreviewStatus(null);
+      previewRenderSourceRef.current = '';
+      setAnimatedPreviewText('');
+    }
+  }, []);
+
+  const startRecognition = useCallback(async () => {
+    if (recognitionRef.current) {
+      return;
+    }
+
+    const RecognitionCtor = getSpeechRecognitionCtor();
+    if (!RecognitionCtor) {
+      setPreviewStatus('实时预览不可用');
+      return;
+    }
+
+    try {
+      if (navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      const recognition = new RecognitionCtor();
+      recognition.lang = previewLanguage;
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognitionShouldRunRef.current = true;
+      livePreviewFinalRef.current = '';
+      setLivePreviewText('');
+      setPreviewStatus('实时预览中');
+
+      recognition.onresult = (event) => {
+        let nextFinal = livePreviewFinalRef.current;
+        let nextInterim = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const result = event.results[i];
+          const transcript = result[0]?.transcript ?? '';
+          if (!transcript) continue;
+          if (result.isFinal) {
+            nextFinal += transcript;
+          } else {
+            nextInterim += transcript;
+          }
+        }
+
+        livePreviewFinalRef.current = nextFinal;
+        const combined = `${nextFinal}${nextInterim}`.replace(/\s+/g, ' ').trim();
+        setLivePreviewText(combined);
+        setPreviewStatus('实时预览中');
+      };
+
+      recognition.onerror = (event) => {
+        const error = event.error ?? event.message ?? 'unknown';
+        if (error === 'not-allowed' || error === 'service-not-allowed') {
+          setPreviewStatus('请授权浏览器麦克风权限');
+        } else if (error === 'no-speech') {
+          setPreviewStatus('等待声音...');
+        } else {
+          setPreviewStatus('实时预览暂不可用');
+        }
+      };
+
+      recognition.onend = () => {
+        recognitionRef.current = null;
+        if (!recognitionShouldRunRef.current) {
+          return;
+        }
+
+        if (sessionPhaseRef.current === 'listening') {
+          recognitionRestartTimerRef.current = window.setTimeout(() => {
+            if (!recognitionShouldRunRef.current || sessionPhaseRef.current !== 'listening') {
+              return;
+            }
+            void startRecognition();
+          }, 180);
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (error) {
+      recognitionRef.current = null;
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        setPreviewStatus('请先允许麦克风权限');
+      } else {
+        setPreviewStatus('实时预览启动失败');
+      }
+    }
+  }, [payload.state, previewLanguage]);
 
   // Re-render audio bars during listening phase
   useEffect(() => {
@@ -174,7 +462,36 @@ export function DictationCapsule() {
     };
   }, [payload.state]);
 
+  // Start/stop live preview recognition in sync with the dictation session.
+  useEffect(() => {
+    if (payload.state === 'listening') {
+      void startRecognition();
+      return () => {
+        stopRecognition(false);
+      };
+    }
+
+    if (payload.state === 'starting') {
+      stopRecognition(true);
+    }
+
+    if (payload.state === 'idle') {
+      stopRecognition(true);
+    }
+
+    if (payload.state === 'transcribing' || payload.state === 'polishing' || payload.state === 'inserting') {
+      stopRecognition(false);
+    }
+
+    return undefined;
+  }, [payload.state, startRecognition, stopRecognition]);
+
   const { state, level, elapsedMs, message, insertedChars, translation } = payload;
+  const previewText = speechRecognitionSupported && state === 'listening'
+    ? (livePreviewText || previewSourceText)
+    : (animatedPreviewText || previewSourceText);
+  const hasPreviewText = previewText.trim().length > 0;
+  const previewModeLabel = speechRecognitionSupported && state === 'listening' ? '实时草稿' : '渐进预览';
 
   // Idle: hidden
   const isVisible = state !== 'idle';
@@ -208,18 +525,53 @@ export function DictationCapsule() {
               <AudioBars level={level} />
               <span style={styles.elapsedText}>{formatElapsed(elapsedMs)}</span>
             </div>
+            <div style={styles.previewChrome}>
+              <div style={styles.previewHeaderRow}>
+                <span style={styles.previewModeChip}>{previewModeLabel}</span>
+                <span style={styles.previewStatusChip}>{previewStatus ?? (speechRecognitionSupported ? '监听中' : '转写后预览')}</span>
+              </div>
+              {hasPreviewText ? (
+                <div style={styles.previewText}>{previewText}</div>
+              ) : (
+                <div style={styles.previewPlaceholder}>
+                  继续说话，草稿会在这里像输入法一样逐步出现
+                </div>
+              )}
+              <div style={styles.previewFooterRow}>
+                <span style={styles.previewHintText}>边说边看 · 松开后完成整理</span>
+                <span style={styles.previewCaret}>▍</span>
+              </div>
+            </div>
             <span style={styles.hintText}>再次按下快捷键结束</span>
           </div>
         )}
 
         {/* Transcribing / Polishing / Inserting */}
         {(state === 'transcribing' || state === 'polishing' || state === 'inserting') && (
-          <div style={styles.contentRow}>
-            <BouncingDots />
-            <span style={styles.statusText}>
-              {state === 'transcribing' ? '识别中...' :
-               state === 'polishing' ? '整理中...' : '插入中...'}
-            </span>
+          <div style={styles.listeningContent}>
+            <div style={styles.contentRow}>
+              <BouncingDots />
+              <span style={styles.statusText}>
+                {state === 'transcribing' ? '识别中...' :
+                 state === 'polishing' ? '整理中...' : '插入中...'}
+              </span>
+            </div>
+            <div style={styles.previewChrome}>
+              <div style={styles.previewHeaderRow}>
+                <span style={styles.previewModeChip}>渐进预览</span>
+                <span style={styles.previewStatusChip}>{previewStatus ?? '正在完善文本'}</span>
+              </div>
+              {hasPreviewText ? (
+                <div style={styles.previewText}>{previewText}</div>
+              ) : (
+                <div style={styles.previewPlaceholder}>
+                  文本整理完成前，这里会逐步显示内容
+                </div>
+              )}
+              <div style={styles.previewFooterRow}>
+                <span style={styles.previewHintText}>结果即将插入光标位置</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -272,22 +624,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
   capsule: {
     position: 'relative',
-    width: 220,
+    width: 320,
     minHeight: 42,
-    maxHeight: 110,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    maxHeight: 160,
+    borderRadius: 24,
+    background:
+      'linear-gradient(180deg, rgba(10, 10, 12, 0.84), rgba(12, 12, 16, 0.72))',
+    backdropFilter: 'blur(22px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(22px) saturate(140%)',
+    border: '1px solid rgba(255, 255, 255, 0.10)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '12px 16px',
+    padding: '14px 16px',
     color: '#ffffff',
     transition: 'all 0.3s ease',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    boxShadow: '0 12px 42px rgba(0, 0, 0, 0.34)',
   },
   statusPill: {
     position: 'absolute',
@@ -402,6 +755,79 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     color: 'rgba(255, 255, 255, 0.4)',
   },
+  previewChrome: {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 18,
+    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.06))',
+    border: '1px solid rgba(255, 255, 255, 0.10)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    maxHeight: 112,
+    overflow: 'auto',
+  },
+  previewHeaderRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  previewModeChip: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: 'rgba(255, 255, 255, 0.84)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    border: '1px solid rgba(255, 255, 255, 0.10)',
+    borderRadius: 999,
+    padding: '3px 8px',
+    flexShrink: 0,
+  },
+  previewStatusChip: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.60)',
+    backgroundColor: 'rgba(15, 23, 42, 0.20)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: 999,
+    padding: '3px 8px',
+    flexShrink: 0,
+  },
+  previewText: {
+    fontSize: 14,
+    lineHeight: 1.56,
+    fontWeight: 500,
+    color: '#ffffff',
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
+    letterSpacing: '0.01em',
+    textShadow: '0 1px 0 rgba(0, 0, 0, 0.15)',
+  },
+  previewPlaceholder: {
+    fontSize: 13,
+    lineHeight: 1.55,
+    color: 'rgba(255, 255, 255, 0.42)',
+    wordBreak: 'break-word',
+  },
+  previewFooterRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  previewHintText: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.45)',
+    letterSpacing: '0.02em',
+  },
+  previewCaret: {
+    fontSize: 14,
+    lineHeight: 1,
+    color: 'rgba(255, 255, 255, 0.8)',
+    animation: 'dictation-caret-blink 1s steps(1, end) infinite',
+  },
   doneText: {
     fontSize: 13,
     fontWeight: 500,
@@ -444,6 +870,10 @@ if (typeof document !== 'undefined' && !document.getElementById(styleSheetId)) {
     @keyframes dictation-spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+    @keyframes dictation-caret-blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
     }
   `;
   document.head.appendChild(style);

@@ -272,8 +272,10 @@ async function bootstrap(): Promise<void> {
     rendererFilePath,
     rendererDevUrl,
     isDev,
+    onWindowCreated: (win) => {
+      dictationCoordinator.setDictationWindow(win);
+    },
   });
-  dictationCoordinator.setDictationWindow(dictationController.getWindow());
 
   // 8. Register IPC handlers
   await registerIpcHandlers({
@@ -313,6 +315,11 @@ async function bootstrap(): Promise<void> {
 
       // OpenLess-inspired: toggle dictation on hotkey
       const s = settings.load();
+      logger.info('app', 'bootstrap', 'voiceInput', 'Voice input hotkey handled', {
+        phase: dictationCoordinator.getPhase(),
+        hotkey: s.capsule.shortcuts.voiceInput,
+        enabled: s.dictation?.enabled ?? false,
+      });
       if (!s.dictation?.enabled) {
         settings.update({
           dictation: { ...(s.dictation ?? DEFAULT_DICTATION_SETTINGS), enabled: true },
@@ -323,9 +330,13 @@ async function bootstrap(): Promise<void> {
         void dictationCoordinator.beginSession();
       } else if (dictationCoordinator.getPhase() === 'listening') {
         void dictationCoordinator.endSession();
+      } else {
+        logger.warn('app', 'bootstrap', 'voiceInput', 'Voice input hotkey ignored because dictation is not idle/listening', {
+          phase: dictationCoordinator.getPhase(),
+        });
       }
     },
-  }, currentSettings);
+  }, settings.load());
 
   // 11. Show dashboard window
   dashboardController.show();

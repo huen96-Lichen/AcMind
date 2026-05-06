@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   AppSettings,
   LogLevel,
@@ -31,6 +31,7 @@ import { AcMindIcon } from '../../design-system/icons';
 import { SettingGroupCard } from '../../design-system/primitives';
 import { Button, StatusBadge } from '../../design-system/components';
 import { AddProviderDialog } from './components/AddProviderDialog';
+import { HotkeyRecorder } from './components/HotkeyRecorder';
 import { ProviderCard } from './components/ProviderCard';
 import { EmptyState } from '../../components/shared/EmptyState';
 import { useToast } from '../../components/shared/ToastViewport';
@@ -206,8 +207,6 @@ export function SettingsPage(): JSX.Element {
   const [repairingWhisper, setRepairingWhisper] = useState(false);
   const [runningDictationDiagnostics, setRunningDictationDiagnostics] = useState(false);
   const [dictationDiagnostics, setDictationDiagnostics] = useState<DictationDiagnosticReport | null>(null);
-  const [dictationHotkeyDraft, setDictationHotkeyDraft] = useState(DEFAULT_DICTATION_SETTINGS.hotkey);
-  const suppressDictationHotkeyCommitRef = useRef(false);
   const [providerDialogProvider, setProviderDialogProvider] = useState<ProviderConfig | null>(null);
   const [showProviderDialog, setShowProviderDialog] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -316,10 +315,6 @@ export function SettingsPage(): JSX.Element {
     void loadWhisperModels();
   }, [settings, activeCategory, addToast]);
 
-  useEffect(() => {
-    setDictationHotkeyDraft(settings?.dictation?.hotkey ?? DEFAULT_DICTATION_SETTINGS.hotkey);
-  }, [settings?.dictation?.hotkey]);
-
   const updateSetting = useCallback(
     async (patch: Partial<AppSettings>): Promise<AppSettings | null> => {
       if (!settings) return null;
@@ -359,15 +354,18 @@ export function SettingsPage(): JSX.Element {
   const commitDictationHotkey = useCallback(
     async (nextHotkey: string) => {
       if (!settings) return;
-      const sanitized = nextHotkey.trim() || DEFAULT_DICTATION_SETTINGS.hotkey;
-      setDictationHotkeyDraft(sanitized);
-      if (sanitized === (settings.dictation?.hotkey ?? DEFAULT_DICTATION_SETTINGS.hotkey)) {
+      const sanitized = nextHotkey.trim() || DEFAULT_CAPSULE_SETTINGS.shortcuts.voiceInput;
+      const currentHotkey = settings.capsule.shortcuts.voiceInput ?? DEFAULT_CAPSULE_SETTINGS.shortcuts.voiceInput;
+      if (sanitized === currentHotkey) {
         return;
       }
       await updateSetting({
-        dictation: {
-          ...(settings.dictation ?? DEFAULT_DICTATION_SETTINGS),
-          hotkey: sanitized,
+        capsule: {
+          ...settings.capsule,
+          shortcuts: {
+            ...settings.capsule.shortcuts,
+            voiceInput: sanitized,
+          },
         },
       });
     },
@@ -1844,31 +1842,11 @@ export function SettingsPage(): JSX.Element {
                     </SettingGroupCard>
 
                     <SettingGroupCard title="快捷键" description="全局快捷键，在任何应用中生效" icon="all">
-                      <SettingsRow label="听写快捷键" description="支持 Cmd+Shift+V / CommandOrControl+Shift+V 这类写法，保存后立即生效。">
-                        <input
-                          type="text"
-                          value={dictationHotkeyDraft}
-                          onChange={(e) => {
-                            setDictationHotkeyDraft(e.target.value);
-                          }}
-                          onBlur={() => {
-                            if (suppressDictationHotkeyCommitRef.current) {
-                              suppressDictationHotkeyCommitRef.current = false;
-                              return;
-                            }
-                            void commitDictationHotkey(dictationHotkeyDraft);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.currentTarget.blur();
-                            } else if (e.key === 'Escape') {
-                              suppressDictationHotkeyCommitRef.current = true;
-                              setDictationHotkeyDraft(settings?.dictation?.hotkey ?? DEFAULT_DICTATION_SETTINGS.hotkey);
-                              e.currentTarget.blur();
-                            }
-                          }}
-                          className="w-56 rounded-[6px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.03)] px-2.5 py-1 text-[13px] text-[color:var(--pm-text-primary)] outline-none focus:border-[color:var(--pm-border)]"
-                          placeholder="Cmd+Shift+V"
+                      <SettingsRow label="听写快捷键" description="点击录制后，直接按下想要的组合键，松开后自动保存并立即生效。">
+                        <HotkeyRecorder
+                          value={settings?.capsule?.shortcuts?.voiceInput ?? DEFAULT_CAPSULE_SETTINGS.shortcuts.voiceInput}
+                          defaultValue={DEFAULT_CAPSULE_SETTINGS.shortcuts.voiceInput}
+                          onCommit={commitDictationHotkey}
                         />
                       </SettingsRow>
                       <SettingsRow label="翻译模式" description="录音中按住 Shift 切换为翻译输出。">

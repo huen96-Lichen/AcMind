@@ -1839,6 +1839,8 @@ export interface DictationCapsulePayload {
   insertedChars: number;
   /** Whether translation mode is active */
   translation: boolean;
+  /** Optional live preview text emitted by the renderer while listening */
+  previewText?: string;
 }
 
 /** Single dictation history entry */
@@ -1886,8 +1888,8 @@ export interface DictationSettings {
 
 export const DEFAULT_DICTATION_SETTINGS: DictationSettings = {
   enabled: true,
-  hotkey: 'Cmd+Shift+V',
-  defaultMode: 'light',
+  hotkey: 'Alt+Space',
+  defaultMode: 'raw',
   enabledModes: ['raw', 'light', 'structured', 'formal'],
   restoreClipboard: true,
   workingLanguages: ['zh-CN', 'en'],

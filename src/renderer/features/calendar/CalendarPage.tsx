@@ -85,35 +85,10 @@ const VIEW_LABELS: Record<CalendarViewMode, string> = {
   year: '年',
 };
 
-const VIEW_SHELL_HEADER_HEIGHT = 78;
-
-function CalendarViewShell({
-  eyebrow,
-  title,
-  subtitle,
-  action,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  subtitle?: string;
-  action?: ReactNode;
-  children: ReactNode;
-}): JSX.Element {
+function CalendarMainFrame({ children }: { children: ReactNode }): JSX.Element {
   return (
-    <section className="calendar-view-shell flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white/72 shadow-[0_18px_56px_rgba(15,23,42,0.045)] backdrop-blur-[18px]">
-      <div
-        className="calendar-view-shell-header flex flex-none items-center justify-between gap-4 border-b border-[rgba(15,23,42,0.06)] px-[22px] py-[14px]"
-        style={{ height: VIEW_SHELL_HEADER_HEIGHT }}
-      >
-        <div className="calendar-view-shell-title-group min-w-0">
-          <div className="calendar-view-eyebrow mb-2 text-[12px] leading-none text-[color:var(--pm-text-tertiary)]">{eyebrow}</div>
-          <div className="calendar-view-title truncate text-[24px] font-bold leading-[1.1] tracking-[-0.03em]">{title}</div>
-          {subtitle ? <div className="calendar-view-subtitle mt-1.5 truncate text-[12px] leading-[1.2] text-[color:var(--pm-text-tertiary)]">{subtitle}</div> : null}
-        </div>
-        {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
-      </div>
-      <div className="calendar-view-shell-body flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+    <section className="calendar-main flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white/72 shadow-[0_18px_56px_rgba(15,23,42,0.045)] backdrop-blur-[18px]">
+      <div className="calendar-main-body flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         {children}
       </div>
     </section>
@@ -461,51 +436,53 @@ export function CalendarPage(): JSX.Element {
         </aside>
 
         <main className="calendar-main-column flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
-          {state.viewMode === 'month' && (
-            <MonthView
-              cells={monthGrid}
-              events={state.events}
-              visibility={state.categoryVisibility}
-              activeDateKey={state.activeDateKey}
-              onSelectDate={setActiveDateKey}
-              onCreate={openCreate}
-              onOpenDetail={openDetail}
-            />
-          )}
-          {state.viewMode === 'week' && (
-            <WeekView
-              weekDates={weekDates}
-              activeDateKey={state.activeDateKey}
-              events={state.events}
-              visibility={state.categoryVisibility}
-              onSelectDate={setActiveDateKey}
-              onCreate={openCreate}
-              onOpenDetail={openDetail}
-            />
-          )}
-          {state.viewMode === 'day' && (
-            <DayView
-              date={activeDate}
-              activeDateKey={state.activeDateKey}
-              events={state.events}
-              visibility={state.categoryVisibility}
-              onCreate={openCreate}
-              onOpenDetail={openDetail}
-              onSelectDate={setActiveDateKey}
-            />
-          )}
-          {state.viewMode === 'year' && (
-            <YearView
-              year={activeDate.getFullYear()}
-              months={visibleYearMonths}
-              activeMonth={activeDate.getMonth()}
-              events={state.events}
-              visibility={state.categoryVisibility}
-              onSelectMonth={(dateKey) => setActiveDateKey(dateKey)}
-              onOpenDetail={openDetail}
-              onCreate={openCreate}
-            />
-          )}
+          <CalendarMainFrame>
+            {state.viewMode === 'month' && (
+              <MonthView
+                cells={monthGrid}
+                events={state.events}
+                visibility={state.categoryVisibility}
+                activeDateKey={state.activeDateKey}
+                onSelectDate={setActiveDateKey}
+                onCreate={openCreate}
+                onOpenDetail={openDetail}
+              />
+            )}
+            {state.viewMode === 'week' && (
+              <WeekView
+                weekDates={weekDates}
+                activeDateKey={state.activeDateKey}
+                events={state.events}
+                visibility={state.categoryVisibility}
+                onSelectDate={setActiveDateKey}
+                onCreate={openCreate}
+                onOpenDetail={openDetail}
+              />
+            )}
+            {state.viewMode === 'day' && (
+              <DayView
+                date={activeDate}
+                activeDateKey={state.activeDateKey}
+                events={state.events}
+                visibility={state.categoryVisibility}
+                onCreate={openCreate}
+                onOpenDetail={openDetail}
+                onSelectDate={setActiveDateKey}
+              />
+            )}
+            {state.viewMode === 'year' && (
+              <YearView
+                year={activeDate.getFullYear()}
+                months={visibleYearMonths}
+                activeMonth={activeDate.getMonth()}
+                events={state.events}
+                visibility={state.categoryVisibility}
+                onSelectMonth={(dateKey) => setActiveDateKey(dateKey)}
+                onOpenDetail={openDetail}
+                onCreate={openCreate}
+              />
+            )}
+          </CalendarMainFrame>
         </main>
 
         {todayPanelOpen ? (
@@ -738,66 +715,57 @@ function MonthView({
   onOpenDetail: (occurrence: CalendarOccurrence) => void;
 }): JSX.Element {
   return (
-    <CalendarViewShell
-      eyebrow="月视图"
-      title={formatMonthTitle(fromDateKey(activeDateKey))}
-      subtitle="标准月历总览"
-    >
-      <div className="month-view-content flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-        <div className="grid grid-cols-7 gap-2 text-center text-[12px] font-medium leading-none text-[color:var(--pm-text-tertiary)]">
-          {['日', '一', '二', '三', '四', '五', '六'].map((label) => (
-            <div key={label} className="py-1">{label}</div>
-          ))}
-        </div>
-        <div
-          className="month-grid grid min-h-0 flex-1 min-w-0 grid-cols-7 gap-2 overflow-hidden"
-          style={{ gridTemplateRows: 'repeat(6, minmax(76px, 1fr))' }}
-        >
-          {cells.map((cell) => {
-            const occurrences = getOccurrencesForDate(events, cell.dateKey).filter((item) => visibility[item.event.categoryId]);
-            const visibleOccurrences = occurrences.slice(0, 3);
-            const moreCount = Math.max(0, occurrences.length - visibleOccurrences.length);
-            const selected = cell.dateKey === activeDateKey;
-            return (
-              <div
-                key={cell.dateKey}
-                role="button"
-                tabIndex={0}
-                className={`month-cell group flex min-h-0 flex-col overflow-hidden rounded-[14px] border p-2 text-left transition-all ${
-                  selected
-                    ? 'border-[color:var(--pm-brand)] bg-[rgba(255,107,43,0.05)] shadow-[0_14px_30px_rgba(255,107,43,0.08)]'
-                    : cell.isToday
-                      ? 'border-[color:var(--pm-brand-border)] bg-[rgba(255,107,43,0.03)]'
-                      : 'border-[color:var(--border-light)] bg-white/75 hover:border-[color:var(--pm-border-strong)] hover:bg-white'
-                }`}
-                onClick={() => onSelectDate(cell.dateKey)}
-                onDoubleClick={() => onCreate(cell.dateKey)}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-[12px] font-semibold ${cell.inCurrentMonth ? 'text-[color:var(--pm-text-primary)]' : 'text-[color:var(--pm-text-muted)]'}`}>
-                    {cell.date.getDate()}
-                  </span>
-                  {cell.isToday ? <span className="rounded-full bg-[color:var(--pm-brand-soft)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--pm-brand)]">今天</span> : null}
-                </div>
-                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-                  {visibleOccurrences.map((occurrence) => (
-                    <EventPill
-                      key={`${occurrence.event.id}:${occurrence.dateKey}`}
-                      occurrence={occurrence}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onOpenDetail(occurrence);
-                      }}
-                    />
-                  ))}
-                  {moreCount > 0 ? <div className="pt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">+{moreCount} 更多</div> : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className="month-view-content flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+      <div className="grid grid-cols-7 gap-2 text-center text-[12px] font-medium leading-none text-[color:var(--pm-text-tertiary)]">
+        {['日', '一', '二', '三', '四', '五', '六'].map((label) => (
+          <div key={label} className="py-1">{label}</div>
+        ))}
       </div>
-    </CalendarViewShell>
+      <div className="month-grid grid min-h-0 flex-1 min-w-0 grid-cols-7 gap-2 overflow-hidden" style={{ gridTemplateRows: 'repeat(6, minmax(76px, 1fr))' }}>
+        {cells.map((cell) => {
+          const occurrences = getOccurrencesForDate(events, cell.dateKey).filter((item) => visibility[item.event.categoryId]);
+          const visibleOccurrences = occurrences.slice(0, 3);
+          const moreCount = Math.max(0, occurrences.length - visibleOccurrences.length);
+          const selected = cell.dateKey === activeDateKey;
+          return (
+            <div
+              key={cell.dateKey}
+              role="button"
+              tabIndex={0}
+              className={`month-cell group flex min-h-0 flex-col overflow-hidden rounded-[14px] border p-2 text-left transition-all ${
+                selected
+                  ? 'border-[color:var(--pm-brand)] bg-[rgba(255,107,43,0.05)] shadow-[0_14px_30px_rgba(255,107,43,0.08)]'
+                  : cell.isToday
+                    ? 'border-[color:var(--pm-brand-border)] bg-[rgba(255,107,43,0.03)]'
+                    : 'border-[color:var(--border-light)] bg-white/75 hover:border-[color:var(--pm-border-strong)] hover:bg-white'
+              }`}
+              onClick={() => onSelectDate(cell.dateKey)}
+              onDoubleClick={() => onCreate(cell.dateKey)}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-[12px] font-semibold ${cell.inCurrentMonth ? 'text-[color:var(--pm-text-primary)]' : 'text-[color:var(--pm-text-muted)]'}`}>
+                  {cell.date.getDate()}
+                </span>
+                {cell.isToday ? <span className="rounded-full bg-[color:var(--pm-brand-soft)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--pm-brand)]">今天</span> : null}
+              </div>
+              <div className="mt-2 flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+                {visibleOccurrences.map((occurrence) => (
+                  <EventPill
+                    key={`${occurrence.event.id}:${occurrence.dateKey}`}
+                    occurrence={occurrence}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenDetail(occurrence);
+                    }}
+                  />
+                ))}
+                {moreCount > 0 ? <div className="pt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">+{moreCount} 更多</div> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -825,69 +793,41 @@ function WeekView({
   const hours = buildTimelineHours(timelineRange.startHour, timelineRange.endHour);
 
   return (
-    <CalendarViewShell
-      eyebrow="周视图"
-      title={formatMonthTitle(weekDates[0])}
-      subtitle={`${formatDayLabel(weekDates[0])} - ${formatDayLabel(weekDates[6])}`}
-    >
-      <div className="week-view-content flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-        <div
-          className="week-days-header grid border-b border-[color:var(--border-light)] bg-white/68 px-3 py-2 text-[12px] font-medium leading-none text-[color:var(--pm-text-tertiary)]"
-          style={{ gridTemplateColumns: `${TIMELINE_TIME_COLUMN_WIDTH}px repeat(7, minmax(96px, 1fr))` }}
-        >
-          <div />
-          {weekDates.map((date) => {
-            const selected = toDateKey(date) === activeDateKey;
-            return (
-              <button
-                key={toDateKey(date)}
-                type="button"
-                className={`week-day-header-cell rounded-[14px] px-2 py-1 text-center transition-all ${selected ? 'bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand)]' : 'hover:bg-[color:var(--pm-bg-subtle)]'}`}
-                onClick={() => onSelectDate(toDateKey(date))}
-                onDoubleClick={() => onCreate(toDateKey(date))}
-              >
-                <div>{['日', '一', '二', '三', '四', '五', '六'][date.getDay()]}</div>
-                <div className="mt-1 text-[16px] font-semibold">{date.getDate()}</div>
-              </button>
-            );
-          })}
-        </div>
-        <div className="week-timeline-scroll min-h-0 flex-1 overflow-auto">
-          <div
-            className="week-timeline-grid relative grid w-full min-w-[760px] px-3 sm:px-4"
-            style={{
-              gridTemplateColumns: `${TIMELINE_TIME_COLUMN_WIDTH}px repeat(7, minmax(96px, 1fr))`,
-              minHeight: `${hours.length * TIMELINE_HOUR_HEIGHT}px`,
-            }}
-          >
-            <div className="week-time-column border-r border-[color:var(--border-light)]">
-              {hours.map((hour) => (
-                <div key={hour} className="week-hour-row flex h-[52px] items-start justify-end pr-2 pt-1 text-[10px] text-[color:var(--pm-text-tertiary)] sm:pr-3 sm:text-[11px]">
-                  {String(hour).padStart(2, '0')}:00
-                </div>
-              ))}
+    <div className="week-timeline-scroll min-h-0 flex-1 overflow-auto">
+      <div
+        className="week-timeline-grid relative grid w-full min-w-[760px] px-3 sm:px-4"
+        style={{
+          gridTemplateColumns: `${TIMELINE_TIME_COLUMN_WIDTH}px repeat(7, minmax(96px, 1fr))`,
+          minHeight: `${hours.length * TIMELINE_HOUR_HEIGHT}px`,
+        }}
+      >
+        <div className="week-time-column border-r border-[color:var(--border-light)]">
+          {hours.map((hour) => (
+            <div key={hour} className="week-hour-row flex h-[52px] items-start justify-end pr-2 pt-1 text-[10px] text-[color:var(--pm-text-tertiary)] sm:pr-3 sm:text-[11px]">
+              {String(hour).padStart(2, '0')}:00
             </div>
-            {weekDates.map((date) => {
-              const dayKey = toDateKey(date);
-              const dayOccurrences = occurrences.filter((item) => item.dateKey === dayKey);
-              return (
-                <div
-                  key={dayKey}
-                  className={`week-day-column relative w-full min-w-[96px] border-r border-[color:var(--border-light)] ${dayKey === activeDateKey ? 'bg-[rgba(255,107,43,0.025)]' : ''}`}
-                  onClick={() => onSelectDate(dayKey)}
-                  onDoubleClick={() => onCreate(dayKey)}
-                >
-                  {hours.map((hour) => (
-                    <div key={hour} className="week-hour-row h-[52px] border-b border-[color:var(--border-soft)]" />
-                  ))}
-                  {dayOccurrences.map((occurrence) => renderTimeBlock(occurrence, onOpenDetail, dayKey, timelineRange, 'week'))}
-                </div>
-              );
-            })}
-          </div>
+          ))}
         </div>
+        {weekDates.map((date) => {
+          const dayKey = toDateKey(date);
+          const dayOccurrences = occurrences.filter((item) => item.dateKey === dayKey);
+          const selected = dayKey === activeDateKey;
+          return (
+            <div
+              key={dayKey}
+              className={`week-day-column relative w-full min-w-[96px] border-r border-[color:var(--border-light)] ${selected ? 'bg-[rgba(255,107,43,0.025)]' : ''}`}
+              onClick={() => onSelectDate(dayKey)}
+              onDoubleClick={() => onCreate(dayKey)}
+            >
+              {hours.map((hour) => (
+                <div key={hour} className="week-hour-row h-[52px] border-b border-[color:var(--border-soft)]" />
+              ))}
+              {dayOccurrences.map((occurrence) => renderTimeBlock(occurrence, onOpenDetail, dayKey, timelineRange, 'week'))}
+            </div>
+          );
+        })}
       </div>
-    </CalendarViewShell>
+    </div>
   );
 }
 
@@ -914,46 +854,33 @@ function DayView({
   const hours = buildTimelineHours(timelineRange.startHour, timelineRange.endHour);
 
   return (
-    <CalendarViewShell
-      eyebrow="日视图"
-      title={formatDayLabel(date)}
-      subtitle="当天执行时间轴"
-      action={(
-        <Button variant="secondary" size="sm" onClick={() => onCreate(dayKey)}>
-          新建日程
-        </Button>
-      )}
-    >
-      <div className="day-view-content flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="day-timeline-scroll min-h-0 flex-1 overflow-auto">
-          <div
-            className="day-timeline-grid relative grid w-full min-w-0 px-3 sm:px-4"
-          style={{
-            gridTemplateColumns: `${TIMELINE_TIME_COLUMN_WIDTH}px minmax(0, 1fr)`,
-            minHeight: `${hours.length * TIMELINE_HOUR_HEIGHT}px`,
-          }}
-        >
-          <div className="day-time-column border-r border-[color:var(--border-light)]">
-            {hours.map((hour) => (
-              <div key={hour} className="day-hour-row flex h-[52px] items-start justify-end pr-2 pt-1 text-[11px] text-[color:var(--pm-text-tertiary)] sm:pr-3">
-                {String(hour).padStart(2, '0')}:00
-              </div>
-            ))}
-          </div>
-          <div
-            className={`day-event-lane relative w-full min-w-0 ${dayKey === activeDateKey ? 'bg-[rgba(255,107,43,0.03)]' : ''}`}
-            onClick={() => onSelectDate(dayKey)}
-            onDoubleClick={() => onCreate(dayKey)}
-          >
-            {hours.map((hour) => (
-              <div key={hour} className="day-hour-row h-[52px] border-b border-[color:var(--border-soft)]" />
-            ))}
-            {occurrences.map((occurrence) => renderTimeBlock(occurrence, onOpenDetail, dayKey, timelineRange, 'day'))}
-          </div>
+    <div className="day-timeline-scroll min-h-0 flex-1 overflow-auto">
+      <div
+        className="day-timeline-grid relative grid w-full min-w-0 px-3 sm:px-4"
+        style={{
+          gridTemplateColumns: `${TIMELINE_TIME_COLUMN_WIDTH}px minmax(0, 1fr)`,
+          minHeight: `${hours.length * TIMELINE_HOUR_HEIGHT}px`,
+        }}
+      >
+        <div className="day-time-column border-r border-[color:var(--border-light)]">
+          {hours.map((hour) => (
+            <div key={hour} className="day-hour-row flex h-[52px] items-start justify-end pr-2 pt-1 text-[11px] text-[color:var(--pm-text-tertiary)] sm:pr-3">
+              {String(hour).padStart(2, '0')}:00
+            </div>
+          ))}
         </div>
+        <div
+          className={`day-event-lane relative w-full min-w-0 ${dayKey === activeDateKey ? 'bg-[rgba(255,107,43,0.03)]' : ''}`}
+          onClick={() => onSelectDate(dayKey)}
+          onDoubleClick={() => onCreate(dayKey)}
+        >
+          {hours.map((hour) => (
+            <div key={hour} className="day-hour-row h-[52px] border-b border-[color:var(--border-soft)]" />
+          ))}
+          {occurrences.map((occurrence) => renderTimeBlock(occurrence, onOpenDetail, dayKey, timelineRange, 'day'))}
         </div>
       </div>
-    </CalendarViewShell>
+    </div>
   );
 }
 
@@ -977,64 +904,55 @@ function YearView({
   onCreate: (dateKey: string, allDay?: boolean, startAt?: number) => void;
 }): JSX.Element {
   return (
-    <CalendarViewShell
-      eyebrow="年视图"
-      title={`${year} 年`}
-      subtitle="12 个月概览"
-    >
-      <div className="year-view-content flex min-h-0 flex-1 flex-col gap-3 overflow-auto p-1 pr-2 pb-2">
-        <div className="text-[12px] leading-none text-[color:var(--pm-text-tertiary)]">点击月份进入月视图</div>
-        <div className="year-grid grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-visible sm:grid-cols-2 xl:grid-cols-3">
-          {months.map((month) => {
-            const monthKey = toDateKey(month);
-            const monthOccurrences = getOccurrencesInRange(events, startOfMonth(month), new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59, 999)).filter((item) => visibility[item.event.categoryId]);
-            return (
-              <button
-                key={monthKey}
-                type="button"
-                className={`year-month-card flex min-h-[178px] max-h-[220px] flex-col overflow-hidden rounded-[18px] border p-4 text-left transition-all ${
-                  month.getMonth() === activeMonth
-                    ? 'border-[color:var(--pm-brand)] bg-[rgba(255,107,43,0.05)] shadow-[0_12px_28px_rgba(255,107,43,0.08)]'
-                    : 'border-[color:var(--border-light)] bg-white/75 hover:bg-white'
-                }`}
-                onClick={() => onSelectMonth(monthKey)}
-                onDoubleClick={() => onCreate(monthKey)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-[15px] font-semibold leading-none">{month.getMonth() + 1} 月</div>
-                  <div className="text-[11px] text-[color:var(--pm-text-tertiary)]">{monthOccurrences.length} 项</div>
+    <div className="year-view-content grid min-h-0 flex-1 grid-cols-3 gap-4 overflow-auto p-1 pr-2 pb-2">
+      {months.map((month) => {
+        const monthKey = toDateKey(month);
+        const monthOccurrences = getOccurrencesInRange(events, startOfMonth(month), new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59, 999)).filter((item) => visibility[item.event.categoryId]);
+        return (
+          <button
+            key={monthKey}
+            type="button"
+            className={`year-month-card flex h-[176px] flex-col overflow-hidden rounded-[18px] border p-4 text-left transition-all ${
+              month.getMonth() === activeMonth
+                ? 'border-[color:var(--pm-brand)] bg-[rgba(255,107,43,0.05)] shadow-[0_12px_28px_rgba(255,107,43,0.08)]'
+                : 'border-[color:var(--border-light)] bg-white/75 hover:bg-white'
+            }`}
+            onClick={() => onSelectMonth(monthKey)}
+            onDoubleClick={() => onCreate(monthKey)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-[15px] font-semibold leading-none">{month.getMonth() + 1} 月</div>
+              <div className="text-[11px] text-[color:var(--pm-text-tertiary)]">{monthOccurrences.length} 项</div>
+            </div>
+            <div className="year-month-mini-grid mt-3 grid flex-1 min-h-0 grid-cols-7 gap-1 text-[10px] leading-none text-[color:var(--pm-text-muted)]">
+              {getMonthGrid(month).slice(0, 35).map((cell) => (
+                <div key={cell.dateKey} className={`flex h-6 items-center justify-center rounded-md ${cell.isToday ? 'bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand)]' : ''}`}>
+                  {cell.date.getDate()}
                 </div>
-                <div className="year-month-mini-grid mt-3 grid flex-1 min-h-0 grid-cols-7 gap-1 text-[10px] leading-none text-[color:var(--pm-text-muted)]">
-                  {getMonthGrid(month).slice(0, 35).map((cell) => (
-                    <div key={cell.dateKey} className={`flex h-6 items-center justify-center rounded-md ${cell.isToday ? 'bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand)]' : ''}`}>
-                      {cell.date.getDate()}
-                    </div>
-                  ))}
-                </div>
-                {monthOccurrences.length > 0 ? (
-                  <div className="year-month-event-summary mt-3 flex flex-nowrap gap-1 overflow-hidden">
-                    {monthOccurrences.slice(0, 3).map((occurrence) => (
-                      <span
-                        key={`${occurrence.event.id}:${occurrence.dateKey}`}
-                        className="min-w-0 flex-1 truncate rounded-full px-2 py-1 text-[10px] font-medium"
-                        style={{ background: CALENDAR_CATEGORY_MAP[occurrence.event.categoryId].softColor, color: CALENDAR_CATEGORY_MAP[occurrence.event.categoryId].color }}
-                      >
-                        {occurrence.event.title}
-                      </span>
-                    ))}
-                    {monthOccurrences.length > 3 ? (
-                      <span className="rounded-full bg-[color:var(--pm-bg-subtle)] px-2 py-1 text-[10px] font-medium text-[color:var(--pm-text-tertiary)]">
-                        +{monthOccurrences.length - 3}
-                      </span>
-                    ) : null}
-                  </div>
+              ))}
+            </div>
+            {monthOccurrences.length > 0 ? (
+              <div className="year-month-event-summary mt-3 flex flex-nowrap gap-1 overflow-hidden">
+                {monthOccurrences.slice(0, 3).map((occurrence) => (
+                  <span
+                    key={`${occurrence.event.id}:${occurrence.dateKey}`}
+                    className="min-w-0 flex-1 truncate rounded-full px-2 py-1 text-[10px] font-medium"
+                    style={{ background: CALENDAR_CATEGORY_MAP[occurrence.event.categoryId].softColor, color: CALENDAR_CATEGORY_MAP[occurrence.event.categoryId].color }}
+                  >
+                    {occurrence.event.title}
+                  </span>
+                ))}
+                {monthOccurrences.length > 3 ? (
+                  <span className="rounded-full bg-[color:var(--pm-bg-subtle)] px-2 py-1 text-[10px] font-medium text-[color:var(--pm-text-tertiary)]">
+                    +{monthOccurrences.length - 3}
+                  </span>
                 ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </CalendarViewShell>
+              </div>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

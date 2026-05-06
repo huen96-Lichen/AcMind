@@ -154,7 +154,7 @@ export async function registerIpcHandlers(deps: RegisterIpcHandlersDeps): Promis
       if (patch.capsule && deps.capsuleController) {
         deps.capsuleController.updateSettings(updated.capsule);
       }
-      if (patch.screenshotShortcut || patch.dashboardShortcut || patch.dictation) {
+      if (patch.screenshotShortcut || patch.dashboardShortcut || patch.capsule || patch.dictation) {
         shortcutManager.refresh(updated);
       }
       return updated;
@@ -4931,6 +4931,8 @@ export async function registerIpcHandlers(deps: RegisterIpcHandlersDeps): Promis
   // ─── Dictation (OpenLess-inspired) ─────────────────────────────
   safeHandle('dictation:start', async () => {
     try {
+      // Record the target app before showing UI so text goes to the right place
+      await dictationCoordinator.recordTargetApp();
       await dictationCoordinator.beginSession();
       return { success: true };
     } catch (error) {

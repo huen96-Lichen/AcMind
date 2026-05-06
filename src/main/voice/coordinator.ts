@@ -3,6 +3,7 @@ import type {
   DictationSessionPhase,
   DictationCapsulePayload,
   VoicePolishMode,
+  VoiceDictionaryEntry,
 } from '../../shared/types'
 import { audioRecorder } from './recorder'
 import { polishTranscriptLocally, polishTranscriptWithLLM } from './polish'
@@ -13,6 +14,8 @@ import { voiceDictionaryStore } from './dictionary'
 import { logger } from '../logger'
 import { settings } from '../settings'
 import { normalizeTranscriptionLanguage } from '../../shared/transcriptionLanguage'
+import { getFrontmostApp } from '../sourceApp'
+import { toSimplifiedChinese } from './chineseNormalizer'
 import path from 'node:path'
 import os from 'node:os'
 
@@ -27,8 +30,24 @@ export class DictationCoordinator {
   private levelInterval: ReturnType<typeof setInterval> | null = null
   private idleTimeout: ReturnType<typeof setTimeout> | null = null
 
+  private lastFrontApp: string = ''
+
   constructor(storageDir: string) {
     this.tempAudioPath = path.join(storageDir, 'tmp', 'dictation')
+  }
+
+  /**
+   * Record the current frontmost app for later text insertion.
+   * Call this before beginSession to ensure text goes to the right app.
+   */
+  async recordTargetApp(): Promise<void> {
+    try {
+      const app = await getFrontmostApp()
+      this.lastFrontApp = app ?? ''
+      logger.info('app', 'voice', 'coordinator', 'Recorded target app', { app: this.lastFrontApp })
+    } catch {
+      this.lastFrontApp = ''
+    }
   }
 
   setDictationWindow(win: BrowserWindow | null): void {
@@ -44,6 +63,7 @@ export class DictationCoordinator {
         message: '',
         insertedChars: 0,
         translation: this.translationModifier,
+        previewText: '',
         ...payload,
       })
     }
@@ -55,14 +75,6 @@ export class DictationCoordinator {
     this.cancelled = false
     this.translationModifier = false
     this.startedAt = Date.now()
-
-    const asrStatus = asrProvider.getStatus()
-    if (!asrStatus.configured) {
-      this.phase = 'error'
-      this.emit({ message: `ASR not configured: ${asrStatus.message}` })
-      this.scheduleIdle(3000)
-      return
-    }
 
     this.phase = 'starting'
     this.emit({})
@@ -106,6 +118,13 @@ export class DictationCoordinator {
         return
       }
 
+      const asrStatus = asrProvider.getStatus()
+      if (!asrStatus.configured) {
+        logger.warn('app', 'voice', 'coordinator', 'ASR not configured, transcription will fail after recording', {
+          message: asrStatus.message,
+        })
+      }
+
       const asrResult = await asrProvider.transcribe(filePath, {
         language: this.getLanguage(),
         translate: this.translationModifier,
@@ -130,20 +149,27 @@ export class DictationCoordinator {
         return
       }
 
-      const rawTranscript = asrResult.text.trim()
+      const rawTranscript = toSimplifiedChinese(asrResult.text.trim())
       logger.info('app', 'voice', 'coordinator', 'Raw transcript ready', {
         length: rawTranscript.length,
         preview: rawTranscript.slice(0, 120),
       })
 
       this.phase = 'polishing'
-      this.emit({ message: 'Polishing...' })
+      this.emit({ message: 'Polishing...', previewText: rawTranscript })
 
       const s = settings.load()
       const mode: VoicePolishMode = this.translationModifier
         ? 'raw'
         : (s.dictation?.defaultMode ?? 'light')
-      const dictionary = voiceDictionaryStore.list().filter((e) => e.enabled)
+      let dictionary: VoiceDictionaryEntry[] = []
+      try {
+        dictionary = voiceDictionaryStore.list().filter((e) => e.enabled)
+      } catch (error) {
+        logger.warn('app', 'voice', 'coordinator', 'Voice dictionary unavailable, continuing without it', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
       const frontApp = this.getFrontApp()
 
       let finalText: string
@@ -183,13 +209,15 @@ export class DictationCoordinator {
         }
       }
 
+      finalText = toSimplifiedChinese(finalText)
+
       if (this.cancelled) {
         this.resetToIdle()
         return
       }
 
       this.phase = 'inserting'
-      this.emit({ message: 'Inserting...' })
+      this.emit({ message: 'Inserting...', previewText: finalText })
 
       const insertResult = await insertText(finalText, {
         restoreClipboard: s.dictation?.restoreClipboard ?? true,
@@ -268,7 +296,7 @@ export class DictationCoordinator {
   }
 
   private getFrontApp(): string {
-    return ''
+    return this.lastFrontApp
   }
 }
 

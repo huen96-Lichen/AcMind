@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { VoiceDictionaryEntry } from '../../../shared/types';
+import { resolveStorageRoot } from '../../settings';
+import { DEFAULT_SETTINGS } from '../../../shared/defaultSettings';
 
 export class VoiceDictionaryStore {
   private filePath: string | null = null;
@@ -16,7 +18,7 @@ export class VoiceDictionaryStore {
   }
 
   list(): VoiceDictionaryEntry[] {
-    const filePath = this.requireFilePath();
+    const filePath = this.ensureFilePath();
     try {
       const raw = readFileSync(filePath, 'utf8');
       const parsed = JSON.parse(raw) as VoiceDictionaryEntry[];
@@ -55,14 +57,15 @@ export class VoiceDictionaryStore {
   }
 
   private write(entries: VoiceDictionaryEntry[]): void {
-    writeFileSync(this.requireFilePath(), JSON.stringify(entries, null, 2), 'utf8');
+    writeFileSync(this.ensureFilePath(), JSON.stringify(entries, null, 2), 'utf8');
   }
 
-  private requireFilePath(): string {
+  private ensureFilePath(): string {
     if (!this.filePath) {
-      throw new Error('VoiceDictionaryStore is not initialized');
+      const storageRoot = resolveStorageRoot(DEFAULT_SETTINGS.storageRoot);
+      this.init(storageRoot);
     }
-    return this.filePath;
+    return this.filePath!;
   }
 }
 

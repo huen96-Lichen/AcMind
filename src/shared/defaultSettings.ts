@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   transcription: {
     provider: 'local',
     localEngine: 'whisper-ctranslate2',
-    localModel: 'base',
+    localModel: 'tiny',
     apiEndpoint: '',
     apiModel: 'whisper-1',
     apiLanguage: 'zh',

@@ -18,6 +18,7 @@ export interface DictationWindowControllerOptions {
   rendererFilePath: string;
   rendererDevUrl?: string;
   isDev: boolean;
+  onWindowCreated?: (window: BrowserWindow) => void;
 }
 
 export interface DictationWindowController {
@@ -117,6 +118,7 @@ export function createDictationWindowController(
     });
 
     dictationWindow = win;
+    options.onWindowCreated?.(win);
     return win;
   }
 

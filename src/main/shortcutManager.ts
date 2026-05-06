@@ -1,5 +1,6 @@
 import { app, globalShortcut } from 'electron';
 import type { AppSettings } from '../shared/types';
+import { DEFAULT_CAPSULE_SETTINGS } from '../shared/capsuleSettings';
 import { logger } from './logger';
 
 // ---------------------------------------------------------------------------
@@ -54,11 +55,12 @@ class ShortcutManager {
   private options: ShortcutManagerOptions | null = null;
   private registered = false;
   private status: ShortcutRegistrationStatus = { ...DEFAULT_SHORTCUT_STATUS };
+  private pendingSettings: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'capsule'> | null = null;
 
   /**
    * Register global shortcuts.
    */
-  register(options: ShortcutManagerOptions, settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'dictation'>): void {
+  register(options: ShortcutManagerOptions, settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'capsule'>): void {
     if (!app.isReady()) {
       logger.warn('app', 'shortcutManager', 'register', 'Cannot register shortcuts before app is ready');
       return;
@@ -68,8 +70,11 @@ class ShortcutManager {
     this.unregister();
 
     this.options = options;
-    const screenshotShortcut = settings?.screenshotShortcut ?? 'Cmd+Shift+1';
-    const dashboardShortcut = settings?.dashboardShortcut ?? 'Cmd+Shift+Space';
+    const effectiveSettings = this.pendingSettings ?? settings;
+    this.pendingSettings = null;
+
+    const screenshotShortcut = effectiveSettings?.screenshotShortcut ?? 'Cmd+Shift+1';
+    const dashboardShortcut = effectiveSettings?.dashboardShortcut ?? 'Cmd+Shift+Space';
 
     // Screenshot shortcut
     const screenshotOk = globalShortcut.register(screenshotShortcut, () => {
@@ -84,7 +89,8 @@ class ShortcutManager {
     });
 
     // Voice input shortcut (Phase 6)
-    const voiceInputShortcut = settings?.dictation?.hotkey?.trim() || 'Cmd+Shift+V';
+    const voiceInputShortcut = effectiveSettings?.capsule?.shortcuts?.voiceInput?.trim()
+      || DEFAULT_CAPSULE_SETTINGS.shortcuts.voiceInput;
     let voiceInputOk = true;
     if (options.onVoiceInput) {
       voiceInputOk = globalShortcut.register(voiceInputShortcut, () => {
@@ -125,9 +131,10 @@ class ShortcutManager {
    * Re-register shortcuts using the last registered callbacks.
    * Useful after settings change without needing a full app restart.
    */
-  refresh(settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'dictation'>): void {
+  refresh(settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'capsule'>): void {
     if (!this.options) {
-      logger.warn('app', 'shortcutManager', 'refresh', 'Cannot refresh shortcuts before initial registration');
+      this.pendingSettings = settings ?? this.pendingSettings;
+      logger.warn('app', 'shortcutManager', 'refresh', 'Shortcut refresh queued until initial registration');
       return;
     }
 

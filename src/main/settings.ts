@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { AppSettings, ExternalProcessorSettings } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaultSettings';
 import { DEFAULT_USER_PROFILE, DEFAULT_USER_PREFERENCES, DEFAULT_MODEL_STRATEGY_SETTINGS } from '../shared/types';
+import { DEFAULT_DICTATION_SETTINGS } from '../shared/types';
 import { mergeCapsuleSettings } from '../shared/capsuleSettings';
 import { storage } from './storage';
 import { logger } from './logger';
@@ -86,6 +87,9 @@ class SettingsService {
       capsule: patch.capsule ? mergeCapsuleSettings(patch.capsule) : current.capsule,
       profile: patch.profile ? { ...current.profile, ...patch.profile } : current.profile,
       preferences: mergedPreferences,
+      dictation: patch.dictation
+        ? { ...(current.dictation ?? DEFAULT_DICTATION_SETTINGS), ...patch.dictation }
+        : current.dictation,
       transcription: patch.transcription
         ? { ...current.transcription, ...patch.transcription }
         : current.transcription,
@@ -209,6 +213,9 @@ class SettingsService {
       voiceImportDelayMs: partial.voiceImportDelayMs ?? DEFAULT_SETTINGS.voiceImportDelayMs,
       voiceDedupEnabled: partial.voiceDedupEnabled ?? DEFAULT_SETTINGS.voiceDedupEnabled,
       dashboardWidget: partial.dashboardWidget ?? DEFAULT_SETTINGS.dashboardWidget,
+      dictation: partial.dictation
+        ? { ...DEFAULT_DICTATION_SETTINGS, ...partial.dictation }
+        : DEFAULT_DICTATION_SETTINGS,
       agentChat: { ...DEFAULT_SETTINGS.agentChat, ...(partial.agentChat ?? {}) },
     };
   }
