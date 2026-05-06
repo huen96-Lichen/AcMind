@@ -1,4 +1,4 @@
-// PinStack migration file - uses PinStack-specific APIs not yet implemented in preload
+// AcMind migration file - uses AcMind-specific APIs not yet implemented in preload
 import { useEffect, useRef, useState } from 'react';
 import type {
   PermissionCheckSource,
@@ -8,7 +8,7 @@ import type {
   PermissionStatusSnapshot,
   RuntimeSettings
 } from '../shared/types';
-import { PinStackIcon, PinStackIconButton } from './design-system/icons';
+import { AcMindIcon, AcMindIconButton } from './design-system/icons';
 import { SectionHeader } from './design-system/primitives';
 import { useCaptureSize } from './hooks/useCaptureSize';
 import { useRecording } from './hooks/useRecording';
@@ -42,7 +42,7 @@ const VK_QUICK_TOOLS: VkQuickTool[] = [
 ];
 
 function CaptureHubVkBar(): JSX.Element {
-  // Phase 12.2: VK 状态未接入真实 VaultKeeper 服务，不再显示假运行状态
+  // Phase 12.2: 外部处理服务状态未接入真实服务，不再显示假运行状态
   const vkStatus = null;
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
@@ -50,7 +50,7 @@ function CaptureHubVkBar(): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
-  // Phase 12.2: 未确认 VaultKeeper 服务状态，默认不显示为运行中
+  // Phase 12.2: 未确认外部处理服务状态，默认不显示为运行中
   const isRunning = false;
   const dotCls = 'bg-gray-400';
 
@@ -183,13 +183,13 @@ function CaptureHubVkBar(): JSX.Element {
       <button
         type="button"
         onClick={toggleExpanded}
-        className="pinstack-btn pinstack-btn-ghost motion-button flex h-8 w-full items-center gap-2 rounded-[10px] border border-[color:var(--ps-border-subtle)] px-2.5 text-left text-[11px] text-[color:var(--ps-text-secondary)]"
+        className="acmind-btn acmind-btn-ghost motion-button flex h-8 w-full items-center gap-2 rounded-[10px] border border-[color:var(--ps-border-subtle)] px-2.5 text-left text-[11px] text-[color:var(--ps-text-secondary)]"
         aria-expanded={isExpanded}
       >
         <span className={`inline-block h-2 w-2 rounded-full ${dotCls}`} />
         <span className="font-medium tracking-[0.04em] text-[color:var(--ps-text-tertiary)]">快速工具</span>
         <span className="ml-auto text-[10px] text-amber-600">需要处理服务</span>
-        <PinStackIcon name={isExpanded ? 'arrow-down' : 'arrow-right'} size={14} className="text-[color:var(--ps-text-tertiary)]" />
+        <AcMindIcon name={isExpanded ? 'arrow-down' : 'arrow-right'} size={14} className="text-[color:var(--ps-text-tertiary)]" />
       </button>
 
       {isExpanded ? (
@@ -210,7 +210,7 @@ function CaptureHubVkBar(): JSX.Element {
                   }`}
                 >
                   <span className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${tool.gradient} shadow-sm transition-transform duration-200 group-hover:scale-110`}>
-                    <PinStackIcon name={tool.icon as any} size={13} className="text-white" />
+                    <AcMindIcon name={tool.icon as any} size={13} className="text-white" />
                   </span>
                   <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-[color:var(--ps-brand-primary)]' : 'text-[color:var(--ps-text-tertiary)]'}`}>
                     {tool.label}
@@ -480,17 +480,17 @@ export function CaptureHub(): JSX.Element {
     captureMode === 'fixed' ? '固定尺寸截图' : recordingState.active ? '录屏中' : '桌面快捷捕获';
 
   return (
-    <main className="pinstack-window-page p-1.5">
+    <main className="acmind-window-page p-1.5">
       <section
         ref={panelRef}
-        className="pinstack-window-panel pinstack-window-panel--autoheight flex max-h-[calc(100vh-12px)] flex-col overflow-hidden px-5 py-3 text-black/78 transition-[height,transform,opacity]"
+        className="acmind-window-panel acmind-window-panel--autoheight flex max-h-[calc(100vh-12px)] flex-col overflow-hidden px-5 py-3 text-black/78 transition-[height,transform,opacity]"
         style={{
           transformOrigin: 'bottom right',
           transitionDuration: captureMode === 'fixed' ? HUB_ENTER_DURATION_FIXED : HUB_ENTER_DURATION_FREE,
           transitionTimingFunction: HUB_TRANSITION_EASING
         }}
       >
-        <header className="pinstack-window-header drag-region -mx-5 -mt-3 mb-2 flex items-start justify-between gap-3 px-5 pb-2.5 pt-2.5">
+        <header className="acmind-window-header drag-region -mx-5 -mt-3 mb-2 flex items-start justify-between gap-3 px-5 pb-2.5 pt-2.5">
           <div className="min-w-0 pl-0.5">
             <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--ps-text-tertiary)]">AcMind</div>
             <h2 className="mt-0.5 text-[13px] font-semibold text-[color:var(--ps-text-primary)]">轻量截图工作面板</h2>
@@ -516,7 +516,7 @@ export function CaptureHub(): JSX.Element {
                 align="end"
                 offset={8}
                 zIndex={240}
-                className="motion-popover pinstack-dropdown-shell w-[300px] p-2.5 text-[11px] text-[color:var(--ps-text-secondary)]"
+                className="motion-popover acmind-dropdown-shell w-[300px] p-2.5 text-[11px] text-[color:var(--ps-text-secondary)]"
               >
                 <div className="mb-1 text-[10px] uppercase tracking-[0.08em] text-black/45">权限状态</div>
                 <p className="leading-relaxed">{permissionStatusText}</p>
@@ -536,7 +536,7 @@ export function CaptureHub(): JSX.Element {
                       const traceId = crypto.randomUUID();
                       void refreshPermissionStatus('manual-refresh', traceId);
                     }}
-                    className="pinstack-btn pinstack-btn-secondary motion-button h-7 px-2 text-[10px]"
+                    className="acmind-btn acmind-btn-secondary motion-button h-7 px-2 text-[10px]"
                   >
                     刷新状态
                   </button>
@@ -547,7 +547,7 @@ export function CaptureHub(): JSX.Element {
                         const traceId = crypto.randomUUID();
                         void window.acmind.permissions.openSettings('privacyScreenCapture', traceId);
                       }}
-                      className="pinstack-btn pinstack-btn-secondary motion-button h-7 px-2 text-[10px]"
+                      className="acmind-btn acmind-btn-secondary motion-button h-7 px-2 text-[10px]"
                     >
                       打开系统设置
                     </button>
@@ -555,15 +555,15 @@ export function CaptureHub(): JSX.Element {
                   <button
                     type="button"
                     onClick={() => setIsPermissionPopoverOpen(false)}
-                    className="pinstack-btn pinstack-btn-ghost motion-button ml-auto h-7 px-2 text-[10px]"
+                    className="acmind-btn acmind-btn-ghost motion-button ml-auto h-7 px-2 text-[10px]"
                   >
                     稍后处理
                   </button>
                 </div>
               </div>
             </div>
-            <span className="pinstack-badge px-2 py-1 text-[10px]">PNG</span>
-            <PinStackIconButton icon="close" label="关闭截图面板" size="sm" tone="soft" onClick={() => void window.acmind.capture.hideHub()} />
+            <span className="acmind-badge px-2 py-1 text-[10px]">PNG</span>
+            <AcMindIconButton icon="close" label="关闭截图面板" size="sm" tone="soft" onClick={() => void window.acmind.capture.hideHub()} />
           </div>
         </header>
 
@@ -582,7 +582,7 @@ export function CaptureHub(): JSX.Element {
                 transitionTimingFunction: HUB_TRANSITION_EASING
               }}
             >
-              <PinStackIcon name="capture" size={14} />
+              <AcMindIcon name="capture" size={14} />
               自由截图
             </button>
             <button
@@ -598,7 +598,7 @@ export function CaptureHub(): JSX.Element {
                 transitionTimingFunction: HUB_TRANSITION_EASING
               }}
             >
-              <PinStackIcon name="edit" size={14} />
+              <AcMindIcon name="edit" size={14} />
               固定尺寸
             </button>
           </div>
@@ -625,7 +625,7 @@ export function CaptureHub(): JSX.Element {
                 transitionTimingFunction: HUB_TRANSITION_EASING
               }}
             >
-              <div className="pinstack-section-panel px-3 py-3">
+              <div className="acmind-section-panel px-3 py-3">
                 <div className="mb-2 text-[11px] font-medium tracking-[0.04em] text-[color:var(--ps-text-tertiary)]">主操作</div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2">
                   <input
@@ -633,7 +633,7 @@ export function CaptureHub(): JSX.Element {
                     value={customWidth}
                     onChange={(event) => onWidthChange(event.target.value)}
                     placeholder="宽"
-                    className="pinstack-field h-9 px-3 text-sm"
+                    className="acmind-field h-9 px-3 text-sm"
                   />
                   <span className="text-sm text-[color:var(--ps-text-tertiary)]">×</span>
                   <input
@@ -641,20 +641,20 @@ export function CaptureHub(): JSX.Element {
                     value={customHeight}
                     onChange={(event) => onHeightChange(event.target.value)}
                     placeholder="高"
-                    className="pinstack-field h-9 px-3 text-sm"
+                    className="acmind-field h-9 px-3 text-sm"
                   />
                   <button
                     type="button"
                     onClick={toggleRatioLock}
-                    className={`pinstack-btn motion-button h-9 shrink-0 whitespace-nowrap px-3 text-[11px] ${
-                      ratioLocked ? 'pinstack-btn-secondary' : 'pinstack-btn-ghost'
+                    className={`acmind-btn motion-button h-9 shrink-0 whitespace-nowrap px-3 text-[11px] ${
+                      ratioLocked ? 'acmind-btn-secondary' : 'acmind-btn-ghost'
                     }`}
                   >
                     锁定比例
                   </button>
                 </div>
               </div>
-              <div className="pinstack-section-panel flex items-center justify-between px-3 py-2">
+              <div className="acmind-section-panel flex items-center justify-between px-3 py-2">
                 <div className="text-[11px] text-[color:var(--ps-text-tertiary)]">
                   当前尺寸：{customSize ? formatSizeLabel(customSize) : '待输入'}
                 </div>
@@ -662,7 +662,7 @@ export function CaptureHub(): JSX.Element {
                   <button
                     type="button"
                     onClick={() => setIsPresetPopoverOpen((prev) => !prev)}
-                    className="pinstack-btn pinstack-btn-ghost motion-button h-7 px-2 text-[11px]"
+                    className="acmind-btn acmind-btn-ghost motion-button h-7 px-2 text-[11px]"
                   >
                     尺寸建议
                   </button>
@@ -675,7 +675,7 @@ export function CaptureHub(): JSX.Element {
                     align="end"
                     offset={8}
                     zIndex={235}
-                    className="motion-popover pinstack-dropdown-shell w-[292px] p-2.5 text-[11px]"
+                    className="motion-popover acmind-dropdown-shell w-[292px] p-2.5 text-[11px]"
                   >
                     <div className="space-y-2">
                       <div>
@@ -688,8 +688,8 @@ export function CaptureHub(): JSX.Element {
                                 key={ratio.label}
                                 type="button"
                                 onClick={() => applyRatio(ratio)}
-                                className={`pinstack-btn motion-button h-7 px-2 text-[10px] ${
-                                  active ? 'pinstack-btn-secondary' : 'pinstack-btn-ghost'
+                                className={`acmind-btn motion-button h-7 px-2 text-[10px] ${
+                                  active ? 'acmind-btn-secondary' : 'acmind-btn-ghost'
                                 }`}
                               >
                                 {ratio.label}
@@ -706,7 +706,7 @@ export function CaptureHub(): JSX.Element {
                               key={`${size.width}-${size.height}`}
                               type="button"
                               onClick={() => applySize(size)}
-                              className="pinstack-btn pinstack-btn-ghost motion-button h-7 px-2 text-[10px]"
+                              className="acmind-btn acmind-btn-ghost motion-button h-7 px-2 text-[10px]"
                             >
                               {formatSizeLabel(size)}
                             </button>
@@ -722,7 +722,7 @@ export function CaptureHub(): JSX.Element {
                                 key={`recent-${size.width}-${size.height}`}
                                 type="button"
                                 onClick={() => applySize(size)}
-                                className="pinstack-btn motion-button h-7 border border-[rgba(124,92,250,0.14)] bg-[color:var(--ps-brand-soft)] px-2 text-[10px] text-[color:var(--ps-brand-primary)] hover:bg-[color:var(--ps-brand-soft)]"
+                                className="acmind-btn motion-button h-7 border border-[rgba(124,92,250,0.14)] bg-[color:var(--ps-brand-soft)] px-2 text-[10px] text-[color:var(--ps-brand-primary)] hover:bg-[color:var(--ps-brand-soft)]"
                               >
                                 {formatSizeLabel(size)}
                               </button>
@@ -745,9 +745,9 @@ export function CaptureHub(): JSX.Element {
               type="button"
               onClick={() => void onStartScreenshot()}
               disabled={effectiveBusyAction !== null || (captureMode === 'fixed' && !customSize)}
-              className="pinstack-btn pinstack-btn-primary motion-button h-9 gap-2 px-3 text-[13px] font-medium disabled:opacity-50"
+              className="acmind-btn acmind-btn-primary motion-button h-9 gap-2 px-3 text-[13px] font-medium disabled:opacity-50"
             >
-              <PinStackIcon name="capture" size={16} />
+              <AcMindIcon name="capture" size={16} />
               开始截图
             </button>
             {/* Phase 12.2: 录屏保存 IPC 未接通，暂时隐藏录屏按钮 */}
@@ -755,9 +755,9 @@ export function CaptureHub(): JSX.Element {
               type="button"
               disabled
               title="录屏保存功能即将推出"
-              className="pinstack-btn pinstack-btn-secondary motion-button h-9 min-w-[112px] gap-2 px-3 text-[13px] disabled:cursor-not-allowed disabled:opacity-40"
+              className="acmind-btn acmind-btn-secondary motion-button h-9 min-w-[112px] gap-2 px-3 text-[13px] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <PinStackIcon name="record" size={16} />
+              <AcMindIcon name="record" size={16} />
               录屏（即将推出）
             </button>
           </div>

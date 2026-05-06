@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import type { ExportRecord } from '../../../shared/types';
 
 type FilterKey = 'all' | 'today' | 'week' | 'failed';
@@ -110,7 +110,7 @@ export function ImportPage(): JSX.Element {
         <div className="flex items-center gap-3">
           <div className="pm-ds-search-field flex-1">
             <span className="pm-ds-search-icon" aria-hidden="true">
-              <PinStackIcon name="search" size={14} />
+              <AcMindIcon name="search" size={14} />
             </span>
             <input
               type="text"
@@ -136,7 +136,7 @@ export function ImportPage(): JSX.Element {
 
         {filteredRecords.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="sb-results" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            icon={<AcMindIcon name="sb-results" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
             title="还没有内容"
             description="整理后会出现在这里"
             action={{

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { useToast } from '../../components/shared/ToastViewport';
 import { useClipboardItems, type ClipboardFilter } from '../../hooks/useClipboardItems';
 import { useAI } from '../../hooks/useAI';
@@ -54,7 +54,7 @@ interface ClipboardCardProps {
   aiRunning: boolean;
 }
 
-function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, aiActions, onRunAiAction, aiRunning }: ClipboardCardProps): JSX.Element {
+const ClipboardCard = memo(function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, aiActions, onRunAiAction, aiRunning }: ClipboardCardProps): JSX.Element {
   const isSaved = !!item.sourceItemId;
   const isUrl = item.contentType === 'url';
   const isImage = item.contentType === 'image';
@@ -90,7 +90,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
             </span>
           )}
           {item.isPinned && (
-            <PinStackIcon name="pin-top" size={12} style={{ color: 'var(--pm-brand)' }} />
+            <AcMindIcon name="pin-top" size={12} style={{ color: 'var(--pm-brand)' }} />
           )}
           {isSaved && (
             <StatusBadge tone="success" label="已入库" />
@@ -108,7 +108,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
             className="flex items-center gap-2 rounded-[8px] px-3 py-2"
             style={{ background: 'var(--pm-bg-elevated)' }}
           >
-            <PinStackIcon name="image" size={16} style={{ color: 'var(--pm-text-tertiary)' }} />
+            <AcMindIcon name="image" size={16} style={{ color: 'var(--pm-text-tertiary)' }} />
             <span className="text-[12px]" style={{ color: 'var(--pm-text-secondary)' }}>
               剪贴板图片
             </span>
@@ -126,7 +126,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
             }}
           >
             <span className="flex items-center gap-1.5">
-              <PinStackIcon name="filled-link" size={13} />
+              <AcMindIcon name="filled-link" size={13} />
               {truncateText(item.text || '', 100)}
             </span>
           </a>
@@ -150,7 +150,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
           <Button
             variant="ghost"
             size="sm"
-            leadingIcon={<PinStackIcon name="duplicate" size={14} />}
+            leadingIcon={<AcMindIcon name="duplicate" size={14} />}
             onClick={() => onCopy(item.id)}
           >
             复制
@@ -159,7 +159,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name={isSaved ? 'status-success' : 'filled-inbox'} size={14} />}
+          leadingIcon={<AcMindIcon name={isSaved ? 'status-success' : 'filled-inbox'} size={14} />}
           onClick={() => onSaveToInbox(item.id)}
           disabled={isSaved}
         >
@@ -170,7 +170,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
             <Button
               variant="ghost"
               size="sm"
-              leadingIcon={<PinStackIcon name="spark" size={14} />}
+              leadingIcon={<AcMindIcon name="spark" size={14} />}
               onClick={() => setShowAiMenu(!showAiMenu)}
               disabled={aiRunning}
             >
@@ -202,7 +202,7 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name={item.isPinned ? 'line-delete' : 'pin-top'} size={14} />}
+          leadingIcon={<AcMindIcon name={item.isPinned ? 'line-delete' : 'pin-top'} size={14} />}
           onClick={() => item.isPinned ? onUnpin(item.id) : onPin(item.id)}
         >
           {item.isPinned ? '取消固定' : '固定'}
@@ -211,13 +211,13 @@ function ClipboardCard({ item, onCopy, onDelete, onPin, onUnpin, onSaveToInbox, 
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="act-delete" size={14} />}
+          leadingIcon={<AcMindIcon name="act-delete" size={14} />}
           onClick={() => onDelete(item.id)}
         />
       </div>
     </div>
   );
-}
+});
 
 // ─── ClipboardPage ───────────────────────────────────────────────────────────
 
@@ -334,7 +334,7 @@ export function ClipboardPage(): JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              leadingIcon={<PinStackIcon name={paused ? 'status-running' : 'status-warning'} size={14} />}
+              leadingIcon={<AcMindIcon name={paused ? 'status-running' : 'status-warning'} size={14} />}
               onClick={togglePause}
             >
               {paused ? '恢复' : '暂停'}
@@ -342,7 +342,7 @@ export function ClipboardPage(): JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              leadingIcon={<PinStackIcon name="act-delete" size={14} />}
+              leadingIcon={<AcMindIcon name="act-delete" size={14} />}
               onClick={handleClearHistory}
             >
               {confirmClear ? '确认清空？' : '清空'}
@@ -398,7 +398,7 @@ export function ClipboardPage(): JSX.Element {
           />
         ) : items.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="filled-clipboard" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            icon={<AcMindIcon name="filled-clipboard" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
             title="还没有剪贴板记录"
             description="复制一段文字或链接，AcMind 会自动捕获并显示在这里。"
             action={{ label: '刷新', onClick: refresh }}

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, unlinkSync, existsSync, copyFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, unlinkSync, existsSync, copyFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { BrowserWindow, shell, systemPreferences, screen, nativeImage, clipboard } from 'electron';
@@ -732,40 +732,28 @@ class CaptureService {
         return;
       }
 
-      // Content-level dedup: check if a PinItem with the same original_id already exists
-      const existingPin = storage.getPinItemByOriginalId(captureRecord.original_id);
-      if (existingPin) {
-        logger.info('app', 'captureService', 'handleNewContent', 'Duplicate clipboard content skipped (PinItem exists)', {
+      // Content-level dedup: check if a SourceItem with the same originalId already exists
+      const existingItem = storage.getSourceItems({}).find(
+        (item) => item.originalId === captureRecord.original_id,
+      );
+      if (existingItem) {
+        logger.info('app', 'captureService', 'handleNewContent', 'Duplicate clipboard content skipped (SourceItem exists)', {
           originalId: captureRecord.original_id,
-          existingPinId: existingPin.id,
+          existingItemId: existingItem.id,
         });
         return;
       }
 
-      // Create PinItem directly (clipboard → Pin Pool)
-      const now = Math.floor(Date.now() / 1000);
-      const pinSourceType: PinItem['sourceType'] = content.type === 'image' ? 'clipboard_image' : 'clipboard_text';
-      const rawText = content.type === 'text' ? (content.text || '') : '';
-      const pin: PinItem = {
-        id: randomUUID(),
-        captureItemId: '',
-        originalId: captureRecord.original_id,
-        sourceType: pinSourceType,
-        title: rawText.slice(0, 32) || (content.type === 'image' ? '剪贴板图片' : '未命名 Pin'),
-        previewText: rawText.slice(0, 180),
-        rawText,
-        status: 'pinned',
-        createdAt: now,
-        pinnedAt: now,
-        updatedAt: now,
-      };
-      storage.insertPinItem(pin);
+      // Create SourceItem via the unified bridge (clipboard → sourceItems)
+      const sourceItem = this.captureRecordToSourceItem(captureRecord);
 
       // Also create a ClipboardItem for the Clipboard history page
+      const rawText = content.type === 'text' ? (content.text || '') : '';
       const isUrl = content.type === 'text' && /^https?:\/\/[^\s]+$/i.test(rawText.trim());
       const clipboardContentType: ClipboardContentType = content.type === 'image' ? 'image' : isUrl ? 'url' : 'text';
 
       // For image items, create an AssetFile so the file path is preserved
+      const now = Math.floor(Date.now() / 1000);
       let clipboardAssetFileIds: string[] | undefined;
       if (content.type === 'image' && content.image && imageFilePath) {
         const assetFile: AssetFile = {
@@ -790,18 +778,16 @@ class CaptureService {
       };
       storage.insertClipboardItem(clipboardItem);
 
-      // Notify renderer of Pin Pool change
+      // Notify renderer of changes
       for (const win of BrowserWindow.getAllWindows()) {
         if (!win.isDestroyed()) {
-          win.webContents.send('pinPool.changed', { action: 'created', id: pin.id, timestamp: now });
           win.webContents.send(IPC_CHANNELS.CLIPBOARD_ITEMS_CHANGED, { timestamp: now });
         }
       }
 
-      logger.info('app', 'captureService', 'handleNewContent', `Clipboard ${content.type} → Pin Pool + ClipboardItem`, {
-        pinId: pin.id,
+      logger.info('app', 'captureService', 'handleNewContent', `Clipboard ${content.type} → SourceItem + ClipboardItem`, {
+        sourceItemId: sourceItem.id,
         clipboardItemId: clipboardItem.id,
-        sourceType: pinSourceType,
         originalId: captureRecord.original_id,
         sourceApp,
       });
@@ -818,6 +804,157 @@ class CaptureService {
         userMessage: '剪贴板内容捕获失败，请稍后重试。',
       });
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // File import and URL save
+  // -------------------------------------------------------------------------
+
+  /**
+   * Import a file as a SourceItem.
+   * Copies the file into the storage sources directory and creates a SourceItem record.
+   */
+  async importFile(filePath: string): Promise<SourceItem> {
+    if (!existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    const stat = statSync(filePath);
+    const fileName = path.basename(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Simple MIME type detection based on extension
+    const mimeType = this.getMimeType(ext);
+
+    const id = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    const storageRoot = settings.getStorageRoot();
+    const dateDir = new Date().toISOString().slice(0, 10);
+    const sourcesDir = path.join(storageRoot, 'sources', dateDir);
+    mkdirSync(sourcesDir, { recursive: true });
+
+    const contentPath = path.join(sourcesDir, `${id}${ext}`);
+    copyFileSync(filePath, contentPath);
+
+    const fileSize = stat.size;
+    const fileSizeStr = fileSize > 1024 * 1024
+      ? `${(fileSize / (1024 * 1024)).toFixed(1)} MB`
+      : `${(fileSize / 1024).toFixed(1)} KB`;
+
+    const sourceItem: SourceItem = {
+      id,
+      type: 'file',
+      source: 'file_import',
+      contentPath,
+      title: fileName,
+      previewText: `${fileName} (${fileSizeStr})`,
+      sourceApp: 'AcMind',
+      createdAt: now,
+      status: 'inbox',
+      metadata: {
+        fileSize,
+        mimeType,
+        originalFileName: fileName,
+      },
+    };
+
+    storage.insertSourceItem(sourceItem);
+    this.emitRecordsChanged({ action: 'created', id, timestamp: now });
+
+    logger.info('app', 'captureService', 'importFile', 'File imported as SourceItem', {
+      id,
+      filePath,
+      fileName,
+      fileSize,
+      mimeType,
+    });
+
+    return sourceItem;
+  }
+
+  /**
+   * Save a URL as a SourceItem.
+   * Creates a SourceItem with type='webpage' and source='url_paste'.
+   */
+  async saveUrl(url: string): Promise<SourceItem> {
+    const trimmed = url.trim();
+    if (!trimmed || !/^https?:\/\/[^\s]+$/i.test(trimmed)) {
+      throw new Error(`Invalid URL: ${trimmed}`);
+    }
+
+    const id = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    const storageRoot = settings.getStorageRoot();
+    const dateDir = new Date().toISOString().slice(0, 10);
+    const sourcesDir = path.join(storageRoot, 'sources', dateDir);
+    mkdirSync(sourcesDir, { recursive: true });
+
+    // Save URL to a text file
+    const contentPath = path.join(sourcesDir, `${id}.txt`);
+    writeFileSync(contentPath, trimmed, 'utf8');
+
+    // Extract domain for title
+    let title = trimmed;
+    try {
+      const parsed = new URL(trimmed);
+      title = parsed.hostname;
+    } catch {
+      // Use raw URL as title if parsing fails
+    }
+
+    const sourceItem: SourceItem = {
+      id,
+      type: 'webpage',
+      source: 'url_paste',
+      contentPath,
+      title,
+      previewText: trimmed,
+      originalUrl: trimmed,
+      sourceApp: 'AcMind',
+      createdAt: now,
+      status: 'inbox',
+    };
+
+    storage.insertSourceItem(sourceItem);
+    this.emitRecordsChanged({ action: 'created', id, timestamp: now });
+
+    logger.info('app', 'captureService', 'saveUrl', 'URL saved as SourceItem', {
+      id,
+      url: trimmed,
+      title,
+    });
+
+    return sourceItem;
+  }
+
+  /**
+   * Simple MIME type detection based on file extension.
+   */
+  private getMimeType(ext: string): string {
+    const mimeMap: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.txt': 'text/plain',
+      '.md': 'text/markdown',
+      '.csv': 'text/csv',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.mp3': 'audio/mpeg',
+      '.mp4': 'video/mp4',
+      '.wav': 'audio/wav',
+      '.zip': 'application/zip',
+    };
+    return mimeMap[ext] || 'application/octet-stream';
   }
 
   // -------------------------------------------------------------------------

@@ -83,6 +83,8 @@ function getSourceLabel(source: SourceItem['source']): string {
     case 'manual': return '手动录入';
     case 'vault_import': return '知识库导入';
     case 'audio': return '语音录音';
+    case 'file_import': return '文件导入';
+    case 'url_paste': return 'URL 粘贴';
   }
 }
 
@@ -91,6 +93,11 @@ function getTypeIcon(type: SourceItem['type']): string {
     case 'url': return '🔗';
     case 'image': return '🖼';
     case 'text': return '📄';
+    case 'file': return '📁';
+    case 'webpage': return '🌐';
+    case 'audio': return '🎵';
+    case 'video': return '🎬';
+    case 'screenshot': return '📸';
   }
 }
 

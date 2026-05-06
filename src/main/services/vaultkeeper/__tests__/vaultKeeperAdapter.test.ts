@@ -1,4 +1,4 @@
-// VaultKeeperAdapter 单元测试
+// ExternalProcessorAdapter 单元测试
 // Phase 9: 测试 HTTP 通信、结果标准化、错误标准化、健康检查降级
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock settings before importing adapter
 vi.mock('../../../settings', () => ({
   settings: {
-    getVaultKeeperSettings: vi.fn(() => ({
+    getExternalProcessorSettings: vi.fn(() => ({
       enabled: true,
       endpoint: 'http://localhost:9800',
       timeout: 5000,
@@ -31,7 +31,7 @@ const mockFetch = vi.fn();
 import { vaultKeeperAdapter } from '../vaultKeeperAdapter';
 import type { VKJobType } from '../types';
 
-describe('VaultKeeperAdapter', () => {
+describe('ExternalProcessorAdapter', () => {
   beforeEach(() => {
     mockFetch.mockReset();
   });
@@ -132,7 +132,7 @@ describe('VaultKeeperAdapter', () => {
           file_path: '/tmp/test.pdf',
           original_id: 'orig-123',
         }),
-      ).rejects.toThrow('VaultKeeper 不可用');
+      ).rejects.toThrow('外部处理服务不可用');
     });
 
     it('should throw when submit endpoint returns error', async () => {

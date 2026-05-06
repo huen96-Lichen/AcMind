@@ -49,6 +49,11 @@ function getTypeLabel(type: SourceItem['type']): string {
     text: '文本',
     image: '图片',
     url: '网页',
+    file: '文件',
+    audio: '音频',
+    video: '视频',
+    screenshot: '截图',
+    webpage: '网页',
   };
   return map[type];
 }
@@ -60,6 +65,8 @@ function getSourceLabel(source: SourceItem['source']): string {
     manual: '手动录入',
     vault_import: '资料库导入',
     audio: '语音录音',
+    file_import: '文件导入',
+    url_paste: 'URL 粘贴',
   };
   return map[source];
 }

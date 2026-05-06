@@ -346,6 +346,7 @@ class DistillPipeline {
       // Broadcast task status to renderer
       this.broadcastTaskStatus(updatedTask);
       this.broadcastRecordsChanged('created', distilledOutput.id);
+      this.broadcastRecordsChanged('updated', task.sourceItemId);
 
       logger.info('ai', 'distillPipeline', 'executeTask', `Task executed successfully: ${task.id}`, {
         operation: task.operation,
@@ -374,6 +375,8 @@ class DistillPipeline {
         error: errorMsg,
         finishedAt: Date.now(),
       });
+      // Ensure UI refreshes on failure too
+      this.broadcastRecordsChanged('updated', task.sourceItemId);
 
       logger.error('ai', 'distillPipeline', 'executeTask', `Task execution failed: ${task.id}`, {
         operation: task.operation,

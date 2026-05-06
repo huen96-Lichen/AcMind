@@ -21,8 +21,8 @@ const DEFAULT_USER_MESSAGES: Record<ErrorType, string> = {
   template_missing: '导出模板缺失，请检查输出规范配置。',
   vault_missing: 'Obsidian 仓库未配置或路径无效，请在设置中指定仓库路径。',
   model_unavailable: 'AI 模型不可用，请检查模型配置或网络连接。',
-  // Phase 9.7: VaultKeeper 错误用户消息
-  vaultkeeper_unavailable: 'VaultKeeper 服务不可用，已保留原始内容并生成占位记录。',
+  // Phase 9.7: 外部服务错误用户消息
+  external_service_unavailable: '外部处理服务不可用，已保留原始内容并生成占位记录。',
   external_job_failed: '外部处理任务失败，请重试或手动处理。',
   external_result_invalid: '外部处理结果无效，请重新提交任务。',
   external_result_ingest_failed: '外部处理结果回填失败，请重试。',
@@ -42,8 +42,8 @@ const RETRYABLE_MAP: Record<ErrorType, boolean> = {
   template_missing: false,
   vault_missing: false,
   model_unavailable: true,
-  // Phase 9.7: VaultKeeper 错误可重试
-  vaultkeeper_unavailable: true,
+  // Phase 9.7: 外部服务错误可重试
+  external_service_unavailable: true,
   external_job_failed: true,
   external_result_invalid: true,
   external_result_ingest_failed: true,

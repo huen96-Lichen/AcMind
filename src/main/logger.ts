@@ -204,6 +204,30 @@ class Logger {
   }
 
   /**
+   * Redact sensitive information from a log entry for diagnostics export.
+   * - API keys (sk-..., key=..., bearer ...) → [REDACTED]
+   * - Long text values (>200 chars) → truncated with [TRUNCATED]
+   */
+  private redactSensitive(entry: LogEntry): LogEntry {
+    const redacted = { ...entry };
+    if (redacted.detail) {
+      let detail = redacted.detail;
+      // Redact API key patterns
+      detail = detail.replace(/(sk-[a-zA-Z0-9]{16,})/g, '[REDACTED]');
+      detail = detail.replace(/(key[=:]\s*)[^\s,}"]{8,}/gi, '$1[REDACTED]');
+      detail = detail.replace(/(bearer\s+)[^\s,}"]{8,}/gi, '$1[REDACTED]');
+      detail = detail.replace(/(apiKey[=:]\s*)[^\s,}"]{8,}/gi, '$1[REDACTED]');
+      detail = detail.replace(/(api_key[=:]\s*)[^\s,}"]{8,}/gi, '$1[REDACTED]');
+      // Truncate long detail strings
+      if (detail.length > 500) {
+        detail = detail.slice(0, 500) + '...[TRUNCATED]';
+      }
+      redacted.detail = detail;
+    }
+    return redacted;
+  }
+
+  /**
    * Export a diagnostics bundle to a single JSON file.
    * Aggregates recent logs from all channels + system info.
    * Returns the path to the exported file.
@@ -217,7 +241,7 @@ class Logger {
       recentLogs[channel] = lines
         .map((line) => {
           try {
-            return JSON.parse(line) as LogEntry;
+            return this.redactSensitive(JSON.parse(line) as LogEntry);
           } catch {
             return null;
           }

@@ -458,7 +458,7 @@ export async function probeScreenshotCommandCapability(): Promise<ScreenshotComm
   const y = Math.round(display.bounds.y + 1);
   const width = Math.min(2, Math.max(1, Math.round(display.bounds.width)));
   const height = Math.min(2, Math.max(1, Math.round(display.bounds.height)));
-  const tempPath = path.join(os.tmpdir(), `pinstack-permission-probe-${Date.now()}.png`);
+  const tempPath = path.join(os.tmpdir(), `acmind-permission-probe-${Date.now()}.png`);
 
   try {
     await execFileAsync('screencapture', ['-x', `-R${x},${y},${width},${height}`, tempPath], {
@@ -755,7 +755,7 @@ function resolveInstanceMismatch(
   }
 
   const executableLooksLikeElectron = /Electron\.app/i.test(appMeta.executablePath);
-  const bundleIdLooksUnexpected = appMeta.bundleId !== 'com.acmind.app';
+  const bundleIdLooksUnexpected = appMeta.bundleId !== 'com.acore.acmind';
   const devRuntime = !appMeta.isPackaged || appMeta.isDev;
   if (!executableLooksLikeElectron && !bundleIdLooksUnexpected && !devRuntime) {
     return { suspected: false };

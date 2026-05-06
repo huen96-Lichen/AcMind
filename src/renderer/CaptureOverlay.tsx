@@ -1,4 +1,4 @@
-// PinStack migration file - uses PinStack-specific APIs not yet implemented in preload
+// AcMind migration file - uses AcMind-specific APIs not yet implemented in preload
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { CapturePoint } from './captureSelection';
 import { buildCaptureSelection, isSelectionValid } from './captureSelection';
@@ -619,10 +619,10 @@ export function CaptureOverlay(): JSX.Element {
   }, [selection]);
 
   return (
-    <main className="pinstack-window-page pinstack-window-page--overlay h-screen w-screen">
+    <main className="acmind-window-page acmind-window-page--overlay h-screen w-screen">
       <div
         ref={rootRef}
-        className="pinstack-window-panel pinstack-window-panel--overlay relative h-full w-full cursor-crosshair overflow-hidden rounded-[14px]"
+        className="acmind-window-panel acmind-window-panel--overlay relative h-full w-full cursor-crosshair overflow-hidden rounded-[14px]"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

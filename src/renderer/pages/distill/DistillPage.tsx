@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, StatusBadge } from '../../design-system/components';
+import { AcMindIcon } from '../../design-system/icons';
 import { useToast } from '../../components/shared/ToastViewport';
+import { FallbackBadge } from '../../components/FallbackBadge';
 import type { SourceItem, DistilledOutput } from '../../../shared/types';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type OrganizeTab = 'pending' | 'confirming' | 'done';
 
@@ -13,22 +16,32 @@ const TABS: { key: OrganizeTab; label: string }[] = [
 ];
 
 const STATUS_MAP: Record<OrganizeTab, string[]> = {
-  pending: ['inbox'],
+  pending: ['inbox', 'distilling'],
   confirming: ['distilled'],
   done: ['exported'],
 };
 
+/** Track which sourceItems are currently being distilled */
+type DistillingState = Record<string, boolean>;
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function DistillPage(): JSX.Element {
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState<OrganizeTab>('confirming');
+  const [activeTab, setActiveTab] = useState<OrganizeTab>('pending');
   const [items, setItems] = useState<SourceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SourceItem | null>(null);
   const [distilledOutput, setDistilledOutput] = useState<DistilledOutput | null>(null);
   const [loadingOutput, setLoadingOutput] = useState(false);
+  const [distilling, setDistilling] = useState<DistillingState>({});
+  const [distillError, setDistillError] = useState<Record<string, string>>({});
+  const prevSelectedRef = useRef<string | null>(null);
 
-  const loadItems = useCallback(async () => {
+  // ── Load items ──
+
+  const loadItems = useCallback(async (preserveSelection = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -36,20 +49,32 @@ export function DistillPage(): JSX.Element {
       const statuses = STATUS_MAP[activeTab];
       const filtered = allItems.filter((item) => statuses.includes(item.status));
       setItems(filtered);
-      if (filtered.length > 0 && !selectedItem) {
+
+      if (preserveSelection && prevSelectedRef.current) {
+        const prev = filtered.find((i) => i.id === prevSelectedRef.current);
+        if (prev) {
+          setSelectedItem(prev);
+        } else if (filtered.length > 0) {
+          setSelectedItem(filtered[0]);
+        } else {
+          setSelectedItem(null);
+          setDistilledOutput(null);
+        }
+      } else if (filtered.length > 0 && !selectedItem) {
         setSelectedItem(filtered[0]);
       } else if (filtered.length === 0) {
         setSelectedItem(null);
         setDistilledOutput(null);
       }
-    } catch (err) {
+    } catch {
       setError('加载失败，请稍后重试。');
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, selectedItem]);
 
-  // Batch 4 Phase 9: Load distilled output for selected item
+  // ── Load distilled output for selected item ──
+
   const loadDistilledOutput = useCallback(async (sourceItemId: string) => {
     setLoadingOutput(true);
     try {
@@ -66,7 +91,20 @@ export function DistillPage(): JSX.Element {
     }
   }, []);
 
-  // Load distilled output when selected item changes
+  // ── Effects ──
+
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
+
+  useEffect(() => {
+    const unsubscribe = window.acmind.onRecordsChanged(() => {
+      prevSelectedRef.current = selectedItem?.id ?? null;
+      void loadItems(true);
+    });
+    return unsubscribe;
+  }, [loadItems, selectedItem]);
+
   useEffect(() => {
     if (selectedItem && (activeTab === 'confirming' || activeTab === 'done')) {
       void loadDistilledOutput(selectedItem.id);
@@ -75,27 +113,105 @@ export function DistillPage(): JSX.Element {
     }
   }, [selectedItem, activeTab, loadDistilledOutput]);
 
-  useEffect(() => {
-    void loadItems();
-  }, [loadItems]);
+  // ── Distill: real IPC call ──
 
-  useEffect(() => {
-    const unsubscribe = window.acmind.onRecordsChanged(() => {
-      void loadItems();
-    });
-    return unsubscribe;
-  }, [loadItems]);
-
-  const handleDistill = async (item: SourceItem) => {
+  const handleDistill = useCallback(async (item: SourceItem) => {
     try {
-      addToast('整理任务已提交', 'success');
-      void loadItems();
-    } catch {
-      addToast('整理失败', 'error');
-    }
-  };
+      setDistilling((prev) => ({ ...prev, [item.id]: true }));
+      setDistillError((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
 
-  const handleConfirmExport = async (item: SourceItem) => {
+      // Update status to distilling first
+      await window.acmind.sourceItems.update(item.id, { status: 'distilling' });
+
+      // Call real distill pipeline
+      await window.acmind.distill.run([item.id], ['summarize']);
+
+      addToast('整理完成', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '整理失败';
+      setDistillError((prev) => ({ ...prev, [item.id]: msg }));
+      addToast(msg, 'error');
+      // Revert status on failure
+      try {
+        await window.acmind.sourceItems.update(item.id, { status: 'inbox' });
+      } catch { /* ignore revert error */ }
+    } finally {
+      setDistilling((prev) => ({ ...prev, [item.id]: false }));
+    }
+  }, [addToast]);
+
+  // ── Retry distill ──
+
+  const handleRetry = useCallback(async (item: SourceItem) => {
+    try {
+      setDistilling((prev) => ({ ...prev, [item.id]: true }));
+      setDistillError((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+
+      await window.acmind.sourceItems.update(item.id, { status: 'distilling' });
+      await window.acmind.distill.run([item.id], ['summarize']);
+
+      addToast('重新整理完成', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '重新整理失败';
+      setDistillError((prev) => ({ ...prev, [item.id]: msg }));
+      addToast(msg, 'error');
+      try {
+        await window.acmind.sourceItems.update(item.id, { status: 'inbox' });
+      } catch { /* ignore */ }
+    } finally {
+      setDistilling((prev) => ({ ...prev, [item.id]: false }));
+    }
+  }, [addToast]);
+
+  // ── Batch distill all pending items ──
+
+  const handleDistillAll = useCallback(async () => {
+    const inboxItems = items.filter((i) => i.status === 'inbox');
+    if (inboxItems.length === 0) {
+      addToast('没有待整理的内容', 'info');
+      return;
+    }
+
+    const ids = inboxItems.map((i) => i.id);
+    const newDistilling = Object.fromEntries(ids.map((id) => [id, true]));
+    setDistilling((prev) => ({ ...prev, ...newDistilling }));
+
+    // Update all statuses to distilling
+    for (const id of ids) {
+      try {
+        await window.acmind.sourceItems.update(id, { status: 'distilling' });
+      } catch { /* continue */ }
+    }
+
+    try {
+      await window.acmind.distill.run(ids, ['summarize']);
+      addToast(`已提交 ${ids.length} 条整理任务`, 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '批量整理失败';
+      addToast(msg, 'error');
+      // Revert failed items
+      for (const id of ids) {
+        try {
+          await window.acmind.sourceItems.update(id, { status: 'inbox' });
+        } catch { /* ignore */ }
+      }
+    } finally {
+      const clearState = Object.fromEntries(ids.map((id) => [id, false]));
+      setDistilling((prev) => ({ ...prev, ...clearState }));
+    }
+  }, [items, addToast]);
+
+  // ── Confirm & export ──
+
+  const handleConfirmExport = useCallback(async (item: SourceItem) => {
     try {
       const outputs = await window.acmind.distilledOutputs.list({ sourceItemId: item.id });
       const preferredOutput =
@@ -109,43 +225,56 @@ export function DistillPage(): JSX.Element {
 
       await window.acmind.export.single(preferredOutput.id);
       addToast('已入库', 'success');
-      void loadItems();
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : '入库失败', 'error');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : '入库失败', 'error');
     }
-  };
+  }, [addToast]);
 
-  const handleSkip = async (item: SourceItem) => {
+  // ── Skip ──
+
+  const handleSkip = useCallback(async (item: SourceItem) => {
     try {
       await window.acmind.sourceItems.delete(item.id);
       addToast('已跳过', 'success');
-      void loadItems();
     } catch {
       addToast('操作失败', 'error');
     }
-  };
+  }, [addToast]);
 
-  const handleRetry = async (item: SourceItem) => {
-    try {
-      addToast('已提交重新整理', 'success');
-      void loadItems();
-    } catch {
-      addToast('操作失败', 'error');
-    }
-  };
+  // ── Helpers ──
 
   const formatTime = (ts: number) => {
-    const diff = Math.floor((Date.now() / 1000 - ts));
+    const diff = Math.floor(Date.now() / 1000 - ts);
     if (diff < 60) return '刚刚';
     if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
     return new Date(ts * 1000).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
 
+  const isItemDistilling = (item: SourceItem) => distilling[item.id] === true;
+  const pendingCount = items.filter((i) => i.status === 'inbox').length;
+
+  // ── Render ──
+
   return (
     <PageShell className="flex h-full flex-col overflow-hidden">
       <div className="px-6 pt-5">
-        <PageHeader title="整理" description="确认 AI 整理结果" />
+        <PageHeader
+          title="整理"
+          description="AI 整理收集的内容"
+          actions={
+            activeTab === 'pending' && pendingCount > 0 ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleDistillAll()}
+                disabled={Object.values(distilling).some(Boolean)}
+              >
+                全部整理 ({pendingCount})
+              </Button>
+            ) : undefined
+          }
+        />
       </div>
 
       <div className="px-6 pb-2">
@@ -177,7 +306,7 @@ export function DistillPage(): JSX.Element {
       ) : items.length === 0 ? (
         <div className="flex items-center justify-center flex-1 px-6">
           <EmptyState
-            icon={<PinStackIcon name="sb-ai-process" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            icon={<AcMindIcon name="sb-ai-process" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
             title={emptyTitle(activeTab)}
             description={emptyDesc(activeTab)}
             action={activeTab === 'pending' ? {
@@ -188,30 +317,51 @@ export function DistillPage(): JSX.Element {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 px-6 pb-4 gap-4">
+          {/* ── Left: Item list ── */}
           <div className="flex flex-col min-w-0 w-[35%] shrink-0 gap-1.5 overflow-auto">
-            {items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-left transition-all ${
-                  selectedItem?.id === item.id
-                    ? 'bg-[color:var(--pm-brand-soft)] border border-[color:var(--pm-brand)]'
-                    : 'bg-[color:var(--pm-bg-surface-soft,rgba(255,255,255,0.5))] border border-transparent hover:border-[color:var(--pm-border-light)]'
-                }`}
-                onClick={() => setSelectedItem(item)}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>
-                    {item.title || item.previewText || '未命名内容'}
-                  </p>
-                  <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>
-                    {formatTime(item.createdAt)}
-                  </p>
-                </div>
-              </button>
-            ))}
+            {items.map((item) => {
+              const distillingItem = isItemDistilling(item);
+              const hasError = Boolean(distillError[item.id]);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={distillingItem}
+                  className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-left transition-all ${
+                    selectedItem?.id === item.id
+                      ? 'bg-[color:var(--pm-brand-soft)] border border-[color:var(--pm-brand)]'
+                      : hasError
+                        ? 'bg-red-50/50 border border-red-200'
+                        : 'bg-[color:var(--pm-bg-surface-soft,rgba(255,255,255,0.5))] border border-transparent hover:border-[color:var(--pm-border-light)]'
+                  }`}
+                  onClick={() => setSelectedItem(item)}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>
+                        {item.title || item.previewText || '未命名内容'}
+                      </p>
+                      {distillingItem && (
+                        <span className="shrink-0 inline-block w-3 h-3 border-2 border-[color:var(--pm-brand)] border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                        {formatTime(item.createdAt)}
+                      </p>
+                      {hasError && (
+                        <p className="text-[11px] text-red-500 truncate">
+                          {distillError[item.id]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
+          {/* ── Right: Detail panel ── */}
           <div className="flex min-w-0 flex-1 flex-col rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-white/50 overflow-hidden">
             {selectedItem ? (
               <>
@@ -221,15 +371,26 @@ export function DistillPage(): JSX.Element {
                       {selectedItem.title || '未命名内容'}
                     </h3>
                     <StatusBadge
-                      tone={statusTone(selectedItem.status)}
-                      label={statusLabel(selectedItem.status)}
+                      tone={statusTone(selectedItem.status, isItemDistilling(selectedItem))}
+                      label={statusLabel(selectedItem.status, isItemDistilling(selectedItem))}
                     />
                   </div>
                 </div>
                 <div className="flex-1 min-h-0 overflow-auto p-4">
-                  {/* Batch 4 Phase 9: Show distilled output Markdown when available */}
-                  {distilledOutput?.contentMarkdown ? (
+                  {/* Distilling progress */}
+                  {isItemDistilling(selectedItem) ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-12">
+                      <div className="w-8 h-8 border-2 border-[color:var(--pm-brand)] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-secondary)' }}>
+                        AI 正在整理中...
+                      </p>
+                      <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                        整理完成后将自动刷新
+                      </p>
+                    </div>
+                  ) : distilledOutput?.contentMarkdown ? (
                     <div className="flex flex-col gap-3">
+                      {Boolean((selectedItem.metadata as Record<string, unknown>)?.used_fallback) && <FallbackBadge />}
                       {distilledOutput.suggestedTitle && (
                         <div>
                           <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--pm-text-tertiary)' }}>
@@ -297,18 +458,42 @@ export function DistillPage(): JSX.Element {
                     </p>
                   )}
                 </div>
+                {/* ── Action bar ── */}
                 <div className="shrink-0 px-4 py-3 border-t border-[color:var(--pm-border-subtle)] flex items-center gap-2">
-                  {activeTab === 'pending' && (
-                    <Button variant="primary" size="sm" onClick={() => void handleDistill(selectedItem)}>
+                  {activeTab === 'pending' && selectedItem.status === 'inbox' && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => void handleDistill(selectedItem)}
+                      disabled={isItemDistilling(selectedItem)}
+                    >
                       开始整理
+                    </Button>
+                  )}
+                  {activeTab === 'pending' && selectedItem.status === 'inbox' && distillError[selectedItem.id] && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleDistill(selectedItem)}
+                      disabled={isItemDistilling(selectedItem)}
+                    >
+                      重试
                     </Button>
                   )}
                   {activeTab === 'confirming' && (
                     <>
+                      <Button variant="secondary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'review' } }))}>
+                        去审阅
+                      </Button>
                       <Button variant="primary" size="sm" onClick={() => void handleConfirmExport(selectedItem)}>
                         确认并入库
                       </Button>
-                      <Button variant="secondary" size="sm" onClick={() => void handleDistill(selectedItem)}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void handleRetry(selectedItem)}
+                        disabled={isItemDistilling(selectedItem)}
+                      >
                         重新整理
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => void handleSkip(selectedItem)}>
@@ -321,7 +506,7 @@ export function DistillPage(): JSX.Element {
             ) : (
               <div className="flex items-center justify-center flex-1">
                 <EmptyState
-                  icon={<PinStackIcon name="sb-ai-process" size={24} style={{ color: 'var(--pm-text-tertiary)' }} />}
+                  icon={<AcMindIcon name="sb-ai-process" size={24} style={{ color: 'var(--pm-text-tertiary)' }} />}
                   title="选择一条内容"
                   description="在左侧列表中选择查看详情"
                 />
@@ -333,6 +518,8 @@ export function DistillPage(): JSX.Element {
     </PageShell>
   );
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function emptyTitle(tab: OrganizeTab): string {
   if (tab === 'pending') return '还没有待整理内容';
@@ -346,14 +533,16 @@ function emptyDesc(tab: OrganizeTab): string {
   return '确认后会出现在这里';
 }
 
-function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' | 'processing' {
+function statusTone(status: string, isDistilling?: boolean): 'success' | 'warning' | 'danger' | 'neutral' | 'processing' {
+  if (isDistilling) return 'processing';
   if (status === 'distilled' || status === 'exported') return 'success';
   if (status === 'distilling') return 'processing';
   if (status === 'inbox') return 'warning';
   return 'neutral';
 }
 
-function statusLabel(status: string): string {
+function statusLabel(status: string, isDistilling?: boolean): string {
+  if (isDistilling) return '整理中...';
   if (status === 'inbox') return '待整理';
   if (status === 'distilling') return '整理中';
   if (status === 'distilled') return '待确认';

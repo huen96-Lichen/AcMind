@@ -6,7 +6,7 @@ import {
   Section,
   StatusBadge,
 } from '../../../design-system/components';
-import { PinStackIcon } from '../../../design-system/icons';
+import { AcMindIcon } from '../../../design-system/icons';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,7 +49,7 @@ interface RecentError {
   status: string;
 }
 
-// Phase 9.7: VaultKeeper 状态
+// Phase 9.7: 外部处理服务状态
 interface VKStatus {
   available: boolean;
   connectionMethod: string;
@@ -85,7 +85,7 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
   template_missing: '模板缺失',
   vault_missing: '仓库未配置',
   model_unavailable: '模型不可用',
-  vaultkeeper_unavailable: '服务不可用',
+  external_service_unavailable: '服务不可用',
   external_job_failed: '外部任务失败',
   external_result_invalid: '外部结果无效',
   external_result_ingest_failed: '结果回填失败',
@@ -247,7 +247,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
       // ignore
     }
 
-    // Phase 9.7: VaultKeeper status
+    // Phase 9.7: 外部处理服务状态
     try {
       const health = await window.acmind.vk.checkHealth() as any;
       const recentJobs = await window.acmind.vk.getRecentJobs(5) as any[];
@@ -416,7 +416,7 @@ export function AdvancedControlPanel({ settings, onUpdateSetting }: AdvancedCont
         </Section>
       </Card>
 
-      {/* ── 4.5. VaultKeeper Status (Phase 9.7) ── */}
+      {/* ── 4.5. 外部处理服务状态 (Phase 9.7) ── */}
       <Card variant="base" padding={16}>
         <Section title="服务状态" compact>
           {vkStatus.checking ? (
@@ -616,7 +616,7 @@ function QuickLink({ label, description, onClick }: { label: string; description
         <div className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>{label}</div>
         <div className="text-[11px] mt-0.5" style={{ color: 'var(--pm-text-tertiary)' }}>{description}</div>
       </div>
-      <PinStackIcon name="arrow-right" size={14} style={{ color: 'var(--pm-text-tertiary)', flexShrink: 0 }} />
+      <AcMindIcon name="arrow-right" size={14} style={{ color: 'var(--pm-text-tertiary)', flexShrink: 0 }} />
     </button>
   );
 }

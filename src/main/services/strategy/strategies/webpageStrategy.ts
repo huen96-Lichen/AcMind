@@ -49,7 +49,7 @@ ${this.buildOutputFormat()}`;
 
   /**
    * 覆写后处理：确保 source_url 保留在 body_markdown 中
-   * Phase 9.4: 当 VaultKeeper 返回 parsed_markdown 时，确保来源信息保留并移除占位标记
+   * Phase 9.4: 当外部处理服务返回 parsed_markdown 时，确保来源信息保留并移除占位标记
    */
   postProcess(raw: Record<string, unknown>, input: StrategyInput): ProcessedContent {
     const result = super.postProcess(raw, input);

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppShell } from './components/layout/AppShell';
 import { EmptyState } from './components/shared/EmptyState';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
-import { PinStackIcon } from './design-system/icons';
+import { ToastProvider } from './components/shared/ToastViewport';
+import { AcMindIcon } from './design-system/icons';
 import { CapturePage } from './pages/capture/CapturePage';
 import { CaptureInboxPage } from './pages/capture-inbox/CaptureInboxPage';
 import { CapsulePage } from './pages/capsule/CapsulePage';
-import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { DistillPage } from './pages/distill/DistillPage';
 import { ExportPage } from './pages/export/ExportPage';
 import { ImportPage } from './pages/import/ImportPage';
@@ -16,35 +16,57 @@ import { OnboardingPage } from './pages/onboarding/OnboardingPage';
 import { SearchPage } from './pages/search';
 import { ErrorReviewPage } from './pages/errors/ErrorReviewPage';
 import { ProcessingHistoryPage } from './pages/history/ProcessingHistoryPage';
-import { DailyKnowledgeFlowPage } from './pages/daily-flow/DailyKnowledgeFlowPage';
+import { WorkbenchPage } from './pages/workbench/WorkbenchPage';
 import { AIPage } from './pages/ai/AIPage';
-import { QuickDeskPage } from './pages/quick-desk/QuickDeskPage';
+import { StagingPoolPage } from './pages/staging-pool/StagingPoolPage';
+import { ToolBenchPage } from './pages/tool-bench/ToolBenchPage';
 import { ClipboardPage } from './pages/clipboard/ClipboardPage';
 import { ShelfPage } from './pages/shelf/ShelfPage';
 import { FileConverterPage } from './pages/file-converter/FileConverterPage';
 import { KnowledgeCardsPage } from './pages/knowledge-cards/KnowledgeCardsPage';
 import { VoiceDictionaryPage } from './pages/voice/VoiceDictionaryPage';
-import { UtilitiesPage } from './pages/utilities/UtilitiesPage';
 import { ReviewPage } from './pages/review/ReviewPage';
 import { TaskQueuePage } from './pages/task-queue/TaskQueuePage';
 import { AutomationPage } from './pages/automation/AutomationPage';
 import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { DatasetsPage } from './pages/datasets/DatasetsPage';
+import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
+import { AgentTasksPage } from './pages/agent-tasks/AgentTasksPage';
+import { SchedulePage } from './pages/schedule/SchedulePage';
 import { LoadingState } from './design-system/components';
 
-type ViewName = 'quick-desk' | 'daily-flow' | 'dashboard' | 'distill' | 'export' | 'import' | 'settings' | 'capture' | 'onboarding' | 'capture-inbox' | 'capsule' | 'edit' | 'search' | 'errors' | 'history' | 'ai' | 'clipboard' | 'shelf' | 'file-converter' | 'knowledge-cards' | 'voice-dictionary' | 'utilities' | 'review' | 'task-queue' | 'automation' | 'projects' | 'datasets';
+// 一级导航：Agent / 日程表 / 工作台 / 自动工具 / 设置
+// 保留旧页面用于内部跳转
+
+type ViewName = 
+  // 一级导航
+  | 'agent'           // Agent 首页（默认）
+  | 'schedule'        // 日程表
+  | 'workbench'       // 工作台（Obsidian 入库和知识沉淀）
+  | 'auto-tools'      // 自动工具
+  | 'settings'        // 设置
+  // 保留的旧页面（用于内部跳转）
+  | 'staging-pool' | 'distill' | 'export' | 'import' | 'capture' | 'onboarding' 
+  | 'capture-inbox' | 'capsule' | 'edit' | 'search' | 'errors' | 'history' 
+  | 'ai' | 'clipboard' | 'shelf' | 'file-converter' | 'knowledge-cards' 
+  | 'voice-dictionary' | 'review' | 'task-queue' | 'automation' 
+  | 'projects' | 'datasets' | 'agent-chat' | 'agent-tasks';
 
 const VIEW_LABELS: Record<ViewName, string> = {
-  'quick-desk': 'Quick Desk',
-  'daily-flow': '首页',
-  'capture-inbox': '收集',
-  dashboard: '首页',
+  // 一级导航
+  agent: 'Agent',
+  schedule: '日程表',
+  workbench: '工作台',
+  'auto-tools': '自动工具',
+  settings: '设置',
+  // 保留的旧页面
+  'staging-pool': '暂存池',
   distill: '整理',
   export: '入库',
   import: '资料库',
-  settings: '设置',
   capture: '快速捕获',
   onboarding: '初始引导',
+  'capture-inbox': '整理',
   capsule: '灵感入口',
   edit: '整理详情',
   search: '搜索',
@@ -56,15 +78,17 @@ const VIEW_LABELS: Record<ViewName, string> = {
   'file-converter': '文件转换',
   'knowledge-cards': '知识库',
   'voice-dictionary': '语音设置',
-  'utilities': '工具箱',
   review: '确认',
   'task-queue': '任务队列',
   automation: '自动化',
   projects: '项目',
   datasets: '数据集',
+  'agent-chat': 'Agent 对话',
+  'agent-tasks': '定时任务',
 };
 
-const DEFAULT_VIEW: ViewName = 'quick-desk';
+// Agent-first: 默认首页改为 Agent
+const DEFAULT_VIEW: ViewName = 'agent';
 
 export function App(): JSX.Element {
   const [activeView, setActiveView] = useState<ViewName>(DEFAULT_VIEW);
@@ -159,14 +183,18 @@ export function App(): JSX.Element {
       <OnboardingPage
         onComplete={() => {
           setOnboardingDone(true);
-          navigateToView('quick-desk');
+          navigateToView('agent');
         }}
       />
     );
   }
 
   if (activeView === 'capture') {
-    return <CapturePage />;
+    return (
+      <ToastProvider>
+        <CapturePage />
+      </ToastProvider>
+    );
   }
 
   // Independent windows: no AppShell wrapper
@@ -185,23 +213,28 @@ export function App(): JSX.Element {
 
 function renderPage(activeView: ViewName): JSX.Element {
   switch (activeView) {
-    case 'quick-desk':
-      return <QuickDeskPage />;
-    case 'daily-flow':
-      return <DailyKnowledgeFlowPage />;
+    // 一级导航页面
+    case 'agent':
+      return <AgentChatPage />;
+    case 'schedule':
+      return <SchedulePage />;
+    case 'workbench':
+      return <WorkbenchPage />;
+    case 'auto-tools':
+      return <ToolBenchPage />;
+    case 'settings':
+      return <SettingsPage />;
+    // 保留的旧页面（用于工作台内部跳转）
+    case 'staging-pool':
+      return <StagingPoolPage />;
     case 'capture-inbox':
       return <CaptureInboxPage />;
-    case 'dashboard':
-      // Batch 4 Phase 7: Dashboard 今日工作台
-      return <DashboardPage />;
     case 'distill':
       return <DistillPage />;
     case 'export':
       return <ExportPage />;
     case 'import':
       return <ImportPage />;
-    case 'settings':
-      return <SettingsPage />;
     case 'edit':
       return <EditPage itemId={new URLSearchParams(window.location.search).get('id') || undefined} />;
     case 'search':
@@ -222,8 +255,6 @@ function renderPage(activeView: ViewName): JSX.Element {
       return <KnowledgeCardsPage />;
     case 'voice-dictionary':
       return <VoiceDictionaryPage />;
-    case 'utilities':
-      return <UtilitiesPage />;
     case 'review':
       return <ReviewPage />;
     case 'task-queue':
@@ -234,12 +265,16 @@ function renderPage(activeView: ViewName): JSX.Element {
       return <ProjectsPage />;
     case 'datasets':
       return <DatasetsPage />;
+    case 'agent-chat':
+      return <AgentChatPage />;
+    case 'agent-tasks':
+      return <AgentTasksPage />;
     default:
       return (
         <div className="flex h-full items-center justify-center p-8">
           <EmptyState
-            icon={<PinStackIcon name="help" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
-            title={`${VIEW_LABELS[activeView]} - 页面不可用`}
+            icon={<AcMindIcon name="help" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            title={`${VIEW_LABELS[activeView as ViewName] ?? '未知页面'} - 页面不可用`}
             description={'当前路由没有对应页面，请返回主工作区。'}
           />
         </div>

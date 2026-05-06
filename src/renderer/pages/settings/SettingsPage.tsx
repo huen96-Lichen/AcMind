@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AppSettings,
   LogLevel,
@@ -7,7 +7,12 @@ import type {
   TranscriptionLocalEngine,
   TranscriptionModelSize,
   TranscriptionProvider,
+  DictationDiagnosticItem,
+  DictationDiagnosticReport,
+  VoicePolishMode,
+  DictationSettings,
 } from '../../../shared/types';
+import { DEFAULT_DICTATION_SETTINGS } from '../../../shared/types';
 import type {
   DesktopMuseCapsuleSettings,
   CapsuleThemeColor,
@@ -22,26 +27,48 @@ import type {
   CapsuleDestination,
 } from '../../../shared/capsuleSettings';
 import { CAPSULE_THEME_COLORS, DEFAULT_CAPSULE_SETTINGS } from '../../../shared/capsuleSettings';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { SettingGroupCard } from '../../design-system/primitives';
 import { Button, StatusBadge } from '../../design-system/components';
 import { AddProviderDialog } from './components/AddProviderDialog';
 import { ProviderCard } from './components/ProviderCard';
 import { EmptyState } from '../../components/shared/EmptyState';
 import { useToast } from '../../components/shared/ToastViewport';
+import { AgentChatSettings } from './components/AgentChatSettings';
 
 // ─── Settings Category Keys ──────────────────────────────────
+// 设置分组：基础 / Agent / 日程表 / 工作台 / 自动工具 / 桌面组件 / 语音 / 知识库 / 高级
 
 type SettingsCategory =
+  // 基础
   | 'general'
   | 'appearance'
-  | 'privacy'
-  | 'obsidian'
-  | 'path-storage'
-  | 'export-rules'
+  | 'shortcuts'
+  // Agent
+  | 'agent-chat'
+  | 'agent-behavior'
   | 'ai-models'
   | 'ai-default-tier'
+  // 日程表
+  | 'schedule-general'
+  | 'schedule-reminder'
+  | 'schedule-calendar'
+  | 'schedule-email'
+  // 工作台
   | 'capture-capsule'
+  | 'workbench-rules'
+  // 自动工具
+  | 'auto-tools-general'
+  | 'auto-tools-ocr'
+  // 桌面组件
+  | 'desktop-widgets'
+  // 语音
+  | 'voice-input'
+  | 'dictation'
+  // 知识库
+  | 'obsidian'
+  | 'export-rules'
+  // 高级
   | 'advanced-logs'
   | 'advanced-data'
   | 'advanced-dev';
@@ -51,7 +78,7 @@ type SettingsCategory =
 interface SettingsCategoryDef {
   key: SettingsCategory;
   title: string;
-  icon: import('../../design-system/icons').PinStackIconName;
+  icon: import('../../design-system/icons').AcMindIconName;
   disabled?: boolean;
   disabledLabel?: string;
 }
@@ -76,45 +103,75 @@ interface WhisperRuntimeStatus {
   engine: string | null;
   message: string;
 }
-
+ 
+// 设置分组：基础 / Agent / 日程表 / 工作台 / 自动工具 / 桌面组件 / 语音 / 知识库 / 高级
 const SETTINGS_GROUPS: SettingsGroupDef[] = [
   {
     key: 'basics',
     title: '基础',
     categories: [
-      { key: 'general', title: '通用', icon: 'all' },
+      { key: 'general', title: '启动', icon: 'all' },
       { key: 'appearance', title: '外观', icon: 'text' },
+      { key: 'shortcuts', title: '快捷键', icon: 'settings' },
     ],
   },
   {
-    key: 'capture',
-    title: '收集',
+    key: 'agent',
+    title: 'Agent',
     categories: [
-      { key: 'capture-capsule', title: '收集入口', icon: 'duplicate' },
-    ],
-  },
-  {
-    key: 'knowledge',
-    title: '资料库',
-    categories: [
-      { key: 'obsidian', title: 'Obsidian', icon: 'edit' },
-      { key: 'path-storage', title: '路径与存储', icon: 'duplicate' },
-      { key: 'export-rules', title: '入库规则', icon: 'text' },
-    ],
-  },
-  {
-    key: 'ai',
-    title: 'AI',
-    categories: [
+      { key: 'agent-chat', title: '默认模型', icon: 'ai-workspace' },
+      { key: 'agent-behavior', title: 'Agent 行为', icon: 'sb-inbox' },
       { key: 'ai-models', title: '模型管理', icon: 'ai-workspace' },
       { key: 'ai-default-tier', title: '默认层级与回退策略', icon: 'settings' },
     ],
   },
   {
-    key: 'privacy',
-    title: '隐私',
+    key: 'schedule',
+    title: '日程表',
     categories: [
-      { key: 'privacy', title: '权限与本地优先', icon: 'help' },
+      { key: 'schedule-general', title: '日程管家', icon: 'clock' },
+      { key: 'schedule-reminder', title: '提醒方式', icon: 'sb-results' },
+      { key: 'schedule-calendar', title: '日历视图', icon: 'filled-home' },
+      { key: 'schedule-email', title: '邮件发送', icon: 'filled-link' },
+    ],
+  },
+  {
+    key: 'workbench',
+    title: '工作台',
+    categories: [
+      { key: 'capture-capsule', title: '收集规则', icon: 'duplicate' },
+      { key: 'workbench-rules', title: '整理与审阅规则', icon: 'sb-ai-process' },
+    ],
+  },
+  {
+    key: 'auto-tools',
+    title: '自动工具',
+    categories: [
+      { key: 'auto-tools-general', title: '工具总览', icon: 'line-file-import' },
+      { key: 'auto-tools-ocr', title: 'OCR 与文件转换', icon: 'image' },
+    ],
+  },
+  {
+    key: 'desktop-widgets',
+    title: '桌面组件',
+    categories: [
+      { key: 'desktop-widgets', title: '桌面组件', icon: 'all' },
+    ],
+  },
+  {
+    key: 'voice',
+    title: '语音',
+    categories: [
+      { key: 'voice-input', title: '录音设备', icon: 'record' },
+      { key: 'dictation', title: '语音转文字', icon: 'spark' },
+    ],
+  },
+  {
+    key: 'knowledge',
+    title: '知识库',
+    categories: [
+      { key: 'obsidian', title: 'Obsidian Vault', icon: 'sb-obsidian' },
+      { key: 'export-rules', title: '入库规则', icon: 'text' },
     ],
   },
   {
@@ -142,6 +199,15 @@ export function SettingsPage(): JSX.Element {
   const [providersLoading, setProvidersLoading] = useState(false);
   const [whisperModels, setWhisperModels] = useState<WhisperModelRow[]>([]);
   const [whisperRuntime, setWhisperRuntime] = useState<WhisperRuntimeStatus | null>(null);
+  const [downloadingWhisperModel, setDownloadingWhisperModel] = useState<WhisperModelRow['size'] | null>(null);
+  const [whisperDownloadProgress, setWhisperDownloadProgress] = useState<number | null>(null);
+  const [whisperDownloadError, setWhisperDownloadError] = useState<string | null>(null);
+  const [lastWhisperFailedModelSize, setLastWhisperFailedModelSize] = useState<WhisperModelRow['size'] | null>(null);
+  const [repairingWhisper, setRepairingWhisper] = useState(false);
+  const [runningDictationDiagnostics, setRunningDictationDiagnostics] = useState(false);
+  const [dictationDiagnostics, setDictationDiagnostics] = useState<DictationDiagnosticReport | null>(null);
+  const [dictationHotkeyDraft, setDictationHotkeyDraft] = useState(DEFAULT_DICTATION_SETTINGS.hotkey);
+  const suppressDictationHotkeyCommitRef = useRef(false);
   const [providerDialogProvider, setProviderDialogProvider] = useState<ProviderConfig | null>(null);
   const [showProviderDialog, setShowProviderDialog] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -250,9 +316,13 @@ export function SettingsPage(): JSX.Element {
     void loadWhisperModels();
   }, [settings, activeCategory, addToast]);
 
+  useEffect(() => {
+    setDictationHotkeyDraft(settings?.dictation?.hotkey ?? DEFAULT_DICTATION_SETTINGS.hotkey);
+  }, [settings?.dictation?.hotkey]);
+
   const updateSetting = useCallback(
-    async (patch: Partial<AppSettings>) => {
-      if (!settings) return;
+    async (patch: Partial<AppSettings>): Promise<AppSettings | null> => {
+      if (!settings) return null;
 
       setSaving(true);
       try {
@@ -260,6 +330,8 @@ export function SettingsPage(): JSX.Element {
         setSettings(updated);
         setSavedAt(Date.now());
         addToast('设置已自动保存', 'success');
+        // Notify shell to refresh snapshot (e.g. sidebar nav depends on settings)
+        window.dispatchEvent(new CustomEvent('acmind:settings-updated'));
         return updated;
       } catch {
         addToast('保存失败', 'error');
@@ -278,6 +350,24 @@ export function SettingsPage(): JSX.Element {
         transcription: {
           ...settings.transcription,
           ...patch,
+        },
+      });
+    },
+    [settings, updateSetting],
+  );
+
+  const commitDictationHotkey = useCallback(
+    async (nextHotkey: string) => {
+      if (!settings) return;
+      const sanitized = nextHotkey.trim() || DEFAULT_DICTATION_SETTINGS.hotkey;
+      setDictationHotkeyDraft(sanitized);
+      if (sanitized === (settings.dictation?.hotkey ?? DEFAULT_DICTATION_SETTINGS.hotkey)) {
+        return;
+      }
+      await updateSetting({
+        dictation: {
+          ...(settings.dictation ?? DEFAULT_DICTATION_SETTINGS),
+          hotkey: sanitized,
         },
       });
     },
@@ -398,12 +488,25 @@ export function SettingsPage(): JSX.Element {
 
   const handleDownloadWhisperModel = useCallback(
     async (modelSize: WhisperModelRow['size']) => {
+      setWhisperDownloadError(null);
+      setLastWhisperFailedModelSize(null);
+      setWhisperDownloadProgress(0);
+      setDownloadingWhisperModel(modelSize);
       try {
-        await window.acmind.whisper.downloadModel(modelSize);
+        await window.acmind.whisper.downloadModel(modelSize, (progress) => {
+          setWhisperDownloadProgress(progress);
+        });
+        setWhisperDownloadProgress(100);
         await refreshWhisperModels();
         addToast(`已下载 ${modelSize} 模型到本地`, 'success');
       } catch (error) {
-        addToast(error instanceof Error ? error.message : '下载本地模型失败', 'error');
+        const message = error instanceof Error ? error.message : '下载本地模型失败';
+        setWhisperDownloadError(message);
+        setLastWhisperFailedModelSize(modelSize);
+        addToast(message, 'error');
+      } finally {
+        setDownloadingWhisperModel(null);
+        window.setTimeout(() => setWhisperDownloadProgress(null), 900);
       }
     },
     [refreshWhisperModels, addToast],
@@ -421,6 +524,109 @@ export function SettingsPage(): JSX.Element {
     },
     [refreshWhisperModels, addToast],
   );
+
+  const handleRunDictationDiagnostics = useCallback(async () => {
+    setRunningDictationDiagnostics(true);
+    try {
+      const report = await window.acmind.voice.getDictationDiagnostics() as DictationDiagnosticReport;
+
+      const browserMicItem: DictationDiagnosticItem = {
+        key: 'browser_microphone',
+        label: '浏览器麦克风',
+        ok: false,
+        message: '无法检查浏览器麦克风。',
+      };
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        browserMicItem.message = '当前环境不支持 getUserMedia，无法直接采集麦克风。';
+      } else {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+          browserMicItem.ok = true;
+          browserMicItem.message = '浏览器可以正常获取麦克风权限。';
+        } catch (error) {
+          browserMicItem.message = error instanceof Error ? error.message : '麦克风权限或设备不可用。';
+        }
+      }
+
+      const otherItems = (report?.items ?? []).filter((item) => item.key !== 'browser_microphone');
+      const items = [browserMicItem, ...otherItems];
+      const nextReport: DictationDiagnosticReport = {
+        ok: items.every((item) => item.ok),
+        checkedAt: Date.now(),
+        items,
+      };
+
+      setDictationDiagnostics(nextReport);
+      addToast(nextReport.ok ? '语音听写自检通过' : '语音听写自检发现问题', nextReport.ok ? 'success' : 'warning');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : '语音听写自检失败', 'error');
+      setDictationDiagnostics({
+        ok: false,
+        checkedAt: Date.now(),
+        items: [],
+      });
+    } finally {
+      setRunningDictationDiagnostics(false);
+    }
+  }, [addToast]);
+
+  const handleRequestMicrophoneAccess = useCallback(async () => {
+    try {
+      const result = await window.acmind.voice.requestMicrophoneAccess();
+      addToast(result.message, result.granted ? 'success' : 'warning');
+      await handleRunDictationDiagnostics();
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : '请求麦克风权限失败', 'error');
+    }
+  }, [addToast, handleRunDictationDiagnostics]);
+
+  const handleInstallLocalAsr = useCallback(async () => {
+    setWhisperDownloadError(null);
+    setLastWhisperFailedModelSize(null);
+    setWhisperDownloadProgress(0);
+    setRepairingWhisper(true);
+    try {
+      await window.acmind.whisper.repair((progress) => {
+        setWhisperDownloadProgress(progress);
+      });
+      setWhisperDownloadProgress(100);
+      await refreshWhisperModels();
+      await handleRunDictationDiagnostics();
+      addToast('本地 ASR 已安装并校验完成', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '安装本地 ASR 失败';
+      setWhisperDownloadError(message);
+      addToast(message, 'error');
+    } finally {
+      setRepairingWhisper(false);
+      window.setTimeout(() => setWhisperDownloadProgress(null), 900);
+    }
+  }, [refreshWhisperModels, addToast, handleRunDictationDiagnostics]);
+
+  const handleOpenWhisperCacheDir = useCallback(async () => {
+    try {
+      const result = await window.acmind.whisper.openCacheDir();
+      if (!result || typeof result !== 'object' || result.success === false) {
+        addToast((result as { error?: string } | undefined)?.error ?? '打开缓存目录失败', 'error');
+        return;
+      }
+      addToast('已打开本地模型缓存目录', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : '打开缓存目录失败', 'error');
+    }
+  }, [addToast]);
+
+  const handleCopyRecorderInstallCommand = useCallback(async () => {
+    try {
+      const command = 'brew install sox';
+      await navigator.clipboard.writeText(command);
+      addToast(`已复制命令：${command}`, 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : '复制安装命令失败', 'error');
+    }
+  }, [addToast]);
 
   const handleSaveProvider = useCallback(
     async (provider: ProviderConfig) => {
@@ -449,6 +655,19 @@ export function SettingsPage(): JSX.Element {
   );
 
   const permissionItems = useMemo(() => permissions?.items ?? [], [permissions]);
+  const showBundledWhisperModels = Boolean(
+    settings && settings.transcription.provider === 'local' && settings.transcription.localEngine === 'whisper',
+  );
+  const dictationDiagnosticItems = dictationDiagnostics?.items ?? [];
+  const whisperBusy = downloadingWhisperModel !== null || repairingWhisper;
+  const whisperProgressLabel = repairingWhisper
+    ? '正在安装/校验本地 ASR'
+    : downloadingWhisperModel
+      ? `正在下载 ${downloadingWhisperModel} 模型`
+      : whisperDownloadProgress === 100
+        ? '处理完成'
+        : '正在检查本地转写环境';
+  const canInstallLocalAsr = settings?.transcription.provider === 'local';
 
   if (!settings) {
     return (
@@ -488,7 +707,7 @@ export function SettingsPage(): JSX.Element {
             调整 AcMind 的工作方式
           </p>
           <div className="acmind-save-indicator is-visible" style={savedAt ? { opacity: 1 } : { opacity: 0 }}>
-            <PinStackIcon name="check" size={12} />
+            <AcMindIcon name="check" size={12} />
             <span>已保存</span>
           </div>
         </div>
@@ -514,7 +733,7 @@ export function SettingsPage(): JSX.Element {
                     })
                   }
                 >
-                  <PinStackIcon
+                  <AcMindIcon
                     name="arrow-right"
                     size={10}
                     className={`transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
@@ -535,7 +754,7 @@ export function SettingsPage(): JSX.Element {
                     >
                       <span className="flex min-w-0 items-center" style={{ gridTemplateColumns: '24px 1fr', columnGap: 12, display: 'grid' }}>
                         <span className={`settings-nav-icon ${active ? 'is-active' : ''} ${isDisabled ? 'opacity-40' : ''}`}>
-                          <PinStackIcon name={cat.icon} size={14} />
+                          <AcMindIcon name={cat.icon} size={14} />
                         </span>
                         <span className="truncate text-[14px]">{cat.title}</span>
                       </span>
@@ -675,8 +894,8 @@ export function SettingsPage(): JSX.Element {
                           }
                           className="pm-ds-input min-w-[220px]"
                         >
-                          <option value="whisper-ctranslate2">whisper-ctranslate2</option>
-                          <option value="whisper">whisper</option>
+                          <option value="whisper-ctranslate2">whisper-ctranslate2 - 速度优先</option>
+                          <option value="whisper">openai-whisper - 可下载模型</option>
                         </select>
                       </SettingsRow>
                       <SettingsRow label="本地模型" description="用于本地引擎的默认模型大小。">
@@ -695,72 +914,181 @@ export function SettingsPage(): JSX.Element {
                         </select>
                       </SettingsRow>
                       <div className="flex items-start gap-2 rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] px-3 py-2.5">
-                        <PinStackIcon name="help" size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--pm-text-tertiary)' }} />
+                        <AcMindIcon name="help" size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--pm-text-tertiary)' }} />
                         <p className="text-[11px] leading-5 text-[color:var(--pm-text-tertiary)]">
                           本地转写会优先调用内置模型缓存，缺失时自动下载到本地目录。
                         </p>
                       </div>
-                      <div className="flex flex-col gap-3 rounded-[16px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
-                              本地模型缓存
-                            </div>
-                            <div className="text-[11px] text-[color:var(--pm-text-tertiary)]">
-                              {whisperRuntime?.message ?? '模型会缓存到应用数据目录。'}
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void refreshWhisperModels()}
-                          >
-                            刷新
-                          </Button>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {whisperModels.map((model) => (
-                            <div
-                              key={model.size}
-                              className="flex flex-col gap-3 rounded-[14px] border border-[color:var(--pm-border-subtle)] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
-                                    {model.displayName}
-                                  </div>
-                                  <StatusBadge
-                                    tone={model.cached ? 'success' : 'neutral'}
-                                    label={model.cached ? '已缓存' : '未缓存'}
-                                    dot={false}
-                                  />
-                                </div>
-                                <div className="mt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">
-                                  {model.fileSize} · {model.description}
-                                </div>
+                      {(whisperDownloadProgress !== null || whisperDownloadError) && (
+                        <div className="flex flex-col gap-2 rounded-[14px] border border-[color:var(--pm-border-subtle)] bg-white px-3 py-3">
+                          {whisperDownloadError ? (
+                            <div className="flex flex-col gap-2">
+                              <div className="text-[12px] font-medium text-[color:var(--pm-danger)]">
+                                {whisperDownloadError}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => void handleDownloadWhisperModel(model.size)}
-                                >
-                                  {model.cached ? '重新下载' : '下载到本地'}
-                                </Button>
-                                {model.cached && (
+                                {lastWhisperFailedModelSize && (
                                   <Button
-                                    variant="ghost"
+                                    variant="secondary"
                                     size="sm"
-                                    onClick={() => void handleDeleteWhisperModel(model.size)}
+                                    onClick={() => void handleDownloadWhisperModel(lastWhisperFailedModelSize)}
+                                    disabled={whisperBusy}
                                   >
-                                    删除缓存
+                                    重试下载
                                   </Button>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => void handleOpenWhisperCacheDir()}
+                                  disabled={whisperBusy}
+                                >
+                                  打开缓存目录
+                                </Button>
                               </div>
                             </div>
-                          ))}
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center justify-between gap-3 text-[12px] text-[color:var(--pm-text-secondary)]">
+                                <span>{whisperProgressLabel}</span>
+                                <span>{Math.max(0, Math.min(100, Math.round(whisperDownloadProgress ?? 0)))}%</span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-[rgba(15,23,42,0.08)]">
+                                <div
+                                  className="h-full rounded-full bg-[var(--pm-accent-orange)] transition-all duration-300"
+                                  style={{ width: `${Math.max(0, Math.min(100, whisperDownloadProgress ?? 0))}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      )}
+                      {showBundledWhisperModels ? (
+                        <div className="flex flex-col gap-3 rounded-[16px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
+                                本地模型缓存
+                              </div>
+                              <div className="text-[11px] text-[color:var(--pm-text-tertiary)]">
+                                {whisperRuntime?.message ?? '模型会缓存到应用数据目录。'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void handleOpenWhisperCacheDir()}
+                                disabled={whisperBusy}
+                              >
+                                打开缓存目录
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void handleInstallLocalAsr()}
+                                disabled={whisperBusy}
+                              >
+                                {repairingWhisper ? '安装中...' : '一键安装并校验'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void refreshWhisperModels()}
+                                disabled={whisperBusy}
+                              >
+                                刷新
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {whisperModels.map((model) => (
+                              <div
+                                key={model.size}
+                                className="flex flex-col gap-3 rounded-[14px] border border-[color:var(--pm-border-subtle)] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
+                                      {model.displayName}
+                                    </div>
+                                    <StatusBadge
+                                      tone={model.cached ? 'success' : 'neutral'}
+                                      label={model.cached ? '已缓存' : '未缓存'}
+                                      dot={false}
+                                    />
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">
+                                    {model.fileSize} · {model.description}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => void handleDownloadWhisperModel(model.size)}
+                                    disabled={whisperBusy}
+                                  >
+                                    {downloadingWhisperModel === model.size
+                                      ? '下载中...'
+                                      : whisperDownloadError && lastWhisperFailedModelSize === model.size
+                                        ? '重试下载'
+                                      : model.cached
+                                        ? '重新下载'
+                                        : '下载到本地'}
+                                  </Button>
+                                  {model.cached && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => void handleDeleteWhisperModel(model.size)}
+                                      disabled={whisperBusy}
+                                    >
+                                      删除缓存
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3 rounded-[16px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] p-4">
+                          <div>
+                            <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
+                              当前引擎：whisper-ctranslate2
+                            </div>
+                            <div className="mt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">
+                              这个引擎会在首次转写时自动拉取模型，不在这里单独管理模型缓存。若你想手动下载和缓存模型，请切换到 openai-whisper。
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => void updateTranscription({ localEngine: 'whisper' })}
+                            >
+                              切换到 openai-whisper
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void handleInstallLocalAsr()}
+                              disabled={whisperBusy}
+                            >
+                              {repairingWhisper ? '安装中...' : '一键安装并校验'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void refreshWhisperModels()}
+                              disabled={whisperBusy}
+                            >
+                              重新检查
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
@@ -856,7 +1184,7 @@ export function SettingsPage(): JSX.Element {
                 {/* Save Feedback */}
                 {savedAt && (
                   <div className="flex items-center gap-2 rounded-[8px] border border-[color:var(--pm-status-success)] bg-[rgba(22,163,74,0.06)] px-3 py-2.5">
-                    <PinStackIcon name="check" size={14} />
+                    <AcMindIcon name="check" size={14} />
                     <div>
                       <p className="text-[12px] font-medium text-[color:var(--pm-status-success)]">
                         设置已自动保存
@@ -913,7 +1241,7 @@ export function SettingsPage(): JSX.Element {
                     </select>
                   </SettingsRow>
                   <div className="flex items-start gap-2 rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] px-3 py-2.5">
-                    <PinStackIcon name="help" size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--pm-text-tertiary)' }} />
+                    <AcMindIcon name="help" size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--pm-text-tertiary)' }} />
                     <p className="text-[11px] leading-5 text-[color:var(--pm-text-tertiary)]">
                       模型不可用时自动尝试可用层级。
                     </p>
@@ -923,7 +1251,7 @@ export function SettingsPage(): JSX.Element {
                 {/* Save Feedback */}
                 {savedAt && (
                   <div className="flex items-center gap-2 rounded-[8px] border border-[color:var(--pm-status-success)] bg-[rgba(22,163,74,0.06)] px-3 py-2.5">
-                    <PinStackIcon name="check" size={14} />
+                    <AcMindIcon name="check" size={14} />
                     <div>
                       <p className="text-[12px] font-medium text-[color:var(--pm-status-success)]">
                         设置已自动保存
@@ -958,89 +1286,188 @@ export function SettingsPage(): JSX.Element {
               </div>
             )}
 
-            {/* ── Path & Storage ──────────────────────────── */}
-            {activeCategory === 'path-storage' && (
+            {/* ── Agent Chat ─────────────────────────────── */}
+            {activeCategory === 'agent-chat' && settings && (
+              <AgentChatSettings
+                settings={settings}
+                onUpdate={updateSetting}
+                providers={providers}
+              />
+            )}
+
+            {/* ── 日程管家（总览） ────────────────────────────── */}
+            {activeCategory === 'schedule-general' && settings && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="acmind-page-title">路径与存储</h3>
+                  <h3 className="acmind-page-title">日程管家</h3>
                   <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
-                    本地数据目录与扫描行为配置。
+                    管理提醒、周期任务和自动执行规则。
                   </p>
                 </div>
 
-                {/* 本地数据目录 */}
-                <SettingGroupCard title="本地数据目录" description="AcMind 所有数据的存储位置。" icon="duplicate">
-                  <div className="settings-row">
-                    <div className="settings-row-copy">
-                      <div className="settings-row-title">当前路径</div>
-                      <code className="block max-w-[360px] truncate rounded-[8px] bg-[rgba(0,0,0,0.04)] px-2.5 py-1.5 text-[12px] text-[color:var(--pm-text-secondary)]" title={settings.storageRoot}>
-                        {settings.storageRoot}
-                      </code>
-                    </div>
-                    <div className="settings-row-control">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => window.acmind.app.openStorageRoot()}
-                        >
-                          打开
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={async () => {
-                            const folder = await window.acmind.vault.pickFolder();
-                            if (folder) {
-                              await updateSetting({ storageRoot: folder });
-                            }
-                          }}
-                        >
-                          更改路径
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </SettingGroupCard>
-
-                {/* 扫描行为 */}
-                <SettingGroupCard title="扫描行为" description="剪贴板监听的频率与范围。" icon="all">
-                  <SettingsRow label="轮询间隔" description="剪贴板检查频率（毫秒）。">
-                    <input
-                      type="number"
-                      min={100}
-                      max={5000}
-                      step={100}
-                      value={settings.pollIntervalMs}
-                      onChange={(e) => void updateSetting({ pollIntervalMs: Number(e.target.value) })}
-                      className="pm-ds-input w-28"
+                {/* Obsidian 自动整理 */}
+                <SettingGroupCard title="Obsidian 自动整理" description="定时自动整理 Obsidian 资料库。" icon="sb-obsidian">
+                  <SettingsRow label="启用自动整理" description="按设定时间自动执行整理任务">
+                    <ToggleSwitch
+                      checked={settings.scheduleManager?.obsidianAutoCleanup ?? false}
+                      onChange={(checked) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, obsidianAutoCleanup: checked } })
+                      }
                     />
                   </SettingsRow>
-                  <SettingsRow label="扫描范围" description="全部应用或仅指定应用。">
-                    <select
-                      value={settings.scopeMode}
-                      onChange={(e) =>
-                        void updateSetting({ scopeMode: e.target.value as AppSettings['scopeMode'] })
-                      }
-                      className="pm-ds-input min-w-[180px]"
-                    >
-                      <option value="all">全部应用</option>
-                      <option value="scoped">指定应用</option>
-                    </select>
-                  </SettingsRow>
-                  <SettingsRow label="指定应用" description={'扫描范围为"指定应用"时生效。'}>
+                  <SettingsRow label="整理时间" description="每天执行自动整理的时间">
                     <input
-                      value={settings.scopedApps.join(', ')}
+                      type="time"
+                      value={settings.scheduleManager?.obsidianCleanupTime ?? '01:00'}
+                      onChange={(e) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, obsidianCleanupTime: e.target.value } })
+                      }
+                      className="pm-ds-input min-w-[120px]"
+                    />
+                  </SettingsRow>
+                </SettingGroupCard>
+
+                {/* 周期任务默认确认策略 */}
+                <SettingGroupCard title="周期任务" description="重复任务的默认执行策略。" icon="sb-ai-process">
+                  <SettingsRow label="自动确认" description="周期任务到期后自动执行，无需手动确认">
+                    <ToggleSwitch
+                      checked={settings.scheduleManager?.autoConfirmRecurring ?? false}
+                      onChange={(checked) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, autoConfirmRecurring: checked } })
+                      }
+                    />
+                  </SettingsRow>
+                  <SettingsRow label="执行失败通知" description="任务执行失败时的通知方式">
+                    <select
+                      value={settings.scheduleManager?.failureNotification ?? 'desktop'}
                       onChange={(e) =>
                         void updateSetting({
-                          scopedApps: e.target.value
-                            .split(',')
-                            .map((v) => v.trim())
-                            .filter(Boolean),
+                          scheduleManager: { ...settings.scheduleManager, failureNotification: e.target.value as 'none' | 'desktop' | 'email' },
                         })
                       }
-                      className="pm-ds-input min-w-[260px]"
-                      placeholder="应用一, 应用二"
+                      className="pm-ds-input min-w-[160px]"
+                    >
+                      <option value="none">不通知</option>
+                      <option value="desktop">桌面通知</option>
+                      <option value="email">邮件通知</option>
+                    </select>
+                  </SettingsRow>
+                </SettingGroupCard>
+              </div>
+            )}
+
+            {/* ── 提醒方式 ───────────────────────────────────── */}
+            {activeCategory === 'schedule-reminder' && settings && (
+              <div className="flex flex-col gap-5">
+                <div className="mt-7">
+                  <h3 className="acmind-page-title">提醒方式</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    默认的提醒通知方式。
+                  </p>
+                </div>
+
+                <SettingGroupCard title="提醒方式" description="默认的提醒通知方式。" icon="sb-results">
+                  <SettingsRow label="桌面通知" description="通过系统通知栏显示提醒">
+                    <ToggleSwitch
+                      checked={settings.scheduleManager?.desktopNotification ?? true}
+                      onChange={(checked) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, desktopNotification: checked } })
+                      }
+                    />
+                  </SettingsRow>
+                  <SettingsRow label="声音提醒" description="提醒时播放提示音">
+                    <ToggleSwitch
+                      checked={settings.scheduleManager?.soundNotification ?? true}
+                      onChange={(checked) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, soundNotification: checked } })
+                      }
+                    />
+                  </SettingsRow>
+                  <SettingsRow label="顶部 Notch 提醒" description="在桌面顶部 Notch 区域显示提醒状态">
+                    <ToggleSwitch
+                      checked={settings.scheduleManager?.notchReminder ?? true}
+                      onChange={(checked) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, notchReminder: checked } })
+                      }
+                    />
+                  </SettingsRow>
+                </SettingGroupCard>
+              </div>
+            )}
+
+            {/* ── 日历视图 ───────────────────────────────────── */}
+            {activeCategory === 'schedule-calendar' && settings && (
+              <div className="flex flex-col gap-5">
+                <div className="mt-7">
+                  <h3 className="acmind-page-title">日历视图</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    日历展示和交互偏好。
+                  </p>
+                </div>
+
+                <SettingGroupCard title="日历视图" description="日历展示和交互偏好。" icon="filled-home">
+                  <SettingsRow label="默认视图" description="打开日程表时的默认视图">
+                    <select
+                      value={settings.scheduleManager?.defaultCalendarView ?? 'week'}
+                      onChange={(e) =>
+                        void updateSetting({
+                          scheduleManager: { ...settings.scheduleManager, defaultCalendarView: e.target.value as 'day' | 'week' | 'month' },
+                        })
+                      }
+                      className="pm-ds-input min-w-[160px]"
+                    >
+                      <option value="day">日视图</option>
+                      <option value="week">周视图</option>
+                      <option value="month">月视图</option>
+                    </select>
+                  </SettingsRow>
+                  <SettingsRow label="一周起始日" description="日历中每周的第一天">
+                    <select
+                      value={settings.scheduleManager?.weekStart ?? 'monday'}
+                      onChange={(e) =>
+                        void updateSetting({
+                          scheduleManager: { ...settings.scheduleManager, weekStart: e.target.value as 'sunday' | 'monday' },
+                        })
+                      }
+                      className="pm-ds-input min-w-[160px]"
+                    >
+                      <option value="monday">周一</option>
+                      <option value="sunday">周日</option>
+                    </select>
+                  </SettingsRow>
+                </SettingGroupCard>
+              </div>
+            )}
+
+            {/* ── 邮件发送 ───────────────────────────────────── */}
+            {activeCategory === 'schedule-email' && settings && (
+              <div className="flex flex-col gap-5">
+                <div className="mt-7">
+                  <h3 className="acmind-page-title">邮件发送</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    定时邮件任务的发送配置。
+                  </p>
+                </div>
+
+                <SettingGroupCard title="邮件发送" description="定时邮件任务的发送配置。" icon="filled-link">
+                  <SettingsRow label="SMTP 服务器" description="邮件发送服务器地址">
+                    <input
+                      value={settings.scheduleManager?.smtpHost ?? ''}
+                      onChange={(e) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, smtpHost: e.target.value } })
+                      }
+                      className="pm-ds-input min-w-[220px]"
+                      placeholder="smtp.example.com"
+                    />
+                  </SettingsRow>
+                  <SettingsRow label="发件人邮箱" description="定时邮件的发件人地址">
+                    <input
+                      value={settings.scheduleManager?.smtpFrom ?? ''}
+                      onChange={(e) =>
+                        void updateSetting({ scheduleManager: { ...settings.scheduleManager, smtpFrom: e.target.value } })
+                      }
+                      className="pm-ds-input min-w-[220px]"
+                      placeholder="reminder@example.com"
                     />
                   </SettingsRow>
                 </SettingGroupCard>
@@ -1185,7 +1612,7 @@ export function SettingsPage(): JSX.Element {
                     </SettingsRow>
                   </div>
                   <div className="flex items-start gap-2 rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] px-3 py-2.5 mt-3">
-                    <PinStackIcon name="help" size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--pm-text-tertiary)' }} />
+                    <AcMindIcon name="help" size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--pm-text-tertiary)' }} />
                     <p className="text-[11px] leading-5 text-[color:var(--pm-text-tertiary)]">
                       如需修改，请前往「资料库 → Obsidian」。
                     </p>
@@ -1196,6 +1623,127 @@ export function SettingsPage(): JSX.Element {
 
             {/* ── Capsule (捕获入口) ───────────────────────── */}
             {activeCategory === 'capture-capsule' && <CapsuleSettingsPanel settings={settings} onUpdateSetting={updateSetting} />}
+
+            {/* ── 自动工具（总览） ────────────────────────────── */}
+            {activeCategory === 'auto-tools-general' && (
+              <div className="flex flex-col gap-5">
+                <div className="mt-7">
+                  <h3 className="acmind-page-title">自动工具</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    AcMind 可调用的处理能力总览。
+                  </p>
+                </div>
+
+                <SettingGroupCard title="工具能力" description="所有可用的自动工具。" icon="line-file-import">
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: '文件转 Markdown', desc: 'PDF、DOCX、PPTX 等文件转换' },
+                      { label: 'OCR 图像识别', desc: '识别图片中的文字内容' },
+                      { label: '语音转文字', desc: 'Whisper 本地模型语音转写' },
+                      { label: '网页正文提取', desc: '提取网页正文并转换为 Markdown' },
+                      { label: '剪贴板监听', desc: '监听系统剪贴板变化' },
+                      { label: '截图捕获', desc: '快速截图并处理' },
+                      { label: '文件夹监听', desc: '监听指定文件夹的文件变化' },
+                      { label: '自动化任务', desc: '配置和管理工作流自动化' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between rounded-[8px] px-3 py-2">
+                        <div>
+                          <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>{item.label}</p>
+                          <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SettingGroupCard>
+              </div>
+            )}
+
+            {/* ── OCR 与文件转换 ────────────────────────────── */}
+            {activeCategory === 'auto-tools-ocr' && (
+              <div className="flex flex-col gap-5">
+                <div className="mt-7">
+                  <h3 className="acmind-page-title">OCR 与文件转换</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    OCR 识别和文件格式转换的配置。
+                  </p>
+                </div>
+                <SettingGroupCard title="OCR 与文件转换" description="OCR 识别和文件转换工具配置。" icon="image">
+                  <EmptyState
+                    icon={<AcMindIcon name="image" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
+                    title="OCR 与文件转换"
+                    description="相关配置即将开放。"
+                  />
+                </SettingGroupCard>
+              </div>
+            )}
+
+            {/* ── 桌面组件 ───────────────────────────────────── */}
+            {activeCategory === 'desktop-widgets' && (
+              <div className="flex flex-col gap-5">
+                <div className="mt-7">
+                  <h3 className="acmind-page-title">桌面组件</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    日程小组件、提醒浮窗、顶部 Notch 提醒等桌面展示组件。
+                  </p>
+                </div>
+
+                <SettingGroupCard title="桌面组件" description="桌面辅助展示组件。" icon="all">
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: '日程小组件', desc: '在桌面展示今日日程' },
+                      { label: '提醒浮窗', desc: '提醒到期时弹出浮窗通知' },
+                      { label: '顶部 Notch 提醒', desc: '在桌面顶部 Notch 区域显示提醒状态' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between rounded-[8px] px-3 py-2">
+                        <div>
+                          <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>{item.label}</p>
+                          <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SettingGroupCard>
+
+                <SettingGroupCard title="桌面工具" description="剪贴板历史、暂存架、截图等桌面辅助能力。" icon="all">
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { view: 'clipboard', label: '剪贴板历史', desc: '查看和管理剪贴板历史记录' },
+                      { view: 'shelf', label: '拖拽暂存架', desc: '拖拽文件到桌面暂存架' },
+                      { view: 'capture', label: '截图与贴图', desc: '快速截图和贴图工具' },
+                      { view: 'capture-inbox', label: '快速记录', desc: '快速记录想法和灵感' },
+                    ].map((item) => (
+                      <button
+                        key={item.view}
+                        type="button"
+                        className="flex items-center justify-between rounded-[8px] px-3 py-2 text-left transition-colors hover:bg-[color:var(--pm-bg-subtle)]"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: item.view } }));
+                        }}
+                      >
+                        <div>
+                          <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>{item.label}</p>
+                          <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>{item.desc}</p>
+                        </div>
+                        <AcMindIcon name="arrow-right" size={14} style={{ color: 'var(--pm-text-tertiary)' }} />
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="flex items-center justify-between rounded-[8px] px-3 py-2 text-left transition-colors hover:bg-[color:var(--pm-bg-subtle)]"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('acmind:toggle-capsule'));
+                      }}
+                    >
+                      <div>
+                        <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>桌面胶囊</p>
+                        <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>切换桌面胶囊显示</p>
+                      </div>
+                      <AcMindIcon name="arrow-right" size={14} style={{ color: 'var(--pm-text-tertiary)' }} />
+                    </button>
+                  </div>
+                </SettingGroupCard>
+              </div>
+            )}
 
             {/* ── Appearance ──────────────────────────────── */}
             {activeCategory === 'appearance' && (
@@ -1224,42 +1772,282 @@ export function SettingsPage(): JSX.Element {
               </div>
             )}
 
-            {/* ── Privacy ─────────────────────────────────── */}
-            {activeCategory === 'privacy' && (
+
+            {/* ── Dictation (OpenLess-inspired) ────────────────── */}
+            {activeCategory === 'dictation' && (
               <div className="flex flex-col gap-5">
                 <div className="mt-7">
-                  <h3 className="acmind-page-title">隐私与本地优先</h3>
-                  <p className="mt-1 text-[13px] leading-5 text-[color:var(--pm-text-secondary)]">
-                    macOS 权限状态。
+                  <h3 className="acmind-page-title">语音听写</h3>
+                  <p className="mt-1 text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
+                    按全局快捷键录音，AI 自动润色后插入光标位置。灵感来自 OpenLess。
                   </p>
                 </div>
-                <SettingGroupCard title="隐私与本地优先" description="macOS 权限状态。" icon="help">
-                  {permissionItems.length === 0 ? (
-                    <EmptyState
-                      icon={'\u{1F512}'}
-                      title="暂无权限信息"
-                      description="刷新后会显示屏幕录制、辅助功能和磁盘访问状态。"
+
+                <SettingGroupCard title="启用" description="开启后可使用快捷键触发语音听写" icon="spark">
+                  <SettingsRow label="启用语音听写" description="全局快捷键触发录音，松开后自动转写并插入。快捷键可在下面自定义。">
+                    <ToggleSwitch
+                      checked={settings?.dictation?.enabled ?? false}
+                      onChange={(checked) => {
+                        void updateSetting({
+                          dictation: { ...(settings?.dictation ?? DEFAULT_DICTATION_SETTINGS), enabled: checked },
+                        });
+                      }}
                     />
-                  ) : (
-                    <div className="flex flex-col">
-                      {permissionItems.map((item) => (
-                        <PermissionCard
-                          key={item.key}
-                          item={item}
-                          onOpenSettings={() =>
-                            void window.acmind.permissions.openSettings(
-                              item.settingsTarget ?? 'system-preferences',
-                            )
-                          }
-                          onRefresh={async () => {
-                            const snapshot = await window.acmind.permissions.refresh('manual-refresh');
-                            setPermissions(snapshot);
+                  </SettingsRow>
+                </SettingGroupCard>
+
+                {settings?.dictation?.enabled && (
+                  <>
+                    <SettingGroupCard title="润色模式" description="选择语音转文字后的 AI 润色方式" icon="all">
+                      <SettingsRow label="默认模式" description="录音结束后自动使用的润色模式。">
+                        <select
+                          value={settings?.dictation?.defaultMode ?? 'light'}
+                          onChange={(e) => {
+                            void updateSetting({
+                              dictation: { ...settings?.dictation ?? DEFAULT_DICTATION_SETTINGS, defaultMode: e.target.value as VoicePolishMode },
+                            });
+                          }}
+                          className="w-36 rounded-[6px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.03)] px-2.5 py-1 text-[13px] text-[color:var(--pm-text-primary)] outline-none focus:border-[color:var(--pm-border)]"
+                        >
+                          <option value="raw">原文（不润色）</option>
+                          <option value="light">轻度润色</option>
+                          <option value="structured">清晰结构</option>
+                          <option value="formal">正式表达</option>
+                        </select>
+                      </SettingsRow>
+                      <SettingsRow label="启用的模式" description="勾选后可在胶囊中切换使用。">
+                        <div className="flex flex-wrap gap-2">
+                          {(['raw', 'light', 'structured', 'formal'] as VoicePolishMode[]).map((mode) => {
+                            const labels: Record<VoicePolishMode, string> = { raw: '原文', light: '轻度', structured: '结构', formal: '正式' };
+                            const isActive = settings?.dictation?.enabledModes?.includes(mode) ?? false;
+                            return (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => {
+                                  const current = (settings?.dictation ?? DEFAULT_DICTATION_SETTINGS).enabledModes ?? ['raw', 'light', 'structured', 'formal'];
+                                  const next = isActive ? current.filter((m) => m !== mode) : [...current, mode];
+                                  void updateSetting({ dictation: { ...settings?.dictation ?? DEFAULT_DICTATION_SETTINGS, enabledModes: next } });
+                                }}
+                                className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                                  isActive
+                                    ? 'bg-[color:var(--pm-accent)] text-white'
+                                    : 'bg-[color:var(--pm-bg-subtle)] text-[color:var(--pm-text-secondary)] hover:bg-[color:var(--pm-bg-hover)]'
+                                }`}
+                              >
+                                {labels[mode]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </SettingsRow>
+                    </SettingGroupCard>
+
+                    <SettingGroupCard title="快捷键" description="全局快捷键，在任何应用中生效" icon="all">
+                      <SettingsRow label="听写快捷键" description="支持 Cmd+Shift+V / CommandOrControl+Shift+V 这类写法，保存后立即生效。">
+                        <input
+                          type="text"
+                          value={dictationHotkeyDraft}
+                          onChange={(e) => {
+                            setDictationHotkeyDraft(e.target.value);
+                          }}
+                          onBlur={() => {
+                            if (suppressDictationHotkeyCommitRef.current) {
+                              suppressDictationHotkeyCommitRef.current = false;
+                              return;
+                            }
+                            void commitDictationHotkey(dictationHotkeyDraft);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Escape') {
+                              suppressDictationHotkeyCommitRef.current = true;
+                              setDictationHotkeyDraft(settings?.dictation?.hotkey ?? DEFAULT_DICTATION_SETTINGS.hotkey);
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          className="w-56 rounded-[6px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.03)] px-2.5 py-1 text-[13px] text-[color:var(--pm-text-primary)] outline-none focus:border-[color:var(--pm-border)]"
+                          placeholder="Cmd+Shift+V"
+                        />
+                      </SettingsRow>
+                      <SettingsRow label="翻译模式" description="录音中按住 Shift 切换为翻译输出。">
+                        <div className="text-[12px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                          录音时按住 Shift 自动切换
+                        </div>
+                      </SettingsRow>
+                    </SettingGroupCard>
+
+                    <SettingGroupCard title="语言" description="配置工作和翻译语言" icon="all">
+                      <SettingsRow label="工作语言" description="用于 AI 润色上下文。">
+                        <div className="flex flex-wrap gap-1.5">
+                          {['zh-CN', 'en', 'ja', 'ko'].map((lang) => {
+                            const isActive = settings?.dictation?.workingLanguages?.includes(lang) ?? false;
+                            const langLabels: Record<string, string> = { 'zh-CN': '中文', en: 'English', ja: '日本語', ko: '한국어' };
+                            return (
+                              <button
+                                key={lang}
+                                type="button"
+                                onClick={() => {
+                                  const current = (settings?.dictation ?? DEFAULT_DICTATION_SETTINGS).workingLanguages ?? ['zh-CN', 'en'];
+                                  const next = isActive ? current.filter((l) => l !== lang) : [...current, lang];
+                                  void updateSetting({ dictation: { ...settings?.dictation ?? DEFAULT_DICTATION_SETTINGS, workingLanguages: next } });
+                                }}
+                                className={`rounded-full px-2.5 py-0.5 text-[12px] transition-colors ${
+                                  isActive
+                                    ? 'bg-[color:var(--pm-accent)] text-white'
+                                    : 'bg-[color:var(--pm-bg-subtle)] text-[color:var(--pm-text-secondary)] hover:bg-[color:var(--pm-bg-hover)]'
+                                }`}
+                              >
+                                {langLabels[lang] ?? lang}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </SettingsRow>
+                      <SettingsRow label="翻译目标语言" description="翻译模式下的输出语言。">
+                        <select
+                          value={settings?.dictation?.translationTargetLanguage ?? 'en'}
+                          onChange={(e) => {
+                            void updateSetting({
+                              dictation: { ...settings?.dictation ?? DEFAULT_DICTATION_SETTINGS, translationTargetLanguage: e.target.value },
+                            });
+                          }}
+                          className="w-36 rounded-[6px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.03)] px-2.5 py-1 text-[13px] text-[color:var(--pm-text-primary)] outline-none focus:border-[color:var(--pm-border)]"
+                        >
+                          <option value="en">English</option>
+                          <option value="zh-CN">中文</option>
+                          <option value="ja">日本語</option>
+                          <option value="ko">한국어</option>
+                        </select>
+                      </SettingsRow>
+                    </SettingGroupCard>
+
+                    <SettingGroupCard title="粘贴行为" description="文本插入到光标位置的方式" icon="all">
+                      <SettingsRow label="恢复剪贴板" description="粘贴后自动恢复之前的剪贴板内容。">
+                        <ToggleSwitch
+                          checked={settings?.dictation?.restoreClipboard ?? true}
+                          onChange={(checked) => {
+                            void updateSetting({
+                              dictation: { ...settings?.dictation ?? DEFAULT_DICTATION_SETTINGS, restoreClipboard: checked },
+                            });
                           }}
                         />
-                      ))}
-                    </div>
-                  )}
-                </SettingGroupCard>
+                      </SettingsRow>
+                    </SettingGroupCard>
+
+                    <SettingGroupCard title="依赖检查" description="语音听写需要以下系统组件" icon="all">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
+                            一键自检
+                          </div>
+                          <div className="mt-1 text-[11px] text-[color:var(--pm-text-tertiary)]">
+                            会检查浏览器麦克风、录音工具、本地/外部 ASR 配置和本地转写运行态。
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {canInstallLocalAsr && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void handleInstallLocalAsr()}
+                              disabled={whisperBusy}
+                            >
+                              {repairingWhisper ? '安装中...' : '安装/校验本地 ASR'}
+                            </Button>
+                          )}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void handleRunDictationDiagnostics()}
+                            disabled={runningDictationDiagnostics}
+                          >
+                            {runningDictationDiagnostics ? '检测中...' : '立即自检'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2">
+                        <SettingsRow label="ASR 服务" description="语音转文字服务（Whisper / 火山引擎 / OpenAI-compatible）。">
+                          <div className="text-[12px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                            {settings.transcription.provider === 'local'
+                              ? `本地 ${settings.transcription.localEngine} · ${settings.transcription.localModel}`
+                              : '外部 API'}
+                          </div>
+                        </SettingsRow>
+                        <SettingsRow label="录音工具" description="macOS 需要 sox 或 rec，Linux 需要 sox 或 arecord。">
+                          <div className="text-[12px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                            由自检按钮自动探测
+                          </div>
+                        </SettingsRow>
+                        <SettingsRow label="AI 润色" description="非原文模式下会调用 LLM API。">
+                          <div className="text-[12px]" style={{ color: 'var(--pm-text-tertiary)' }}>
+                            {settings.ai?.apiKey ? '已配置' : '未配置'}
+                          </div>
+                        </SettingsRow>
+                      </div>
+
+                      {dictationDiagnostics && (
+                        <div className="mt-4 flex flex-col gap-2 rounded-[14px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.015)] p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-[13px] font-medium text-[color:var(--pm-text-primary)]">
+                                自检结果
+                              </div>
+                              <div className="text-[11px] text-[color:var(--pm-text-tertiary)]">
+                                {dictationDiagnostics.ok ? '全部通过' : canInstallLocalAsr ? '本地 ASR 可一键安装/校验' : '存在未满足的依赖或权限'}
+                              </div>
+                            </div>
+                            <StatusBadge tone={dictationDiagnostics.ok ? 'success' : 'warning'} label={dictationDiagnostics.ok ? '通过' : '需处理'} dot={false} />
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            {dictationDiagnosticItems.map((item) => (
+                              <div
+                                key={item.key}
+                                className="flex flex-col gap-1 rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-white px-3 py-2.5"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="text-[12px] font-medium text-[color:var(--pm-text-primary)]">
+                                    {item.label}
+                                  </div>
+                                  <StatusBadge tone={item.ok ? 'success' : 'danger'} label={item.ok ? '通过' : '失败'} dot={false} />
+                                </div>
+                                <div className="text-[11px] leading-5 text-[color:var(--pm-text-tertiary)]">
+                                  {item.message}
+                                </div>
+                                {!item.ok && item.key === 'browser_microphone' && (
+                                  <div className="mt-1 flex items-center gap-2">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => void handleRequestMicrophoneAccess()}
+                                      disabled={runningDictationDiagnostics}
+                                    >
+                                      请求麦克风权限
+                                    </Button>
+                                  </div>
+                                )}
+                                {!item.ok && item.key === 'recorder_tool' && (
+                                  <div className="mt-1 flex items-center gap-2">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => void handleCopyRecorderInstallCommand()}
+                                    >
+                                      复制安装命令
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </SettingGroupCard>
+                  </>
+                )}
               </div>
             )}
 
@@ -1475,6 +2263,32 @@ export function SettingsPage(): JSX.Element {
                     >
                       打开日志目录
                     </Button>
+                  </div>
+                </SettingGroupCard>
+
+                <SettingGroupCard title="高级功能入口" description="这里放置 AI 服务、任务队列、数据集、诊断等高级能力。普通使用无需频繁调整。" icon="filled-cloud">
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { view: 'ai', label: 'AI Console', desc: 'AI 服务状态与配置' },
+                      { view: 'task-queue', label: '任务队列', desc: '查看和管理后台任务' },
+                      { view: 'datasets', label: '数据集', desc: '管理训练数据集' },
+                      { view: 'automation', label: '自动化', desc: '自动化规则与流程' },
+                    ].map((item) => (
+                      <button
+                        key={item.view}
+                        type="button"
+                        className="flex items-center justify-between rounded-[8px] px-3 py-2 text-left transition-colors hover:bg-[color:var(--pm-bg-subtle)]"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: item.view } }));
+                        }}
+                      >
+                        <div>
+                          <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>{item.label}</p>
+                          <p className="text-[11px]" style={{ color: 'var(--pm-text-tertiary)' }}>{item.desc}</p>
+                        </div>
+                        <AcMindIcon name="arrow-right" size={14} style={{ color: 'var(--pm-text-tertiary)' }} />
+                      </button>
+                    ))}
                   </div>
                 </SettingGroupCard>
               </div>
@@ -2219,7 +3033,7 @@ function ShortcutRow({
             className="inline-flex items-center gap-1 rounded-[6px] border border-[color:var(--pm-border-subtle)] bg-[rgba(0,0,0,0.03)] px-2.5 py-1 text-[12px] text-[color:var(--pm-text-secondary)] transition-colors hover:border-[color:var(--pm-border)] hover:bg-[rgba(0,0,0,0.05)]"
           >
             <kbd className="font-mono text-[11px]">{value}</kbd>
-            <PinStackIcon name="edit" size={11} className="text-[color:var(--pm-text-tertiary)]" />
+            <AcMindIcon name="edit" size={11} className="text-[color:var(--pm-text-tertiary)]" />
           </button>
         )}
       </div>

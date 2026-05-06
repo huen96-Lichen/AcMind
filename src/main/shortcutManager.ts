@@ -58,7 +58,7 @@ class ShortcutManager {
   /**
    * Register global shortcuts.
    */
-  register(options: ShortcutManagerOptions, settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut'>): void {
+  register(options: ShortcutManagerOptions, settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'dictation'>): void {
     if (!app.isReady()) {
       logger.warn('app', 'shortcutManager', 'register', 'Cannot register shortcuts before app is ready');
       return;
@@ -84,7 +84,7 @@ class ShortcutManager {
     });
 
     // Voice input shortcut (Phase 6)
-    const voiceInputShortcut = 'Cmd+Shift+V';
+    const voiceInputShortcut = settings?.dictation?.hotkey?.trim() || 'Cmd+Shift+V';
     let voiceInputOk = true;
     if (options.onVoiceInput) {
       voiceInputOk = globalShortcut.register(voiceInputShortcut, () => {
@@ -119,6 +119,19 @@ class ShortcutManager {
     if (!voiceInputOk) {
       logger.warn('error', 'shortcutManager', 'register', `Failed to register voice input shortcut: ${voiceInputShortcut}`);
     }
+  }
+
+  /**
+   * Re-register shortcuts using the last registered callbacks.
+   * Useful after settings change without needing a full app restart.
+   */
+  refresh(settings?: Pick<AppSettings, 'screenshotShortcut' | 'dashboardShortcut' | 'dictation'>): void {
+    if (!this.options) {
+      logger.warn('app', 'shortcutManager', 'refresh', 'Cannot refresh shortcuts before initial registration');
+      return;
+    }
+
+    this.register(this.options, settings);
   }
 
   /**

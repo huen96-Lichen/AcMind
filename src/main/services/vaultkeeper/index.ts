@@ -1,5 +1,5 @@
-// VaultKeeper Module — Barrel Export
-// Phase 9.1-9.3: 统一导出 VaultKeeper 相关类型和单例
+// External Processor Module — Barrel Export
+// Phase 9.1-9.3: 统一导出外部处理服务相关类型和单例
 
 export { vaultKeeperAdapter } from './vaultKeeperAdapter';
 export { processingJobService } from './processingJobService';

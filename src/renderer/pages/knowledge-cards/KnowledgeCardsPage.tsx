@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import {
   PageShell,
   PageHeader,
@@ -52,7 +52,7 @@ export function KnowledgeCardsPage(): JSX.Element {
                 key={tab.key}
                 variant={activeTab === tab.key ? 'primary' : 'ghost'}
                 size="sm"
-                leadingIcon={<PinStackIcon name={tab.icon} size={14} />}
+                leadingIcon={<AcMindIcon name={tab.icon} size={14} />}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.label}
@@ -119,7 +119,7 @@ function CardsSection(): JSX.Element {
         <Section title={`知识卡片 (${cards.length})`}>
           {cards.length === 0 ? (
             <EmptyState
-              icon={<PinStackIcon name="ai-workspace" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+              icon={<AcMindIcon name="ai-workspace" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
               title="暂无知识卡片"
               description="知识卡片会在 AI 处理内容时自动生成"
             />
@@ -164,7 +164,7 @@ function CardsSection(): JSX.Element {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[14px] font-semibold">卡片详情</h3>
               <Button variant="ghost" size="sm" onClick={() => setSelectedCard(null)}>
-                <PinStackIcon name="close" size={14} />
+                <AcMindIcon name="close" size={14} />
               </Button>
             </div>
             <div className="text-[13px] font-medium mb-2">{selectedCard.canonicalTitle || '未命名卡片'}</div>
@@ -237,7 +237,7 @@ function VaultSearchSection(): JSX.Element {
 
       {!loading && results.length === 0 && keyword && !error && (
         <EmptyState
-          icon={<PinStackIcon name="sb-results" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+          icon={<AcMindIcon name="sb-results" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
           title="未找到匹配结果"
           description={`没有在 Vault 中找到包含 "${keyword}" 的文件`}
         />
@@ -245,7 +245,7 @@ function VaultSearchSection(): JSX.Element {
 
       {!loading && !keyword && results.length === 0 && (
         <EmptyState
-          icon={<PinStackIcon name="sb-results" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+          icon={<AcMindIcon name="sb-results" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
           title="搜索 Obsidian Vault"
           description="输入关键词搜索 Vault 中的 Markdown 文件内容"
         />
@@ -315,7 +315,7 @@ function DistilledNotesSection(): JSX.Element {
         <Section title={`蒸馏笔记 (${notes.length})`}>
           {notes.length === 0 ? (
             <EmptyState
-              icon={<PinStackIcon name="sb-ai-process" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+              icon={<AcMindIcon name="sb-ai-process" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
               title="暂无蒸馏笔记"
               description="蒸馏笔记会在 AI 处理内容时自动生成"
             />
@@ -378,7 +378,7 @@ function DistilledNotesSection(): JSX.Element {
                   删除
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedNote(null)}>
-                  <PinStackIcon name="close" size={14} />
+                  <AcMindIcon name="close" size={14} />
                 </Button>
               </div>
             </div>

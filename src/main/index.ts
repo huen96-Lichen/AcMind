@@ -4,6 +4,7 @@ import { app, BrowserWindow } from 'electron';
 import type { App as ElectronApp } from 'electron';
 
 import { DEFAULT_SETTINGS } from '../shared/defaultSettings';
+import { DEFAULT_DICTATION_SETTINGS } from '../shared/types';
 import { logger } from './logger';
 import { storage } from './storage';
 import { errorService } from './errorService';
@@ -14,6 +15,9 @@ import { shortcutManager } from './shortcutManager';
 import { createPermissionCoordinator, type PermissionCoordinator } from './permissionCoordinator';
 import { createDashboardWindowController } from './dashboardWindowController';
 import { createCapsuleController } from './capsuleController';
+import { createWidgetWindowController } from './widgetWindowController';
+import { createDictationWindowController } from './dictationWindowController';
+import { dictationCoordinator } from './voice/coordinator';
 import { captureService } from './captureService';
 import { captureRegistry } from './services/capture';
 import {
@@ -71,7 +75,10 @@ const rendererDevUrl = process.env.VITE_DEV_SERVER_URL;
 
 let dashboardController: ReturnType<typeof createDashboardWindowController> | null = null;
 let capsuleController: ReturnType<typeof createCapsuleController> | null = null;
+let widgetController: ReturnType<typeof createWidgetWindowController> | null = null;
+let dictationController: ReturnType<typeof createDictationWindowController> | null = null;
 let permissionCoordinator: PermissionCoordinator | null = null;
+let lastVoiceInputTriggerAt = 0;
 
 // ---------------------------------------------------------------------------
 // Bootstrap
@@ -246,10 +253,33 @@ async function bootstrap(): Promise<void> {
     initialSettings: initialSettings.capsule,
   });
 
+  // 7c. Create dashboard widget (floating pill) controller
+  widgetController = createWidgetWindowController({
+    preloadPath,
+    rendererFilePath,
+    rendererDevUrl,
+    isDev,
+  });
+
+  // Show widget if enabled in settings
+  if (currentSettings.dashboardWidget?.enabled) {
+    widgetController.show();
+  }
+
+  // 7b. Create dictation capsule window (OpenLess-inspired)
+  dictationController = createDictationWindowController({
+    preloadPath,
+    rendererFilePath,
+    rendererDevUrl,
+    isDev,
+  });
+  dictationCoordinator.setDictationWindow(dictationController.getWindow());
+
   // 8. Register IPC handlers
-  registerIpcHandlers({
+  await registerIpcHandlers({
     permissionCoordinator: permissionCoordinator!,
     capsuleController,
+    widgetController,
   });
 
   // 9. Create system tray
@@ -272,6 +302,28 @@ async function bootstrap(): Promise<void> {
     },
     onToggleDashboard: () => {
       dashboardController?.toggle();
+    },
+    onVoiceInput: () => {
+      const now = Date.now();
+      if (now - lastVoiceInputTriggerAt < 450) {
+        logger.debug('app', 'bootstrap', 'voiceInput', 'Ignored duplicate voice input trigger');
+        return;
+      }
+      lastVoiceInputTriggerAt = now;
+
+      // OpenLess-inspired: toggle dictation on hotkey
+      const s = settings.load();
+      if (!s.dictation?.enabled) {
+        settings.update({
+          dictation: { ...(s.dictation ?? DEFAULT_DICTATION_SETTINGS), enabled: true },
+        });
+      }
+      if (dictationCoordinator.getPhase() === 'idle') {
+        dictationController?.show();
+        void dictationCoordinator.beginSession();
+      } else if (dictationCoordinator.getPhase() === 'listening') {
+        void dictationCoordinator.endSession();
+      }
     },
   }, currentSettings);
 

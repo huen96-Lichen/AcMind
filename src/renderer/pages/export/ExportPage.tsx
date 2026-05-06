@@ -13,7 +13,7 @@ import {
   SearchField,
   StatusBadge,
 } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { useExportRecords } from '../../hooks/useExportRecords';
 import type { DistilledOutput, ExportRecord, SourceItem } from '../../../shared/types';
 
@@ -154,7 +154,7 @@ function DetailPanel({ row, onClose, onRetry }: DetailPanelProps): JSX.Element {
           size="sm"
           onClick={onClose}
         >
-          <PinStackIcon name="close" size={14} />
+          <AcMindIcon name="close" size={14} />
         </Button>
       </div>
 
@@ -184,7 +184,7 @@ function DetailPanel({ row, onClose, onRetry }: DetailPanelProps): JSX.Element {
             <Button
               variant="primary"
               size="sm"
-              leadingIcon={<PinStackIcon name="panel" size={14} />}
+              leadingIcon={<AcMindIcon name="panel" size={14} />}
               onClick={handleOpenInObsidian}
               style={{ flex: 1 }}
             >
@@ -193,7 +193,7 @@ function DetailPanel({ row, onClose, onRetry }: DetailPanelProps): JSX.Element {
             <Button
               variant="secondary"
               size="sm"
-              leadingIcon={<PinStackIcon name="copy" size={14} />}
+              leadingIcon={<AcMindIcon name="copy" size={14} />}
               onClick={handleCopyPath}
             >
               {copied ? '已复制' : '复制路径'}
@@ -901,7 +901,7 @@ export function ExportPage(): JSX.Element {
           description="查看已入库的 Markdown 文件、来源内容和 Obsidian 写入位置。"
           actions={(
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" leadingIcon={<PinStackIcon name="refresh" size={14} />} onClick={handleRefresh}>
+              <Button variant="secondary" size="sm" leadingIcon={<AcMindIcon name="refresh" size={14} />} onClick={handleRefresh}>
                 刷新
               </Button>
               <FilterSelect
@@ -992,7 +992,7 @@ export function ExportPage(): JSX.Element {
             ) : filteredRows.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  icon={<PinStackIcon name="filled-output" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+                  icon={<AcMindIcon name="filled-output" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
                   title="还没有入库记录"
                   description="完成整理并确认入库后，文件会出现在这里。"
                   action={{

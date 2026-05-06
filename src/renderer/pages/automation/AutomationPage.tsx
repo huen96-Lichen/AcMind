@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { useToast } from '../../components/shared/ToastViewport';
 
@@ -219,7 +219,7 @@ export function AutomationPage(): JSX.Element {
           {error && <ErrorState title="加载失败" reason={error} suggestion="请稍后重试。" action={{ label: '重新加载', onClick: loadTasks }} />}
           {!loading && !error && tasks.length === 0 && (
             <EmptyState
-              icon={<PinStackIcon name="settings" size={28} />}
+              icon={<AcMindIcon name="settings" size={28} />}
               title="暂无自动化规则"
               description="点击下方按钮添加第一条规则"
             />
@@ -290,8 +290,10 @@ export function AutomationPage(): JSX.Element {
                       <span style={styles.metaLabel}>下次运行</span>
                       <span style={styles.metaValue}>
                         {task.nextRunAt
-                          ? `${relativeTime(task.nextRunAt)}${task.nextRunAtEstimated ? ' (预估)' : ''}`
-                          : '—'}
+                          ? relativeTime(task.nextRunAt)
+                          : task.enabled
+                            ? '计算中...'
+                            : '—'}
                       </span>
                     </div>
 

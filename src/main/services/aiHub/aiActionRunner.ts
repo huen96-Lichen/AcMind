@@ -91,7 +91,7 @@ class AiActionRunner {
       status: 'running',
       provider: '',
       model: '',
-      input: { actionId: action.id, actionName: action.name, text: input.slice(0, 500) },
+      input: { actionId: action.id, actionName: action.name, text: input.slice(0, 200), redacted: true },
       createdAt: Date.now(),
       updatedAt: Date.now(),
       startedAt: Date.now(),

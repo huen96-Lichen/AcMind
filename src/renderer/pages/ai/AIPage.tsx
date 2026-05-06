@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import {
   PageShell,
   PageHeader,
@@ -130,7 +130,7 @@ export function AIPage(): JSX.Element {
         actions={
           <Button
             variant="primary"
-            leadingIcon={<PinStackIcon name="act-quick-capture" size={16} />}
+            leadingIcon={<AcMindIcon name="act-quick-capture" size={16} />}
             busy={busyAction === 'create'}
             onClick={() => setShowCreateForm(true)}
           >
@@ -168,7 +168,7 @@ export function AIPage(): JSX.Element {
       >
         {actions.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="sb-ai-process" size={28} />}
+            icon={<AcMindIcon name="sb-ai-process" size={28} />}
             title="暂无 AI Action"
             description="创建 Action 来定义 AI 处理流程"
             action={{ label: '新建 Action', onClick: () => setShowCreateForm(true) }}
@@ -200,7 +200,7 @@ export function AIPage(): JSX.Element {
       >
         {jobs.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="status-waiting" size={28} />}
+            icon={<AcMindIcon name="status-waiting" size={28} />}
             title="暂无任务"
             description="运行 AI Action 后会在此显示任务状态"
           />
@@ -236,7 +236,7 @@ function ActionRow({ action, busy, onRun, onDelete }: ActionRowProps): JSX.Eleme
   return (
     <Card variant="interactive" className="flex items-center gap-3 p-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-[color:var(--pm-surface-muted)]">
-        <PinStackIcon name="sb-ai-process" size={16} />
+        <AcMindIcon name="sb-ai-process" size={16} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ function JobRow({ job, onCancel }: JobRowProps): JSX.Element {
   return (
     <Card variant="interactive" className="flex items-center gap-3 p-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-[color:var(--pm-surface-muted)]">
-        <PinStackIcon name="status-running" size={16} />
+        <AcMindIcon name="status-running" size={16} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

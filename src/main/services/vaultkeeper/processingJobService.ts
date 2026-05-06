@@ -1,8 +1,8 @@
 // ProcessingJobService
-// Phase 9.2: 根据 CaptureRecord 判断是否需要 VaultKeeper 处理，提交 Job
+// Phase 9.2: 根据 CaptureRecord 判断是否需要外部处理，提交 Job
 //
 // 职责：
-// - 判断 CaptureRecord 是否需要提交 VaultKeeper
+// - 判断 CaptureRecord 是否需要提交外部处理
 // - 异步提交 Job（不阻塞主流程）
 // - 可靠写回 external_job_id / external_processor / external_processing_status 到 SourceItem metadata
 // - 提交失败时记录错误但不阻塞 pipeline
@@ -49,7 +49,7 @@ const HINT_TO_JOB_TYPE: Record<string, VKJobType> = {
 
 class ProcessingJobService {
   /**
-   * 判断 CaptureRecord 是否需要提交 VaultKeeper 处理。
+   * 判断 CaptureRecord 是否需要提交外部处理。
    * 返回 VKJobType 或 null（不需要外部处理）。
    */
   determineJobType(record: CaptureRecord): VKJobType | null {
@@ -86,7 +86,7 @@ class ProcessingJobService {
   }
 
   /**
-   * 异步提交 Job 到 VaultKeeper。
+   * 异步提交 Job 到外部处理服务。
    * 不阻塞主流程；失败时记录错误但不抛出。
    * 可靠写回 external_job_id / external_processor / external_processing_status 到 SourceItem metadata。
    *
@@ -97,7 +97,7 @@ class ProcessingJobService {
   async submitJob(record: CaptureRecord, sourceItemId?: string): Promise<string | null> {
     const jobType = this.determineJobType(record);
     if (!jobType) {
-      logger.info('app', 'processingJobService', 'skip', '不需要 VaultKeeper 处理', {
+      logger.info('app', 'processingJobService', 'skip', '不需要外部处理', {
         sourceType: record.source_type,
         originalId: record.original_id,
       });
@@ -139,7 +139,7 @@ class ProcessingJobService {
       if (sourceItemId) {
         this.writeMetadata(sourceItemId, {
           external_job_id: response.job_id,
-          external_processor: 'vaultkeeper',
+          external_processor: 'external',
           external_processing_status: 'processing',
           external_job_type: jobType,
           external_submitted_at: response.submitted_at,
@@ -157,20 +157,20 @@ class ProcessingJobService {
       // 写入失败状态
       if (sourceItemId) {
         this.writeMetadata(sourceItemId, {
-          external_processor: 'vaultkeeper',
+          external_processor: 'external',
           external_processing_status: 'failed',
           external_job_type: jobType,
           external_error: errorMsg,
         });
       }
 
-      // VaultKeeper 不可用时优雅降级：记录错误但不阻塞
+      // 外部处理服务不可用时优雅降级：记录错误但不阻塞
       errorService.createRecord({
-        errorType: 'vaultkeeper_unavailable',
+        errorType: 'external_service_unavailable',
         originalId: record.original_id,
         stage: 'vk_submit',
         message: errorMsg,
-        userMessage: `VaultKeeper 任务提交失败: ${errorMsg}`,
+        userMessage: `外部处理任务提交失败: ${errorMsg}`,
         retryable: true,
       });
 

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
-import type { PinStackIconName } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
+import type { AcMindIconName } from '../../design-system/icons';
 import { useToast } from '../../components/shared/ToastViewport';
 import { useShelfItems } from '../../hooks/useShelfItems';
 import type { ShelfItem } from '../../../shared/types';
@@ -36,7 +36,7 @@ function getOriginLabel(origin?: ShelfItem['origin']): string {
   }
 }
 
-function getOriginIcon(origin?: ShelfItem['origin']): PinStackIconName {
+function getOriginIcon(origin?: ShelfItem['origin']): AcMindIconName {
   switch (origin) {
     case 'drag_drop': return 'filled-file-import';
     case 'clipboard': return 'filled-clipboard';
@@ -85,7 +85,7 @@ function ShelfCard({ item, onRemove, onSaveToInbox }: ShelfCardProps): JSX.Eleme
           className="flex items-center gap-2 rounded-[8px] px-3 py-2"
           style={{ background: 'var(--pm-bg-elevated)' }}
         >
-          <PinStackIcon name={getOriginIcon(item.origin)} size={16} style={{ color: 'var(--pm-text-tertiary)' }} />
+          <AcMindIcon name={getOriginIcon(item.origin)} size={16} style={{ color: 'var(--pm-text-tertiary)' }} />
           <span className="text-[13px] truncate" style={{ color: 'var(--pm-text-primary)' }}>
             {item.label || '未命名项目'}
           </span>
@@ -97,7 +97,7 @@ function ShelfCard({ item, onRemove, onSaveToInbox }: ShelfCardProps): JSX.Eleme
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name={isSaved ? 'status-success' : 'filled-inbox'} size={14} />}
+          leadingIcon={<AcMindIcon name={isSaved ? 'status-success' : 'filled-inbox'} size={14} />}
           onClick={() => onSaveToInbox(item.id)}
           disabled={isSaved}
         >
@@ -107,7 +107,7 @@ function ShelfCard({ item, onRemove, onSaveToInbox }: ShelfCardProps): JSX.Eleme
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="act-delete" size={14} />}
+          leadingIcon={<AcMindIcon name="act-delete" size={14} />}
           onClick={() => onRemove(item.id)}
         />
       </div>
@@ -197,7 +197,7 @@ export function ShelfPage(): JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              leadingIcon={<PinStackIcon name="text" size={14} />}
+              leadingIcon={<AcMindIcon name="text" size={14} />}
               onClick={() => setShowAddText(!showAddText)}
             >
               添加文本
@@ -220,7 +220,7 @@ export function ShelfPage(): JSX.Element {
           }}
         >
           <div className="flex flex-col items-center gap-2">
-            <PinStackIcon name="filled-file-import" size={24} style={{ color: 'var(--pm-text-tertiary)' }} />
+            <AcMindIcon name="filled-file-import" size={24} style={{ color: 'var(--pm-text-tertiary)' }} />
             <span className="text-[13px]" style={{ color: 'var(--pm-text-secondary)' }}>
               拖拽文件到这里，或使用上方按钮添加文本
             </span>
@@ -268,7 +268,7 @@ export function ShelfPage(): JSX.Element {
           />
         ) : items.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="empty-inbox" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            icon={<AcMindIcon name="empty-inbox" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
             title="Shelf 是空的"
             description="拖拽文件到这里临时存放，或点击「添加文本」手动添加内容。"
             action={{ label: '刷新', onClick: refresh }}

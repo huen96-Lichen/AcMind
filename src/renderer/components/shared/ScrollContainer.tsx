@@ -13,12 +13,12 @@ interface ScrollContainerProps {
  * min-h-0 is critical for flex children to allow overflow scrolling.
  *
  * `bottomPadding` adds inline padding-bottom so content is never hidden
- * behind a fixed BottomRuntimeBar or similar footer element.
+ * behind a fixed footer element.
  */
 export function ScrollContainer({ children, className, bottomPadding = 64 }: ScrollContainerProps): JSX.Element {
   return (
     <div
-      className={`overflow-y-auto flex-1 min-h-0 scroll-smooth-y ${className ?? ''}`}
+      className={`overflow-y-auto flex-1 min-h-0 min-w-0 scroll-smooth-y ${className ?? ''}`}
       style={{ paddingBottom: bottomPadding }}
     >
       {children}

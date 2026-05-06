@@ -72,7 +72,7 @@ ${this.buildOutputFormat()}`;
 
   /**
    * 覆写后处理：处理无解析内容的情况
-   * Phase 9.4: 当 VaultKeeper 返回 parsed_markdown 时，移除占位标记
+   * Phase 9.4: 当外部处理服务返回 parsed_markdown 时，移除占位标记
    */
   postProcess(raw: Record<string, unknown>, input: StrategyInput): ProcessedContent {
     const hasParsed = input.parsed_markdown && input.parsed_markdown.trim().length > 0;

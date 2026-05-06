@@ -3,7 +3,7 @@ import type { ErrorRecord, ErrorType } from '../../../shared/types';
 import { useErrorRecords } from '../../hooks/useErrorRecords';
 import { useToast } from '../../components/shared/ToastViewport';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
-import { PinStackIcon, PinStackIconButton } from '../../design-system/icons';
+import { AcMindIcon, AcMindIconButton } from '../../design-system/icons';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -18,8 +18,8 @@ const ERROR_TYPE_LABELS: Record<ErrorType, string> = {
   template_missing: '模板缺失',
   vault_missing: '仓库未配置',
   model_unavailable: '模型不可用',
-  // Phase 9.7: VaultKeeper 错误标签
-  vaultkeeper_unavailable: '服务不可用',
+  // Phase 9.7: 外部服务错误标签
+  external_service_unavailable: '服务不可用',
   external_job_failed: '外部任务失败',
   external_result_invalid: '外部结果无效',
   external_result_ingest_failed: '结果回填失败',
@@ -35,8 +35,8 @@ const ERROR_TYPE_TONES: Record<ErrorType, 'danger' | 'warning' | 'neutral'> = {
   template_missing: 'neutral',
   vault_missing: 'danger',
   model_unavailable: 'warning',
-  // Phase 9.7: VaultKeeper 错误色调
-  vaultkeeper_unavailable: 'warning',
+  // Phase 9.7: 外部服务错误色调
+  external_service_unavailable: 'warning',
   external_job_failed: 'danger',
   external_result_invalid: 'warning',
   external_result_ingest_failed: 'warning',
@@ -241,7 +241,7 @@ function ErrorCard({
               onMouseEnter={(e) => { if (!isRetrying) (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--primary) 8%, transparent)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
-              <PinStackIcon name={action.icon} size={14} />
+              <AcMindIcon name={action.icon} size={14} />
               {isRetrying ? '重试中...' : action.label}
             </button>
           )}
@@ -267,7 +267,7 @@ function ErrorCard({
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--pm-status-success, #22c55e) 10%, transparent)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
               >
-                <PinStackIcon name="status-success" size={15} />
+                <AcMindIcon name="status-success" size={15} />
               </button>
               <button
                 onClick={() => onDismiss(record.error_id)}
@@ -288,7 +288,7 @@ function ErrorCard({
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--pm-text-tertiary) 8%, transparent)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
               >
-                <PinStackIcon name="close" size={14} />
+                <AcMindIcon name="close" size={14} />
               </button>
             </>
           )}
@@ -309,7 +309,7 @@ function ErrorCard({
                 borderRadius: '6px',
               }}
             >
-              <PinStackIcon name="act-more" size={14} />
+              <AcMindIcon name="act-more" size={14} />
               详情
             </button>
           )}
@@ -367,7 +367,7 @@ function ErrorDetailDialog({
               {record.error_id}
             </div>
           </div>
-          <PinStackIconButton icon="close" label="关闭" tone="ghost" size="sm" onClick={onClose} />
+          <AcMindIconButton icon="close" label="关闭" tone="ghost" size="sm" onClick={onClose} />
         </div>
 
         {/* Fields */}
@@ -422,7 +422,7 @@ function DevOnlySection({ rawError }: { rawError: string }): JSX.Element {
           letterSpacing: '0.5px',
         }}
       >
-        <PinStackIcon name={expanded ? 'act-more' : 'line-inbox'} size={12} />
+        <AcMindIcon name={expanded ? 'act-more' : 'line-inbox'} size={12} />
         {expanded ? '收起开发者信息' : '开发者信息'}
       </button>
       {expanded && (
@@ -630,7 +630,7 @@ export function ErrorReviewPage(): JSX.Element {
             </div>
           ) : filteredRecords.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: '12px' }}>
-              <PinStackIcon
+              <AcMindIcon
                 name="status-success"
                 size={36}
                 style={{ color: 'var(--pm-text-tertiary)', opacity: 0.4 }}

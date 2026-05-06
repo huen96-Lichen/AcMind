@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import {
   PageShell,
   PageHeader,
@@ -172,7 +172,7 @@ export function FileConverterPage(): JSX.Element {
         actions={
           <Button
             variant="primary"
-            leadingIcon={<PinStackIcon name="sb-results" size={16} />}
+            leadingIcon={<AcMindIcon name="sb-results" size={16} />}
             busy={busyAction === 'convert'}
             onClick={() => void handleSelectFile()}
           >
@@ -193,7 +193,7 @@ export function FileConverterPage(): JSX.Element {
         onDrop={(e) => void handleDrop(e)}
       >
         <div className="flex flex-col items-center gap-2 text-center">
-          <PinStackIcon name="sb-results" size={32} />
+          <AcMindIcon name="sb-results" size={32} />
           <p className="text-[14px] text-[color:var(--pm-text-secondary)]">
             拖拽文件到此处，或点击上方按钮选择
           </p>
@@ -227,7 +227,7 @@ export function FileConverterPage(): JSX.Element {
               <Button
                 variant="ghost"
                 size="sm"
-                leadingIcon={<PinStackIcon name="copy" size={14} />}
+                leadingIcon={<AcMindIcon name="copy" size={14} />}
                 onClick={() => void handleCopy()}
               >
                 复制
@@ -235,7 +235,7 @@ export function FileConverterPage(): JSX.Element {
               <Button
                 variant="primary"
                 size="sm"
-                leadingIcon={<PinStackIcon name="filled-inbox" size={14} />}
+                leadingIcon={<AcMindIcon name="filled-inbox" size={14} />}
                 busy={busyAction === 'save'}
                 onClick={() => void handleSaveToInbox()}
               >
@@ -260,7 +260,7 @@ export function FileConverterPage(): JSX.Element {
           <Button
             variant="ghost"
             size="sm"
-            leadingIcon={<PinStackIcon name="status-running" size={14} />}
+            leadingIcon={<AcMindIcon name="status-running" size={14} />}
             onClick={() => void refresh()}
           >
             刷新
@@ -269,7 +269,7 @@ export function FileConverterPage(): JSX.Element {
       >
         {jobs.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="sb-results" size={28} />}
+            icon={<AcMindIcon name="sb-results" size={28} />}
             title="暂无转换任务"
             description="选择文件开始转换"
             action={{ label: '选择文件', onClick: () => void handleSelectFile() }}
@@ -318,7 +318,7 @@ function JobRow({ job, busy, onView }: JobRowProps): JSX.Element {
   return (
     <Card variant="interactive" className="flex items-center gap-3 p-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-[color:var(--pm-surface-muted)]">
-        <PinStackIcon name="sb-results" size={16} />
+        <AcMindIcon name="sb-results" size={16} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

@@ -19,6 +19,7 @@ import type {
   TranscriptionModelSize,
   TranscriptionSettings,
 } from '../../../shared/types';
+import { normalizeTranscriptionLanguage } from '../../../shared/transcriptionLanguage';
 import { logger } from '../../logger';
 import { storage } from '../../storage';
 import { settings } from '../../settings';
@@ -108,6 +109,7 @@ const WHISPER_MODEL_FILE_NAMES: Record<WhisperModelInfo['size'], string> = {
 
 class AudioTranscriptionService {
   private jobs = new Map<string, TranscriptionJob>();
+  private bundledModelDownloads = new Map<WhisperModelInfo['size'], Promise<void>>();
 
   private getTranscriptionConfig(): TranscriptionSettings {
     return settings.load().transcription;
@@ -166,9 +168,10 @@ class AudioTranscriptionService {
     pcmf32: Float32Array,
     options?: WhisperTranscriptionOptions & { sampleRate?: number },
   ): Promise<{ text: string; engine: string; elapsedMs: number }> {
-    const sampleRate = options?.sampleRate && Number.isFinite(options.sampleRate) && options.sampleRate > 0
-      ? Math.round(options.sampleRate)
-      : 16000;
+    const sampleRate =
+      options?.sampleRate && Number.isFinite(options.sampleRate) && options.sampleRate > 0
+        ? Math.round(options.sampleRate)
+        : 16000;
 
     const tmpDir = path.join(process.cwd(), '.acmind-tmp');
     mkdirSync(tmpDir, { recursive: true });
@@ -199,29 +202,11 @@ class AudioTranscriptionService {
   /**
    * 预下载或预热本地 Whisper 模型缓存。
    */
-  async downloadBundledWhisperModel(modelSize: WhisperModelInfo['size']): Promise<void> {
-    const python = this.resolvePythonCommand();
-    if (!python) {
-      throw new Error('未找到 Python 运行时，无法下载本地模型');
-    }
-
-    const cacheDir = this.getWhisperModelCacheDir();
-    mkdirSync(cacheDir, { recursive: true });
-
-    const script = `
-import sys
-import whisper
-
-model_dir = sys.argv[1]
-model_name = sys.argv[2]
-whisper.load_model(model_name, download_root=model_dir)
-print("ok")
-`;
-
-    await execFileAsync(python, ['-c', script, cacheDir, modelSize], {
-      timeout: 30 * 60 * 1000,
-      maxBuffer: 10 * 1024 * 1024,
-    });
+  async downloadBundledWhisperModel(
+    modelSize: WhisperModelInfo['size'],
+    onProgress?: (progress: number) => void,
+  ): Promise<void> {
+    await this.ensureBundledWhisperModel(modelSize, { force: true, onProgress });
   }
 
   /**
@@ -239,10 +224,7 @@ print("ok")
    * @param captureItemId - CaptureItem 的 ID（用于关联 SourceItem）
    * @param rawFilePath - 原始音频文件路径
    */
-  async submitTranscriptionJob(
-    captureItemId: string,
-    rawFilePath: string,
-  ): Promise<TranscriptionResult> {
+  async submitTranscriptionJob(captureItemId: string, rawFilePath: string): Promise<TranscriptionResult> {
     // 校验文件
     if (!existsSync(rawFilePath)) {
       this.updateCaptureItemStatus(captureItemId, 'failed');
@@ -530,6 +512,9 @@ print("ok")
       throw new Error('未找到 Python 运行时，无法使用内置 Whisper 模型');
     }
 
+    await this.ensurePythonModule(python, 'whisper', 'openai-whisper');
+    await this.ensureBundledWhisperModel(options?.model || 'base');
+
     const cacheDir = this.getWhisperModelCacheDir();
     mkdirSync(cacheDir, { recursive: true });
 
@@ -554,17 +539,31 @@ result = model.transcribe(
 )
 print(json.dumps({"text": (result.get("text") or "").strip()}))
 `;
-      const { stdout } = await execFileAsync(python, ['-c', script, filePath, cacheDir, options?.model || 'base', options?.language || 'zh', options?.translate ? '1' : '0'], {
-        timeout: 30 * 60 * 1000,
-        maxBuffer: 10 * 1024 * 1024,
-      });
+      const { stdout } = await execFileAsync(
+        python,
+        [
+          '-c',
+          script,
+          filePath,
+          cacheDir,
+          options?.model || 'base',
+          normalizeTranscriptionLanguage(options?.language, 'zh') || '',
+          options?.translate ? '1' : '0',
+        ],
+        {
+          timeout: 30 * 60 * 1000,
+          maxBuffer: 10 * 1024 * 1024,
+        },
+      );
 
       const parsed = JSON.parse(stdout.trim()) as { text?: string };
       return parsed.text?.trim() || null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('No module named whisper')) {
-        logger.warn('error', 'audioTranscriptionService', 'runBundledWhisper', 'openai-whisper module not found', { filePath });
+        logger.warn('error', 'audioTranscriptionService', 'runBundledWhisper', 'openai-whisper module not found', {
+          filePath,
+        });
         return null;
       }
       throw err;
@@ -579,24 +578,48 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     filePath: string,
     options?: { language?: string; translate?: boolean; model?: TranscriptionModelSize },
   ): Promise<string | null> {
+    const python = this.resolvePythonCommand();
+    if (!python) {
+      throw new Error('未找到 Python 运行时，无法使用 whisper-ctranslate2');
+    }
+
+    await this.ensureWhisperCT2Available(python);
+    const whisperCommand = this.resolveWhisperCT2Command(python);
+    if (!whisperCommand) {
+      throw new Error('已安装 whisper-ctranslate2，但未找到可执行入口');
+    }
+
     const tmpDir = path.join(process.cwd(), '.acmind-tmp');
     mkdirSync(tmpDir, { recursive: true });
 
     try {
-      const { stdout } = await execFileAsync('whisper-ctranslate2', [
+      const language = normalizeTranscriptionLanguage(options?.language, 'zh');
+      const whisperArgs = [
         filePath,
-        '--model', options?.model || 'base',
-        '--language', options?.language || 'zh',
-        '--output_format', 'txt',
-        '--output_dir', tmpDir,
+        '--model',
+        options?.model || 'base',
+        '--output_format',
+        'txt',
+        '--output_dir',
+        tmpDir,
+        ...(language ? ['--language', language] : []),
         ...(options?.translate ? ['--task', 'translate'] : []),
-      ], { timeout: 300_000, maxBuffer: 10 * 1024 * 1024 });
+      ];
+
+      const { stdout } = await execFileAsync(whisperCommand, whisperArgs, {
+        timeout: 300_000,
+        maxBuffer: 10 * 1024 * 1024,
+      });
 
       const baseName = path.basename(filePath, path.extname(filePath));
       const txtPath = path.join(tmpDir, `${baseName}.txt`);
       if (existsSync(txtPath)) {
         const text = readFileSync(txtPath, 'utf8').trim();
-        try { unlinkSync(txtPath); } catch { /* ignore cleanup error */ }
+        try {
+          unlinkSync(txtPath);
+        } catch {
+          /* ignore cleanup error */
+        }
         return text || null;
       }
       // Fallback: try parsing stdout
@@ -604,7 +627,9 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('ENOENT') || msg.includes('not found')) {
-        logger.warn('error', 'audioTranscriptionService', 'runWhisperCT2', 'whisper-ctranslate2 not found', { filePath });
+        logger.warn('error', 'audioTranscriptionService', 'runWhisperCT2', 'whisper-ctranslate2 not found', {
+          filePath,
+        });
         return null;
       }
       throw err;
@@ -618,7 +643,9 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     // 更新 SourceItem 的 ocr_text 字段（用于存储 transcript_text）
     const sourceItem = storage.getSourceItem(sourceItemId);
     if (!sourceItem) {
-      logger.error('error', 'audioTranscriptionService', 'backfillTranscript', 'SourceItem not found', { sourceItemId });
+      logger.error('error', 'audioTranscriptionService', 'backfillTranscript', 'SourceItem not found', {
+        sourceItemId,
+      });
       return;
     }
 
@@ -668,9 +695,7 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     }
   }
 
-  private isWhisperModelAvailable(
-    modelSize: WhisperModelInfo['size'],
-  ): boolean {
+  private isWhisperModelAvailable(modelSize: WhisperModelInfo['size']): boolean {
     return existsSync(this.getBundledWhisperModelPath(modelSize));
   }
 
@@ -684,7 +709,8 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
       return { text, engine: 'api' };
     }
 
-    const localEngine = this.resolveLocalEngine(config.localEngine) ?? (job.engine as TranscriptionLocalEngine | undefined);
+    const localEngine =
+      this.resolveLocalEngine(config.localEngine) ?? (job.engine as TranscriptionLocalEngine | undefined);
     if (!localEngine) {
       throw new Error('未找到可用本地转写引擎');
     }
@@ -718,7 +744,7 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     }
 
     const text = await this.callTranscriptionEngine(filePath, engine, {
-      language: options?.language?.trim() || 'zh',
+      language: normalizeTranscriptionLanguage(options?.language, 'zh'),
       translate: Boolean(options?.translate),
       model: config.localModel,
     });
@@ -744,7 +770,10 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     const form = new FormData();
     form.append('file', new Blob([fileBuffer], { type: 'audio/wav' }), path.basename(filePath));
     form.append('model', config.apiModel || 'whisper-1');
-    form.append('language', options?.language?.trim() || config.apiLanguage || 'zh');
+    const language = normalizeTranscriptionLanguage(options?.language ?? config.apiLanguage);
+    if (language) {
+      form.append('language', language);
+    }
     form.append('response_format', 'json');
     if (options?.translate ?? config.apiTranslate) {
       form.append('task', 'translate');
@@ -835,9 +864,8 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
   }
 
   private resolveLocalEngine(preferred: TranscriptionLocalEngine): TranscriptionLocalEngine | null {
-    const candidates: TranscriptionLocalEngine[] = preferred === 'whisper'
-      ? ['whisper', 'whisper-ctranslate2']
-      : ['whisper-ctranslate2', 'whisper'];
+    const candidates: TranscriptionLocalEngine[] =
+      preferred === 'whisper' ? ['whisper', 'whisper-ctranslate2'] : ['whisper-ctranslate2', 'whisper'];
 
     for (const engine of candidates) {
       if (this.isEngineAvailable(engine)) {
@@ -848,12 +876,81 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     return null;
   }
 
-  private getWhisperModelCacheDir(): string {
+  getWhisperModelCacheDir(): string {
     return path.join(settings.getStorageRoot(), 'cache', 'whisper-models');
   }
 
   private getBundledWhisperModelPath(modelSize: WhisperModelInfo['size']): string {
     return path.join(this.getWhisperModelCacheDir(), WHISPER_MODEL_FILE_NAMES[modelSize]);
+  }
+
+  private async ensureBundledWhisperModel(
+    modelSize: WhisperModelInfo['size'],
+    options?: { force?: boolean; onProgress?: (progress: number) => void },
+  ): Promise<void> {
+    const force = Boolean(options?.force);
+    const cachedPath = this.getBundledWhisperModelPath(modelSize);
+    const onProgress = options?.onProgress;
+    onProgress?.(0);
+    if (!force && existsSync(cachedPath)) {
+      onProgress?.(100);
+      return;
+    }
+
+    const inFlight = this.bundledModelDownloads.get(modelSize);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const task = (async () => {
+      const python = this.resolvePythonCommand();
+      if (!python) {
+        throw new Error('未找到 Python 运行时，无法下载本地模型');
+      }
+      onProgress?.(15);
+
+      await this.ensurePythonModule(python, 'whisper', 'openai-whisper');
+      onProgress?.(35);
+
+      const cacheDir = this.getWhisperModelCacheDir();
+      mkdirSync(cacheDir, { recursive: true });
+
+      if (force && existsSync(cachedPath)) {
+        try {
+          unlinkSync(cachedPath);
+        } catch {
+          // ignore stale cache cleanup failures
+        }
+      }
+      onProgress?.(45);
+
+      const script = `
+import sys
+import whisper
+
+model_dir = sys.argv[1]
+model_name = sys.argv[2]
+whisper.load_model(model_name, download_root=model_dir)
+print("ok")
+`;
+
+      onProgress?.(60);
+      await execFileAsync(python, ['-c', script, cacheDir, modelSize], {
+        timeout: 30 * 60 * 1000,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      onProgress?.(90);
+
+      if (!existsSync(cachedPath)) {
+        throw new Error(`模型 ${modelSize} 下载完成，但缓存文件未找到`);
+      }
+      onProgress?.(100);
+    })().finally(() => {
+      this.bundledModelDownloads.delete(modelSize);
+    });
+
+    this.bundledModelDownloads.set(modelSize, task);
+    return task;
   }
 
   private getBundledModelCacheMessage(modelSize: WhisperModelInfo['size']): string {
@@ -876,11 +973,112 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     return null;
   }
 
+  private async ensurePythonModule(python: string, importName: string, pipPackage: string): Promise<void> {
+    try {
+      execFileSync(python, ['-c', `import ${importName}`], { timeout: 5000, stdio: 'pipe' });
+      return;
+    } catch {
+      // continue to installation
+    }
+
+    try {
+      await execFileAsync(python, ['-m', 'pip', '--version'], {
+        timeout: 5000,
+        maxBuffer: 1024 * 1024,
+      });
+    } catch {
+      throw new Error(`Python 环境缺少 pip，无法安装 ${pipPackage}`);
+    }
+
+    await execFileAsync(python, ['-m', 'pip', 'install', '--user', pipPackage], {
+      timeout: 30 * 60 * 1000,
+      maxBuffer: 20 * 1024 * 1024,
+    });
+
+    try {
+      execFileSync(python, ['-c', `import ${importName}`], { timeout: 5000, stdio: 'pipe' });
+    } catch {
+      throw new Error(`已尝试安装 ${pipPackage}，但 ${importName} 仍不可用`);
+    }
+  }
+
+  private async ensureWhisperCT2Available(python: string, onProgress?: (progress: number) => void): Promise<void> {
+    onProgress?.(0);
+    try {
+      execFileSync('whisper-ctranslate2', ['--help'], { timeout: 5000, stdio: 'pipe' });
+      onProgress?.(100);
+      return;
+    } catch {
+      // continue to installation
+    }
+
+    onProgress?.(30);
+    await this.ensurePythonModule(python, 'whisper_ctranslate2', 'whisper-ctranslate2');
+    onProgress?.(70);
+
+    try {
+      const command = this.resolveWhisperCT2Command(python);
+      if (!command) {
+        throw new Error('已尝试安装 whisper-ctranslate2，但命令仍不可用');
+      }
+      execFileSync(command, ['--help'], { timeout: 5000, stdio: 'pipe' });
+      onProgress?.(100);
+    } catch {
+      throw new Error('已尝试安装 whisper-ctranslate2，但命令仍不可用');
+    }
+  }
+
+  async repairWhisperEnvironment(
+    modelSize?: WhisperModelInfo['size'],
+    onProgress?: (progress: number) => void,
+  ): Promise<{ engine: TranscriptionLocalEngine | 'api' | null; repaired: boolean; message: string }> {
+    const config = this.getTranscriptionConfig();
+    const selectedModel = modelSize ?? config.localModel;
+    const python = this.resolvePythonCommand();
+    const engine = config.provider === 'api' ? 'api' : config.localEngine;
+
+    if (config.provider === 'api') {
+      return {
+        engine,
+        repaired: false,
+        message: '当前使用外部 API 转写，不需要修复本地模型缓存。',
+      };
+    }
+
+    if (!python) {
+      throw new Error('未找到 Python 运行时，无法修复本地转写环境');
+    }
+
+    if (config.localEngine === 'whisper') {
+      onProgress?.(10);
+      await this.ensurePythonModule(python, 'whisper', 'openai-whisper');
+      onProgress?.(45);
+      await this.ensureBundledWhisperModel(selectedModel, { onProgress });
+      return {
+        engine,
+        repaired: true,
+        message: `已检查并修复 openai-whisper 与 ${selectedModel} 模型缓存`,
+      };
+    }
+
+    await this.ensureWhisperCT2Available(python, onProgress);
+    return {
+      engine,
+      repaired: true,
+      message: '已检查并修复 whisper-ctranslate2 环境',
+    };
+  }
+
   private isEngineAvailable(engine: TranscriptionLocalEngine): boolean {
     try {
       if (engine === 'whisper-ctranslate2') {
-        execFileSync('whisper-ctranslate2', ['--help'], { timeout: 5000, stdio: 'pipe' });
-        return true;
+        const python = this.resolvePythonCommand();
+        const command = python ? this.resolveWhisperCT2Command(python) : null;
+        if (command) {
+          execFileSync(command, ['--help'], { timeout: 5000, stdio: 'pipe' });
+          return true;
+        }
+        return false;
       }
 
       const python = this.resolvePythonCommand();
@@ -892,6 +1090,56 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     } catch {
       return false;
     }
+  }
+
+  private resolveWhisperCT2Command(python: string): string | null {
+    const candidates = new Set<string>();
+    candidates.add('whisper-ctranslate2');
+
+    try {
+      const script = `
+import os
+import site
+import sysconfig
+
+paths = []
+user_base = site.getuserbase()
+if user_base:
+  paths.append(os.path.join(user_base, 'bin', 'whisper-ctranslate2'))
+scripts_dir = sysconfig.get_path('scripts')
+if scripts_dir:
+  paths.append(os.path.join(scripts_dir, 'whisper-ctranslate2'))
+print('\\n'.join(paths))
+`;
+      const stdout = execFileSync(python, ['-c', script], { timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }).toString(
+        'utf8',
+      );
+      for (const line of stdout.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (trimmed) {
+          candidates.add(trimmed);
+        }
+      }
+    } catch {
+      // fall back to PATH lookup only
+    }
+
+    for (const candidate of candidates) {
+      if (candidate === 'whisper-ctranslate2') {
+        try {
+          execFileSync(candidate, ['--help'], { timeout: 5000, stdio: 'pipe' });
+          return candidate;
+        } catch {
+          continue;
+        }
+      }
+
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
   }
 
   private resolveApiEndpoint(endpoint: string): string | null {
@@ -924,23 +1172,36 @@ print(json.dumps({"text": (result.get("text") or "").strip()}))
     const buffer = Buffer.alloc(44 + dataSize);
 
     let offset = 0;
-    buffer.write('RIFF', offset); offset += 4;
-    buffer.writeUInt32LE(36 + dataSize, offset); offset += 4;
-    buffer.write('WAVE', offset); offset += 4;
-    buffer.write('fmt ', offset); offset += 4;
-    buffer.writeUInt32LE(16, offset); offset += 4;
-    buffer.writeUInt16LE(1, offset); offset += 2;
-    buffer.writeUInt16LE(numChannels, offset); offset += 2;
-    buffer.writeUInt32LE(sampleRate, offset); offset += 4;
-    buffer.writeUInt32LE(byteRate, offset); offset += 4;
-    buffer.writeUInt16LE(blockAlign, offset); offset += 2;
-    buffer.writeUInt16LE(16, offset); offset += 2;
-    buffer.write('data', offset); offset += 4;
-    buffer.writeUInt32LE(dataSize, offset); offset += 4;
+    buffer.write('RIFF', offset);
+    offset += 4;
+    buffer.writeUInt32LE(36 + dataSize, offset);
+    offset += 4;
+    buffer.write('WAVE', offset);
+    offset += 4;
+    buffer.write('fmt ', offset);
+    offset += 4;
+    buffer.writeUInt32LE(16, offset);
+    offset += 4;
+    buffer.writeUInt16LE(1, offset);
+    offset += 2;
+    buffer.writeUInt16LE(numChannels, offset);
+    offset += 2;
+    buffer.writeUInt32LE(sampleRate, offset);
+    offset += 4;
+    buffer.writeUInt32LE(byteRate, offset);
+    offset += 4;
+    buffer.writeUInt16LE(blockAlign, offset);
+    offset += 2;
+    buffer.writeUInt16LE(16, offset);
+    offset += 2;
+    buffer.write('data', offset);
+    offset += 4;
+    buffer.writeUInt32LE(dataSize, offset);
+    offset += 4;
 
     for (let i = 0; i < pcmf32.length; i++) {
       const sample = Math.max(-1, Math.min(1, pcmf32[i] || 0));
-      buffer.writeInt16LE(sample < 0 ? sample * 0x8000 : sample * 0x7FFF, offset);
+      buffer.writeInt16LE(sample < 0 ? sample * 0x8000 : sample * 0x7fff, offset);
       offset += 2;
     }
 

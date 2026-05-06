@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import type { CaptureItem } from '../../../shared/types';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -301,7 +301,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
             color: 'var(--pm-text-secondary)',
           }}
         >
-          <PinStackIcon name={getTypeIconName(item) as any} size={16} />
+          <AcMindIcon name={getTypeIconName(item) as any} size={16} />
         </span>
 
         {/* Title + Summary + Tags */}
@@ -401,7 +401,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
               style={{ color: 'var(--pm-primary)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               title="整理"
             >
-              <PinStackIcon name="spark" size={12} />
+              <AcMindIcon name="spark" size={12} />
               整理
             </button>
           )}
@@ -413,7 +413,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
               style={{ color: 'var(--pm-warning)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               title="重新整理"
             >
-              <PinStackIcon name="refresh" size={12} />
+              <AcMindIcon name="refresh" size={12} />
               重试
             </button>
           )}
@@ -426,7 +426,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
               style={{ color: 'var(--pm-primary)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               title="查看整理结果"
             >
-              <PinStackIcon name="arrow-right" size={12} />
+              <AcMindIcon name="arrow-right" size={12} />
               查看结果
             </button>
           )}
@@ -437,7 +437,7 @@ export function CaptureItemCard({ item, isSelected, onClick, onDistill, onDelete
             style={{ color: 'var(--pm-error)', fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
             title="删除"
           >
-            <PinStackIcon name="close" size={12} />
+            <AcMindIcon name="close" size={12} />
             删除
           </button>
         </div>

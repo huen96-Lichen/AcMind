@@ -1,4 +1,4 @@
-// ─── Core icons (original PinStack set) ───────────────────────────────────────
+// ─── Core icons (original AcMind set) ───────────────────────────────────────
 import psCapture from '../../assets/icon/core/ps-capture.svg';
 import psClassify from '../../assets/icon/core/ps-classify.svg';
 import psDuplicate from '../../assets/icon/core/ps-duplicate.svg';
@@ -125,7 +125,7 @@ import uiBadgeAiProcessing from '../../assets/icon/ui-component/badge-ai-process
 import uiBadgeOutputDone from '../../assets/icon/ui-component/badge-output-done.svg';
 
 // ─── Asset Map ────────────────────────────────────────────────────────────────
-export const PINSTACK_ICON_ASSET_MAP = {
+export const ACMIND_ICON_ASSET_MAP = {
   // Core (original)
   all: psAll,
   'ai-workspace': psAiWorkspace,
@@ -253,4 +253,4 @@ export const PINSTACK_ICON_ASSET_MAP = {
   'ui-badge-output-done': uiBadgeOutputDone,
 } as const;
 
-export type PinStackAssetIconName = keyof typeof PINSTACK_ICON_ASSET_MAP;
+export type AcMindAssetIconName = keyof typeof ACMIND_ICON_ASSET_MAP;

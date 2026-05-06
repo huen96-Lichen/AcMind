@@ -10,7 +10,7 @@ import {
   Section,
   StatusBadge,
 } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { useToast } from '../../components/shared/ToastViewport';
 import type { AiTask } from '../../../shared/types';
@@ -249,7 +249,7 @@ export function TaskQueuePage(): JSX.Element {
             {error && <ErrorState title="加载失败" reason={error} suggestion="请稍后重试。" action={{ label: '重新加载', onClick: fetchTasks }} />}
             {!loading && !error && filteredTasks.length === 0 && (
               <EmptyState
-                icon={<PinStackIcon name="sb-ai-process" size={28} />}
+                icon={<AcMindIcon name="sb-ai-process" size={28} />}
                 title="暂无任务"
                 description="当前筛选条件下没有任务"
               />
@@ -283,7 +283,7 @@ export function TaskQueuePage(): JSX.Element {
                     title={isFailed ? task.error : undefined}
                   >
                     <span style={styles.colOp}>
-                      <PinStackIcon name="sb-ai-process" size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                      <AcMindIcon name="sb-ai-process" size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                       {opLabel(task.operation)}
                     </span>
                     <span style={styles.colSource} title={task.sourceItemId}>

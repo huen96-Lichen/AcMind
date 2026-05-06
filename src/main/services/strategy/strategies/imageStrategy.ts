@@ -72,7 +72,7 @@ ${this.buildOutputFormat()}`;
 
   /**
    * 覆写后处理：处理无 OCR 的情况
-   * Phase 9.5: 当 VaultKeeper 返回 extracted_text 时，移除占位标记并标注 OCR 来源
+   * Phase 9.5: 当外部处理服务返回 extracted_text 时，移除占位标记并标注 OCR 来源
    */
   postProcess(raw: Record<string, unknown>, input: StrategyInput): ProcessedContent {
     const hasOcr = input.extracted_text && input.extracted_text.trim().length > 0;

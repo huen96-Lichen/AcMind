@@ -13,7 +13,7 @@ import {
   Section,
   StatusBadge,
 } from '../../design-system/components';
-import { PinStackIcon, PinStackIconButton } from '../../design-system/icons';
+import { AcMindIcon, AcMindIconButton } from '../../design-system/icons';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -263,7 +263,7 @@ function HistoryCard({
         </div>
       )}
 
-      {/* Phase 9: VaultKeeper processing status */}
+      {/* Phase 9: 外部处理服务状态 */}
       {item.vkInfo && (
         <div
           style={{
@@ -496,7 +496,7 @@ function ActionButton({
       onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--pm-text-tertiary) 8%, transparent)'; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
     >
-      <PinStackIcon name={icon} size={13} />
+      <AcMindIcon name={icon} size={13} />
       {label}
     </button>
   );
@@ -564,7 +564,7 @@ function ContentPreviewDialog({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--pm-text-primary)' }}>原文内容</div>
-          <PinStackIconButton icon="close" label="关闭" tone="ghost" size="sm" onClick={onClose} />
+          <AcMindIconButton icon="close" label="关闭" tone="ghost" size="sm" onClick={onClose} />
         </div>
         {error ? (
           <div style={{ fontSize: '12px', color: 'var(--pm-status-danger)' }}>{error}</div>
@@ -730,7 +730,7 @@ export function ProcessingHistoryPage(): JSX.Element {
             <Button
               variant="secondary"
               size="sm"
-              leadingIcon={<PinStackIcon name="refresh" size={14} />}
+              leadingIcon={<AcMindIcon name="refresh" size={14} />}
               onClick={() => void refresh()}
             >
               刷新
@@ -785,7 +785,7 @@ export function ProcessingHistoryPage(): JSX.Element {
             />
           ) : items.length === 0 ? (
             <EmptyState
-              icon={<PinStackIcon name="sb-results" size={36} style={{ color: 'var(--pm-text-tertiary)' }} />}
+              icon={<AcMindIcon name="sb-results" size={36} style={{ color: 'var(--pm-text-tertiary)' }} />}
               title="暂无处理记录"
               description="整理和入库的执行记录将显示在这里。"
               action={{

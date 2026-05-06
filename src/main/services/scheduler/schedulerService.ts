@@ -2,7 +2,9 @@
 // Provides scheduled task automation for distillation, export, and cleanup.
 // Calls existing pipelines (distillPipeline, obsidianExporter) without modifying them.
 
+import { randomUUID } from 'node:crypto';
 import cron from 'node-cron';
+import { CronExpressionParser } from 'cron-parser';
 import { BrowserWindow } from 'electron';
 import { logger } from '../../logger';
 import { storage } from '../../storage';
@@ -14,6 +16,8 @@ import type {
   TaskExecutionResult,
   CreateTaskParams,
 } from './types';
+import type { ScheduledAgentTask } from '../../../shared/types';
+import { SCHEDULED_AGENT_TASKS_IPC_CHANNELS } from '../../../shared/types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -46,6 +50,10 @@ class SchedulerService {
   private initialized = false;
   private tasks: Map<string, ScheduledTask> = new Map();
   private cronJobs: Map<string, { stop: () => void }> = new Map();
+
+  // Phase D: Scheduled Agent Tasks
+  private agentTasks: Map<string, ScheduledAgentTask> = new Map();
+  private agentCronJobs: Map<string, { stop: () => void }> = new Map();
 
   // -------------------------------------------------------------------------
   // Initialization
@@ -82,9 +90,19 @@ class SchedulerService {
       }
     }
 
+    // Phase D: Load and start scheduled agent tasks
+    const agentTaskList = storage.listScheduledAgentTasks();
+    for (const task of agentTaskList) {
+      this.agentTasks.set(task.id, task);
+      if (task.enabled) {
+        this._scheduleAgentTask(task);
+      }
+    }
+
     this.initialized = true;
-    logger.info('app', MODULE, 'init', `Scheduler initialized with ${this.tasks.size} tasks`, {
+    logger.info('app', MODULE, 'init', `Scheduler initialized with ${this.tasks.size} tasks, ${agentTaskList.length} agent tasks`, {
       enabledCount: [...this.tasks.values()].filter((t) => t.enabled).length,
+      enabledAgentCount: agentTaskList.filter((t) => t.enabled).length,
     });
   }
 
@@ -98,7 +116,7 @@ class SchedulerService {
   createTask(params: CreateTaskParams): ScheduledTask {
     this.ensureInitialized();
 
-    const id = crypto.randomUUID();
+    const id = randomUUID();
     const now = Date.now();
 
     const task: ScheduledTask = {
@@ -647,43 +665,22 @@ class SchedulerService {
   /**
    * Compute the next run timestamp for a cron expression.
    * Returns null if the expression is invalid.
+   * Uses cron-parser for accurate next-run calculation.
    */
   private computeNextRun(cronExpr: string): number | null {
     try {
-      // Parse the cron expression to compute next run time
-      // node-cron doesn't expose a direct "next" calculation, so we estimate
-      // by checking if the expression is valid and returning a reasonable
-      // approximation. For precise scheduling, the cron library handles it internally.
+      // Validate with node-cron first
       if (!cron.validate(cronExpr)) {
         return null;
       }
 
-      // Simple heuristic: parse the minute field to estimate next run
-      const parts = cronExpr.split(/\s+/);
-      if (parts.length < 5) return null;
+      // Use cron-parser for accurate next-run calculation
+      const expression = CronExpressionParser.parse(cronExpr, {
+        currentDate: new Date(),
+      });
 
-      const now = new Date();
-      const next = new Date(now);
-
-      // If minute is a specific value, schedule to next occurrence
-      const minutePart = parts[0];
-      if (minutePart !== '*') {
-        const minutes = minutePart.split(',').map((m) => parseInt(m, 10));
-        const currentMinute = now.getMinutes();
-
-        // Find next matching minute
-        let nextMinute = minutes.find((m) => m > currentMinute);
-        if (nextMinute === undefined) {
-          nextMinute = minutes[0];
-          next.setHours(next.getHours() + 1);
-        }
-        next.setMinutes(nextMinute, 0, 0);
-      } else {
-        // Runs every minute, next run is in ~1 minute
-        next.setMinutes(next.getMinutes() + 1, 0, 0);
-      }
-
-      return next.getTime();
+      const nextDate = expression.next().toDate();
+      return nextDate.getTime();
     } catch {
       return null;
     }
@@ -706,6 +703,256 @@ class SchedulerService {
   private ensureInitialized(): void {
     if (!this.initialized) {
       throw new Error('SchedulerService has not been initialized. Call init() first.');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase D: Scheduled Agent Tasks
+  // -------------------------------------------------------------------------
+
+  /**
+   * Create a new scheduled agent task.
+   */
+  createScheduledAgentTask(params: {
+    name: string;
+    cronExpression: string;
+    skillName: string;
+    inputParams?: Record<string, unknown>;
+    enabled?: boolean;
+  }): ScheduledAgentTask {
+    this.ensureInitialized();
+
+    // Validate cron expression
+    if (!cron.validate(params.cronExpression)) {
+      throw new Error(`Invalid cron expression: ${params.cronExpression}`);
+    }
+
+    const id = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+
+    const task: ScheduledAgentTask = {
+      id,
+      name: params.name,
+      cronExpression: params.cronExpression,
+      skillName: params.skillName,
+      inputParams: params.inputParams ?? {},
+      enabled: params.enabled ?? true,
+      lastRunAt: null,
+      lastRunStatus: null,
+      lastRunTaskId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    storage.insertScheduledAgentTask(task);
+    this.agentTasks.set(id, task);
+
+    if (task.enabled) {
+      this._scheduleAgentTask(task);
+    }
+
+    logger.info('app', MODULE, 'createScheduledAgentTask', `Scheduled agent task created: ${task.name} (${id})`, {
+      skillName: task.skillName,
+      cronExpression: task.cronExpression,
+    });
+
+    this.broadcastAgentTaskChange('created', task);
+
+    return task;
+  }
+
+  /**
+   * Update a scheduled agent task.
+   */
+  updateScheduledAgentTask(id: string, updates: Partial<Pick<ScheduledAgentTask, 'name' | 'cronExpression' | 'skillName' | 'inputParams' | 'enabled'>>): ScheduledAgentTask {
+    this.ensureInitialized();
+
+    const existing = this.agentTasks.get(id);
+    if (!existing) {
+      throw new Error(`Scheduled agent task not found: ${id}`);
+    }
+
+    // Validate cron expression if changing
+    if (updates.cronExpression && !cron.validate(updates.cronExpression)) {
+      throw new Error(`Invalid cron expression: ${updates.cronExpression}`);
+    }
+
+    // Reschedule if needed
+    const needsReschedule = existing.enabled && (updates.cronExpression || updates.enabled === true);
+    if (needsReschedule) {
+      this._unscheduleAgentTask(id);
+    }
+
+    const updated: ScheduledAgentTask = {
+      ...existing,
+      ...updates,
+      updatedAt: Math.floor(Date.now() / 1000),
+    };
+
+    storage.updateScheduledAgentTask(id, updated);
+    this.agentTasks.set(id, updated);
+
+    if (needsReschedule && updated.enabled) {
+      this._scheduleAgentTask(updated);
+    }
+
+    logger.info('app', MODULE, 'updateScheduledAgentTask', `Scheduled agent task updated: ${updated.name} (${id})`);
+
+    this.broadcastAgentTaskChange('updated', updated);
+
+    return updated;
+  }
+
+  /**
+   * Delete a scheduled agent task.
+   */
+  deleteScheduledAgentTask(id: string): void {
+    this.ensureInitialized();
+
+    const task = this.agentTasks.get(id);
+    if (!task) {
+      throw new Error(`Scheduled agent task not found: ${id}`);
+    }
+
+    this._unscheduleAgentTask(id);
+    this.agentTasks.delete(id);
+    storage.deleteScheduledAgentTask(id);
+
+    logger.info('app', MODULE, 'deleteScheduledAgentTask', `Scheduled agent task deleted: ${task.name} (${id})`);
+
+    this.broadcastAgentTaskChange('deleted', task);
+  }
+
+  /**
+   * Get a scheduled agent task by ID.
+   */
+  getScheduledAgentTask(id: string): ScheduledAgentTask | null {
+    return this.agentTasks.get(id) ?? null;
+  }
+
+  /**
+   * List all scheduled agent tasks.
+   */
+  listScheduledAgentTasks(): ScheduledAgentTask[] {
+    return [...this.agentTasks.values()];
+  }
+
+  /**
+   * Manually run a scheduled agent task now.
+   */
+  async runScheduledAgentTaskNow(id: string): Promise<void> {
+    this.ensureInitialized();
+
+    const task = this.agentTasks.get(id);
+    if (!task) {
+      throw new Error(`Scheduled agent task not found: ${id}`);
+    }
+
+    logger.info('app', MODULE, 'runScheduledAgentTaskNow', `Manually running scheduled agent task: ${task.name} (${id})`);
+
+    await this._executeAgentTask(task);
+  }
+
+  /**
+   * Schedule an agent task with cron.
+   */
+  private _scheduleAgentTask(task: ScheduledAgentTask): void {
+    this._unscheduleAgentTask(task.id);
+
+    if (!cron.validate(task.cronExpression)) {
+      logger.error('error', MODULE, '_scheduleAgentTask', `Invalid cron expression: ${task.cronExpression}`, {
+        taskId: task.id,
+      });
+      return;
+    }
+
+    const job = cron.schedule(task.cronExpression, async () => {
+      logger.info('app', MODULE, '_scheduleAgentTask', `Cron triggered for agent task: ${task.name} (${task.id})`);
+      await this._executeAgentTask(task);
+    });
+
+    this.agentCronJobs.set(task.id, job);
+
+    logger.info('app', MODULE, '_scheduleAgentTask', `Scheduled agent task: ${task.name}`, {
+      cronExpression: task.cronExpression,
+    });
+  }
+
+  /**
+   * Unschedule an agent task.
+   */
+  private _unscheduleAgentTask(taskId: string): void {
+    const job = this.agentCronJobs.get(taskId);
+    if (job) {
+      job.stop();
+      this.agentCronJobs.delete(taskId);
+    }
+  }
+
+  /**
+   * Execute a scheduled agent task.
+   */
+  private async _executeAgentTask(task: ScheduledAgentTask): Promise<void> {
+    const { agentTaskService } = await import('../chat/agentTaskService');
+
+    try {
+      const agentTask = agentTaskService.createTask({
+        sessionId: `__scheduled_${task.id}__`,
+        name: task.name,
+        skillName: task.skillName,
+        inputParams: task.inputParams,
+      });
+
+      await agentTaskService.runTask(agentTask.id);
+
+      const completedTask = agentTaskService.getTask(agentTask.id);
+      const status = completedTask?.status === 'completed' ? 'success' : 'error';
+
+      const updated: ScheduledAgentTask = {
+        ...task,
+        lastRunAt: Math.floor(Date.now() / 1000),
+        lastRunStatus: status,
+        lastRunTaskId: agentTask.id,
+        updatedAt: Math.floor(Date.now() / 1000),
+      };
+
+      storage.updateScheduledAgentTask(task.id, updated);
+      this.agentTasks.set(task.id, updated);
+      this.broadcastAgentTaskChange('updated', updated);
+
+      logger.info('app', MODULE, '_executeAgentTask', `Agent task executed: ${task.name}`, {
+        status,
+        taskId: agentTask.id,
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      const updated: ScheduledAgentTask = {
+        ...task,
+        lastRunAt: Math.floor(Date.now() / 1000),
+        lastRunStatus: 'error',
+        lastRunTaskId: null,
+        updatedAt: Math.floor(Date.now() / 1000),
+      };
+
+      storage.updateScheduledAgentTask(task.id, updated);
+      this.agentTasks.set(task.id, updated);
+      this.broadcastAgentTaskChange('updated', updated);
+
+      logger.error('error', MODULE, '_executeAgentTask', `Agent task execution failed: ${task.name}`, {
+        error: errorMsg,
+      });
+    }
+  }
+
+  /**
+   * Broadcast a scheduled agent task change to all renderer windows.
+   */
+  private broadcastAgentTaskChange(action: 'created' | 'updated' | 'deleted', task: ScheduledAgentTask): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.TASK_CHANGED, { action, task });
+      }
     }
   }
 }

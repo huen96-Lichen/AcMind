@@ -200,7 +200,7 @@ describe('ProcessingJobService', () => {
         metadata: {
           extension: '.pdf',
           external_job_id: 'vk-job-001',
-          external_processor: 'vaultkeeper',
+          external_processor: 'external',
           external_processing_status: 'processing',
           external_job_type: 'pdf_parse',
           external_submitted_at: 1700000000,
@@ -229,7 +229,7 @@ describe('ProcessingJobService', () => {
       expect(jobId).toBeNull();
       expect(storage.updateSourceItem).toHaveBeenCalledWith('si-456', {
         metadata: {
-          external_processor: 'vaultkeeper',
+          external_processor: 'external',
           external_processing_status: 'failed',
           external_job_type: 'pdf_parse',
           external_error: 'ECONNREFUSED',
@@ -237,7 +237,7 @@ describe('ProcessingJobService', () => {
       });
       expect(errorService.createRecord).toHaveBeenCalledWith(
         expect.objectContaining({
-          errorType: 'vaultkeeper_unavailable',
+          errorType: 'external_service_unavailable',
           originalId: 'test-original-id',
           retryable: true,
         }),

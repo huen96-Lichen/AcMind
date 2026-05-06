@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppSettings, ProviderConfig, PermissionStatusSnapshot } from '../../../shared/types';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 
 type OnboardingStep = 'welcome' | 'permissions' | 'ai' | 'vault' | 'test' | 'done';
 type AiChoice = 'local' | 'cloud';
@@ -232,7 +232,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps): JSX.Element
         <aside className="border-r border-[color:var(--pm-border-subtle)] bg-white/60 p-5">
           <div className="mb-6 flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand-primary)]">
-              <PinStackIcon name="ai-workspace" size={18} />
+              <AcMindIcon name="ai-workspace" size={18} />
             </span>
             <div>
               <div className="text-[14px] font-semibold text-[color:var(--pm-text-primary)]">AcMind</div>

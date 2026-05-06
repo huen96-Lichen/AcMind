@@ -237,7 +237,7 @@ type: 决策复盘
     it('prefers the first markdown heading over bullet-like first lines', async () => {
       const markdownInput = `- AcMind V2.1 - V3.0 Phase 路线总纲
 
-# PinStack 产品手册 v2.1
+# AcMind 产品手册 v2.1
 
 正文内容第一段。
 `;
@@ -247,7 +247,7 @@ type: 决策复盘
       expect(path.basename(result.outputPath!)).not.toContain('_- ');
 
       const content = fs.readFileSync(result.outputPath!, 'utf8');
-      expect(content).toContain('title: PinStack 产品手册 v2.1');
+      expect(content).toContain('title: AcMind 产品手册 v2.1');
       expect(content).not.toContain('title: "- AcMind V2.1 - V3.0 Phase 路线总纲"');
     });
 

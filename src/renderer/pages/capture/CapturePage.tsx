@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import {
   PageShell,
   PageHeader,
@@ -155,7 +155,7 @@ export function CapturePage(): JSX.Element {
             />
             <Button
               variant="primary"
-              leadingIcon={<PinStackIcon name="capture" size={16} />}
+              leadingIcon={<AcMindIcon name="capture" size={16} />}
               busy={busyAction === 'screenshot'}
               onClick={() => void handleScreenshot()}
             >
@@ -190,7 +190,7 @@ export function CapturePage(): JSX.Element {
           <Button
             variant="ghost"
             size="sm"
-            leadingIcon={<PinStackIcon name="status-running" size={14} />}
+            leadingIcon={<AcMindIcon name="status-running" size={14} />}
             onClick={() => void refresh()}
           >
             刷新
@@ -199,7 +199,7 @@ export function CapturePage(): JSX.Element {
       >
         {recentCaptures.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="capture" size={28} />}
+            icon={<AcMindIcon name="capture" size={28} />}
             title="暂无截图"
             description="点击上方「截图」按钮开始捕获屏幕内容"
             action={{ label: '开始截图', onClick: () => void handleScreenshot() }}
@@ -254,7 +254,7 @@ function CaptureCard({ item, busy, onPinToDesktop, onOcr, onSaveToInbox }: Captu
           />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <PinStackIcon name="image" size={32} />
+            <AcMindIcon name="image" size={32} />
           </div>
         )}
         <div className="absolute bottom-2 right-2">
@@ -274,7 +274,7 @@ function CaptureCard({ item, busy, onPinToDesktop, onOcr, onSaveToInbox }: Captu
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="pin-top" size={14} />}
+          leadingIcon={<AcMindIcon name="pin-top" size={14} />}
           busy={busy === `pin-${item.id}`}
           onClick={onPinToDesktop}
           title="钉到桌面"
@@ -284,7 +284,7 @@ function CaptureCard({ item, busy, onPinToDesktop, onOcr, onSaveToInbox }: Captu
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="text" size={14} />}
+          leadingIcon={<AcMindIcon name="text" size={14} />}
           busy={busy === `ocr-${item.id}`}
           onClick={onOcr}
           title="OCR 文字提取"
@@ -294,7 +294,7 @@ function CaptureCard({ item, busy, onPinToDesktop, onOcr, onSaveToInbox }: Captu
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="filled-inbox" size={14} />}
+          leadingIcon={<AcMindIcon name="filled-inbox" size={14} />}
           busy={busy === `save-${item.id}`}
           onClick={onSaveToInbox}
           title="已在收集箱"
@@ -351,7 +351,7 @@ function PinnedImageCard({ pinned, busy, onClose, onSaveToInbox }: PinnedImageCa
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="filled-inbox" size={14} />}
+          leadingIcon={<AcMindIcon name="filled-inbox" size={14} />}
           busy={busy === `save-pinned-${pinned.id}`}
           onClick={onSaveToInbox}
           title="保存到收集箱"
@@ -361,7 +361,7 @@ function PinnedImageCard({ pinned, busy, onClose, onSaveToInbox }: PinnedImageCa
         <Button
           variant="danger"
           size="sm"
-          leadingIcon={<PinStackIcon name="close" size={14} />}
+          leadingIcon={<AcMindIcon name="close" size={14} />}
           busy={busy === `close-pinned-${pinned.id}`}
           onClick={onClose}
           title="关闭贴图"

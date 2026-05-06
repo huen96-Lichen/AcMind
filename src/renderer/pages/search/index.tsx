@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, LoadingState, PageHeader, PageShell, SearchField, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { SearchResultCard } from '../../components/search/SearchResultCard';
 import type { SearchResult } from '../../components/search/SearchResultCard';
@@ -136,7 +136,7 @@ export function SearchPage(): JSX.Element {
         eyebrow="知识检索"
         title="搜索"
         description="搜索收集内容、整理结果、标签和入库记录。"
-        actions={<Button variant="ghost" leadingIcon={<PinStackIcon name="refresh" size={14} />} onClick={() => void handleRebuildIndex()} disabled={rebuilding}>{rebuilding ? '重建中...' : '重建索引'}</Button>}
+        actions={<Button variant="ghost" leadingIcon={<AcMindIcon name="refresh" size={14} />} onClick={() => void handleRebuildIndex()} disabled={rebuilding}>{rebuilding ? '重建中...' : '重建索引'}</Button>}
         meta={status ? (
           <StatusBadge
             tone={status.searchable ? 'success' : status.initialized ? 'warning' : 'neutral'}
@@ -164,7 +164,7 @@ export function SearchPage(): JSX.Element {
             {!searched && !loading ? (
               <div className="flex min-h-[360px] items-center justify-center p-6">
                 <EmptyState
-                  icon={<PinStackIcon name="search" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+                  icon={<AcMindIcon name="search" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
                   title="搜索资料库"
                   description="输入关键词，搜索收集内容、整理结果、标签和入库记录。"
                 />
@@ -180,7 +180,7 @@ export function SearchPage(): JSX.Element {
             {searched && !loading && results.length === 0 ? (
               <div className="flex min-h-[360px] items-center justify-center p-6">
                 <EmptyState
-                  icon={<PinStackIcon name="empty-search" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+                  icon={<AcMindIcon name="empty-search" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
                   title="未找到相关结果"
                   description="尝试更换关键词，或重建索引后重试。"
                   action={{ label: '重建索引', onClick: () => void handleRebuildIndex() }}

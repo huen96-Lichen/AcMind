@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { PinStackIcon, type PinStackIconName } from './icons';
+import { AcMindIcon, type AcMindIconName } from './icons';
 
 interface SectionHeaderProps {
   eyebrow?: string;
@@ -22,7 +22,7 @@ export function SectionHeader({ eyebrow, title, description, action }: SectionHe
 }
 
 interface SidebarItemProps {
-  icon: PinStackIconName;
+  icon: AcMindIconName;
   label: string;
   active?: boolean;
   meta?: ReactNode;
@@ -34,7 +34,7 @@ export function SidebarItem({ icon, label, active = false, meta, onClick }: Side
     <button type="button" onClick={onClick} className={`acmind-sidebar-item motion-button ${active ? 'is-active' : ''}`}>
       <span className="flex min-w-0 items-center gap-3">
         <span className={`acmind-sidebar-icon ${active ? 'is-active' : ''}`}>
-          <PinStackIcon name={icon} size={16} />
+          <AcMindIcon name={icon} size={16} />
         </span>
         <span className="truncate text-left">{label}</span>
       </span>
@@ -64,7 +64,7 @@ export function CardHeaderActions({ children }: { children: ReactNode }): JSX.El
 }
 
 interface SettingsNavItemProps {
-  icon: PinStackIconName;
+  icon: AcMindIconName;
   label: string;
   active?: boolean;
   badge?: string;
@@ -80,7 +80,7 @@ export function SettingsNavItem({ icon, label, active = false, badge, onClick }:
     >
       <span className="flex min-w-0 items-center gap-2.5">
         <span className={`settings-nav-icon ${active ? 'is-active' : ''}`}>
-          <PinStackIcon name={icon} size={15} />
+          <AcMindIcon name={icon} size={15} />
         </span>
         <span className="truncate text-[13px]">{label}</span>
       </span>
@@ -148,7 +148,7 @@ export function StatusCapsule({ tone, label, onClick }: StatusCapsuleProps): JSX
 interface SettingGroupCardProps {
   title: string;
   description?: string;
-  icon?: PinStackIconName;
+  icon?: AcMindIconName;
   children: ReactNode;
 }
 
@@ -159,7 +159,7 @@ export function SettingGroupCard({ title, description, icon, children }: Setting
         <div className="flex items-center gap-2.5">
           {icon && (
             <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-[color:var(--pm-brand-soft)] text-[color:var(--pm-brand)]">
-              <PinStackIcon name={icon} size={14} />
+              <AcMindIcon name={icon} size={14} />
             </span>
           )}
           <div>
@@ -190,7 +190,7 @@ export function OnboardingStepCard({ step, title, description, action, completed
         className="acmind-onboarding-step-number"
         style={completed ? { background: 'var(--pm-success-bg)', color: 'var(--pm-success)' } : undefined}
       >
-        {completed ? <PinStackIcon name="check" size={14} /> : step}
+        {completed ? <AcMindIcon name="check" size={14} /> : step}
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium" style={{ color: 'var(--pm-text-primary)' }}>{title}</p>

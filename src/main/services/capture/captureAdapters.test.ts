@@ -268,7 +268,7 @@ describe('fileAdapter', () => {
     const record = fileAdapter.capture({ filePath });
     expect(record.source_type).toBe('video');
     expect(record.metadata?.processing_hint).toBe('needs_video_transcription');
-    expect(record.metadata?.external_processor).toBe('vaultkeeper');
+    expect(record.metadata?.external_processor).toBe('external');
     expect(record.metadata?.mime_type).toBe('video/mp4');
   });
 
@@ -278,7 +278,7 @@ describe('fileAdapter', () => {
     const record = fileAdapter.capture({ filePath });
     expect(record.source_type).toBe('pdf');
     expect(record.metadata?.processing_hint).toBe('needs_document_parse');
-    expect(record.metadata?.external_processor).toBe('vaultkeeper');
+    expect(record.metadata?.external_processor).toBe('external');
     expect(record.metadata?.mime_type).toBe('application/pdf');
   });
 
@@ -288,7 +288,7 @@ describe('fileAdapter', () => {
     const record = fileAdapter.capture({ filePath });
     expect(record.source_type).toBe('docx');
     expect(record.metadata?.processing_hint).toBe('needs_document_parse');
-    expect(record.metadata?.external_processor).toBe('vaultkeeper');
+    expect(record.metadata?.external_processor).toBe('external');
     expect(record.metadata?.mime_type).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   });
 

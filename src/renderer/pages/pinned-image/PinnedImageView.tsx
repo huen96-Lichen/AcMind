@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { Button } from '../../design-system/components';
 import type { PinnedImage } from '../../../shared/types';
 
@@ -78,7 +78,7 @@ export function PinnedImageView(): JSX.Element {
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="duplicate" size={14} />}
+          leadingIcon={<AcMindIcon name="duplicate" size={14} />}
           onClick={() => void handleCopy()}
           title="复制到剪贴板"
           className="text-white hover:text-white"
@@ -88,7 +88,7 @@ export function PinnedImageView(): JSX.Element {
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="filled-inbox" size={14} />}
+          leadingIcon={<AcMindIcon name="filled-inbox" size={14} />}
           busy={busy === 'save'}
           onClick={() => void handleSaveToInbox()}
           title="保存到收集箱"
@@ -99,7 +99,7 @@ export function PinnedImageView(): JSX.Element {
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="close" size={14} />}
+          leadingIcon={<AcMindIcon name="close" size={14} />}
           onClick={handleClose}
           title="关闭贴图"
           className="text-white hover:text-white"

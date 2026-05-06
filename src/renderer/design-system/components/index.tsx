@@ -1,5 +1,5 @@
 import { forwardRef, useState, type ButtonHTMLAttributes, type ChangeEvent, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref } from 'react';
-import { PinStackIcon } from '../icons';
+import { AcMindIcon } from '../icons';
 import { DESIGN_TOKENS, type ThemeMode } from '../tokens';
 
 function classNames(...values: Array<string | false | null | undefined>): string {
@@ -320,7 +320,7 @@ export function SearchField({
   return (
     <div className={classNames('pm-ds-search-field', className)} style={{ '--pm-search-placeholder': getThemeColors(mode).textTertiary } as CSSProperties}>
       <span className="pm-ds-search-icon" aria-hidden="true">
-        <PinStackIcon name="search" size={14} />
+        <AcMindIcon name="search" size={14} />
       </span>
       <input
         type="search"
@@ -352,7 +352,7 @@ export function SearchField({
           aria-label="清除搜索内容"
           title="清除搜索内容"
         >
-          <PinStackIcon name="close" size={12} />
+          <AcMindIcon name="close" size={12} />
         </Button>
       ) : onSearch ? (
         <Button
@@ -460,7 +460,7 @@ export interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, mode = 'light' }: EmptyStateProps): JSX.Element {
   return (
     <Card variant="elevated" mode={mode} className="pm-ds-state-card">
-      <div className="pm-ds-state-icon">{icon ?? <PinStackIcon name="empty-inbox" size={28} />}</div>
+      <div className="pm-ds-state-icon">{icon ?? <AcMindIcon name="empty-inbox" size={28} />}</div>
       <div className="pm-ds-state-title">{title}</div>
       {description ? <div className="pm-ds-state-description">{description}</div> : null}
       {action ? (
@@ -505,7 +505,7 @@ export function ErrorState({ title, reason, suggestion, action, mode = 'light' }
   return (
     <Card variant="elevated" mode={mode} className="pm-ds-state-card">
       <div className="pm-ds-state-icon pm-ds-state-icon-danger">
-        <PinStackIcon name="status-error" size={28} />
+        <AcMindIcon name="status-error" size={28} />
       </div>
       <div className="pm-ds-state-title">{title}</div>
       <div className="pm-ds-state-description">{reason}</div>

@@ -11,7 +11,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 
 type AnnotationTool = 'select' | 'rect' | 'arrow' | 'text';
 
@@ -270,7 +270,7 @@ export function AnnotationCanvas({ imageUrl, onSave, onCancel }: AnnotationCanva
         <Button
           variant={tool === 'text' ? 'primary' : 'ghost'}
           size="sm"
-          leadingIcon={<PinStackIcon name="text" size={14} />}
+          leadingIcon={<AcMindIcon name="text" size={14} />}
           onClick={() => setTool('text')}
         >
           文字
@@ -281,7 +281,7 @@ export function AnnotationCanvas({ imageUrl, onSave, onCancel }: AnnotationCanva
         <Button
           variant="ghost"
           size="sm"
-          leadingIcon={<PinStackIcon name="act-delete" size={14} />}
+          leadingIcon={<AcMindIcon name="act-delete" size={14} />}
           onClick={handleUndo}
           disabled={annotations.length === 0}
         >

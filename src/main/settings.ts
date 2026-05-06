@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import type { AppSettings, VaultKeeperSettings } from '../shared/types';
+import type { AppSettings, ExternalProcessorSettings } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaultSettings';
 import { DEFAULT_USER_PROFILE, DEFAULT_USER_PREFERENCES, DEFAULT_MODEL_STRATEGY_SETTINGS } from '../shared/types';
 import { mergeCapsuleSettings } from '../shared/capsuleSettings';
@@ -89,7 +89,7 @@ class SettingsService {
       transcription: patch.transcription
         ? { ...current.transcription, ...patch.transcription }
         : current.transcription,
-      vaultkeeper: patch.vaultkeeper ? { ...current.vaultkeeper, ...patch.vaultkeeper } : current.vaultkeeper,
+      externalProcessor: patch.externalProcessor ? { ...current.externalProcessor, ...patch.externalProcessor } : current.externalProcessor,
     };
 
     this.cachedSettings = merged;
@@ -117,28 +117,46 @@ class SettingsService {
   }
 
   /**
-   * Get VaultKeeper settings.
+   * Get external processor settings.
    */
-  getVaultKeeperSettings(): VaultKeeperSettings {
-    return this.load().vaultkeeper ?? DEFAULT_SETTINGS.vaultkeeper;
+  getExternalProcessorSettings(): ExternalProcessorSettings {
+    return this.load().externalProcessor ?? DEFAULT_SETTINGS.externalProcessor;
+  }
+
+  /** @deprecated Use getExternalProcessorSettings */
+  getVaultKeeperSettings(): ExternalProcessorSettings {
+    return this.getExternalProcessorSettings();
   }
 
   /**
    * Migrate legacy pinmind-* identifiers to acmind-* equivalents.
    */
   private migrateLegacyIdentifiers(partial: Partial<AppSettings>): Partial<AppSettings> {
+    let result = partial;
+
     // Migrate legacy 'pinmind-inbox' → 'acmind-inbox' in capsule settings
     const dest = partial.capsule?.quickCapture?.defaultDestination as string | undefined;
     if (dest === 'pinmind-inbox') {
-      return {
-        ...partial,
+      result = {
+        ...result,
         capsule: {
-          ...partial.capsule,
-          quickCapture: { ...partial.capsule!.quickCapture!, defaultDestination: 'acmind-inbox' },
+          ...result.capsule,
+          quickCapture: { ...result.capsule!.quickCapture!, defaultDestination: 'acmind-inbox' },
         } as AppSettings['capsule'],
       };
     }
-    return partial;
+
+    // Migrate legacy 'vaultkeeper' → 'externalProcessor' in settings
+    const legacy = (partial as Record<string, unknown>).vaultkeeper as Record<string, unknown> | undefined;
+    if (legacy && !partial.externalProcessor) {
+      const { vaultkeeper: _vk, ...rest } = result as Record<string, unknown>;
+      result = {
+        ...rest,
+        externalProcessor: legacy,
+      } as unknown as Partial<AppSettings>;
+    }
+
+    return result;
   }
 
   /**
@@ -182,7 +200,7 @@ class SettingsService {
       profile: { ...DEFAULT_USER_PROFILE, ...(partial.profile ?? {}) },
       preferences,
       modelStrategy: { ...DEFAULT_MODEL_STRATEGY_SETTINGS, ...(partial.modelStrategy ?? {}) },
-      vaultkeeper: { ...DEFAULT_SETTINGS.vaultkeeper, ...(partial.vaultkeeper ?? {}) },
+      externalProcessor: { ...DEFAULT_SETTINGS.externalProcessor, ...(partial.externalProcessor ?? {}) },
       transcription: { ...DEFAULT_SETTINGS.transcription, ...(partial.transcription ?? {}) },
       voiceWatchEnabled: partial.voiceWatchEnabled ?? DEFAULT_SETTINGS.voiceWatchEnabled,
       voiceWatchFolderPath: partial.voiceWatchFolderPath ?? DEFAULT_SETTINGS.voiceWatchFolderPath,
@@ -190,6 +208,8 @@ class SettingsService {
       voiceSupportedExtensions: partial.voiceSupportedExtensions ?? DEFAULT_SETTINGS.voiceSupportedExtensions,
       voiceImportDelayMs: partial.voiceImportDelayMs ?? DEFAULT_SETTINGS.voiceImportDelayMs,
       voiceDedupEnabled: partial.voiceDedupEnabled ?? DEFAULT_SETTINGS.voiceDedupEnabled,
+      dashboardWidget: partial.dashboardWidget ?? DEFAULT_SETTINGS.dashboardWidget,
+      agentChat: { ...DEFAULT_SETTINGS.agentChat, ...(partial.agentChat ?? {}) },
     };
   }
 

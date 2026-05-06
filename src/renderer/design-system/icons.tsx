@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from 'react';
-import { PINSTACK_ICON_ASSET_MAP, type PinStackAssetIconName } from './iconAssetMap';
+import { ACMIND_ICON_ASSET_MAP, type AcMindAssetIconName } from './iconAssetMap';
 
-export type PinStackIconName =
-  | PinStackAssetIconName
+export type AcMindIconName =
+  | AcMindAssetIconName
   | 'arrow-left'
   | 'arrow-right'
   | 'arrow-down'
@@ -22,8 +22,8 @@ export type PinStackIconName =
   | 'spark'
   | 'alert';
 
-interface PinStackIconProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
-  name: PinStackIconName;
+interface AcMindIconProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
+  name: AcMindIconName;
   size?: number;
   title?: string;
   strokeWidth?: number;
@@ -31,14 +31,14 @@ interface PinStackIconProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'child
 
 type IconRenderer = () => ReactNode;
 
-const ICON_ALIASES: Partial<Record<PinStackIconName, PinStackAssetIconName>> = {
+const ICON_ALIASES: Partial<Record<AcMindIconName, AcMindAssetIconName>> = {
   category: 'classify',
   copy: 'duplicate',
   pin: 'pin-top',
   spark: 'ai-workspace'
 };
 
-const FALLBACK_ICON_RENDERERS: Partial<Record<PinStackIconName, IconRenderer>> = {
+const FALLBACK_ICON_RENDERERS: Partial<Record<AcMindIconName, IconRenderer>> = {
   'arrow-left': () => <path d="M10.5 3.5 6 8l4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />,
   'arrow-right': () => <path d="m5.5 3.5 4.5 4.5-4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />,
   'arrow-down': () => <path d="M4.5 6.5 8 10l3.5-3.5" strokeLinecap="round" strokeLinejoin="round" />,
@@ -105,9 +105,9 @@ const FALLBACK_ICON_RENDERERS: Partial<Record<PinStackIconName, IconRenderer>> =
   ),
 };
 
-function resolveAssetIconName(name: PinStackIconName): PinStackAssetIconName | null {
-  if (name in PINSTACK_ICON_ASSET_MAP) {
-    return name as PinStackAssetIconName;
+function resolveAssetIconName(name: AcMindIconName): AcMindAssetIconName | null {
+  if (name in ACMIND_ICON_ASSET_MAP) {
+    return name as AcMindAssetIconName;
   }
 
   return ICON_ALIASES[name] ?? null;
@@ -131,11 +131,11 @@ function buildAssetMaskStyle(src: string, size: number): CSSProperties {
   };
 }
 
-export function PinStackIcon({ name, size = 16, className, title, strokeWidth = 1.45, style, ...rest }: PinStackIconProps): JSX.Element {
+export function AcMindIcon({ name, size = 16, className, title, strokeWidth = 1.45, style, ...rest }: AcMindIconProps): JSX.Element {
   const assetName = resolveAssetIconName(name);
 
   if (assetName) {
-    const src = PINSTACK_ICON_ASSET_MAP[assetName];
+    const src = ACMIND_ICON_ASSET_MAP[assetName];
     return (
       <span
         className={className}
@@ -182,14 +182,14 @@ export function PinStackIcon({ name, size = 16, className, title, strokeWidth = 
   );
 }
 
-interface PinStackIconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
-  icon: PinStackIconName;
+interface AcMindIconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+  icon: AcMindIconName;
   label: string;
   tone?: 'ghost' | 'soft' | 'accent' | 'danger';
   size?: 'sm' | 'md';
 }
 
-export function PinStackIconButton({
+export function AcMindIconButton({
   icon,
   label,
   tone = 'ghost',
@@ -197,7 +197,7 @@ export function PinStackIconButton({
   className,
   type = 'button',
   ...rest
-}: PinStackIconButtonProps): JSX.Element {
+}: AcMindIconButtonProps): JSX.Element {
   const sizeClass = size === 'sm' ? 'h-8 w-8' : 'h-9 w-9';
 
   return (
@@ -208,7 +208,7 @@ export function PinStackIconButton({
       className={`acmind-icon-button acmind-icon-button-${tone} motion-button ${sizeClass} disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ''}`}
       {...rest}
     >
-      <PinStackIcon name={icon} size={size === 'sm' ? 15 : 16} />
+      <AcMindIcon name={icon} size={size === 'sm' ? 15 : 16} />
     </button>
   );
 }

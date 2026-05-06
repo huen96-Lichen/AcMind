@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { useToast } from '../../components/shared/ToastViewport';
 
@@ -434,7 +434,7 @@ export function DatasetsPage(): JSX.Element {
           <Button
             variant="primary"
             size="sm"
-            leadingIcon={<PinStackIcon name="filled-logs" size={14} />}
+            leadingIcon={<AcMindIcon name="filled-logs" size={14} />}
             onClick={() => setShowCreateForm(!showCreateForm)}
           >
             新建数据集
@@ -451,7 +451,7 @@ export function DatasetsPage(): JSX.Element {
             marginBottom: 16,
           }}
         >
-          <PinStackIcon name="status-info" size={14} style={{ color: 'var(--pm-text-tertiary)', marginTop: 1 }} />
+          <AcMindIcon name="status-info" size={14} style={{ color: 'var(--pm-text-tertiary)', marginTop: 1 }} />
           <span className="text-[12px]" style={{ color: 'var(--pm-text-secondary)' }}>
             数据集仅包含经过确认的内容。默认不上传云端，不做真实模型训练。
           </span>
@@ -539,7 +539,7 @@ export function DatasetsPage(): JSX.Element {
           />
         ) : datasets.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="empty-inbox" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            icon={<AcMindIcon name="empty-inbox" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
             title="还没有数据集"
             description="点击「新建数据集」创建你的第一个训练数据集。"
           />
@@ -591,7 +591,7 @@ export function DatasetsPage(): JSX.Element {
                   <Button
                     variant="ghost"
                     size="sm"
-                    leadingIcon={<PinStackIcon name="filled-logs" size={14} />}
+                    leadingIcon={<AcMindIcon name="filled-logs" size={14} />}
                     onClick={() => setAddItemsDatasetId(dataset.id)}
                   >
                     添加内容
@@ -599,7 +599,7 @@ export function DatasetsPage(): JSX.Element {
                   <Button
                     variant="ghost"
                     size="sm"
-                    leadingIcon={<PinStackIcon name="filled-file-import" size={14} />}
+                    leadingIcon={<AcMindIcon name="filled-file-import" size={14} />}
                     onClick={() => setExportDataset({ id: dataset.id, name: dataset.name })}
                   >
                     导出
@@ -608,7 +608,7 @@ export function DatasetsPage(): JSX.Element {
                   <Button
                     variant="ghost"
                     size="sm"
-                    leadingIcon={<PinStackIcon name="act-delete" size={14} />}
+                    leadingIcon={<AcMindIcon name="act-delete" size={14} />}
                     onClick={() => handleDelete(dataset)}
                   />
                 </div>

@@ -5,7 +5,7 @@
 ```bash
 # 1. 克隆仓库
 git clone <repo-url>
-cd AcMindV2.0
+cd acmind
 
 # 2. 安装依赖
 npm install

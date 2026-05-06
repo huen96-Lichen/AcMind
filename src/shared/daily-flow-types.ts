@@ -40,7 +40,7 @@ export const STATUS_LABEL_MAP: Record<string, string> = {
   template_missing: '模板缺失',
   vault_missing: 'Vault 路径缺失',
   model_unavailable: '模型不可用',
-  vaultkeeper_unavailable: 'VaultKeeper 不可用',
+  external_service_unavailable: '外部处理服务不可用',
   external_job_failed: '外部任务失败',
   external_result_invalid: '外部结果无效',
   external_result_ingest_failed: '外部结果导入失败',

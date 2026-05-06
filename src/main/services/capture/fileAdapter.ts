@@ -1,7 +1,7 @@
 // AcMind FileAdapter
 // V2.1 Phase 7.1: Captures a file (PDF, DOCX, etc.) into a CaptureRecord.
 // V2.1 Phase 7.5: Enhanced with .txt/.md text reading and richer metadata.
-// V2.1 Phase 7.6: Auto-classify source_type by extension + processing_hint for VaultKeeper.
+// V2.1 Phase 7.6: Auto-classify source_type by extension + processing_hint for external processor.
 
 import { createHash } from 'node:crypto';
 import { existsSync, statSync, readFileSync } from 'node:fs';
@@ -65,9 +65,9 @@ function determineExternalProcessor(ext: string, hasReadableText: boolean): Comp
   if (hasReadableText) return 'none';
   if (IMAGE_EXTENSIONS.has(ext)) return 'ocr';
   if (AUDIO_EXTENSIONS.has(ext)) return 'whisper';
-  if (VIDEO_EXTENSIONS.has(ext)) return 'vaultkeeper';
-  if (PDF_EXTENSIONS.has(ext)) return 'vaultkeeper';
-  if (DOCX_EXTENSIONS.has(ext)) return 'vaultkeeper';
+  if (VIDEO_EXTENSIONS.has(ext)) return 'external';
+  if (PDF_EXTENSIONS.has(ext)) return 'external';
+  if (DOCX_EXTENSIONS.has(ext)) return 'external';
   return 'manual';
 }
 

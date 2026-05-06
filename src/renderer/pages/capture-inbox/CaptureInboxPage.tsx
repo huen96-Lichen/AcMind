@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon, type PinStackIconName } from '../../design-system/icons';
+import { AcMindIcon, type AcMindIconName } from '../../design-system/icons';
 import { AddCaptureItemDialog } from '../../components/capture-inbox/AddCaptureItemDialog';
 import { CaptureItemDetail } from '../../components/capture-inbox/CaptureItemDetail';
 import { useToast } from '../../components/shared/ToastViewport';
@@ -148,7 +148,7 @@ export function CaptureInboxPage(): JSX.Element {
             <Button
               variant="primary"
               size="sm"
-              leadingIcon={<PinStackIcon name="act-quick-capture" size={14} />}
+              leadingIcon={<AcMindIcon name="act-quick-capture" size={14} />}
               onClick={() => setDialogOpen(true)}
             >
               新建
@@ -161,10 +161,10 @@ export function CaptureInboxPage(): JSX.Element {
         <Section title="收集方式" compact>
           <div className="grid grid-cols-4 gap-2">
             {([
-              { type: 'clipboard' as const, label: '粘贴内容', icon: 'filled-clipboard' as PinStackIconName },
-              { type: 'file' as const, label: '导入文件', icon: 'filled-file-import' as PinStackIconName },
-              { type: 'screenshot' as const, label: '截图', icon: 'capture' as PinStackIconName },
-              { type: 'audio' as const, label: '录音', icon: 'record' as PinStackIconName },
+              { type: 'clipboard' as const, label: '粘贴内容', icon: 'filled-clipboard' as AcMindIconName },
+              { type: 'file' as const, label: '导入文件', icon: 'filled-file-import' as AcMindIconName },
+              { type: 'screenshot' as const, label: '截图', icon: 'capture' as AcMindIconName },
+              { type: 'audio' as const, label: '录音', icon: 'record' as AcMindIconName },
             ]).map((action) => (
               <button
                 key={action.type}
@@ -172,7 +172,7 @@ export function CaptureInboxPage(): JSX.Element {
                 className="flex flex-col items-center gap-1.5 rounded-[12px] border border-[color:var(--pm-border-subtle)] bg-white/50 p-3 transition-all hover:border-[color:var(--pm-brand)] hover:bg-[color:var(--pm-brand-soft)]"
                 onClick={() => void handleCollect(action.type)}
               >
-                <PinStackIcon name={action.icon} size={20} style={{ color: 'var(--pm-text-secondary)' }} />
+                <AcMindIcon name={action.icon} size={20} style={{ color: 'var(--pm-text-secondary)' }} />
                 <span className="text-[12px] font-medium" style={{ color: 'var(--pm-text-secondary)' }}>
                   {action.label}
                 </span>
@@ -184,7 +184,7 @@ export function CaptureInboxPage(): JSX.Element {
         <Section title="最近收集" compact>
           {items.length === 0 ? (
             <EmptyState
-              icon={<PinStackIcon name="filled-inbox" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
+              icon={<AcMindIcon name="filled-inbox" size={28} style={{ color: 'var(--pm-text-tertiary)' }} />}
               title="还没有内容"
               description="粘贴或导入开始"
             />

@@ -1,8 +1,8 @@
-// PinStack migration file - uses PinStack-specific APIs not yet implemented in preload
+// AcMind migration file - uses AcMind-specific APIs not yet implemented in preload
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { CaptureLauncherVisualState, CaptureRecordingState } from '../shared/types';
-import { PinStackIcon } from './design-system/icons';
+import { AcMindIcon } from './design-system/icons';
 
 const DRAG_THRESHOLD = 6;
 
@@ -193,8 +193,8 @@ export function CaptureLauncher(): JSX.Element {
           : 'h-9 w-9 border-[rgba(124,92,250,0.2)] bg-[color:var(--ps-brand-soft)] text-[color:var(--ps-brand-primary)] shadow-[0_0_0_1px_rgba(124,92,250,0.06)]';
 
   return (
-    <main className="pinstack-window-page pinstack-window-page--clear p-0">
-      <section className="pinstack-window-panel pinstack-window-panel--clear flex h-full w-full items-center justify-center p-0">
+    <main className="acmind-window-page acmind-window-page--clear p-0">
+      <section className="acmind-window-panel acmind-window-panel--clear flex h-full w-full items-center justify-center p-0">
         <button
           type="button"
           onPointerDown={handlePointerDown}
@@ -224,7 +224,7 @@ export function CaptureLauncher(): JSX.Element {
             >
               <span className="pointer-events-none absolute inset-0 grid place-items-center">
                 {recordingState.active ? (
-                  <PinStackIcon name="record" size={16} className="block" />
+                  <AcMindIcon name="record" size={16} className="block" />
                 ) : (
                   <svg
                     viewBox="0 0 16 16"

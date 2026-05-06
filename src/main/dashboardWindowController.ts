@@ -6,10 +6,10 @@ import { createBrandNativeImage } from './tray';
 // Constants
 // ---------------------------------------------------------------------------
 
-const MIN_WIDTH = 900;
-const MIN_HEIGHT = 600;
-const DEFAULT_WIDTH = 1200;
-const DEFAULT_HEIGHT = 800;
+const MIN_WIDTH = 1180;
+const MIN_HEIGHT = 760;
+const DEFAULT_WIDTH = 1440;
+const DEFAULT_HEIGHT = 900;
 
 // ---------------------------------------------------------------------------
 // DashboardWindowController

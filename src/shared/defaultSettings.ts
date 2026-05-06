@@ -1,6 +1,6 @@
 import type { AppSettings } from './types';
 import { DEFAULT_CAPSULE_SETTINGS } from './capsuleSettings';
-import { DEFAULT_USER_PROFILE, DEFAULT_USER_PREFERENCES, DEFAULT_MODEL_STRATEGY_SETTINGS } from './types';
+import { DEFAULT_USER_PROFILE, DEFAULT_USER_PREFERENCES, DEFAULT_MODEL_STRATEGY_SETTINGS, DEFAULT_DASHBOARD_WIDGET_SETTINGS, DEFAULT_AGENT_CHAT_CONFIG } from './types';
 import { DEFAULT_OBSIDIAN_DOCUMENTS_ROOT } from './markdownSpec';
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   profile: DEFAULT_USER_PROFILE,
   preferences: DEFAULT_USER_PREFERENCES,
   modelStrategy: DEFAULT_MODEL_STRATEGY_SETTINGS,
-  vaultkeeper: {
+  externalProcessor: {
     enabled: false,
     endpoint: '',
     timeout: 30000,
@@ -57,4 +57,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   voiceSupportedExtensions: ['.m4a', '.mp3', '.wav', '.aac'],
   voiceImportDelayMs: 3000,
   voiceDedupEnabled: true,
+  dashboardWidget: DEFAULT_DASHBOARD_WIDGET_SETTINGS,
+  // Phase A: Agent Chat 默认配置
+  agentChat: DEFAULT_AGENT_CHAT_CONFIG,
 };

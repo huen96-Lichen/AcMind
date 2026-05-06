@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { RightInspector } from './RightInspector';
 import { PersonalSpacePanel } from './PersonalSpacePanel';
 import { ScrollContainer } from '../shared/ScrollContainer';
 import { ToastProvider } from '../shared/ToastViewport';
 import { useShellSnapshot } from '../../hooks/useShellSnapshot';
 import { useLayoutMode } from '../../hooks/useLayoutMode';
-import { SelectedItemContext } from '../../context/SelectedItemContext';
-import type { CaptureItem } from '../../../shared/types';
+
+const STORAGE_APP_NAV_COLLAPSED_KEY = 'acmind:app-nav-collapsed';
+const APP_NAV_EXPANDED_WIDTH = 216;
+const APP_NAV_COLLAPSED_WIDTH = 72;
 
 interface AppShellProps {
   activeView: string;
@@ -19,15 +21,11 @@ interface AppShellProps {
 export function AppShell({ activeView, onNavigate, children }: AppShellProps): JSX.Element {
   const snapshot = useShellSnapshot();
   const mode = useLayoutMode();
-  const [selectedItem, setSelectedItem] = useState<CaptureItem | null>(null);
   const [showPersonalSpace, setShowPersonalSpace] = useState(false);
   const [sidebarForcedOpen, setSidebarForcedOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => loadCollapsedState());
 
-  // Reset selectedItem when navigating away from capture-inbox
   const handleNavigate = useCallback((view: string, options?: { tab?: string; id?: string }) => {
-    if (view !== 'capture-inbox') {
-      setSelectedItem(null);
-    }
     onNavigate(view, options);
   }, [onNavigate]);
 
@@ -44,64 +42,86 @@ export function AppShell({ activeView, onNavigate, children }: AppShellProps): J
     return () => window.removeEventListener('acmind:toggle-sidebar', handler);
   }, []);
 
-  // Sidebar visibility: hidden in compact and small modes
+  useEffect(() => {
+    persistCollapsedState(sidebarCollapsed);
+  }, [sidebarCollapsed]);
+
+  // Refresh shell snapshot when settings are updated (e.g. dashboard toggle)
+  useEffect(() => {
+    const handler = () => { snapshot.refresh(); };
+    window.addEventListener('acmind:settings-updated', handler);
+    return () => window.removeEventListener('acmind:settings-updated', handler);
+  }, [snapshot]);
+
+  // Sidebar stays visible on spacious layouts; on compact layouts it can be toggled open.
   const sidebarVisible = sidebarForcedOpen || mode === 'large' || mode === 'medium';
+  const sidebarWidth = sidebarCollapsed ? APP_NAV_COLLAPSED_WIDTH : APP_NAV_EXPANDED_WIDTH;
 
-  // RightInspector: only in large mode, but NOT on settings page
-  const inspectorVisible = mode === 'large' && activeView !== 'settings';
-
-  // Responsive grid: 4 breakpoints
-  // large + inspector (>=1280):   240px minmax(0,1fr) 380px
-  // large without inspector:      240px minmax(0,1fr)  (full width for main content)
-  // medium (960-1279):            240px minmax(0,1fr)
-  // compact (720-959):            1fr (sidebar collapsed, top entry only)
-  // small (<720):                 1fr (single column)
-  const layoutClasses = mode === 'large'
-    ? inspectorVisible
-      ? 'grid-cols-[var(--pm-sidebar-width)_minmax(0,1fr)_var(--pm-detail-width)]'
-      : 'grid-cols-[var(--pm-sidebar-width)_minmax(0,1fr)]'
-    : mode === 'medium'
-      ? 'grid-cols-[var(--pm-sidebar-width)_minmax(0,1fr)]'
-      : 'grid-cols-1';
+  const layoutClasses = mode === 'small' || mode === 'compact'
+    ? 'grid-cols-1'
+    : 'grid-cols-[var(--pm-sidebar-width)_minmax(0,1fr)]';
 
   return (
     <ToastProvider>
-      <SelectedItemContext.Provider value={{ selectedItem, setSelectedItem }}>
-        <div className="flex h-full w-full flex-col overflow-hidden acmind-app-shell">
-          <TopBar
-            snapshot={snapshot}
-            onRefresh={snapshot.refresh}
-            onNavigate={handleNavigate}
-            layoutMode={mode}
-            activeView={activeView}
-          />
+      <div
+        className="flex h-full w-full min-w-0 flex-col overflow-hidden acmind-app-shell"
+        style={{ '--pm-sidebar-width': `${sidebarWidth}px` } as CSSProperties}
+      >
+        <TopBar
+          snapshot={snapshot}
+          onRefresh={snapshot.refresh}
+          onNavigate={handleNavigate}
+          layoutMode={mode}
+          activeView={activeView}
+        />
 
-          <div className={`grid flex-1 min-h-0 ${layoutClasses}`}>
-            {/* Sidebar — visible in large/medium, hidden in compact/small */}
-            <div className={sidebarVisible ? 'min-h-0' : 'hidden'}>
-              <Sidebar activeView={activeView} onNavigate={handleNavigate} snapshot={snapshot} />
+        <div className={`grid flex-1 min-h-0 min-w-0 ${layoutClasses}`}>
+          {/* Sidebar — visible in large/medium, hidden in compact/small */}
+          <div className={sidebarVisible ? 'min-h-0' : 'hidden'}>
+            <Sidebar
+              activeView={activeView}
+              onNavigate={handleNavigate}
+              snapshot={snapshot}
+              collapsed={sidebarCollapsed}
+              onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+            />
+          </div>
+
+          {/* Main content area */}
+          {activeView === 'schedule' ? (
+            <div className="acmind-window-page min-h-0 min-w-0 overflow-hidden">
+              {children}
             </div>
-
-            {/* Main content area */}
-            <ScrollContainer className="acmind-window-page min-h-0 overflow-y-auto">
+          ) : (
+            <ScrollContainer className="acmind-window-page min-h-0 min-w-0 overflow-y-auto">
               {children}
             </ScrollContainer>
+          )}
 
-            {/* Right Inspector — only in large mode (380px via grid) */}
-            {inspectorVisible && (
-              <div className="min-h-0 flex">
-                <RightInspector activeView={activeView} snapshot={snapshot} onNavigate={handleNavigate} />
-              </div>
-            )}
-          </div>
         </div>
+      </div>
 
-        {/* Personal Space Panel */}
-        <PersonalSpacePanel
-          visible={showPersonalSpace}
-          onClose={() => setShowPersonalSpace(false)}
-        />
-      </SelectedItemContext.Provider>
+      {/* Personal Space Panel */}
+      <PersonalSpacePanel
+        visible={showPersonalSpace}
+        onClose={() => setShowPersonalSpace(false)}
+      />
     </ToastProvider>
   );
+}
+
+function loadCollapsedState(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_APP_NAV_COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function persistCollapsedState(collapsed: boolean): void {
+  try {
+    window.localStorage.setItem(STORAGE_APP_NAV_COLLAPSED_KEY, collapsed ? '1' : '0');
+  } catch {
+    // noop
+  }
 }

@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { useToast } from '../../components/shared/ToastViewport';
 
@@ -142,7 +142,7 @@ export function ProjectsPage(): JSX.Element {
           <Button
             variant="primary"
             size="sm"
-            leadingIcon={<PinStackIcon name="filled-logs" size={14} />}
+            leadingIcon={<AcMindIcon name="filled-logs" size={14} />}
             onClick={() => setShowCreateForm(!showCreateForm)}
           >
             新建项目
@@ -213,7 +213,7 @@ export function ProjectsPage(): JSX.Element {
           />
         ) : projects.length === 0 ? (
           <EmptyState
-            icon={<PinStackIcon name="empty-inbox" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+            icon={<AcMindIcon name="empty-inbox" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
             title="还没有项目"
             description="点击「新建项目」创建你的第一个项目空间。"
           />
@@ -262,7 +262,7 @@ export function ProjectsPage(): JSX.Element {
                     variant="ghost"
                     size="sm"
                     leadingIcon={
-                      <PinStackIcon
+                      <AcMindIcon
                         name={project.status === 'archived' ? 'filled-logs' : 'filled-search'}
                         size={14}
                       />
@@ -275,7 +275,7 @@ export function ProjectsPage(): JSX.Element {
                   <Button
                     variant="ghost"
                     size="sm"
-                    leadingIcon={<PinStackIcon name="act-delete" size={14} />}
+                    leadingIcon={<AcMindIcon name="act-delete" size={14} />}
                     onClick={() => handleDelete(project)}
                   />
                 </div>

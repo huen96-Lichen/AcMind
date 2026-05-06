@@ -3,7 +3,7 @@ import type { SourceItem, SourceItemType } from '../../shared/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type InboxFilter = 'all' | 'text' | 'image' | 'screenshot';
+export type InboxFilter = 'all' | 'text' | 'image' | 'screenshot' | 'file' | 'webpage' | 'audio';
 
 interface UseSourceItemsReturn {
   items: SourceItem[];
@@ -17,12 +17,17 @@ interface UseSourceItemsReturn {
   selectedItem: SourceItem | null;
   setSelectedItem: (item: SourceItem | null) => void;
   deleteItem: (id: string) => Promise<boolean>;
+  deleteBatch: (ids: string[]) => Promise<boolean>;
+  updateItem: (id: string, patch: Partial<SourceItem>) => Promise<boolean>;
+  getContent: (id: string) => Promise<{ type: SourceItemType; text?: string; dataUrl?: string } | null>;
+  importFile: (filePath: string) => Promise<SourceItem | null>;
+  saveUrl: (url: string) => Promise<SourceItem | null>;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 /**
- * Custom hook for managing source items in the Inbox page.
+ * Custom hook for managing source items in the Inbox / Staging Pool pages.
  * Handles loading, filtering, searching, selection, and real-time updates.
  */
 export function useSourceItems(): UseSourceItemsReturn {
@@ -111,6 +116,16 @@ export function useSourceItems(): UseSourceItemsReturn {
     if (filter === 'screenshot') {
       return allItems.filter((item) => item.source === 'screenshot');
     }
+    if (filter === 'webpage') {
+      return allItems.filter((item) => item.type === 'url');
+    }
+    if (filter === 'audio') {
+      return allItems.filter((item) => item.source === 'audio');
+    }
+    // 'file' — currently SourceItem.type doesn't have 'file', fallback: items with contentPath that are not text/image/url
+    if (filter === 'file') {
+      return allItems.filter((item) => item.source === 'vault_import');
+    }
     return allItems.filter((item) => item.type === (filter as SourceItemType));
   }, [allItems, filter]);
 
@@ -131,6 +146,89 @@ export function useSourceItems(): UseSourceItemsReturn {
       }
     },
     [selectedItem],
+  );
+
+  // ── Delete batch ──
+
+  const deleteBatch = useCallback(
+    async (ids: string[]): Promise<boolean> => {
+      try {
+        await window.acmind.sourceItems.deleteBatch(ids);
+        if (selectedItem && ids.includes(selectedItem.id)) {
+          setSelectedItem(null);
+        }
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return false;
+      }
+    },
+    [selectedItem],
+  );
+
+  // ── Update item ──
+
+  const updateItem = useCallback(
+    async (id: string, patch: Partial<SourceItem>): Promise<boolean> => {
+      try {
+        await window.acmind.sourceItems.update(id, patch);
+        // records.changed event will trigger loadItems → state refresh
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return false;
+      }
+    },
+    [],
+  );
+
+  // ── Get content ──
+
+  const getContent = useCallback(
+    async (id: string): Promise<{ type: SourceItemType; text?: string; dataUrl?: string } | null> => {
+      try {
+        return await window.acmind.sourceItems.getContent(id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return null;
+      }
+    },
+    [],
+  );
+
+  // ── Import file ──
+  // NOTE: Uses window.acmind.parser.importFile which is the existing API.
+  // This creates a source item from a file import.
+
+  const importFile = useCallback(
+    async (filePath: string): Promise<SourceItem | null> => {
+      try {
+        // parser.importFile triggers capture → bridge → sourceItem pipeline
+        const result = await window.acmind.parser.importFile(filePath);
+        // The pipeline will trigger onRecordsChanged → loadItems
+        return result as SourceItem | null;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return null;
+      }
+    },
+    [],
+  );
+
+  // ── Save URL ──
+
+  const saveUrl = useCallback(
+    async (url: string): Promise<SourceItem | null> => {
+      try {
+        const item = await window.acmind.sourceItems.saveUrl(url);
+        await loadItems();
+        return item;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return null;
+      }
+    },
+    [loadItems],
   );
 
   // ── Cleanup debounce on unmount ──
@@ -155,5 +253,10 @@ export function useSourceItems(): UseSourceItemsReturn {
     selectedItem,
     setSelectedItem,
     deleteItem,
+    deleteBatch,
+    updateItem,
+    getContent,
+    importFile,
+    saveUrl,
   };
 }

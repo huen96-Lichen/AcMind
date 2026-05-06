@@ -1,5 +1,5 @@
-// VaultKeeper Adapter Types
-// Phase 9: 定义 AcMind 与 VaultKeeper 外部服务的通信协议类型边界
+// External Processor Adapter Types
+// Phase 9: 定义 AcMind 与外部处理服务的通信协议类型边界
 //
 // 设计原则：
 // - AcMind 不做复杂解析引擎
@@ -11,7 +11,7 @@
 // Job 类型
 // ---------------------------------------------------------------------------
 
-/** VaultKeeper 支持的 Job 类型 */
+/** 外部处理服务支持的 Job 类型 */
 export type VKJobType =
   | 'webpage_extract'
   | 'pdf_parse'
@@ -25,7 +25,7 @@ export type VKJobType =
 // Job 状态
 // ---------------------------------------------------------------------------
 
-/** VaultKeeper Job 状态 */
+/** 外部处理服务 Job 状态 */
 export type VKJobStatus =
   | 'pending'
   | 'queued'
@@ -42,7 +42,7 @@ export type VKJobStatus =
 export interface VKSubmitJobRequest {
   /** 任务类型 */
   job_type: VKJobType;
-  /** 文件路径（本地文件需要 VaultKeeper 可访问） */
+  /** 文件路径（本地文件需要外部处理服务可访问） */
   file_path?: string;
   /** URL（网页提取时使用） */
   url?: string;
@@ -52,13 +52,13 @@ export interface VKSubmitJobRequest {
   options?: Record<string, unknown>;
   /** 优先级 */
   priority?: 'low' | 'normal' | 'high';
-  /** 回调 URL（VaultKeeper 完成后通知） */
+  /** 回调 URL（外部处理服务完成后通知） */
   callback_url?: string;
 }
 
 /** 提交 Job 的响应 */
 export interface VKSubmitJobResponse {
-  /** VaultKeeper 分配的任务 ID */
+  /** 外部处理服务分配的任务 ID */
   job_id: string;
   /** 初始状态 */
   status: VKJobStatus;
@@ -86,7 +86,7 @@ export interface VKJobStatusResponse {
 // Job 结果（标准化后）
 // ---------------------------------------------------------------------------
 
-/** VaultKeeper Job 结果（标准化后） */
+/** 外部处理服务 Job 结果（标准化后） */
 export interface VKJobResult {
   job_id: string;
   job_type: VKJobType;
@@ -113,7 +113,7 @@ export interface VKJobResult {
 // 健康检查
 // ---------------------------------------------------------------------------
 
-/** VaultKeeper 健康检查结果 */
+/** 外部处理服务健康检查结果 */
 export interface VKHealthStatus {
   /** 是否可用 */
   available: boolean;
@@ -121,7 +121,7 @@ export interface VKHealthStatus {
   connection_method: 'http' | 'stdio' | 'unavailable';
   /** 支持的 job 类型 */
   supported_job_types: VKJobType[];
-  /** VaultKeeper 版本 */
+  /** 外部处理服务版本 */
   version?: string;
   /** 不可用时的错误信息 */
   error?: string;
@@ -133,9 +133,9 @@ export interface VKHealthStatus {
 // Adapter 接口
 // ---------------------------------------------------------------------------
 
-/** VaultKeeper Adapter 接口 — AcMind 与 VaultKeeper 的唯一通信边界 */
+/** 外部处理服务 Adapter 接口 — AcMind 与外部处理服务的唯一通信边界 */
 export interface IVaultKeeperAdapter {
-  /** 检查 VaultKeeper 是否可用（不抛异常） */
+  /** 检查外部处理服务是否可用（不抛异常） */
   checkHealth(): Promise<VKHealthStatus>;
   /** 提交一个处理任务 */
   submitJob(request: VKSubmitJobRequest): Promise<VKSubmitJobResponse>;

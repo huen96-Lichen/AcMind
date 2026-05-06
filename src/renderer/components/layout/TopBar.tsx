@@ -1,5 +1,5 @@
 import { Button, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import type { ShellSnapshot } from '../../hooks/useShellSnapshot';
 import type { LayoutMode } from '../../hooks/useLayoutMode';
 
@@ -13,9 +13,11 @@ interface TopBarProps {
 
 function viewTitle(view: string): string {
   const labels: Record<string, string> = {
-    'daily-flow': '首页',
-    'capture-inbox': '收集',
+    'daily-flow': '工作台',
+    'capture-inbox': '整理',
     distill: '整理',
+    'staging-pool': '暂存池',
+    'knowledge-cards': '知识库',
     import: '资料库',
     ai: 'AI',
     settings: '设置',
@@ -24,6 +26,12 @@ function viewTitle(view: string): string {
     errors: '错误回看',
     history: '处理历史',
     search: '搜索',
+    'agent-chat': 'Agent 对话',
+    'agent-tasks': '定时任务',
+    'auto-tools': '自动工具',
+    workbench: '工作台',
+    schedule: '日程表',
+    agent: 'Agent',
   };
   return labels[view] ?? 'AcMind';
 }
@@ -60,7 +68,7 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
             onClick={() => window.dispatchEvent(new CustomEvent('acmind:toggle-sidebar'))}
             title="菜单"
           >
-            <PinStackIcon name="settings" size={18} />
+            <AcMindIcon name="settings" size={18} />
           </Button>
         ) : null}
         <span className="truncate text-[13px] font-semibold text-[color:var(--pm-text-primary)]">
@@ -70,20 +78,38 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
 
       {!isSmall && !isCompact ? (
         <div className="no-drag flex min-w-0 flex-1 justify-center px-4">
-          <button
-            type="button"
-            className="pm-ds-search-field w-full max-w-[480px]"
-            onClick={() => onNavigate('search')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="pm-ds-search-icon" aria-hidden="true">
-              <PinStackIcon name="search" size={14} />
-            </span>
-            <span className="truncate text-[13px] text-[color:var(--pm-text-tertiary)]">
-              搜索内容、标签、来源
-            </span>
-            <span className="ml-auto text-[11px] text-[color:var(--pm-text-tertiary)]">⌘K</span>
-          </button>
+          <div className="flex w-full max-w-[560px] items-center gap-2">
+            <button
+              type="button"
+              className="pm-ds-search-field min-w-0 flex-1"
+              onClick={() => {
+                // 搜索归位到 Agent：唤起 Agent 并准备搜索
+                window.dispatchEvent(new CustomEvent('acmind:navigate', { detail: { view: 'agent' } }));
+                // 延迟后触发搜索焦点事件（Agent 页面加载需要时间）
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('acmind:focus-search'));
+                }, 100);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <span className="pm-ds-search-icon" aria-hidden="true">
+                <AcMindIcon name="search" size={14} />
+              </span>
+              <span className="truncate text-[13px] text-[color:var(--pm-text-tertiary)]">
+                让 Agent 帮你搜索知识库…
+              </span>
+              <span className="ml-auto text-[11px] text-[color:var(--pm-text-tertiary)]">⌘K</span>
+            </button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              leadingIcon={<AcMindIcon name="line-file-import" size={14} />}
+              onClick={() => onNavigate('auto-tools')}
+            >
+              自动工具
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -97,7 +123,7 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
         ) : null}
 
         <Button variant="icon" size="sm" onClick={() => onNavigate('settings')} title="设置">
-          <PinStackIcon name="settings" size={16} />
+          <AcMindIcon name="settings" size={16} />
         </Button>
 
         <button
@@ -110,7 +136,7 @@ export function TopBar({ snapshot, onRefresh, onNavigate, layoutMode, activeView
             <span className="acmind-topbar-avatar-letter">{avatarInitial}</span>
           ) : (
             <span className="acmind-topbar-avatar-logo">
-              <PinStackIcon name="brand-acmind-logo" size={14} />
+              <AcMindIcon name="brand-acmind-logo" size={14} />
             </span>
           )}
           {!isConfigured ? <span className="acmind-topbar-avatar-badge" /> : null}

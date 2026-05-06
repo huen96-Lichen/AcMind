@@ -16,7 +16,7 @@ import {
   ErrorState,
   Section,
 } from '../../design-system';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { distillWithRules } from '../../services/ruleBasedDistiller';
 import type { DistillConfig, DistillResult } from '../../services/ruleBasedDistiller';
 
@@ -245,7 +245,7 @@ export function DistillationWorkbench(): JSX.Element {
                   size="sm"
                   onClick={handlePasteFromClipboard}
                   disabled={state === 'processing'}
-                  leadingIcon={<PinStackIcon name="copy" size={12} />}
+                  leadingIcon={<AcMindIcon name="copy" size={12} />}
                 >
                   从剪贴板粘贴
                 </Button>
@@ -398,7 +398,7 @@ export function DistillationWorkbench(): JSX.Element {
               {state === 'idle' && (
                 <div className="flex-1 flex items-center justify-center">
                   <EmptyState
-                    icon={<PinStackIcon name="spark" size={28} style={{ color: 'var(--pm-text-tertiary)', opacity: 0.5 }} />}
+                    icon={<AcMindIcon name="spark" size={28} style={{ color: 'var(--pm-text-tertiary)', opacity: 0.5 }} />}
                     title="等待蒸馏结果"
                     description="在左侧输入或粘贴原始材料，配置参数后点击「开始蒸馏」"
                   />
@@ -409,7 +409,7 @@ export function DistillationWorkbench(): JSX.Element {
               {state === 'ready' && (
                 <div className="flex-1 flex items-center justify-center">
                   <EmptyState
-                    icon={<PinStackIcon name="spark" size={28} style={{ color: 'var(--pm-brand-primary)', opacity: 0.7 }} />}
+                    icon={<AcMindIcon name="spark" size={28} style={{ color: 'var(--pm-brand-primary)', opacity: 0.7 }} />}
                     title="已就绪"
                     description="点击「开始蒸馏」处理输入内容"
                   />
@@ -459,7 +459,7 @@ export function DistillationWorkbench(): JSX.Element {
                         size="sm"
                         onClick={handleSaveToFile}
                         disabled={isSaving}
-                        leadingIcon={<PinStackIcon name="save" size={12} />}
+                        leadingIcon={<AcMindIcon name="save" size={12} />}
                       >
                         {isSaving ? '保存中...' : '保存为 .md'}
                       </Button>
@@ -467,7 +467,7 @@ export function DistillationWorkbench(): JSX.Element {
                         variant="secondary"
                         size="sm"
                         onClick={handleCopyResult}
-                        leadingIcon={<PinStackIcon name="copy" size={12} />}
+                        leadingIcon={<AcMindIcon name="copy" size={12} />}
                       >
                         复制 Markdown
                       </Button>

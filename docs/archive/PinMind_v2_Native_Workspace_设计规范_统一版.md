@@ -1,3 +1,5 @@
+> ⚠️ 历史文档，路径和内容可能已过时，仅供参考。
+
 # AcMind v2.0 Native Workspace 设计规范
 
 > **适用产品**：AcMind v2.0

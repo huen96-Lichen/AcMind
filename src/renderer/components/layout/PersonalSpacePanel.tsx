@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../shared/ScrollContainer';
 import type { AppSettings, UserProfile, UserPreferences } from '../../../shared/types';
 import { DEFAULT_USER_PROFILE, DEFAULT_USER_PREFERENCES } from '../../../shared/types';
@@ -224,7 +224,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
             onClick={onClose}
             title="关闭"
           >
-            <PinStackIcon name="close" size={16} />
+            <AcMindIcon name="close" size={16} />
           </button>
         </div>
 
@@ -320,7 +320,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
                       className="ml-0.5 hover:opacity-70"
                       onClick={() => handleRemoveTag(tag)}
                     >
-                      <PinStackIcon name="close" size={10} />
+                      <AcMindIcon name="close" size={10} />
                     </button>
                   </span>
                 ))}
@@ -340,7 +340,7 @@ export function PersonalSpacePanel({ visible, onClose }: PersonalSpacePanelProps
                     onClick={handleAddTag}
                     title="添加标签"
                   >
-                    <PinStackIcon name="launcher" size={14} />
+                    <AcMindIcon name="launcher" size={14} />
                   </button>
                 </div>
               </div>

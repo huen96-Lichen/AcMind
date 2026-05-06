@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import type { ShellSnapshot } from '../../hooks/useShellSnapshot';
 import { ScrollContainer } from '../shared/ScrollContainer';
 import { EmptyState } from '../shared/EmptyState';
@@ -48,7 +48,7 @@ export function RightInspector({ activeView, snapshot, onNavigate }: RightInspec
             aria-label="关闭"
             onClick={() => onNavigate('capture-inbox')}
           >
-            <PinStackIcon name="close" size={16} />
+            <AcMindIcon name="close" size={16} />
           </button>
         ) : null}
       </div>
@@ -280,7 +280,7 @@ function EmptyInspector({ activeView }: { activeView: string }): JSX.Element {
   return (
     <div className="flex h-full items-center justify-center p-6">
       <EmptyState
-        icon={<PinStackIcon name="panel" size={24} />}
+        icon={<AcMindIcon name="panel" size={24} />}
         title="选择一条内容查看详情"
         description={hint}
       />

@@ -1,5 +1,5 @@
 // ExternalResultIngestionService
-// Phase 9.3: VaultKeeper 处理结果回填机制
+// Phase 9.3: 外部处理结果回填机制
 //
 // 职责：
 // - 根据 external_job_id 找到对应的 SourceItem
@@ -11,7 +11,7 @@
 // 不负责：
 // - Markdown 渲染
 // - Obsidian 写入
-// - VaultKeeper 通信（由 VaultKeeperAdapter 处理）
+// - 外部处理服务通信（由 ExternalProcessorAdapter 处理）
 
 import { logger } from '../../logger';
 import { storage } from '../../storage';
@@ -38,7 +38,7 @@ export interface IngestionResult {
 
 class ExternalResultIngestionService {
   /**
-   * 根据 job_id 查询 VaultKeeper 结果并回填到 SourceItem。
+   * 根据 job_id 查询外部处理结果并回填到 SourceItem。
    *
    * 流程：
    * 1. 通过 job_id 查询 VK 获取结果
@@ -118,7 +118,7 @@ class ExternalResultIngestionService {
         originalId,
         stage: 'vk_ingest',
         message: errorMsg,
-        userMessage: `VaultKeeper 结果回填失败: ${errorMsg}`,
+        userMessage: `外部处理结果回填失败: ${errorMsg}`,
         retryable: true,
       });
 

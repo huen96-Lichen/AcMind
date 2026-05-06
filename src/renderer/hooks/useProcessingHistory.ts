@@ -52,7 +52,7 @@ export interface ProcessingHistoryItem {
   qualityFlags: string[];
   /** Phase 8: Whether fallback was used */
   usedFallback: boolean;
-  /** Phase 9: VaultKeeper processing info */
+  /** Phase 9: 外部处理服务信息 */
   vkInfo: VKProcessingInfo | null;
 }
 
@@ -100,7 +100,7 @@ function resolveStatus(item: SourceItem, exportRecord: ExportRecord | null, erro
   if (item.status === 'distilling') {
     return { status: '正在整理', tone: 'warning' };
   }
-  // Phase 9: VaultKeeper processing status
+  // Phase 9: 外部处理服务状态
   const meta = (item as any).metadata ?? {};
   const vkStatus = meta.external_processing_status as string | undefined;
   if (vkStatus === 'processing') {
@@ -210,9 +210,9 @@ export function useProcessingHistory(): UseProcessingHistoryReturn {
       const usedFallback = (meta.used_fallback as boolean) ?? false;
 
       // Phase 9: Extract VK processing info from metadata
-      const vkInfo: VKProcessingInfo | null = meta.external_processor === 'vaultkeeper' ? {
+      const vkInfo: VKProcessingInfo | null = meta.external_processor === 'external' ? {
         external_job_id: (meta.external_job_id as string) ?? '',
-        external_processor: 'vaultkeeper',
+        external_processor: 'external',
         external_processing_status: (meta.external_processing_status as string) ?? 'unknown',
         external_job_type: (meta.external_job_type as string) ?? undefined,
         external_submitted_at: (meta.external_submitted_at as number) ?? undefined,

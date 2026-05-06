@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import {
   PageShell,
   PageHeader,
@@ -46,7 +46,7 @@ export function VoiceDictionaryPage(): JSX.Element {
       <Section title="ASR 引擎状态">
         <Card variant="elevated">
           <div className="flex items-center gap-3">
-            <PinStackIcon name={asrStatus?.configured ? 'status-success' : 'status-waiting'} size={20} />
+            <AcMindIcon name={asrStatus?.configured ? 'status-success' : 'status-waiting'} size={20} />
             <div>
               <div className="text-[13px] font-medium">
                 {asrStatus?.configured ? `已配置: ${asrStatus.provider}` : '未配置'}
@@ -118,7 +118,7 @@ function DictionarySection(): JSX.Element {
 
       {entries.length === 0 ? (
         <EmptyState
-          icon={<PinStackIcon name="sb-ai-process" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
+          icon={<AcMindIcon name="sb-ai-process" size={32} style={{ color: 'var(--pm-text-tertiary)' }} />}
           title="词典为空"
           description="添加专有名词、产品名等，帮助 ASR 更准确地转写"
         />
@@ -159,7 +159,7 @@ function DictionaryEntryRow({
           onClick={() => onToggle(!entry.enabled)}
         >
           {entry.enabled && (
-            <PinStackIcon name="status-success" size={12} style={{ color: 'white' }} />
+            <AcMindIcon name="status-success" size={12} style={{ color: 'white' }} />
           )}
         </button>
         <div className="flex-1 min-w-0">
@@ -178,7 +178,7 @@ function DictionaryEntryRow({
             <StatusBadge tone="info" label={`${entry.hits} 次命中`} dot={false} />
           )}
           <Button variant="ghost" size="sm" onClick={onDelete}>
-            <PinStackIcon name="close" size={14} />
+            <AcMindIcon name="close" size={14} />
           </Button>
         </div>
       </div>

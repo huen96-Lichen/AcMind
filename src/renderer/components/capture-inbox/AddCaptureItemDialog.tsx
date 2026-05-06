@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { CaptureItem } from '../../../shared/types';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -230,9 +230,9 @@ export function AddCaptureItemDialog({ open, onClose, onCreate, onWebpageCollect
   if (!open) return null;
 
   const tabs: { key: DialogTab; label: string; icon: JSX.Element }[] = [
-    { key: 'text', label: '文本', icon: <PinStackIcon name="text" size={13} /> },
-    { key: 'link', label: '链接', icon: <PinStackIcon name="duplicate" size={13} /> },
-    { key: 'image', label: '图片', icon: <PinStackIcon name="image" size={13} /> },
+    { key: 'text', label: '文本', icon: <AcMindIcon name="text" size={13} /> },
+    { key: 'link', label: '链接', icon: <AcMindIcon name="duplicate" size={13} /> },
+    { key: 'image', label: '图片', icon: <AcMindIcon name="image" size={13} /> },
   ];
 
   // Determine submit button label

@@ -27,8 +27,8 @@ const RETRY_STAGE_MAP: Record<ErrorType, string> = {
   template_missing: 'exporting',
   vault_missing: 'exporting',
   model_unavailable: 'processing',
-  // Phase 9.7: VaultKeeper 错误重试阶段
-  vaultkeeper_unavailable: 'processing',
+  // Phase 9.7: 外部服务错误重试阶段
+  external_service_unavailable: 'processing',
   external_job_failed: 'processing',
   external_result_invalid: 'processing',
   external_result_ingest_failed: 'processing',

@@ -7,10 +7,13 @@
  * - 本地 whisper CLI fallback
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { logger } from '../../logger';
 import { settings } from '../../settings';
+import type { TranscriptionLocalEngine } from '../../../shared/types';
+import { normalizeTranscriptionLanguage } from '../../../shared/transcriptionLanguage';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -49,21 +52,29 @@ class AsrProvider {
     const ts = s.transcription;
 
     // Check API provider
-    if (ts.provider === 'api' && ts.apiEndpoint && ts.apiKey) {
+    if (ts.provider === 'api') {
+      const endpoint = ts.apiEndpoint?.trim();
+      const apiKey = ts.apiKey?.trim();
+      const configured = Boolean(endpoint && apiKey);
       return {
         provider: 'openai_compatible',
-        configured: true,
-        message: `API endpoint: ${ts.apiEndpoint}`,
-        endpoint: ts.apiEndpoint,
+        configured,
+        message: configured
+          ? `API endpoint: ${endpoint}`
+          : 'ASR API not fully configured. Set both endpoint and API key in Settings → AI Models.',
+        endpoint,
       };
     }
 
     // Check local whisper
     if (ts.provider === 'local') {
+      const engine = this.resolveLocalEngine(ts.localEngine);
       return {
         provider: 'whisper_compatible',
-        configured: true,
-        message: `Local engine: ${ts.localEngine}, model: ${ts.localModel}`,
+        configured: Boolean(engine),
+        message: engine
+          ? `Local engine: ${engine}, model: ${ts.localModel}`
+          : 'No local transcription engine available. Install whisper-ctranslate2 or whisper.',
       };
     }
 
@@ -79,6 +90,15 @@ class AsrProvider {
    */
   async transcribe(filePath: string, options?: AsrTranscribeOptions): Promise<AsrTranscribeResult> {
     const status = this.getStatus();
+
+    if (!status.configured) {
+      return {
+        success: false,
+        text: '',
+        error: status.message,
+        engine: status.provider === 'openai_compatible' ? 'openai_compatible' : 'whisper_compatible',
+      };
+    }
 
     if (status.provider === 'openai_compatible') {
       return this.transcribeViaApi(filePath, options);
@@ -126,7 +146,7 @@ class AsrProvider {
       parts.push(Buffer.from(`${ts.apiModel || 'whisper-1'}\r\n`));
 
       // Language part
-      const language = options?.language ?? ts.apiLanguage;
+      const language = normalizeTranscriptionLanguage(options?.language ?? ts.apiLanguage);
       if (language) {
         parts.push(Buffer.from(`--${boundary}\r\n`));
         parts.push(Buffer.from(`Content-Disposition: form-data; name="language"\r\n\r\n`));
@@ -173,7 +193,7 @@ class AsrProvider {
         const response = await fetch(url, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': `multipart/form-data; boundary=${boundary}`,
           },
           body,
@@ -193,7 +213,7 @@ class AsrProvider {
           };
         }
 
-        const result = await response.json() as Record<string, unknown>;
+        const result = (await response.json()) as Record<string, unknown>;
         const text = (result.text as string) ?? '';
 
         return {
@@ -224,19 +244,44 @@ class AsrProvider {
   private async transcribeViaLocal(filePath: string, options?: AsrTranscribeOptions): Promise<AsrTranscribeResult> {
     const s = settings.load();
     const ts = s.transcription;
-    const engine = ts.localEngine ?? 'whisper-ctranslate2';
+    const engine = this.resolveLocalEngine(ts.localEngine);
     const model = ts.localModel ?? 'base';
 
-    try {
-      const args = [filePath, '--model', model, '--output_format', 'json'];
+    if (!engine) {
+      return {
+        success: false,
+        text: '',
+        error: 'No local transcription engine available. Install whisper-ctranslate2 or whisper.',
+        engine: ts.localEngine ?? 'whisper-ctranslate2',
+      };
+    }
 
-      const language = options?.language ?? ts.apiLanguage;
-      if (language) {
-        args.push('--language', language);
+    try {
+      const command = engine === 'whisper-ctranslate2' ? this.resolveWhisperCT2Command() : engine;
+      if (!command) {
+        return {
+          success: false,
+          text: '',
+          error: 'No local transcription engine available. Install whisper-ctranslate2 or whisper.',
+          engine,
+        };
       }
-      if (options?.translate) {
-        args.push('--task', 'translate');
-      }
+
+      const language = normalizeTranscriptionLanguage(options?.language ?? ts.apiLanguage, 'zh');
+      const tmpDir = path.join(process.cwd(), '.acmind-tmp');
+      mkdirSync(tmpDir, { recursive: true });
+
+      const args = [
+        filePath,
+        '--model',
+        model,
+        '--output_format',
+        'txt',
+        '--output_dir',
+        tmpDir,
+      ];
+      if (language) args.push('--language', language);
+      if (options?.translate) args.push('--task', 'translate');
 
       logger.info('app', 'asr', 'transcribe', `Running local ${engine}`, { file: filePath, model });
 
@@ -244,14 +289,44 @@ class AsrProvider {
       const { promisify } = await import('node:util');
       const execFileAsync = promisify(execFileCb);
 
-      const { stdout } = await execFileAsync(engine, args, { timeout: 300000 });
+      const { stdout } = await execFileAsync(command, args, { timeout: 300000 });
+      const baseName = path.basename(filePath, path.extname(filePath));
+      const txtPath = path.join(tmpDir, `${baseName}.txt`);
+      if (existsSync(txtPath)) {
+        const text = readFileSync(txtPath, 'utf8').trim();
+        logger.info('app', 'asr', 'transcribe', 'Local whisper output file read', {
+          engine,
+          file: filePath,
+          txtPath,
+          textLength: text.length,
+          preview: text.slice(0, 120),
+        });
+        try {
+          unlinkSync(txtPath);
+        } catch {
+          /* ignore cleanup error */
+        }
+        return {
+          success: true,
+          text,
+          language: language ?? undefined,
+          engine,
+        };
+      }
 
       // Try to parse JSON output
       try {
         const parsed = JSON.parse(stdout) as Record<string, unknown>;
+        const text = ((parsed.text as string) ?? '').trim();
+        logger.info('app', 'asr', 'transcribe', 'Local whisper stdout parsed as JSON', {
+          engine,
+          file: filePath,
+          textLength: text.length,
+          preview: text.slice(0, 120),
+        });
         return {
           success: true,
-          text: (parsed.text as string) ?? '',
+          text,
           language: parsed.language as string | undefined,
           duration: parsed.duration as number | undefined,
           segments: parsed.segments as AsrTranscribeResult['segments'],
@@ -259,9 +334,16 @@ class AsrProvider {
         };
       } catch {
         // Fallback: treat stdout as plain text
+        const text = stdout.trim();
+        logger.info('app', 'asr', 'transcribe', 'Local whisper stdout treated as plain text', {
+          engine,
+          file: filePath,
+          textLength: text.length,
+          preview: text.slice(0, 120),
+        });
         return {
           success: true,
-          text: stdout.trim(),
+          text,
           engine,
         };
       }
@@ -270,6 +352,107 @@ class AsrProvider {
       logger.error('error', 'asr', 'transcribe', `Local transcription failed: ${msg}`);
       return { success: false, text: '', error: msg, engine };
     }
+  }
+
+  private resolveLocalEngine(preferred: TranscriptionLocalEngine): TranscriptionLocalEngine | null {
+    const candidates: TranscriptionLocalEngine[] =
+      preferred === 'whisper' ? ['whisper', 'whisper-ctranslate2'] : ['whisper-ctranslate2', 'whisper'];
+
+    for (const engine of candidates) {
+      if (this.isLocalEngineAvailable(engine)) {
+        return engine;
+      }
+    }
+
+    return null;
+  }
+
+  private isLocalEngineAvailable(engine: TranscriptionLocalEngine): boolean {
+    try {
+      if (engine === 'whisper-ctranslate2') {
+        const command = this.resolveWhisperCT2Command();
+        if (!command) {
+          return false;
+        }
+        execFileSync(command, ['--help'], { timeout: 5000, stdio: 'pipe' });
+        return true;
+      }
+
+      const python = this.resolvePythonCommand();
+      if (!python) {
+        return false;
+      }
+
+      execFileSync(python, ['-c', 'import whisper'], { timeout: 5000, stdio: 'pipe' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private resolvePythonCommand(): string | null {
+    for (const command of ['python3', 'python']) {
+      try {
+        execFileSync(command, ['--version'], { timeout: 5000, stdio: 'pipe' });
+        return command;
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  }
+
+  private resolveWhisperCT2Command(): string | null {
+    const python = this.resolvePythonCommand();
+    const candidates = new Set<string>(['whisper-ctranslate2']);
+
+    if (python) {
+      try {
+        const script = `
+import os
+import site
+import sysconfig
+
+paths = []
+user_base = site.getuserbase()
+if user_base:
+  paths.append(os.path.join(user_base, 'bin', 'whisper-ctranslate2'))
+scripts_dir = sysconfig.get_path('scripts')
+if scripts_dir:
+  paths.append(os.path.join(scripts_dir, 'whisper-ctranslate2'))
+print('\\n'.join(paths))
+`;
+        const stdout = execFileSync(python, ['-c', script], { timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+        for (const line of stdout.toString('utf8').split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (trimmed) {
+            candidates.add(trimmed);
+          }
+        }
+      } catch {
+        // fall back to PATH lookup only
+      }
+    }
+
+    for (const candidate of candidates) {
+      if (candidate === 'whisper-ctranslate2') {
+        try {
+          execFileSync(candidate, ['--help'], { timeout: 5000, stdio: 'pipe' });
+          return candidate;
+        } catch {
+          continue;
+        }
+      }
+
+      try {
+        execFileSync(candidate, ['--help'], { timeout: 5000, stdio: 'pipe' });
+        return candidate;
+      } catch {
+        // continue
+      }
+    }
+
+    return null;
   }
 
   private getMimeType(filePath: string): string {

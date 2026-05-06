@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.13.0 (2026-05-05) — Phase 2: 整理链路打通
+
+### Changed
+- **useSourceItems.updateItem**：从乐观更新占位改为调用真实 `sourceItems.update` IPC
+- **DistillPage 整理页**：`handleDistill` / `handleRetry` 调用真实 `distill.run` IPC，新增整理进度 UI（spinner + 状态文案）
+- **StagingPoolPage 暂存池**："标记待整理"替换为直接"送入整理"流程，新增单条和批量送入整理按钮
+- **Sidebar 导航**："整理"导航从 `capture-inbox` 改为 `distill`（指向 DistillPage）
+- **状态流**：inbox → distilling → distilled → exported 在 UI 层完整串联
+
+### Added
+- **批量整理**：DistillPage 新增"全部整理"按钮，一键整理所有待整理条目
+- **整理进度追踪**：`distilling` 状态条目实时显示在待整理标签页，spinner + 状态文案
+- **单条重试**：整理失败的条目显示错误状态和重试按钮
+- **暂存池送入整理**：单条"送入整理"按钮 + 表头批量"送入整理"按钮，逐条追踪 distilling 状态
+- `docs/ACMIND_PHASE_2_DISTILL_EXPORT.md` — Phase 2 技术文档
+
+## 0.12.0 (2026-05-05) — Phase 1: 核心收集主链路固定
+
+### Changed
+- **数据源统一**：废弃 pinPool，所有收集内容统一写入 sourceItems
+- **SourceItem 类型扩展**：新增 `file`/`webpage`/`audio`/`video`/`screenshot` 类型，新增 `file_import`/`url_paste` 来源
+- **SourceItem 字段扩展**：新增 `filePath`/`thumbnailPath`/`updatedAt`/`fileSize`/`mimeType` 字段
+- **暂存池重构**：从 pinPool 数据源改为 sourceItems，支持类型筛选、搜索、详情面板、操作按钮
+- **工作台重构**：移除 pinPool 依赖，"记录想法"直接写入 sourceItems，"今日暂存"展示 sourceItems 数据
+- **剪贴板监听**：自动监听改为写入 sourceItems（不再写 pinPool）
+- **数据库迁移**：v21 迁移新增 `file_path`/`thumbnail_path`/`updated_at`/`file_size`/`mime_type` 列
+
+### Added
+- **通用文件导入**：支持任意文件类型导入为 sourceItem（记录文件名/路径/大小/MIME）
+- **URL 保存**：支持粘贴 URL 保存为 webpage 类型 sourceItem
+- **IPC 通道**：新增 `sourceItems.importFile`/`sourceItems.saveUrl`/`sourceItems.update`
+- **暂存池操作**：复制内容、删除、标记待整理、打开文件
+- **暂存池筛选**：全部/文本/图片/截图/文件/网页/音频
+- **暂存池空状态**：引导文案提示用户如何收集内容
+- **Toast 反馈**：所有关键操作（收集/删除/复制/标记）均有成功/失败反馈
+- `docs/ACMIND_PHASE_1_CAPTURE_INBOX.md` — Phase 1 技术文档
+
+### Removed
+- 暂存池不再使用 pinPool 作为数据源
+- 工作台不再使用 usePinPool hook
+
+## 0.11.0 (2026-05-05) — Phase 0.5: Acore 产品线收束与产品边界统一
+
+### Changed
+- **品牌统一**：Acore 确立为母品牌，AcMind 为主应用名
+- **导航收束**：一级导航从 8 项精简为 6 项（工作台、暂存池、整理、知识库、工具台、设置）
+  - Agent 对话降级为工具台子页
+  - 定时任务降级为工具台子页
+- **首页重构**：标题改为"工作台"，副标题改为"个人桌面 AI 信息中枢 — 从碎片收集到知识沉淀"
+- **CSS 类名统一**：`pinstack-*` 前缀全部替换为 `acmind-*`
+- **localStorage key 统一**：`pinstack.quicknote` → `acmind.quicknote`
+- **AI 助手中性化**：默认 systemPrompt 移除"小龙虾"人格，改为"你是 AcMind 的 AI 助手"
+  - 用户可在设置中自定义 AI 助手名称和人设
+
+### Added
+- `docs/ACORE_PRODUCT_MAP.md` — Acore 产品体系地图
+- `docs/ACMIND_PRODUCT_BOUNDARY.md` — AcMind 产品边界说明
+- `docs/PROJECT_HANDOVER.md` — 项目交接文档
+- `docs/WORKLOG.md` — 工作日志
+
 ## 0.10.0 (2026-05-03) — Phase 6: 语音能力深化
 
 ### Added

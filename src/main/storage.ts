@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import type {
@@ -40,7 +40,7 @@ import { logger } from './logger';
 // Schema definitions
 // ---------------------------------------------------------------------------
 
-const CURRENT_SCHEMA_VERSION = 18;
+const CURRENT_SCHEMA_VERSION = 21;
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS source_items (
@@ -320,6 +320,84 @@ CREATE TABLE IF NOT EXISTS _migration (
   version INTEGER NOT NULL,
   applied_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Phase A: Agent Chat Tables
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '新对话',
+  provider_id TEXT,
+  model_id TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_status ON chat_sessions(status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  model_id TEXT,
+  provider_id TEXT,
+  prompt_tokens INTEGER,
+  completion_tokens INTEGER,
+  latency_ms INTEGER,
+  error TEXT,
+  action_proposals TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at ASC);
+
+-- Phase C: Agent Tasks
+CREATE TABLE IF NOT EXISTS agent_tasks (
+  id TEXT PRIMARY KEY,
+  session_id TEXT REFERENCES chat_sessions(id),
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  skill_name TEXT,
+  input_params TEXT NOT NULL DEFAULT '{}',
+  result TEXT,
+  error TEXT,
+  started_at INTEGER,
+  completed_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks(status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS agent_task_events (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_task_events_task ON agent_task_events(task_id, created_at ASC);
+
+-- Phase D: Scheduled Agent Tasks
+CREATE TABLE IF NOT EXISTS scheduled_agent_tasks (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  cron_expression TEXT NOT NULL,
+  skill_name TEXT NOT NULL,
+  input_params TEXT NOT NULL DEFAULT '{}',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  last_run_at INTEGER,
+  last_run_status TEXT,
+  last_run_task_id TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_agent_tasks_enabled ON scheduled_agent_tasks(enabled, updated_at DESC);
 `;
 
 // ---------------------------------------------------------------------------
@@ -388,6 +466,33 @@ class StorageService {
   private stmtDeleteCaptureItem!: Database.Statement;
   private stmtGetKnowledgeCardBySourceItemId!: Database.Statement;
 
+  // Phase A: Agent Chat
+  private stmtInsertChatSession!: Database.Statement;
+  private stmtGetChatSession!: Database.Statement;
+  private stmtUpdateChatSession!: Database.Statement;
+  private stmtDeleteChatSession!: Database.Statement;
+  private stmtListChatSessions!: Database.Statement;
+  private stmtInsertChatMessage!: Database.Statement;
+  private stmtGetChatMessage!: Database.Statement;
+  private stmtUpdateChatMessage!: Database.Statement;
+  private stmtListChatMessages!: Database.Statement;
+
+  // Phase C: Agent Tasks
+  private stmtInsertAgentTask!: Database.Statement;
+  private stmtGetAgentTask!: Database.Statement;
+  private stmtUpdateAgentTask!: Database.Statement;
+  private stmtDeleteAgentTask!: Database.Statement;
+  private stmtListAgentTasks!: Database.Statement;
+  private stmtInsertAgentTaskEvent!: Database.Statement;
+  private stmtListAgentTaskEvents!: Database.Statement;
+
+  // Phase D: Scheduled Agent Tasks
+  private stmtInsertScheduledAgentTask!: Database.Statement;
+  private stmtGetScheduledAgentTask!: Database.Statement;
+  private stmtUpdateScheduledAgentTask!: Database.Statement;
+  private stmtDeleteScheduledAgentTask!: Database.Statement;
+  private stmtListScheduledAgentTasks!: Database.Statement;
+
   /**
    * Initialize the database: create file, run schema, apply migrations.
    */
@@ -417,6 +522,7 @@ class StorageService {
 
     this.runMigrations();
     this.prepareStatements();
+    this.seedFeaturedToolProjects();
 
     logger.info('app', 'storage', 'init', 'Storage initialized', {
       dbPath,
@@ -452,7 +558,7 @@ class StorageService {
           db.exec(SCHEMA_SQL);
         }
         if (currentVersion < 2) {
-          // Phase 6: VaultKeeper Import
+          // Phase 6: External Import
           db.exec(`
             CREATE TABLE IF NOT EXISTS import_tasks (
               id TEXT PRIMARY KEY,
@@ -933,6 +1039,82 @@ class StorageService {
           `);
         }
 
+        // v19: Rename vaultkeeper → external in DB
+        if (currentVersion < 19) {
+          // errors / error_records.error_type: vaultkeeper_unavailable → external_service_unavailable
+          for (const tableName of ['error_records', 'errors']) {
+            if (this.tableExists(db, tableName)) {
+              db.exec(`
+                UPDATE ${tableName} SET error_type = 'external_service_unavailable'
+                WHERE error_type = 'vaultkeeper_unavailable'
+              `);
+            }
+          }
+          // source_items.metadata: external_processor 'vaultkeeper' → 'external'
+          const rows = db.prepare(
+            `SELECT id, metadata FROM source_items WHERE metadata LIKE '%"vaultkeeper"%'`
+          ).all() as { id: string; metadata: string | null }[];
+          const updateStmt = db.prepare(
+            `UPDATE source_items SET metadata = ? WHERE id = ?`
+          );
+          for (const row of rows) {
+            if (!row.metadata) continue;
+            try {
+              const meta = JSON.parse(row.metadata);
+              if (meta.external_processor === 'vaultkeeper') {
+                meta.external_processor = 'external';
+                updateStmt.run(JSON.stringify(meta), row.id);
+              }
+            } catch { /* skip malformed JSON */ }
+          }
+        }
+
+        // ── v20: ToolBench tables ──
+        if (currentVersion < 20) {
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS tool_projects (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT NOT NULL DEFAULT '',
+              repo_url TEXT,
+              local_path TEXT,
+              launch_command TEXT,
+              docs_path TEXT,
+              category TEXT NOT NULL DEFAULT 'other',
+              tags_json TEXT NOT NULL DEFAULT '[]',
+              status TEXT NOT NULL DEFAULT 'saved',
+              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+              last_used_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_tool_projects_category ON tool_projects(category);
+            CREATE INDEX IF NOT EXISTS idx_tool_projects_updated_at ON tool_projects(updated_at);
+
+            CREATE TABLE IF NOT EXISTS local_script_tools (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              command TEXT NOT NULL,
+              working_directory TEXT,
+              description TEXT NOT NULL DEFAULT '',
+              tags_json TEXT NOT NULL DEFAULT '[]',
+              safety_level TEXT NOT NULL DEFAULT 'safe',
+              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+              last_used_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_local_script_tools_updated_at ON local_script_tools(updated_at);
+          `);
+        }
+
+        // v21: Add file-related columns to source_items
+        if (currentVersion < 21) {
+          try { db.exec(`ALTER TABLE source_items ADD COLUMN file_path TEXT`); } catch { /* column may already exist */ }
+          try { db.exec(`ALTER TABLE source_items ADD COLUMN thumbnail_path TEXT`); } catch { /* column may already exist */ }
+          try { db.exec(`ALTER TABLE source_items ADD COLUMN updated_at INTEGER`); } catch { /* column may already exist */ }
+          try { db.exec(`ALTER TABLE source_items ADD COLUMN file_size INTEGER`); } catch { /* column may already exist */ }
+          try { db.exec(`ALTER TABLE source_items ADD COLUMN mime_type TEXT`); } catch { /* column may already exist */ }
+        }
+
         db.prepare(
           'INSERT OR REPLACE INTO _migration (version) VALUES (?)',
         ).run(CURRENT_SCHEMA_VERSION);
@@ -970,6 +1152,45 @@ class StorageService {
     db.exec(`UPDATE ai_tasks SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = 0`);
   }
 
+  private tableExists(db: Database.Database, tableName: string): boolean {
+    const row = db.prepare(
+      `SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1`,
+    ).get(tableName);
+    return !!row;
+  }
+
+  /**
+   * Seed a small set of curated tool entries so useful local projects show up
+   * in ToolBench without manual import.
+   */
+  private seedFeaturedToolProjects(): void {
+    const featuredProjects = [
+      {
+        id: 'featured_ztools_search',
+        name: 'ZTools',
+        description: '一个高性能、可扩展的桌面搜索工具和插件平台，适合作为 AcMind 的搜索能力参考项目。',
+        repoUrl: 'https://github.com/ZToolsCenter/ZTools',
+        localPath: '/Volumes/White Atlas/03_Projects/AcMind/GitHub/ZTools-main',
+        launchCommand: 'cd "/Volumes/White Atlas/03_Projects/AcMind/GitHub/ZTools-main" && pnpm dev',
+        docsPath: '/Volumes/White Atlas/03_Projects/AcMind/GitHub/ZTools-main/README.md',
+        category: 'knowledge',
+        tags: ['搜索', '启动器', '插件平台'],
+        status: 'saved',
+      },
+    ];
+
+    for (const project of featuredProjects) {
+      if (project.localPath && !existsSync(project.localPath)) {
+        continue;
+      }
+      const existing = project.localPath ? this.getGithubProjectByLocalPath(project.localPath) : null;
+      if (existing) {
+        continue;
+      }
+      this.insertGithubProject({ ...project });
+    }
+  }
+
   /**
    * Get the raw database instance (for ErrorService initialization).
    */
@@ -984,8 +1205,8 @@ class StorageService {
     const db = this._db!;
 
     this.stmtInsertSourceItem = db.prepare(`
-      INSERT INTO source_items (id, capture_item_id, type, source, content_path, content_hash, preview_text, ocr_text, source_app, original_url, created_at, status, title, tags, vault_import_path, original_id, metadata)
-      VALUES (@id, @capture_item_id, @type, @source, @content_path, @content_hash, @preview_text, @ocr_text, @source_app, @original_url, @created_at, @status, @title, @tags, @vault_import_path, @original_id, @metadata)
+      INSERT INTO source_items (id, capture_item_id, type, source, content_path, content_hash, preview_text, ocr_text, source_app, original_url, created_at, status, title, tags, vault_import_path, original_id, metadata, file_path, thumbnail_path, updated_at, file_size, mime_type)
+      VALUES (@id, @capture_item_id, @type, @source, @content_path, @content_hash, @preview_text, @ocr_text, @source_app, @original_url, @created_at, @status, @title, @tags, @vault_import_path, @original_id, @metadata, @file_path, @thumbnail_path, @updated_at, @file_size, @mime_type)
     `);
 
     this.stmtGetSourceItem = db.prepare('SELECT * FROM source_items WHERE id = ?');
@@ -996,7 +1217,8 @@ class StorageService {
         capture_item_id = @capture_item_id, type = @type, source = @source, content_path = @content_path, content_hash = @content_hash,
         preview_text = @preview_text, ocr_text = @ocr_text, source_app = @source_app,
         original_url = @original_url, status = @status, title = @title, tags = @tags,
-        vault_import_path = @vault_import_path, original_id = @original_id, metadata = @metadata
+        vault_import_path = @vault_import_path, original_id = @original_id, metadata = @metadata,
+        file_path = @file_path, thumbnail_path = @thumbnail_path, updated_at = @updated_at, file_size = @file_size, mime_type = @mime_type
       WHERE id = @id
     `);
 
@@ -1191,6 +1413,112 @@ class StorageService {
     `);
 
     this.stmtDeleteCaptureItem = db.prepare('DELETE FROM capture_items WHERE id = ?');
+
+    // Phase A: Agent Chat prepared statements
+    this.stmtInsertChatSession = db.prepare(`
+      INSERT INTO chat_sessions (id, title, provider_id, model_id, status, metadata, created_at, updated_at)
+      VALUES (@id, @title, @provider_id, @model_id, @status, @metadata, @created_at, @updated_at)
+    `);
+
+    this.stmtGetChatSession = db.prepare('SELECT * FROM chat_sessions WHERE id = ?');
+
+    this.stmtUpdateChatSession = db.prepare(`
+      UPDATE chat_sessions SET
+        title = @title, provider_id = @provider_id, model_id = @model_id,
+        status = @status, metadata = @metadata, updated_at = @updated_at
+      WHERE id = @id
+    `);
+
+    this.stmtDeleteChatSession = db.prepare('DELETE FROM chat_sessions WHERE id = ?');
+
+    this.stmtListChatSessions = db.prepare(`
+      SELECT * FROM chat_sessions
+      WHERE status = @status
+      ORDER BY updated_at DESC
+      LIMIT @limit OFFSET @offset
+    `);
+
+    this.stmtInsertChatMessage = db.prepare(`
+      INSERT INTO chat_messages (id, session_id, role, content, status, model_id, provider_id, prompt_tokens, completion_tokens, latency_ms, error, action_proposals, created_at)
+      VALUES (@id, @session_id, @role, @content, @status, @model_id, @provider_id, @prompt_tokens, @completion_tokens, @latency_ms, @error, @action_proposals, @created_at)
+    `);
+
+    this.stmtGetChatMessage = db.prepare('SELECT * FROM chat_messages WHERE id = ?');
+
+    this.stmtUpdateChatMessage = db.prepare(`
+      UPDATE chat_messages SET
+        content = @content, status = @status, model_id = @model_id, provider_id = @provider_id,
+        prompt_tokens = @prompt_tokens, completion_tokens = @completion_tokens, latency_ms = @latency_ms,
+        error = @error, action_proposals = @action_proposals
+      WHERE id = @id
+    `);
+
+    this.stmtListChatMessages = db.prepare(`
+      SELECT * FROM chat_messages
+      WHERE session_id = @session_id
+      ORDER BY created_at ASC
+      LIMIT @limit
+    `);
+
+    // Phase C: Agent Tasks prepared statements
+    this.stmtInsertAgentTask = db.prepare(`
+      INSERT INTO agent_tasks (id, session_id, name, status, skill_name, input_params, result, error, started_at, completed_at, created_at, updated_at)
+      VALUES (@id, @session_id, @name, @status, @skill_name, @input_params, @result, @error, @started_at, @completed_at, @created_at, @updated_at)
+    `);
+
+    this.stmtGetAgentTask = db.prepare('SELECT * FROM agent_tasks WHERE id = ?');
+
+    this.stmtUpdateAgentTask = db.prepare(`
+      UPDATE agent_tasks SET
+        name = @name, status = @status, skill_name = @skill_name,
+        input_params = @input_params, result = @result, error = @error,
+        started_at = @started_at, completed_at = @completed_at, updated_at = @updated_at
+      WHERE id = @id
+    `);
+
+    this.stmtDeleteAgentTask = db.prepare('DELETE FROM agent_tasks WHERE id = ?');
+
+    this.stmtListAgentTasks = db.prepare(`
+      SELECT * FROM agent_tasks
+      WHERE status = @status
+      ORDER BY updated_at DESC
+      LIMIT @limit OFFSET @offset
+    `);
+
+    this.stmtInsertAgentTaskEvent = db.prepare(`
+      INSERT INTO agent_task_events (id, task_id, event_type, description, metadata, created_at)
+      VALUES (@id, @task_id, @event_type, @description, @metadata, @created_at)
+    `);
+
+    this.stmtListAgentTaskEvents = db.prepare(`
+      SELECT * FROM agent_task_events
+      WHERE task_id = @task_id
+      ORDER BY created_at ASC
+      LIMIT @limit
+    `);
+
+    // Phase D: Scheduled Agent Tasks prepared statements
+    this.stmtInsertScheduledAgentTask = db.prepare(`
+      INSERT INTO scheduled_agent_tasks (id, name, cron_expression, skill_name, input_params, enabled, last_run_at, last_run_status, last_run_task_id, created_at, updated_at)
+      VALUES (@id, @name, @cron_expression, @skill_name, @input_params, @enabled, @last_run_at, @last_run_status, @last_run_task_id, @created_at, @updated_at)
+    `);
+
+    this.stmtGetScheduledAgentTask = db.prepare('SELECT * FROM scheduled_agent_tasks WHERE id = ?');
+
+    this.stmtUpdateScheduledAgentTask = db.prepare(`
+      UPDATE scheduled_agent_tasks SET
+        name = @name, cron_expression = @cron_expression, skill_name = @skill_name,
+        input_params = @input_params, enabled = @enabled, last_run_at = @last_run_at,
+        last_run_status = @last_run_status, last_run_task_id = @last_run_task_id, updated_at = @updated_at
+      WHERE id = @id
+    `);
+
+    this.stmtDeleteScheduledAgentTask = db.prepare('DELETE FROM scheduled_agent_tasks WHERE id = ?');
+
+    this.stmtListScheduledAgentTasks = db.prepare(`
+      SELECT * FROM scheduled_agent_tasks
+      ORDER BY updated_at DESC
+    `);
   }
 
   // -------------------------------------------------------------------------
@@ -1307,6 +1635,24 @@ class StorageService {
     `).run(id, params.sourceItemId, params.fromState, params.toState, params.actor ?? 'system', params.reason ?? null, params.error ?? null);
   }
 
+  // ---------------------------------------------------------------------------
+  // Capture → SourceItem bridge helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Map CaptureItem.type to SourceItem.source.
+   * Preserves capture origin semantics instead of hardcoding 'manual'.
+   */
+  private mapCaptureTypeToSource(type: CaptureItem['type']): SourceItem['source'] {
+    switch (type) {
+      case 'image': return 'screenshot';
+      case 'audio': return 'audio';
+      case 'text': return 'clipboard';
+      case 'link': return 'manual';
+      default: return 'manual';
+    }
+  }
+
   createSourceItemFromCaptureItem(captureItemId: string): SourceItem {
     const existing = this.getSourceItemByCaptureItemId(captureItemId);
     if (existing) {
@@ -1356,7 +1702,7 @@ class StorageService {
       id: sourceId,
       captureItemId,
       type: sourceType,
-      source: mapCaptureTypeToSource(captureItem.type),
+      source: this.mapCaptureTypeToSource(captureItem.type),
       contentPath,
       contentHash,
       previewText: captureItem.title || contentText.slice(0, 240) || captureItem.userNote || '',
@@ -1390,6 +1736,11 @@ class StorageService {
       vault_import_path: item.vaultImportPath ?? null,
       original_id: item.originalId ?? null,
       metadata: item.metadata ? JSON.stringify(item.metadata) : null,
+      file_path: item.filePath ?? null,
+      thumbnail_path: item.thumbnailPath ?? null,
+      updated_at: item.updatedAt ?? null,
+      file_size: item.fileSize ?? null,
+      mime_type: item.mimeType ?? null,
     });
 
     logger.info('app', 'storage', 'insertSourceItem', `SourceItem created: ${item.id}`, {
@@ -1427,6 +1778,11 @@ class StorageService {
       vault_import_path: merged.vaultImportPath ?? null,
       original_id: merged.originalId ?? null,
       metadata: merged.metadata ? JSON.stringify(merged.metadata) : null,
+      file_path: merged.filePath ?? null,
+      thumbnail_path: merged.thumbnailPath ?? null,
+      updated_at: merged.updatedAt ?? null,
+      file_size: merged.fileSize ?? null,
+      mime_type: merged.mimeType ?? null,
     });
 
     logger.info('app', 'storage', 'updateSourceItem', `SourceItem updated: ${id}`);
@@ -1438,6 +1794,99 @@ class StorageService {
       throw new Error(`SourceItem not found: ${id}`);
     }
     logger.info('app', 'storage', 'deleteSourceItem', `SourceItem deleted: ${id}`);
+  }
+
+  importFileAsSourceItem(filePath: string): SourceItem {
+    if (!existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    const stat = statSync(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypeMap: Record<string, string> = {
+      '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+      '.bmp': 'image/bmp', '.mp3': 'audio/mpeg', '.wav': 'audio/wav',
+      '.mp4': 'video/mp4', '.pdf': 'application/pdf', '.txt': 'text/plain',
+      '.md': 'text/markdown', '.json': 'application/json',
+    };
+    const mimeType = mimeTypeMap[ext] || 'application/octet-stream';
+
+    let itemType: SourceItem['type'] = 'file';
+    if (mimeType.startsWith('image/')) itemType = 'image';
+    else if (mimeType.startsWith('audio/')) itemType = 'audio';
+    else if (mimeType.startsWith('video/')) itemType = 'video';
+
+    const now = Math.floor(Date.now() / 1000);
+    const storageRoot = this.storageRoot ?? process.cwd();
+    const dateDir = new Date(now * 1000).toISOString().slice(0, 10);
+    const importDir = path.join(storageRoot, 'sources', dateDir, 'file-import');
+    mkdirSync(importDir, { recursive: true });
+
+    const id = randomUUID();
+    const destPath = path.join(importDir, `${id}${ext}`);
+    copyFileSync(filePath, destPath);
+
+    const contentHash = createHash('sha256').update(readFileSync(filePath)).digest('hex');
+
+    const sourceItem: SourceItem = {
+      id,
+      type: itemType,
+      source: 'file_import',
+      contentPath: destPath,
+      filePath: filePath,
+      contentHash,
+      previewText: path.basename(filePath),
+      title: path.basename(filePath, ext),
+      createdAt: now,
+      status: 'inbox',
+      fileSize: stat.size,
+      mimeType,
+    };
+
+    this.insertSourceItem(sourceItem);
+    return sourceItem;
+  }
+
+  saveUrlAsSourceItem(url: string): SourceItem {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const storageRoot = this.storageRoot ?? process.cwd();
+    const dateDir = new Date(now * 1000).toISOString().slice(0, 10);
+    const urlDir = path.join(storageRoot, 'sources', dateDir, 'url-import');
+    mkdirSync(urlDir, { recursive: true });
+
+    const id = randomUUID();
+    const contentPath = path.join(urlDir, `${id}.txt`);
+    writeFileSync(contentPath, url, 'utf8');
+
+    const contentHash = createHash('sha256').update(url).digest('hex');
+
+    let parsedTitle: string | undefined;
+    try {
+      parsedTitle = new URL(url).hostname;
+    } catch {
+      parsedTitle = undefined;
+    }
+
+    const sourceItem: SourceItem = {
+      id,
+      type: 'url',
+      source: 'url_paste',
+      contentPath,
+      contentHash,
+      previewText: url,
+      originalUrl: url,
+      title: parsedTitle,
+      createdAt: now,
+      status: 'inbox',
+    };
+
+    this.insertSourceItem(sourceItem);
+    return sourceItem;
   }
 
   searchSourceItems(query: string): SourceItem[] {
@@ -1987,6 +2436,7 @@ class StorageService {
     return rows.map(this.rowToReviewEvent);
   }
 
+  /** @deprecated Use createDataset (v2) instead */
   createDatasetSnapshot(snapshot: DatasetSnapshot): void {
     this.stmtInsertDatasetSnapshot.run({
       id: snapshot.id,
@@ -2001,6 +2451,7 @@ class StorageService {
     });
   }
 
+  /** @deprecated Use updateDataset (v2) instead */
   updateDatasetSnapshot(id: string, patch: Partial<DatasetSnapshot>): DatasetSnapshot | null {
     const existing = this.getDatasetSnapshot(id);
     if (!existing) {
@@ -2027,11 +2478,13 @@ class StorageService {
     return this.getDatasetSnapshot(id);
   }
 
+  /** @deprecated Use getDatasets (v2) instead */
   getDatasetSnapshots(): DatasetSnapshot[] {
     const rows = this._db!.prepare('SELECT * FROM dataset_snapshots ORDER BY created_at DESC').all() as Record<string, unknown>[];
     return rows.map(this.rowToDatasetSnapshot);
   }
 
+  /** @deprecated Use getDataset (v2) instead */
   getDatasetSnapshot(id: string): DatasetSnapshot | null {
     const row = this._db!.prepare('SELECT * FROM dataset_snapshots WHERE id = ?').get(id) as Record<string, unknown> | undefined;
     return row ? this.rowToDatasetSnapshot(row) : null;
@@ -2444,6 +2897,11 @@ class StorageService {
       vaultImportPath: (row.vault_import_path as string) ?? undefined,
       originalId: (row.original_id as string) ?? undefined,
       metadata: parseJson<Record<string, unknown> | undefined>(row.metadata as string, undefined),
+      filePath: (row.file_path as string) ?? undefined,
+      thumbnailPath: (row.thumbnail_path as string) ?? undefined,
+      updatedAt: (row.updated_at as number) ?? undefined,
+      fileSize: (row.file_size as number) ?? undefined,
+      mimeType: (row.mime_type as string) ?? undefined,
     };
   }
 
@@ -3714,6 +4172,481 @@ class StorageService {
       }
       return { path: dirPath, count: items.length };
     }
+  }
+
+  // ─── ToolBench: GitHub Projects ──────────────────────────────────
+
+  insertGithubProject(p: {
+    id: string; name: string; description: string;
+    repoUrl?: string; localPath?: string; launchCommand?: string; docsPath?: string;
+    category: string; tags: string[]; status: string;
+  }): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO tool_projects (id, name, description, repo_url, local_path, launch_command, docs_path, category, tags_json, status)
+      VALUES (@id, @name, @description, @repo_url, @local_path, @launch_command, @docs_path, @category, @tags_json, @status)
+    `).run({
+      id: p.id, name: p.name, description: p.description,
+      repo_url: p.repoUrl ?? null, local_path: p.localPath ?? null,
+      launch_command: p.launchCommand ?? null, docs_path: p.docsPath ?? null,
+      category: p.category, tags_json: JSON.stringify(p.tags), status: p.status,
+    });
+  }
+
+  listGithubProjects(): any[] {
+    const db = this._db!;
+    return (db.prepare('SELECT * FROM tool_projects ORDER BY updated_at DESC').all() as any[]).map(this.rowToGithubProject);
+  }
+
+  getGithubProject(id: string): any | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM tool_projects WHERE id = ?').get(id);
+    return row ? this.rowToGithubProject(row) : null;
+  }
+
+  updateGithubProject(id: string, patch: Record<string, unknown>): void {
+    const db = this._db!;
+    const allowed = ['name', 'description', 'repo_url', 'local_path', 'launch_command', 'docs_path', 'category', 'tags_json', 'status', 'last_used_at'];
+    const sets: string[] = [];
+    const values: Record<string, unknown> = { id };
+    for (const key of allowed) {
+      if (key in patch) {
+        const col = key;
+        sets.push(`${col} = @${key}`);
+        values[key] = key === 'tags_json' && Array.isArray(patch[key]) ? JSON.stringify(patch[key]) : patch[key];
+      }
+    }
+    if (sets.length === 0) return;
+    sets.push("updated_at = datetime('now')");
+    db.prepare(`UPDATE tool_projects SET ${sets.join(', ')} WHERE id = @id`).run(values);
+  }
+
+  deleteGithubProject(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM tool_projects WHERE id = ?').run(id);
+  }
+
+  getGithubProjectByLocalPath(localPath: string): any | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM tool_projects WHERE local_path = ?').get(localPath);
+    return row ? this.rowToGithubProject(row) : null;
+  }
+
+  private rowToGithubProject(row: any): any {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      repoUrl: row.repo_url,
+      localPath: row.local_path,
+      launchCommand: row.launch_command,
+      docsPath: row.docs_path,
+      category: row.category,
+      tags: parseJson<string[]>(row.tags_json, []),
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      lastUsedAt: row.last_used_at,
+    };
+  }
+
+  // ─── ToolBench: Local Scripts ────────────────────────────────────
+
+  insertLocalScript(s: {
+    id: string; name: string; command: string;
+    workingDirectory?: string; description: string;
+    tags: string[]; safetyLevel: string;
+  }): void {
+    const db = this._db!;
+    db.prepare(`
+      INSERT INTO local_script_tools (id, name, command, working_directory, description, tags_json, safety_level)
+      VALUES (@id, @name, @command, @working_directory, @description, @tags_json, @safety_level)
+    `).run({
+      id: s.id, name: s.name, command: s.command,
+      working_directory: s.workingDirectory ?? null, description: s.description,
+      tags_json: JSON.stringify(s.tags), safety_level: s.safetyLevel,
+    });
+  }
+
+  listLocalScripts(): any[] {
+    const db = this._db!;
+    return (db.prepare('SELECT * FROM local_script_tools ORDER BY updated_at DESC').all() as any[]).map(this.rowToLocalScript);
+  }
+
+  getLocalScript(id: string): any | null {
+    const db = this._db!;
+    const row = db.prepare('SELECT * FROM local_script_tools WHERE id = ?').get(id);
+    return row ? this.rowToLocalScript(row) : null;
+  }
+
+  updateLocalScript(id: string, patch: Record<string, unknown>): void {
+    const db = this._db!;
+    const allowed = ['name', 'command', 'working_directory', 'description', 'tags_json', 'safety_level', 'last_used_at'];
+    const sets: string[] = [];
+    const values: Record<string, unknown> = { id };
+    for (const key of allowed) {
+      if (key in patch) {
+        sets.push(`${key} = @${key}`);
+        values[key] = key === 'tags_json' && Array.isArray(patch[key]) ? JSON.stringify(patch[key]) : patch[key];
+      }
+    }
+    if (sets.length === 0) return;
+    sets.push("updated_at = datetime('now')");
+    db.prepare(`UPDATE local_script_tools SET ${sets.join(', ')} WHERE id = @id`).run(values);
+  }
+
+  deleteLocalScript(id: string): void {
+    const db = this._db!;
+    db.prepare('DELETE FROM local_script_tools WHERE id = ?').run(id);
+  }
+
+  private rowToLocalScript(row: any): any {
+    return {
+      id: row.id,
+      name: row.name,
+      command: row.command,
+      workingDirectory: row.working_directory,
+      description: row.description,
+      tags: parseJson<string[]>(row.tags_json, []),
+      safetyLevel: row.safety_level,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      lastUsedAt: row.last_used_at,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Phase A: Agent Chat CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ─── Chat Session ─────────────────────────────────────────────
+
+  insertChatSession(session: import('../shared/types').ChatSession): void {
+    this.stmtInsertChatSession.run({
+      id: session.id,
+      title: session.title,
+      provider_id: session.providerId ?? null,
+      model_id: session.modelId ?? null,
+      status: session.status,
+      metadata: JSON.stringify(session.metadata ?? {}),
+      created_at: session.createdAt,
+      updated_at: session.updatedAt,
+    });
+  }
+
+  getChatSession(id: string): import('../shared/types').ChatSession | null {
+    const row = this.stmtGetChatSession.get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToChatSession(row) : null;
+  }
+
+  updateChatSession(id: string, patch: Partial<import('../shared/types').ChatSession>): void {
+    const existing = this.getChatSession(id);
+    if (!existing) return;
+    const merged: import('../shared/types').ChatSession = { ...existing, ...patch, id, updatedAt: Math.floor(Date.now() / 1000) };
+    this.stmtUpdateChatSession.run({
+      id,
+      title: merged.title,
+      provider_id: merged.providerId ?? null,
+      model_id: merged.modelId ?? null,
+      status: merged.status,
+      metadata: JSON.stringify(merged.metadata ?? {}),
+      updated_at: merged.updatedAt,
+    });
+  }
+
+  deleteChatSession(id: string): void {
+    this.stmtDeleteChatSession.run(id);
+  }
+
+  listChatSessions(filter?: { status?: string; limit?: number; offset?: number }): import('../shared/types').ChatSession[] {
+    const rows = this.stmtListChatSessions.all({
+      status: filter?.status ?? 'active',
+      limit: filter?.limit ?? 100,
+      offset: filter?.offset ?? 0,
+    }) as Record<string, unknown>[];
+    return rows.map(this.rowToChatSession);
+  }
+
+  private rowToChatSession(row: Record<string, unknown>): import('../shared/types').ChatSession {
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      providerId: (row.provider_id as string) ?? null,
+      modelId: (row.model_id as string) ?? null,
+      status: row.status as import('../shared/types').ChatSession['status'],
+      metadata: parseJson(row.metadata as string, {}),
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+    };
+  }
+
+  // ─── Chat Message ─────────────────────────────────────────────
+
+  insertChatMessage(message: import('../shared/types').ChatMessage): void {
+    this.stmtInsertChatMessage.run({
+      id: message.id,
+      session_id: message.sessionId,
+      role: message.role,
+      content: message.content,
+      status: message.status,
+      model_id: message.modelId ?? null,
+      provider_id: message.providerId ?? null,
+      prompt_tokens: message.promptTokens ?? null,
+      completion_tokens: message.completionTokens ?? null,
+      latency_ms: message.latencyMs ?? null,
+      error: message.error ?? null,
+      action_proposals: JSON.stringify(message.actionProposals ?? []),
+      created_at: message.createdAt,
+    });
+  }
+
+  getChatMessage(id: string): import('../shared/types').ChatMessage | null {
+    const row = this.stmtGetChatMessage.get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToChatMessage(row) : null;
+  }
+
+  updateChatMessage(id: string, patch: Partial<import('../shared/types').ChatMessage>): void {
+    const existing = this.getChatMessage(id);
+    if (!existing) return;
+    const merged: import('../shared/types').ChatMessage = { ...existing, ...patch, id };
+    this.stmtUpdateChatMessage.run({
+      id,
+      content: merged.content,
+      status: merged.status,
+      model_id: merged.modelId ?? null,
+      provider_id: merged.providerId ?? null,
+      prompt_tokens: merged.promptTokens ?? null,
+      completion_tokens: merged.completionTokens ?? null,
+      latency_ms: merged.latencyMs ?? null,
+      error: merged.error ?? null,
+      action_proposals: JSON.stringify(merged.actionProposals ?? []),
+    });
+  }
+
+  listChatMessages(sessionId: string, filter?: { limit?: number }): import('../shared/types').ChatMessage[] {
+    const rows = this.stmtListChatMessages.all({
+      session_id: sessionId,
+      limit: filter?.limit ?? 1000,
+    }) as Record<string, unknown>[];
+    return rows.map(this.rowToChatMessage);
+  }
+
+  private rowToChatMessage(row: Record<string, unknown>): import('../shared/types').ChatMessage {
+    return {
+      id: row.id as string,
+      sessionId: row.session_id as string,
+      role: row.role as import('../shared/types').ChatMessage['role'],
+      content: row.content as string,
+      status: row.status as import('../shared/types').ChatMessage['status'],
+      modelId: (row.model_id as string) ?? null,
+      providerId: (row.provider_id as string) ?? null,
+      promptTokens: (row.prompt_tokens as number) ?? null,
+      completionTokens: (row.completion_tokens as number) ?? null,
+      latencyMs: (row.latency_ms as number) ?? null,
+      error: (row.error as string) ?? null,
+      actionProposals: parseJson(row.action_proposals as string, []),
+      createdAt: row.created_at as number,
+    };
+  }
+
+  // ─── Agent Task (Phase C) ─────────────────────────────────────
+
+  insertAgentTask(task: import('../shared/types').AgentTask): void {
+    this.stmtInsertAgentTask.run({
+      id: task.id,
+      session_id: task.sessionId,
+      name: task.name,
+      status: task.status,
+      skill_name: task.skillName ?? null,
+      input_params: JSON.stringify(task.inputParams),
+      result: task.result ?? null,
+      error: task.error ?? null,
+      started_at: task.startedAt ?? null,
+      completed_at: task.completedAt ?? null,
+      created_at: task.createdAt,
+      updated_at: task.updatedAt,
+    });
+  }
+
+  getAgentTask(id: string): import('../shared/types').AgentTask | null {
+    const row = this.stmtGetAgentTask.get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToAgentTask(row) : null;
+  }
+
+  updateAgentTask(id: string, patch: Partial<import('../shared/types').AgentTask>): void {
+    const existing = this.getAgentTask(id);
+    if (!existing) return;
+    const merged: import('../shared/types').AgentTask = { ...existing, ...patch, id, updatedAt: Math.floor(Date.now() / 1000) };
+    this.stmtUpdateAgentTask.run({
+      id,
+      name: merged.name,
+      status: merged.status,
+      skill_name: merged.skillName ?? null,
+      input_params: JSON.stringify(merged.inputParams),
+      result: merged.result ?? null,
+      error: merged.error ?? null,
+      started_at: merged.startedAt ?? null,
+      completed_at: merged.completedAt ?? null,
+      updated_at: merged.updatedAt,
+    });
+  }
+
+  deleteAgentTask(id: string): void {
+    this.stmtDeleteAgentTask.run(id);
+  }
+
+  listAgentTasks(filter?: { status?: string; limit?: number; offset?: number }): import('../shared/types').AgentTask[] {
+    const rows = this.stmtListAgentTasks.all({
+      status: filter?.status ?? 'pending',
+      limit: filter?.limit ?? 100,
+      offset: filter?.offset ?? 0,
+    }) as Record<string, unknown>[];
+    return rows.map(this.rowToAgentTask);
+  }
+
+  listAllAgentTasks(filter?: { status?: string; limit?: number; offset?: number }): import('../shared/types').AgentTask[] {
+    const db = this._db!;
+    let sql = 'SELECT * FROM agent_tasks';
+    const params: unknown[] = [];
+    const conditions: string[] = [];
+
+    if (filter?.status) {
+      conditions.push('status = ?');
+      params.push(filter.status);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    sql += ' ORDER BY updated_at DESC';
+
+    if (filter?.limit) {
+      sql += ' LIMIT ?';
+      params.push(filter.limit);
+      if (filter?.offset) {
+        sql += ' OFFSET ?';
+        params.push(filter.offset);
+      }
+    }
+
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return rows.map(this.rowToAgentTask);
+  }
+
+  private rowToAgentTask(row: Record<string, unknown>): import('../shared/types').AgentTask {
+    return {
+      id: row.id as string,
+      sessionId: row.session_id as string,
+      name: row.name as string,
+      status: row.status as import('../shared/types').AgentTask['status'],
+      skillName: (row.skill_name as string) ?? undefined,
+      inputParams: parseJson(row.input_params as string, {}),
+      result: (row.result as string) ?? undefined,
+      error: (row.error as string) ?? undefined,
+      startedAt: (row.started_at as number) ?? undefined,
+      completedAt: (row.completed_at as number) ?? undefined,
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+    };
+  }
+
+  // ─── Agent Task Event (Phase C) ───────────────────────────────
+
+  insertAgentTaskEvent(event: import('../shared/types').AgentTaskEvent): void {
+    this.stmtInsertAgentTaskEvent.run({
+      id: event.id,
+      task_id: event.taskId,
+      event_type: event.eventType,
+      description: event.description,
+      metadata: JSON.stringify(event.metadata),
+      created_at: event.createdAt,
+    });
+  }
+
+  listAgentTaskEvents(taskId: string, filter?: { limit?: number }): import('../shared/types').AgentTaskEvent[] {
+    const rows = this.stmtListAgentTaskEvents.all({
+      task_id: taskId,
+      limit: filter?.limit ?? 200,
+    }) as Record<string, unknown>[];
+    return rows.map(this.rowToAgentTaskEvent);
+  }
+
+  private rowToAgentTaskEvent(row: Record<string, unknown>): import('../shared/types').AgentTaskEvent {
+    return {
+      id: row.id as string,
+      taskId: row.task_id as string,
+      eventType: row.event_type as import('../shared/types').AgentTaskEvent['eventType'],
+      description: row.description as string,
+      metadata: parseJson(row.metadata as string, {}),
+      createdAt: row.created_at as number,
+    };
+  }
+
+  // ─── Scheduled Agent Task (Phase D) ─────────────────────────────
+
+  insertScheduledAgentTask(task: import('../shared/types').ScheduledAgentTask): void {
+    this.stmtInsertScheduledAgentTask.run({
+      id: task.id,
+      name: task.name,
+      cron_expression: task.cronExpression,
+      skill_name: task.skillName,
+      input_params: JSON.stringify(task.inputParams),
+      enabled: task.enabled ? 1 : 0,
+      last_run_at: task.lastRunAt ?? null,
+      last_run_status: task.lastRunStatus ?? null,
+      last_run_task_id: task.lastRunTaskId ?? null,
+      created_at: task.createdAt,
+      updated_at: task.updatedAt,
+    });
+  }
+
+  getScheduledAgentTask(id: string): import('../shared/types').ScheduledAgentTask | null {
+    const row = this.stmtGetScheduledAgentTask.get(id) as Record<string, unknown> | undefined;
+    return row ? this.rowToScheduledAgentTask(row) : null;
+  }
+
+  updateScheduledAgentTask(id: string, patch: Partial<import('../shared/types').ScheduledAgentTask>): void {
+    const existing = this.getScheduledAgentTask(id);
+    if (!existing) return;
+    const merged: import('../shared/types').ScheduledAgentTask = { ...existing, ...patch, id, updatedAt: Math.floor(Date.now() / 1000) };
+    this.stmtUpdateScheduledAgentTask.run({
+      id,
+      name: merged.name,
+      cron_expression: merged.cronExpression,
+      skill_name: merged.skillName,
+      input_params: JSON.stringify(merged.inputParams),
+      enabled: merged.enabled ? 1 : 0,
+      last_run_at: merged.lastRunAt ?? null,
+      last_run_status: merged.lastRunStatus ?? null,
+      last_run_task_id: merged.lastRunTaskId ?? null,
+      updated_at: merged.updatedAt,
+    });
+  }
+
+  deleteScheduledAgentTask(id: string): void {
+    this.stmtDeleteScheduledAgentTask.run(id);
+  }
+
+  listScheduledAgentTasks(): import('../shared/types').ScheduledAgentTask[] {
+    const rows = this.stmtListScheduledAgentTasks.all() as Record<string, unknown>[];
+    return rows.map(this.rowToScheduledAgentTask);
+  }
+
+  private rowToScheduledAgentTask(row: Record<string, unknown>): import('../shared/types').ScheduledAgentTask {
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      cronExpression: row.cron_expression as string,
+      skillName: row.skill_name as string,
+      inputParams: parseJson(row.input_params as string, {}),
+      enabled: (row.enabled as number) === 1,
+      lastRunAt: (row.last_run_at as number) ?? null,
+      lastRunStatus: (row.last_run_status as import('../shared/types').ScheduledAgentTask['lastRunStatus']) ?? null,
+      lastRunTaskId: (row.last_run_task_id as string) ?? null,
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+    };
   }
 }
 

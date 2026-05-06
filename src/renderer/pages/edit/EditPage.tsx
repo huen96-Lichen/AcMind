@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CaptureItem, DistilledOutput, SourceItem } from '../../../shared/types';
+import type { CaptureItem, CaptureItemType, DistilledOutput, SourceItem } from '../../../shared/types';
 import { ErrorState, LoadingState, PageShell } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { ImagePreview } from '../../components/shared/ImagePreview';
 import { useToast } from '../../components/shared/ToastViewport';
@@ -82,7 +82,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
         const syntheticCapture: CaptureItem | null = resolvedCapture ?? (resolvedSource
           ? {
               id: resolvedSource.captureItemId ?? resolvedSource.id,
-              type: resolvedSource.type === 'url' ? 'link' : resolvedSource.type,
+              type: (resolvedSource.type === 'screenshot' ? 'image' : resolvedSource.type === 'url' ? 'link' : resolvedSource.type) as CaptureItemType,
               title: resolvedSource.title ?? '无标题',
               rawText: resolvedSource.previewText ?? resolvedSource.originalUrl ?? '',
               sourceUrl: resolvedSource.originalUrl ?? '',
@@ -509,7 +509,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
         {/* Row 1: Back + Title */}
         <div className="flex items-center gap-2.5 px-4 pt-3 pb-1.5">
           <button type="button" onClick={handleBack} className="acmind-btn acmind-btn-ghost motion-button flex items-center gap-1.5 text-[13px]">
-            <PinStackIcon name="arrow-left" size={14} />
+            <AcMindIcon name="arrow-left" size={14} />
             返回
           </button>
           <div className="mx-1.5 h-4 w-px bg-[color:var(--pm-border-subtle)]" />
@@ -533,7 +533,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
               </h1>
             )}
             <button type="button" onClick={() => void handleToggleEditTitle()} className="shrink-0 text-[color:var(--pm-text-tertiary)] hover:text-[color:var(--pm-text-secondary)] transition-colors" title="编辑标题">
-              <PinStackIcon name="edit" size={14} />
+              <AcMindIcon name="edit" size={14} />
             </button>
           </div>
           {/* Review status badge */}
@@ -555,7 +555,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
           <div className="flex items-center gap-1.5">
             {!distilledOutput && (
               <button type="button" onClick={() => void handleDistill()} className="acmind-btn acmind-btn-secondary motion-button text-[12px] flex items-center gap-1.5">
-                <PinStackIcon name="spark" size={13} />
+                <AcMindIcon name="spark" size={13} />
                 整理
               </button>
             )}
@@ -564,7 +564,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
               onClick={() => setShowSource((v) => !v)}
               className={`acmind-btn motion-button text-[12px] flex items-center gap-1.5 ${showSource ? 'acmind-btn-primary' : 'acmind-btn-ghost'}`}
             >
-              <PinStackIcon name="save" size={13} />
+              <AcMindIcon name="save" size={13} />
               原文
             </button>
             <button
@@ -572,7 +572,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
               onClick={() => setShowExportPreview((v) => !v)}
               className={`acmind-btn motion-button text-[12px] flex items-center gap-1.5 ${showExportPreview ? 'acmind-btn-primary' : 'acmind-btn-ghost'}`}
             >
-              <PinStackIcon name="launcher" size={13} />
+              <AcMindIcon name="launcher" size={13} />
               输出预览
             </button>
             {exportStatus === 'success' ? (
@@ -582,7 +582,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                 onClick={() => void handleOpenInObsidian()}
                 className="acmind-btn acmind-btn-primary motion-button text-[12px] flex items-center gap-1.5"
               >
-                <PinStackIcon name="panel" size={13} />
+                <AcMindIcon name="panel" size={13} />
                 打开 Obsidian 文件
               </button>
             ) : exportStatus === 'failed' ? (
@@ -593,7 +593,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                 disabled={exporting}
                 className="acmind-btn acmind-btn-primary motion-button text-[12px] flex items-center gap-1.5"
               >
-                <PinStackIcon name="refresh" size={13} />
+                <AcMindIcon name="refresh" size={13} />
                 {exporting ? '写入中...' : '重试写入 Obsidian'}
               </button>
             ) : (
@@ -604,7 +604,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                 disabled={exporting}
                 className="acmind-btn acmind-btn-secondary motion-button text-[12px] flex items-center gap-1.5"
               >
-                <PinStackIcon name="check" size={13} />
+                <AcMindIcon name="check" size={13} />
                 {exporting ? '写入中...' : '写入 Obsidian'}
               </button>
             )}
@@ -637,12 +637,12 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                 )}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => void handleToggleEditContent()} className={`acmind-btn motion-button text-[12px] flex items-center gap-1.5 ${editingContent ? 'acmind-btn-primary' : 'acmind-btn-secondary'}`}>
-                    <PinStackIcon name="edit" size={12} />
+                    <AcMindIcon name="edit" size={12} />
                     {editingContent ? '完成编辑' : '编辑内容'}
                   </button>
                   {item.sourceUrl && (
                     <button type="button" onClick={handleOpenInBrowser} className="acmind-btn acmind-btn-ghost motion-button text-[12px] flex items-center gap-1.5" style={{ color: 'var(--pm-brand-primary)' }}>
-                      <PinStackIcon name="arrow-right" size={12} /> 在浏览器中打开
+                      <AcMindIcon name="arrow-right" size={12} /> 在浏览器中打开
                     </button>
                   )}
                 </div>
@@ -675,19 +675,19 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
               {distilledLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <div className="flex flex-col items-center gap-3">
-                    <PinStackIcon name="refresh" size={20} className="animate-spin" />
+                    <AcMindIcon name="refresh" size={20} className="animate-spin" />
                     <span className="text-[13px] text-[color:var(--pm-text-tertiary)]">加载整理结果...</span>
                   </div>
                 </div>
               ) : !distilledOutput ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-4">
-                  <PinStackIcon name="spark" size={36} style={{ color: 'var(--pm-text-tertiary)' }} />
+                  <AcMindIcon name="spark" size={36} style={{ color: 'var(--pm-text-tertiary)' }} />
                   <p className="text-[14px] text-[color:var(--pm-text-tertiary)]">尚未整理</p>
                   <p className="text-[12px] text-[color:var(--pm-text-tertiary)] text-center max-w-[260px]">
                     点击上方「整理」按钮，AI 将自动生成摘要、标题和标签建议
                   </p>
                   <button type="button" onClick={() => void handleDistill()} className="acmind-btn acmind-btn-secondary motion-button text-[13px] flex items-center gap-1.5">
-                    <PinStackIcon name="spark" size={14} />
+                    <AcMindIcon name="spark" size={14} />
                     开始整理
                   </button>
                 </div>
@@ -780,11 +780,11 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                   {/* ── Save button ── */}
                   <div className="flex items-center gap-2 pt-2">
                     <button type="button" onClick={() => void handleSaveDistilledOutput()} disabled={savingDistilled} className="acmind-btn acmind-btn-primary motion-button text-[13px] flex items-center gap-1.5">
-                      <PinStackIcon name="check" size={14} />
+                      <AcMindIcon name="check" size={14} />
                       {savingDistilled ? '保存中...' : '保存审阅结果'}
                     </button>
                     <button type="button" onClick={() => void handleCopyMarkdown()} className="acmind-btn acmind-btn-ghost motion-button text-[13px] flex items-center gap-1.5">
-                      <PinStackIcon name="copy" size={14} />
+                      <AcMindIcon name="copy" size={14} />
                       复制 Markdown
                     </button>
                   </div>
@@ -815,7 +815,7 @@ export function EditPage({ itemId }: EditPageProps): JSX.Element {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 rounded-[var(--radius-control)] border border-[color:var(--pm-border-subtle)] bg-[color:var(--pm-bg-subtle)] px-3 py-2">
-                  <PinStackIcon name="text" size={12} />
+                  <AcMindIcon name="text" size={12} />
                   <span className="text-[11px] text-[color:var(--pm-text-tertiary)]">{item.rawText.length} 字</span>
                 </div>
               </div>

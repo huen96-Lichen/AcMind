@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, PageShell, Section, StatusBadge } from '../../design-system/components';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 import { ScrollContainer } from '../../components/shared/ScrollContainer';
 import { useToast } from '../../components/shared/ToastViewport';
+import { FallbackBadge } from '../../components/FallbackBadge';
 import type { DistilledOutput, SourceItem } from '../../../shared/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ export function ReviewPage(): JSX.Element {
   const [editTitle, setEditTitle] = useState('');
   const [editSummary, setEditSummary] = useState('');
   const [editTags, setEditTags] = useState('');
+  const [selectedUsedFallback, setSelectedUsedFallback] = useState(false);
 
   // ── Derived ──
   const currentList = activeTab === 'pending' ? pendingItems : activeTab === 'accepted' ? acceptedItems : rejectedItems;
@@ -89,6 +91,12 @@ export function ReviewPage(): JSX.Element {
       setEditTitle(selectedItem.suggestedTitle ?? '');
       setEditSummary(selectedItem.summary ?? '');
       setEditTags((selectedItem.tags ?? []).join(', '));
+      // Load source item metadata to check used_fallback
+      void window.acmind.sourceItems.get(selectedItem.sourceItemId).then((si) => {
+        setSelectedUsedFallback(Boolean((si?.metadata as Record<string, unknown>)?.used_fallback));
+      }).catch(() => setSelectedUsedFallback(false));
+    } else {
+      setSelectedUsedFallback(false);
     }
   }, [selectedItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -154,6 +162,21 @@ export function ReviewPage(): JSX.Element {
       addToast(String(e), 'error');
     }
   }, [addToast, loadAll, pendingItems]);
+
+  const handleApproveAndExport = useCallback(
+    async (outputId: string) => {
+      try {
+        await window.acmind.distilledOutputs.review(outputId, 'approve');
+        await window.acmind.export.single(outputId);
+        addToast('已确认并导出', 'success');
+        if (selectedId === outputId) setSelectedId(null);
+        await loadAll();
+      } catch (e) {
+        addToast(String(e), 'error');
+      }
+    },
+    [addToast, loadAll, selectedId],
+  );
 
   // ── Render ──
   if (loading) {
@@ -346,6 +369,7 @@ export function ReviewPage(): JSX.Element {
                     label={STATUS_BADGE_MAP[selectedItem.reviewStatus].label}
                   />
                 )}
+                {selectedUsedFallback && <FallbackBadge />}
               </div>
 
               {/* Source info */}
@@ -548,8 +572,11 @@ export function ReviewPage(): JSX.Element {
               <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
                 {selectedItem.reviewStatus === 'pending' && (
                   <>
-                    <Button variant="primary" onClick={() => handleReview(selectedItem.id, 'approve')}>
-                      确认
+                    <Button variant="primary" onClick={() => handleApproveAndExport(selectedItem.id)}>
+                      确认并导出
+                    </Button>
+                    <Button variant="secondary" onClick={() => handleReview(selectedItem.id, 'approve')}>
+                      仅确认
                     </Button>
                     <Button variant="danger" onClick={() => handleReview(selectedItem.id, 'discard')}>
                       拒绝
@@ -567,7 +594,7 @@ export function ReviewPage(): JSX.Element {
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32 }}>
               <EmptyState
-                icon={<PinStackIcon name="empty-inbox" size={28} />}
+                icon={<AcMindIcon name="empty-inbox" size={28} />}
                 title="选择一条记录"
                 description="从左侧列表选择要查看的提炼结果"
               />

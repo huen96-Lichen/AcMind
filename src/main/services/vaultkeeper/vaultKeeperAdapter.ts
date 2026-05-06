@@ -1,11 +1,11 @@
-// VaultKeeper Adapter
-// Phase 9: AcMind 与 VaultKeeper 外部服务的真实 HTTP 通信层
+// External Processor Adapter
+// Phase 9: AcMind 与外部处理服务的真实 HTTP 通信层
 //
 // 职责边界：
 // - 负责：提交任务、查询状态、获取结果、取消任务、标准化结果/错误
 // - 不负责：Markdown 渲染、Obsidian 写入、UI 展示
 //
-// VaultKeeper 不可用时优雅降级：checkHealth 不抛异常，submitJob 失败由调用方处理
+// 外部处理服务不可用时优雅降级：checkHealth 不抛异常，submitJob 失败由调用方处理
 
 import { logger } from '../../logger';
 import { settings } from '../../settings';
@@ -31,17 +31,17 @@ interface VKErrorResponse {
 }
 
 function getEndpoint(): string {
-  const vkSettings = settings.getVaultKeeperSettings();
-  return vkSettings.endpoint.replace(/\/+$/, '');
+  const epSettings = settings.getExternalProcessorSettings();
+  return epSettings.endpoint.replace(/\/+$/, '');
 }
 
 function getTimeout(): number {
-  return settings.getVaultKeeperSettings().timeout ?? 30000;
+  return settings.getExternalProcessorSettings().timeout ?? 30000;
 }
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const apiKey = settings.getVaultKeeperSettings().apiKey;
+  const apiKey = settings.getExternalProcessorSettings().apiKey;
   if (apiKey) {
     headers['Authorization'] = `Bearer ${apiKey}`;
   }
@@ -76,10 +76,10 @@ async function parseVKError(resp: Response): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// VaultKeeperAdapter
+// ExternalProcessorAdapter
 // ---------------------------------------------------------------------------
 
-class VaultKeeperAdapter implements IVaultKeeperAdapter {
+class ExternalProcessorAdapter implements IVaultKeeperAdapter {
   /** 缓存最近一次健康检查结果 */
   private lastHealthStatus: VKHealthStatus | null = null;
 
@@ -88,13 +88,13 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
   // -------------------------------------------------------------------------
 
   async checkHealth(): Promise<VKHealthStatus> {
-    const vkSettings = settings.getVaultKeeperSettings();
-    if (!vkSettings.enabled || !vkSettings.endpoint) {
+    const epSettings = settings.getExternalProcessorSettings();
+    if (!epSettings.enabled || !epSettings.endpoint) {
       const status: VKHealthStatus = {
         available: false,
         connection_method: 'unavailable',
         supported_job_types: [],
-        error: 'VaultKeeper 未启用或未配置端点',
+        error: '外部处理服务未启用或未配置端点',
         checked_at: Math.floor(Date.now() / 1000),
       };
       this.lastHealthStatus = status;
@@ -146,7 +146,7 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
   async submitJob(request: VKSubmitJobRequest): Promise<VKSubmitJobResponse> {
     const health = this.lastHealthStatus ?? (await this.checkHealth());
     if (!health.available) {
-      throw new Error(`VaultKeeper 不可用: ${health.error ?? '未知原因'}`);
+      throw new Error(`外部处理服务不可用: ${health.error ?? '未知原因'}`);
     }
 
     const resp = await vkFetch('/jobs', {
@@ -164,7 +164,7 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
 
     if (!resp.ok) {
       const errMsg = await parseVKError(resp);
-      throw new Error(`VaultKeeper submitJob 失败: ${errMsg}`);
+      throw new Error(`外部处理服务 submitJob 失败: ${errMsg}`);
     }
 
     const body = (await resp.json()) as Record<string, unknown>;
@@ -183,7 +183,7 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
     const resp = await vkFetch(`/jobs/${encodeURIComponent(jobId)}`);
     if (!resp.ok) {
       const errMsg = await parseVKError(resp);
-      throw new Error(`VaultKeeper getJobStatus 失败: ${errMsg}`);
+      throw new Error(`外部处理服务 getJobStatus 失败: ${errMsg}`);
     }
 
     const body = (await resp.json()) as Record<string, unknown>;
@@ -206,7 +206,7 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
     const resp = await vkFetch(`/jobs/${encodeURIComponent(jobId)}/result`);
     if (!resp.ok) {
       const errMsg = await parseVKError(resp);
-      throw new Error(`VaultKeeper getJobResult 失败: ${errMsg}`);
+      throw new Error(`外部处理服务 getJobResult 失败: ${errMsg}`);
     }
 
     const body = (await resp.json()) as Record<string, unknown>;
@@ -224,7 +224,7 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
     });
     if (!resp.ok) {
       const errMsg = await parseVKError(resp);
-      throw new Error(`VaultKeeper cancelJob 失败: ${errMsg}`);
+      throw new Error(`外部处理服务 cancelJob 失败: ${errMsg}`);
     }
     return true;
   }
@@ -288,7 +288,7 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
 
   normalizeError(error: unknown, jobId?: string): VKJobResult {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error('error', 'vaultkeeper', 'normalizeError', message, { jobId });
+    logger.error('error', 'external-processor', 'normalizeError', message, { jobId });
     return {
       job_id: jobId || '',
       job_type: 'file_convert', // 占位，调用方应覆盖
@@ -307,4 +307,4 @@ class VaultKeeperAdapter implements IVaultKeeperAdapter {
   }
 }
 
-export const vaultKeeperAdapter = new VaultKeeperAdapter();
+export const vaultKeeperAdapter = new ExternalProcessorAdapter();

@@ -72,7 +72,7 @@ ${this.buildOutputFormat()}`;
 
   /**
    * 覆写后处理：处理无转写的情况
-   * Phase 9.6: 当 VaultKeeper 返回 transcript_text 时，移除占位标记并标注转写来源
+   * Phase 9.6: 当外部处理服务返回 transcript_text 时，移除占位标记并标注转写来源
    */
   postProcess(raw: Record<string, unknown>, input: StrategyInput): ProcessedContent {
     const hasTranscript = input.transcript_text && input.transcript_text.trim().length > 0;

@@ -39,6 +39,8 @@ import type {
   VoicePolishResult,
   ClipboardItem,
   ShelfItem,
+  GithubToolProject,
+  LocalScriptTool,
   ProcessJob,
   AIAction,
   AIActionType,
@@ -47,6 +49,9 @@ import type {
   DistilledNote,
   VaultSearchResult,
   VoiceDictionaryEntry,
+  ChatSession,
+  ChatMessage,
+  ChatSessionMetadata,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/types';
 
@@ -169,6 +174,15 @@ const acmindApi = {
     // Distill Loop: Get full lineage status for a capture item
     getDistillStatus(captureItemId: string): Promise<DistillLineageStatus> {
       return ipcRenderer.invoke(IPC_CHANNELS.SOURCE_ITEMS_GET_DISTILL_STATUS, captureItemId);
+    },
+    importFile(filePath: string): Promise<SourceItem> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SOURCE_ITEMS_IMPORT_FILE, filePath);
+    },
+    saveUrl(url: string): Promise<SourceItem> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SOURCE_ITEMS_SAVE_URL, url);
+    },
+    update(id: string, patch: Partial<SourceItem>): Promise<boolean> {
+      return ipcRenderer.invoke(IPC_CHANNELS.SOURCE_ITEMS_UPDATE, id, patch);
     },
   },
 
@@ -559,6 +573,7 @@ const acmindApi = {
     },
   },
   datasets: {
+    /** @deprecated Use datasets.create (v2) instead */
     createSnapshot(data: { name: string; description?: string; splitConfig?: Record<string, unknown> }): Promise<DatasetSnapshot> {
       return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_CREATE_SNAPSHOT, data);
     },
@@ -568,6 +583,7 @@ const acmindApi = {
     get(id: string): Promise<DatasetSnapshot | null> {
       return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_V2_GET, id);
     },
+    /** @deprecated Use datasets.exportDataset (v2) instead */
     exportBundle(snapshotId: string): Promise<{ bundleDir: string; manifest: unknown }> {
       return ipcRenderer.invoke(IPC_CHANNELS.DATASETS_EXPORT_BUNDLE, snapshotId);
     },
@@ -724,7 +740,7 @@ const acmindApi = {
     },
   },
 
-  // -- VaultKeeper (Phase 9: 深度接入) ------------------------------------
+  // -- 外部处理服务 (Phase 9: 深度接入) ------------------------------------
   vk: {
     // 保留旧接口兼容
     task: {
@@ -761,6 +777,12 @@ const acmindApi = {
     getDictationGuide(): Promise<unknown> {
       return ipcRenderer.invoke(IPC_CHANNELS.VOICE_GET_DICTATION_GUIDE);
     },
+    getDictationDiagnostics(): Promise<unknown> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_GET_DICTATION_DIAGNOSTICS);
+    },
+    requestMicrophoneAccess(): Promise<{ success: boolean; supported: boolean; granted: boolean; message: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.VOICE_REQUEST_MICROPHONE_ACCESS);
+    },
     polishTranscript(request: VoicePolishRequest): Promise<{ success: boolean; result?: VoicePolishResult; error?: string }> {
       return ipcRenderer.invoke(IPC_CHANNELS.VOICE_POLISH_TRANSCRIPT, request);
     },
@@ -790,7 +812,31 @@ const acmindApi = {
     },
   },
 
-  // -- Import (Phase 6: VaultKeeper Import) ----------------------------------
+  // -- Dictation (OpenLess-inspired) ----------------------------------
+  dictation: {
+    start(): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke('dictation:start');
+    },
+    stop(): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke('dictation:stop');
+    },
+    cancel(): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke('dictation:cancel');
+    },
+    getHistory(params?: { limit?: number; offset?: number }): Promise<unknown[]> {
+      return ipcRenderer.invoke('dictation:getHistory', params);
+    },
+    clearHistory(): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke('dictation:clearHistory');
+    },
+    onStateChange(callback: (payload: { state: string; level: number; elapsedMs: number; message: string; insertedChars: number; translation: boolean }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, payload: { state: string; level: number; elapsedMs: number; message: string; insertedChars: number; translation: boolean }) => callback(payload);
+      ipcRenderer.on('dictation:state', handler);
+      return () => { ipcRenderer.removeListener('dictation:state', handler); };
+    },
+  },
+
+  // -- Import (Phase 6: External Import) ----------------------------------
   import: {
     scan(params: { vaultPath: string; folderPath?: string; excludePatterns?: string[] }): Promise<unknown> {
       return ipcRenderer.invoke('import.scan', params);
@@ -1057,6 +1103,12 @@ const acmindApi = {
       return () => { ipcRenderer.removeListener(IPC_CHANNELS.FILE_CONVERT_JOBS_CHANGED, handler); };
     },
   },
+  // Calendar
+  calendar: {
+    showNotification(title: string, body: string): Promise<boolean> {
+      return ipcRenderer.invoke(IPC_CHANNELS.CALENDAR_SHOW_NOTIFICATION, { title, body });
+    },
+  },
   // Phase 3: Scheduler
   scheduler: {
     createTask: (params: Record<string, unknown>) => ipcRenderer.invoke(IPC_CHANNELS.SCHEDULER_CREATE_TASK, params),
@@ -1082,8 +1134,20 @@ const acmindApi = {
       }
       return request;
     },
+    openCacheDir: () => ipcRenderer.invoke(IPC_CHANNELS.WHISPER_OPEN_CACHE_DIR),
     deleteModel: (modelSize: string) => ipcRenderer.invoke(IPC_CHANNELS.WHISPER_DELETE_MODEL, modelSize),
     initialize: (modelSize: string) => ipcRenderer.invoke(IPC_CHANNELS.WHISPER_INITIALIZE, modelSize),
+    repair: (onProgress?: (progress: number) => void) => {
+      const request = ipcRenderer.invoke(IPC_CHANNELS.WHISPER_REPAIR);
+      if (onProgress) {
+        const handler = (_event: Electron.IpcRendererEvent, progress: number) => onProgress(progress);
+        ipcRenderer.on(IPC_CHANNELS.WHISPER_DOWNLOAD_PROGRESS, handler);
+        request.finally(() => {
+          ipcRenderer.removeListener(IPC_CHANNELS.WHISPER_DOWNLOAD_PROGRESS, handler);
+        });
+      }
+      return request;
+    },
     transcribe: (audioData: Float32Array, options?: Record<string, unknown>) =>
       ipcRenderer.invoke(IPC_CHANNELS.WHISPER_TRANSCRIBE, audioData, options),
   },
@@ -1240,6 +1304,188 @@ const acmindApi = {
     },
     transcribe(filePath: string, options?: { language?: string; translate?: boolean; prompt?: string }): Promise<{ success: boolean; text: string; error?: string; engine?: string }> {
       return ipcRenderer.invoke(IPC_CHANNELS.ASR_TRANSCRIBE, { filePath, ...options });
+    },
+  },
+  // ToolBench: GitHub Projects & Local Scripts
+  toolBench: {
+    listGithubProjects(): Promise<{ success: boolean; projects: GithubToolProject[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_LIST_GITHUB_PROJECTS);
+    },
+    createGithubProject(input: Omit<GithubToolProject, 'id' | 'createdAt' | 'updatedAt' | 'lastUsedAt'>): Promise<{ success: boolean; id?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_CREATE_GITHUB_PROJECT, input);
+    },
+    updateGithubProject(id: string, patch: Partial<GithubToolProject>): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_UPDATE_GITHUB_PROJECT, { id, patch });
+    },
+    deleteGithubProject(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_DELETE_GITHUB_PROJECT, { id });
+    },
+    listScripts(): Promise<{ success: boolean; scripts: LocalScriptTool[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_LIST_SCRIPTS);
+    },
+    createScript(input: Omit<LocalScriptTool, 'id' | 'createdAt' | 'updatedAt' | 'lastUsedAt'>): Promise<{ success: boolean; id?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_CREATE_SCRIPT, input);
+    },
+    updateScript(id: string, patch: Partial<LocalScriptTool>): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_UPDATE_SCRIPT, { id, patch });
+    },
+    deleteScript(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_DELETE_SCRIPT, { id });
+    },
+    openUrl(url: string): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_OPEN_URL, { url });
+    },
+    openPath(dirPath: string): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_OPEN_PATH, { path: dirPath });
+    },
+    copyCommand(command: string): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_COPY_COMMAND, { command });
+    },
+    scanLocalDir(dirPath: string): Promise<{ success: boolean; repos?: any[]; error?: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_SCAN_LOCAL_DIR, { dirPath });
+    },
+    batchImportProjects(repos: any[]): Promise<{ success: boolean; imported: number; skipped: number }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_BATCH_IMPORT_PROJECTS, { repos });
+    },
+    pickDirectory(): Promise<{ success: boolean; path: string }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.TOOLBENCH_PICK_DIRECTORY);
+    },
+  },
+  // Dashboard Widget (独立仪表盘)
+  dashboardWidget: {
+    getMedia(): Promise<{ success: boolean; media: any }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_WIDGET_GET_MEDIA);
+    },
+    mediaControl(action: 'playpause' | 'next' | 'previous'): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_WIDGET_MEDIA_CONTROL, action);
+    },
+    getCalendar(): Promise<{ success: boolean; events: any[] }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_WIDGET_GET_CALENDAR);
+    },
+    toggleWindow(enabled: boolean): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_WIDGET_TOGGLE_WINDOW, enabled);
+    },
+  },
+
+  // -- Phase A: Agent Chat --------------------------------------------
+  agentChat: {
+    // Sessions
+    listSessions(filter?: { status?: 'active' | 'archived' | 'deleted'; limit?: number; offset?: number }): Promise<{ success: boolean; sessions: ChatSession[] }> {
+      return ipcRenderer.invoke('agentChat.sessions.list', filter);
+    },
+    getSession(id: string): Promise<{ success: boolean; session: ChatSession | null }> {
+      return ipcRenderer.invoke('agentChat.sessions.get', id);
+    },
+    createSession(params?: { title?: string; metadata?: ChatSessionMetadata; providerId?: string; modelId?: string }): Promise<{ success: boolean; session?: ChatSession; error?: string }> {
+      return ipcRenderer.invoke('agentChat.sessions.create', params);
+    },
+    updateSession(id: string, patch: Partial<ChatSession>): Promise<{ success: boolean; session?: ChatSession; error?: string }> {
+      return ipcRenderer.invoke('agentChat.sessions.update', id, patch);
+    },
+    deleteSession(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke('agentChat.sessions.delete', id);
+    },
+    // Messages
+    listMessages(sessionId: string, filter?: { limit?: number }): Promise<{ success: boolean; messages: ChatMessage[] }> {
+      return ipcRenderer.invoke('agentChat.messages.list', sessionId, filter);
+    },
+    createSystemMessage(sessionId: string, content: string): Promise<{ success: boolean; message?: ChatMessage; error?: string }> {
+      return ipcRenderer.invoke('agentChat.messages.createSystem', sessionId, content);
+    },
+    listSkills(): Promise<{ success: boolean; skills: Array<{ name: string; description: string; category: string; requiresConfirmation: boolean }> }> {
+      return ipcRenderer.invoke('agentChat.skills.list');
+    },
+    sendMessage(params: { sessionId: string; content: string; providerId?: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+      return ipcRenderer.invoke('agentChat.send', params);
+    },
+    stopGeneration(): Promise<{ success: boolean; stopped?: boolean }> {
+      return ipcRenderer.invoke('agentChat.stop');
+    },
+    // Event listeners
+    onStreamChunk(callback: (data: { messageId: string; chunk: string; accumulated: string; timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { messageId: string; chunk: string; accumulated: string; timestamp: number }) => callback(data);
+      ipcRenderer.on('agentChat.stream.chunk', handler);
+      return () => { ipcRenderer.removeListener('agentChat.stream.chunk', handler); };
+    },
+    onStreamDone(callback: (data: { messageId: string; interrupted: boolean; timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { messageId: string; interrupted: boolean; timestamp: number }) => callback(data);
+      ipcRenderer.on('agentChat.stream.done', handler);
+      return () => { ipcRenderer.removeListener('agentChat.stream.done', handler); };
+    },
+    onStreamError(callback: (data: { messageId: string; error: string; timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { messageId: string; error: string; timestamp: number }) => callback(data);
+      ipcRenderer.on('agentChat.stream.error', handler);
+      return () => { ipcRenderer.removeListener('agentChat.stream.error', handler); };
+    },
+    onSessionChanged(callback: (data: { action: string; id: string; timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { action: string; id: string; timestamp: number }) => callback(data);
+      ipcRenderer.on('agentChat.session.changed', handler);
+      return () => { ipcRenderer.removeListener('agentChat.session.changed', handler); };
+    },
+    onMessageChanged(callback: (data: { action: string; id: string; sessionId: string; timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { action: string; id: string; sessionId: string; timestamp: number }) => callback(data);
+      ipcRenderer.on('agentChat.message.changed', handler);
+      return () => { ipcRenderer.removeListener('agentChat.message.changed', handler); };
+    },
+  },
+
+  // -- Phase C: Agent Tasks --------------------------------------------
+  agentTasks: {
+    list(filter?: { status?: string; limit?: number; offset?: number }): Promise<{ success: boolean; tasks: import('../shared/types').AgentTask[] }> {
+      return ipcRenderer.invoke('agentTasks.list', filter);
+    },
+    get(id: string): Promise<{ success: boolean; task: import('../shared/types').AgentTask | null }> {
+      return ipcRenderer.invoke('agentTasks.get', id);
+    },
+    create(params: { sessionId: string; name: string; skillName?: string; inputParams?: Record<string, unknown> }): Promise<{ success: boolean; task?: import('../shared/types').AgentTask; error?: string }> {
+      return ipcRenderer.invoke('agentTasks.create', params);
+    },
+    update(id: string, updates: Partial<import('../shared/types').AgentTask>): Promise<{ success: boolean; task?: import('../shared/types').AgentTask; error?: string }> {
+      return ipcRenderer.invoke('agentTasks.update', id, updates);
+    },
+    delete(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke('agentTasks.delete', id);
+    },
+    runNow(id: string): Promise<{ success: boolean; task?: import('../shared/types').AgentTask; error?: string }> {
+      return ipcRenderer.invoke('agentTasks.runNow', id);
+    },
+    history(taskId: string): Promise<{ success: boolean; events: import('../shared/types').AgentTaskEvent[] }> {
+      return ipcRenderer.invoke('agentTasks.history', taskId);
+    },
+    cancel(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke('agentTasks.cancel', id);
+    },
+    onTaskChanged(callback: (data: { task: import('../shared/types').AgentTask; timestamp: number }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { task: import('../shared/types').AgentTask; timestamp: number }) => callback(data);
+      ipcRenderer.on('agentTasks.task.changed', handler);
+      return () => { ipcRenderer.removeListener('agentTasks.task.changed', handler); };
+    },
+  },
+
+  // -- Phase D: Scheduled Agent Tasks ---------------------------------
+  scheduledAgentTasks: {
+    list(): Promise<{ success: boolean; tasks: import('../shared/types').ScheduledAgentTask[] }> {
+      return ipcRenderer.invoke('scheduledAgentTasks.list');
+    },
+    get(id: string): Promise<{ success: boolean; task: import('../shared/types').ScheduledAgentTask | null }> {
+      return ipcRenderer.invoke('scheduledAgentTasks.get', id);
+    },
+    create(params: { name: string; cronExpression: string; skillName: string; inputParams?: Record<string, unknown>; enabled?: boolean }): Promise<{ success: boolean; task?: import('../shared/types').ScheduledAgentTask; error?: string }> {
+      return ipcRenderer.invoke('scheduledAgentTasks.create', params);
+    },
+    update(id: string, updates: Partial<import('../shared/types').ScheduledAgentTask>): Promise<{ success: boolean; task?: import('../shared/types').ScheduledAgentTask; error?: string }> {
+      return ipcRenderer.invoke('scheduledAgentTasks.update', id, updates);
+    },
+    delete(id: string): Promise<{ success: boolean }> {
+      return ipcRenderer.invoke('scheduledAgentTasks.delete', id);
+    },
+    runNow(id: string): Promise<{ success: boolean; error?: string }> {
+      return ipcRenderer.invoke('scheduledAgentTasks.runNow', id);
+    },
+    onTaskChanged(callback: (data: { action: string; task: import('../shared/types').ScheduledAgentTask }) => void): () => void {
+      const handler = (_event: Electron.IpcRendererEvent, data: { action: string; task: import('../shared/types').ScheduledAgentTask }) => callback(data);
+      ipcRenderer.on('scheduledAgentTasks.task.changed', handler);
+      return () => { ipcRenderer.removeListener('scheduledAgentTasks.task.changed', handler); };
     },
   },
 } as const;

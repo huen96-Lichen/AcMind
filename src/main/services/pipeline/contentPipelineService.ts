@@ -383,18 +383,18 @@ class ContentPipelineService {
         originalId: record.original_id,
       });
 
-      // Phase 9.2: 异步提交 VaultKeeper Job（不阻塞主流程）
+      // Phase 9.2: 异步提交外部处理 Job（不阻塞主流程）
       void import('../vaultkeeper/processingJobService').then(({ processingJobService }) => {
         return processingJobService.submitJob(record, sourceItem.id);
       }).then((jobId) => {
         if (jobId) {
-          logger.info('app', 'pipeline', 'vk-job-submitted', `VaultKeeper Job 已提交: ${jobId}`, {
+          logger.info('app', 'pipeline', 'vk-job-submitted', `外部处理 Job 已提交: ${jobId}`, {
             sourceItemId: sourceItem.id,
             originalId: record.original_id,
           });
         }
       }).catch((vkError) => {
-        logger.warn('app', 'pipeline', 'vk-job-async-error', 'VaultKeeper 异步提交异常', {
+        logger.warn('app', 'pipeline', 'vk-job-async-error', '外部处理异步提交异常', {
           error: vkError instanceof Error ? vkError.message : String(vkError),
           originalId: record.original_id,
         });
@@ -1079,7 +1079,7 @@ class ContentPipelineService {
         lines.push(`- **文本可读**：是`);
       }
       lines.push('');
-      lines.push('> 文件解析能力后续接入 VaultKeeper 或解析模块，可自动提取全文内容。');
+      lines.push('> 文件解析能力后续接入外部处理服务或解析模块，可自动提取全文内容。');
 
       return {
         title,
@@ -1113,7 +1113,7 @@ class ContentPipelineService {
         lines.push(`- **待处理**：OCR 文字识别`);
       }
       lines.push('');
-      lines.push('> 后续可通过 VaultKeeper OCR 引擎自动提取图片中的文字内容。');
+      lines.push('> 后续可通过外部处理 OCR 引擎自动提取图片中的文字内容。');
 
       return {
         title,
@@ -1207,7 +1207,7 @@ class ContentPipelineService {
       }
       lines.push(`- **待处理**：视频转写`);
       lines.push('');
-      lines.push('> 后续可通过 VaultKeeper 视频转写引擎自动提取视频中的语音内容。');
+      lines.push('> 后续可通过外部处理视频转写引擎自动提取视频中的语音内容。');
 
       return {
         title,
@@ -1236,7 +1236,7 @@ class ContentPipelineService {
       }
       lines.push(`- **待处理**：PDF 全文解析`);
       lines.push('');
-      lines.push('> 后续可通过 VaultKeeper 文档解析引擎自动提取 PDF 中的文本和结构化内容。');
+      lines.push('> 后续可通过外部处理文档解析引擎自动提取 PDF 中的文本和结构化内容。');
 
       return {
         title,
@@ -1265,7 +1265,7 @@ class ContentPipelineService {
       }
       lines.push(`- **待处理**：DOCX 转 Markdown`);
       lines.push('');
-      lines.push('> 后续可通过 VaultKeeper 文档解析引擎自动将 Word 文档转换为 Markdown 格式。');
+      lines.push('> 后续可通过外部处理文档解析引擎自动将 Word 文档转换为 Markdown 格式。');
 
       return {
         title,

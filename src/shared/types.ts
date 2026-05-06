@@ -10,8 +10,8 @@ import type { DistilledDocumentType } from './markdownSpec';
 export interface SourceItem {
   id: string;
   captureItemId?: string;
-  type: 'text' | 'image' | 'url';
-  source: 'clipboard' | 'screenshot' | 'manual' | 'vault_import' | 'audio';
+  type: 'text' | 'image' | 'url' | 'file' | 'audio' | 'video' | 'screenshot' | 'webpage';
+  source: 'clipboard' | 'screenshot' | 'manual' | 'vault_import' | 'audio' | 'file_import' | 'url_paste';
   contentPath: string;
   contentHash?: string;
   previewText?: string;
@@ -27,6 +27,16 @@ export interface SourceItem {
   originalId?: string;
   /** V2.1 Phase 8: Extended metadata (model call records, quality info, regeneration history) */
   metadata?: Record<string, unknown>;
+  /** Original file path (for file/image/audio/video) */
+  filePath?: string;
+  /** Thumbnail path */
+  thumbnailPath?: string;
+  /** Updated timestamp */
+  updatedAt?: number;
+  /** File size in bytes */
+  fileSize?: number;
+  /** File MIME type */
+  mimeType?: string;
 }
 
 // ─── AiTask ───────────────────────────────────────────────────
@@ -148,6 +158,7 @@ export interface TrainingExample {
   createdAt: number;
 }
 
+/** @deprecated Use Dataset + DatasetItem (v2) instead. Kept for migration read only. */
 export interface DatasetSnapshot {
   id: string;
   name: string;
@@ -264,19 +275,22 @@ export const DEFAULT_MODEL_STRATEGY_SETTINGS: ModelStrategySettings = {
   fallbackStrategy: 'downgrade',
 };
 
-// ─── VaultKeeperSettings (V2.1 Phase 9) ───────────────────────
-// Configuration for VaultKeeper external processing service
+// ─── ExternalProcessorSettings (V2.1 Phase 9) ─────────────────
+// Configuration for external processing service
 
-export interface VaultKeeperSettings {
-  /** 是否启用 VaultKeeper */
+export interface ExternalProcessorSettings {
+  /** 是否启用外部处理服务 */
   enabled: boolean;
-  /** VaultKeeper HTTP 端点 */
+  /** 外部处理服务 HTTP 端点 */
   endpoint: string;
   /** 请求超时（毫秒） */
   timeout: number;
   /** 可选 API Key */
   apiKey?: string;
 }
+
+/** @deprecated Use ExternalProcessorSettings */
+export type VaultKeeperSettings = ExternalProcessorSettings;
 
 // ─── TranscriptionSettings (V2.1 Phase 10) ─────────────────────
 // Configuration for speech-to-text providers
@@ -333,8 +347,8 @@ export interface AppSettings {
   preferences: UserPreferences;
   /** V2.1 Phase 8.6: 模型策略设置 */
   modelStrategy: ModelStrategySettings;
-  /** V2.1 Phase 9: VaultKeeper 设置 */
-  vaultkeeper: VaultKeeperSettings;
+  /** V2.1 Phase 9: 外部处理服务设置 */
+  externalProcessor: ExternalProcessorSettings;
   /** V2.1 Phase 10: 语音转写设置 */
   transcription: TranscriptionSettings;
   /** V2.1 Phase 10: 语音监听开关 */
@@ -349,6 +363,16 @@ export interface AppSettings {
   voiceImportDelayMs: number;
   /** V2.1 Phase 10: 文件去重 */
   voiceDedupEnabled: boolean;
+  /** 独立仪表盘模块设置 */
+  dashboardWidget: DashboardWidgetSettings;
+  /** OpenLess-inspired 语音听写设置 */
+  dictation?: DictationSettings;
+  /** AI API 配置（用于 LLM 润色等） */
+  ai?: { apiKey: string; apiEndpoint?: string; model?: string };
+  /** Phase A: Agent Chat 配置 */
+  agentChat: AgentChatConfig;
+  /** 日程管家设置 */
+  scheduleManager?: ScheduleManagerSettings;
 }
 
 // ─── ProviderConfig ───────────────────────────────────────────
@@ -529,6 +553,9 @@ export const IPC_CHANNELS = {
   SOURCE_ITEMS_ENSURE_FROM_CAPTURE: 'sourceItems.ensureFromCapture',
   SOURCE_ITEMS_GET_BY_CAPTURE_ITEM_ID: 'sourceItems.getByCaptureItemId',
   SOURCE_ITEMS_READ_IMAGE: 'sourceItems.readImage',
+  SOURCE_ITEMS_IMPORT_FILE: 'sourceItems.importFile',
+  SOURCE_ITEMS_SAVE_URL: 'sourceItems.saveUrl',
+  SOURCE_ITEMS_UPDATE: 'sourceItems.update',
   RECORDS_CHANGED: 'records.changed',
   CAPTURE_SCREENSHOT: 'capture.screenshot',
   CLIPBOARD_GET_STATUS: 'clipboard.getStatus',
@@ -575,16 +602,20 @@ export const IPC_CHANNELS = {
   EXPORT_RETRY: 'export.retry',
   TEMPLATE_PREVIEW: 'template.preview',
   // Phase 4.5: Datasets / Training / Models
+  /** @deprecated Use DATASETS_V2_CREATE instead */
   DATASETS_CREATE_SNAPSHOT: 'datasets.createSnapshot',
+  /** @deprecated Use DATASETS_V2_LIST instead */
   DATASETS_LIST: 'datasets.list',
+  /** @deprecated Use DATASETS_V2_GET instead */
   DATASETS_GET: 'datasets.get',
+  /** @deprecated Use DATASETS_V2_EXPORT instead */
   DATASETS_EXPORT_BUNDLE: 'datasets.exportBundle',
   TRAINING_RUNS_IMPORT_RESULT: 'trainingRuns.importResult',
   TRAINING_RUNS_LIST: 'trainingRuns.list',
   MODEL_VERSIONS_LIST: 'modelVersions.list',
   MODEL_VERSIONS_ACTIVATE: 'modelVersions.activate',
   MODEL_VERSIONS_ROLLBACK: 'modelVersions.rollback',
-  // Phase 6: VaultKeeper Import
+  // Phase 6: External Import
   IMPORT_SCAN: 'import.scan',
   IMPORT_START: 'import.start',
   IMPORT_STATUS: 'import.status',
@@ -629,6 +660,8 @@ export const IPC_CHANNELS = {
   FILE_CONVERT_SAVE_TO_INBOX: 'fileConverter.saveToInbox',
   FILE_CONVERT_PREVIEW: 'fileConverter.preview',
   FILE_CONVERT_JOBS_CHANGED: 'fileConverter.jobsChanged',
+  // Phase X: Calendar
+  CALENDAR_SHOW_NOTIFICATION: 'calendar.showNotification',
   // Phase 3: Scheduler
   SCHEDULER_CREATE_TASK: 'scheduler.createTask',
   SCHEDULER_UPDATE_TASK: 'scheduler.updateTask',
@@ -645,6 +678,8 @@ export const IPC_CHANNELS = {
   WHISPER_INITIALIZE: 'whisper.initialize',
   WHISPER_TRANSCRIBE: 'whisper.transcribe',
   WHISPER_DOWNLOAD_PROGRESS: 'whisper.downloadProgress',
+  WHISPER_OPEN_CACHE_DIR: 'whisper.openCacheDir',
+  WHISPER_REPAIR: 'whisper.repair',
   // AI Polish (text refinement)
   POLISH_TEXT: 'polish.text',
   POLISH_GET_STYLES: 'polish.getStyles',
@@ -705,7 +740,7 @@ export const IPC_CHANNELS = {
   DIALOG_SELECT_DIRECTORY: 'dialog.selectDirectory',
   // V2.1 Phase 8: AI Strategy & Regeneration
   STRATEGY_REGENERATE: 'strategy.regenerate',
-  // V2.1 Phase 9: VaultKeeper 深度接入
+  // V2.1 Phase 9: 外部处理服务深度接入
   VK_CHECK_HEALTH: 'vk.checkHealth',
   VK_GET_JOB_STATUS: 'vk.getJobStatus',
   VK_CANCEL_JOB: 'vk.cancelJob',
@@ -722,6 +757,8 @@ export const IPC_CHANNELS = {
   VOICE_GET_TRANSCRIPTION_STATUS: 'voice.getTranscriptionStatus',
   // V2.1 Phase 10: Voice dictation & polish
   VOICE_GET_DICTATION_GUIDE: 'voice.getDictationGuide',
+  VOICE_GET_DICTATION_DIAGNOSTICS: 'voice.getDictationDiagnostics',
+  VOICE_REQUEST_MICROPHONE_ACCESS: 'voice.requestMicrophoneAccess',
   VOICE_POLISH_TRANSCRIPT: 'voice.polishTranscript',
   VOICE_CREATE_PIN_FROM_TRANSCRIPT: 'voice.createPinFromTranscript',
   // Phase 12.6: Local Diagnostics Export
@@ -828,6 +865,27 @@ export const IPC_CHANNELS = {
   DATASETS_V2_UPDATE_ITEM: 'datasets.v2.updateItem',
   DATASETS_V2_EXPORT: 'datasets.v2.export',
   DATASETS_V2_DELETE: 'datasets.v2.delete',
+
+  // ─── ToolBench: GitHub Projects & Local Scripts ──────────
+  TOOLBENCH_LIST_GITHUB_PROJECTS: 'toolbench.listGithubProjects',
+  TOOLBENCH_CREATE_GITHUB_PROJECT: 'toolbench.createGithubProject',
+  TOOLBENCH_UPDATE_GITHUB_PROJECT: 'toolbench.updateGithubProject',
+  TOOLBENCH_DELETE_GITHUB_PROJECT: 'toolbench.deleteGithubProject',
+  TOOLBENCH_LIST_SCRIPTS: 'toolbench.listScripts',
+  TOOLBENCH_CREATE_SCRIPT: 'toolbench.createScript',
+  TOOLBENCH_UPDATE_SCRIPT: 'toolbench.updateScript',
+  TOOLBENCH_DELETE_SCRIPT: 'toolbench.deleteScript',
+  TOOLBENCH_OPEN_URL: 'toolbench.openUrl',
+  TOOLBENCH_OPEN_PATH: 'toolbench.openPath',
+  TOOLBENCH_COPY_COMMAND: 'toolbench.copyCommand',
+  TOOLBENCH_SCAN_LOCAL_DIR: 'toolbench.scanLocalDir',
+  TOOLBENCH_BATCH_IMPORT_PROJECTS: 'toolbench.batchImportProjects',
+  TOOLBENCH_PICK_DIRECTORY: 'toolbench.pickDirectory',
+  // ─── Dashboard Widget (独立仪表盘) ──────────────────────────────
+  DASHBOARD_WIDGET_GET_MEDIA: 'dashboardWidget.getMedia',
+  DASHBOARD_WIDGET_MEDIA_CONTROL: 'dashboardWidget.mediaControl',
+  DASHBOARD_WIDGET_GET_CALENDAR: 'dashboardWidget.getCalendar',
+  DASHBOARD_WIDGET_TOGGLE_WINDOW: 'dashboardWidget.toggleWindow',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
@@ -854,7 +912,7 @@ export interface DistillLineageStatus {
   bridgeExists: boolean;
 }
 
-// ─── Error Handling Types (from PinStack) ──────────────────────
+// ─── Error Handling Types (legacy) ──────────────────────
 
 export type AppErrorCode =
   | 'PERMISSION_DENIED'
@@ -866,7 +924,7 @@ export type AppErrorCode =
   | 'VAULT_NOT_CONFIGURED'
   | 'NETWORK_ERROR'
   | 'UNKNOWN'
-  // PinStack-specific error codes
+  // legacy error codes
   | 'INTERNAL_ERROR'
   | 'PERMISSION_REQUIRED'
   | 'FILE_MISSING'
@@ -899,8 +957,8 @@ export type ErrorType =
   | 'template_missing'
   | 'vault_missing'
   | 'model_unavailable'
-  // Phase 9.7: VaultKeeper 错误类型
-  | 'vaultkeeper_unavailable'
+  // Phase 9.7: 外部处理服务错误类型
+  | 'external_service_unavailable'
   | 'external_job_failed'
   | 'external_result_invalid'
   | 'external_result_ingest_failed'
@@ -934,14 +992,14 @@ export interface ErrorRecord {
   status: ErrorStatus;
 }
 
-// ─── Permission Types (from PinStack) ──────────────────────────
+// ─── Permission Types (legacy) ──────────────────────────
 
 export type PermissionCheckSource =
   | 'app-launch'
   | 'capture-screenshot'
   | 'clipboard-monitor'
   | 'export-file'
-  // PinStack-specific sources
+  // legacy sources
   | 'manual-refresh'
   | 'renderer-query'
   | 'activate'
@@ -956,7 +1014,7 @@ export interface PermissionDiagnostics {
     source: string;
   }>;
   timestamp: number;
-  // PinStack-specific fields
+  // legacy fields
   appName?: string;
   executablePath?: string;
   appPath?: string;
@@ -1005,7 +1063,7 @@ export interface PermissionStatusSnapshot {
   accessibility: PermissionState;
   fullDiskAccess: PermissionState;
   lastChecked: number;
-  // PinStack-specific fields
+  // legacy fields
   items?: PermissionItem[];
   hasIssues?: boolean;
   hasBlockingIssues?: boolean;
@@ -1018,21 +1076,21 @@ export type PermissionSettingsTarget =
   | 'system-preferences'
   | 'terminal'
   | 'finder'
-  // PinStack-specific targets
+  // legacy targets
   | 'privacyGeneral'
   | 'privacyAccessibility'
   | 'privacyInputMonitoring'
   | 'keyboardShortcuts'
   | 'privacyScreenCapture';
 
-// ─── Capture Types (from PinStack) ────────────────────────────
+// ─── Capture Types (legacy) ────────────────────────────
 
 export interface RuntimeSettings {
   captureSize: CaptureSizeOption;
   captureRatio: CaptureRatioOption;
   scopeMode: 'all' | 'scoped';
   scopedApps: string[];
-  // PinStack-specific fields
+  // legacy fields
   defaultCaptureSizePreset?: string;
   defaultCaptureCustomSize?: CaptureSizeOption;
   rememberCaptureRecentSizes?: boolean;
@@ -1068,7 +1126,7 @@ export interface CaptureRecordingState {
   isRecording?: boolean;
   startTime?: number | null;
   sourceApp?: string | null;
-  // PinStack-specific fields
+  // legacy fields
   active?: boolean;
   startedAt?: number | null;
 }
@@ -1086,7 +1144,7 @@ export interface CaptureSessionConfig {
   sourceApp?: string;
   captureRatio?: CaptureRatioOption | null;
   captureSize?: CaptureSizeOption | null;
-  // PinStack-specific fields
+  // legacy fields
   mode?: CaptureMode;
   ratio?: CaptureRatioOption | null;
   size?: CaptureSizeOption | null;
@@ -1120,7 +1178,7 @@ export type SourceType =
   | 'video'
   | 'ocr_text'
   | 'system_context'
-  // V2.1 Phase 7.6: VaultKeeper reserved source types
+  // V2.1 Phase 7.6: External processor reserved source types
   | 'pdf'
   | 'docx'
   | 'unknown_file';
@@ -1128,7 +1186,7 @@ export type SourceType =
 /**
  * V2.1 Phase 7.6: ComplexFileMetadata — metadata for media/complex files.
  *
- * Used by fileAdapter to record processing hints and future VaultKeeper integration fields.
+ * Used by fileAdapter to record processing hints and external processor integration fields.
  * All fields are optional; adapters fill what they know at capture time.
  */
 export interface ComplexFileMetadata {
@@ -1148,7 +1206,7 @@ export interface ComplexFileMetadata {
     | 'needs_manual_review';
 
   /** Which external processor should handle this file */
-  external_processor?: 'vaultkeeper' | 'ocr' | 'whisper' | 'manual' | 'none';
+  external_processor?: 'external' | 'ocr' | 'whisper' | 'manual' | 'none';
 
   /** Current status of external processing */
   external_processing_status?:
@@ -1318,7 +1376,7 @@ export interface CaptureItemListFilter {
   offset?: number;
 }
 
-// ─── VaultKeeper Import Types (Phase 6) ─────────────────────────
+// ─── External Import Types (Phase 6) ─────────────────────────
 
 export type ImportTaskStatus = 'scanning' | 'preview' | 'importing' | 'done' | 'failed' | 'cancelled';
 
@@ -1528,6 +1586,8 @@ export interface ProcessedContent {
   body_markdown: string;
   suggested_folder: string;
   quality_flags: string[];
+  /** Whether the result was produced by fallback/placeholder logic */
+  usedFallback?: boolean;
 }
 
 // ─── DistilledNote ────────────────────────────────────────────
@@ -1612,6 +1672,110 @@ export interface PinItemListFilter {
   offset?: number;
 }
 
+// ─── ToolBench: GitHub Projects & Local Scripts ──────────────────
+
+export type ToolProjectCategory = 'capture' | 'convert' | 'ai' | 'automation' | 'desktop' | 'dev' | 'knowledge' | 'other';
+export type ToolProjectStatus = 'saved' | 'available' | 'missing_path' | 'not_configured' | 'error';
+
+export interface GithubToolProject {
+  id: string;
+  name: string;
+  description: string;
+  repoUrl?: string;
+  localPath?: string;
+  launchCommand?: string;
+  docsPath?: string;
+  category: ToolProjectCategory;
+  tags: string[];
+  status: ToolProjectStatus;
+  createdAt: string;
+  updatedAt: string;
+  lastUsedAt?: string;
+}
+
+export type LocalScriptSafetyLevel = 'safe' | 'needs_review' | 'dangerous';
+
+export interface LocalScriptTool {
+  id: string;
+  name: string;
+  command: string;
+  workingDirectory?: string;
+  description: string;
+  tags: string[];
+  safetyLevel: LocalScriptSafetyLevel;
+  createdAt: string;
+  updatedAt: string;
+  lastUsedAt?: string;
+}
+
+export interface ScannedGitRepo {
+  name: string;
+  localPath: string;
+  description: string;
+  alreadyImported: boolean;
+}
+
+// ─── Dashboard Widget (独立仪表盘模块) ──────────────────────────
+
+export interface DashboardWidgetSettings {
+  enabled: boolean;
+  mediaPollIntervalMs: number;
+  showCalendar: boolean;
+  showMediaPlayer: boolean;
+  /** 悬停展开（对照 boring.notch openNotchOnHover） */
+  openNotchOnHover: boolean;
+  /** 悬停延迟毫秒（对照 boring.notch minimumHoverDuration） */
+  hoverDelayMs: number;
+  /** 自动收起延迟毫秒 */
+  autoCloseDelayMs: number;
+  /** 启用阴影（对照 boring.notch enableShadow） */
+  enableShadow: boolean;
+  /** 圆角缩放（对照 boring.notch cornerRadiusScaling） */
+  cornerRadiusScaling: boolean;
+  /** 显示 Face 动画（对照 boring.notch showNotHumanFace） */
+  showFaceAnimation: boolean;
+  /** 显示歌词（对照 boring.notch enableLyrics） */
+  showLyrics: boolean;
+  /** 音频频谱可视化（对照 boring.notch useMusicVisualizer） */
+  enableSpectrumVisualizer: boolean;
+}
+
+export const DEFAULT_DASHBOARD_WIDGET_SETTINGS: DashboardWidgetSettings = {
+  enabled: false,
+  mediaPollIntervalMs: 1000,
+  showCalendar: true,
+  showMediaPlayer: true,
+  openNotchOnHover: true,
+  hoverDelayMs: 300,
+  autoCloseDelayMs: 2000,
+  enableShadow: true,
+  cornerRadiusScaling: true,
+  showFaceAnimation: false,
+  showLyrics: false,
+  enableSpectrumVisualizer: true,
+};
+
+export type MediaPlaybackState = 'playing' | 'paused' | 'stopped' | 'unknown';
+
+export interface MediaInfo {
+  source: string | null;
+  trackName: string;
+  artist: string;
+  album: string;
+  duration: number;
+  position: number;
+  state: MediaPlaybackState;
+  artworkDataUrl: string | null;
+}
+
+export interface CalendarEvent {
+  title: string;
+  startDate: string;
+  endDate: string;
+  location?: string;
+  calendarName: string;
+}
+
 // ─── Voice Types (Phase 10) ───────────────────────────────────
 
 export type VoiceSessionPhase = 'idle' | 'listening' | 'processing' | 'done' | 'error';
@@ -1648,6 +1812,88 @@ export interface VoiceCreatePinRequest {
   sourceApp?: string;
 }
 
+// ── OpenLess-inspired Dictation ────────────────────────────────────
+
+/** Dictation session phases — mirrors OpenLess coordinator.rs SessionPhase */
+export type DictationSessionPhase =
+  | 'idle'
+  | 'starting'
+  | 'listening'
+  | 'transcribing'
+  | 'polishing'
+  | 'inserting'
+  | 'done'
+  | 'cancelled'
+  | 'error';
+
+/** Payload sent from main → renderer capsule window */
+export interface DictationCapsulePayload {
+  state: DictationSessionPhase;
+  /** Audio level 0..1 (only during listening) */
+  level: number;
+  /** Elapsed ms since session start */
+  elapsedMs: number;
+  /** Status message (e.g. "已粘贴 42 字", error message) */
+  message: string;
+  /** Number of characters inserted (only on done) */
+  insertedChars: number;
+  /** Whether translation mode is active */
+  translation: boolean;
+}
+
+/** Single dictation history entry */
+export interface DictationHistoryEntry {
+  id: string;
+  timestamp: number;
+  rawTranscript: string;
+  finalText: string;
+  mode: VoicePolishMode;
+  durationMs: number;
+  frontApp?: string;
+  polishFailed: boolean;
+}
+
+export interface DictationDiagnosticItem {
+  key: 'browser_microphone' | 'recorder_tool' | 'asr_provider' | 'whisper_runtime';
+  label: string;
+  ok: boolean;
+  message: string;
+}
+
+export interface DictationDiagnosticReport {
+  ok: boolean;
+  checkedAt: number;
+  items: DictationDiagnosticItem[];
+}
+
+/** Dictation-specific settings */
+export interface DictationSettings {
+  /** Enable dictation feature */
+  enabled: boolean;
+  /** Global hotkey to trigger dictation */
+  hotkey: string;
+  /** Default polish mode */
+  defaultMode: VoicePolishMode;
+  /** Which modes are enabled */
+  enabledModes: VoicePolishMode[];
+  /** Restore clipboard after paste */
+  restoreClipboard: boolean;
+  /** Working languages for context */
+  workingLanguages: string[];
+  /** Translation target language */
+  translationTargetLanguage: string;
+}
+
+export const DEFAULT_DICTATION_SETTINGS: DictationSettings = {
+  enabled: true,
+  hotkey: 'Cmd+Shift+V',
+  defaultMode: 'light',
+  enabledModes: ['raw', 'light', 'structured', 'formal'],
+  restoreClipboard: true,
+  workingLanguages: ['zh-CN', 'en'],
+  translationTargetLanguage: 'en',
+};
+
 // ── Phase 2A: Pinned Image ────────────────────────────────────────
 
 export interface PinnedImage {
@@ -1675,3 +1921,338 @@ export interface OcrResult {
   language?: string;
   error?: string;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase A: AcMind Local Agent Chat
+// 本地 Agent 对话基座 — 第一阶段类型定义
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Chat Session ─────────────────────────────────────────────
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  providerId: string | null;
+  modelId: string | null;
+  status: 'active' | 'archived' | 'deleted';
+  createdAt: number;
+  updatedAt: number;
+  metadata: ChatSessionMetadata;
+}
+
+export interface ChatSessionMetadata {
+  /** 关联的 AcMind 上下文类型 */
+  contextType?: 'pins' | 'inbox' | 'recent' | 'none';
+  /** 关联的内容 ID 列表 */
+  contextItemIds?: string[];
+  /** 任务模板 ID（如果从快捷指令创建） */
+  taskTemplateId?: string;
+  /** 会话上下文摘要，供 Agent 压缩/回溯使用 */
+  summary?: string;
+  /** 最近一次用户命令或意图 */
+  lastCommand?: string;
+  /** 最近一次使用的模型标识 */
+  lastModelId?: string;
+  /** 消息来源：桌面 / 手机 / Web / 自动化 — 预留用于远程同步 */
+  source?: 'desktop' | 'mobile' | 'web' | 'automation';
+  /** 远程客户端 ID — 预留用于多设备同步 */
+  remoteClientId?: string;
+}
+
+// ─── Chat Message ─────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content: string;
+  status: ChatMessageStatus;
+  modelId: string | null;
+  providerId: string | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  latencyMs: number | null;
+  error: string | null;
+  /** Agent 建议的操作（Phase A 仅支持 navigate/open_file） */
+  actionProposals?: AgentActionProposal[];
+  createdAt: number;
+  /** 消息来源 — 预留用于远程同步 */
+  source?: 'desktop' | 'mobile' | 'system' | 'agent';
+  /** 客户端消息 ID — 预留用于去重和冲突处理 */
+  clientMessageId?: string;
+}
+
+export type ChatMessageStatus =
+  | 'pending'
+  | 'streaming'
+  | 'completed'
+  | 'interrupted'
+  | 'error';
+
+// ─── Agent Action Proposal ────────────────────────────────────
+// Phase A: 仅支持 navigate / open_file
+// Phase B: 扩展 distill / export / scan / run_skill / create_task
+
+export interface AgentActionProposal {
+  id: string;
+  type: 'navigate' | 'open_file' | 'distill' | 'export' | 'scan' | 'run_skill' | 'create_task';
+  label: string;
+  description?: string;
+  riskLevel: 'safe' | 'confirm' | 'danger';
+  requiresConfirmation: boolean;
+  target?: string;
+  params?: Record<string, unknown>;
+  status?: 'proposed' | 'approved' | 'running' | 'completed' | 'failed' | 'cancelled' | 'pending_confirmation';
+  createdAt: number;
+}
+
+// ─── Agent Permission Policy ──────────────────────────────────
+// Phase A: 仅定义，不执行（用于 UI 提示）
+// Phase B: 在 agentActionService 中强制执行
+
+export interface AgentPermissionPolicy {
+  allowNavigate: boolean;
+  allowReadInbox: boolean;
+  allowReadObsidianInbox: boolean;
+  allowWriteMarkdown: boolean;
+  allowRunShell: boolean;
+  allowDeleteFile: boolean;
+  allowedDirectories: string[];
+  shellCommandAllowlist: string[];
+}
+
+export const DEFAULT_AGENT_PERMISSION_POLICY: AgentPermissionPolicy = {
+  allowNavigate: true,
+  allowReadInbox: true,
+  allowReadObsidianInbox: true,
+  allowWriteMarkdown: false,     // Phase A: 禁止写入
+  allowRunShell: false,          // Phase A: 禁止 Shell
+  allowDeleteFile: false,        // Phase A: 禁止删除
+  allowedDirectories: [],
+  shellCommandAllowlist: [],
+};
+
+// ─── Agent Chat Config ────────────────────────────────────────
+
+export interface AgentChatConfig {
+  /** 是否启用 Agent 对话功能 */
+  enabled: boolean;
+  /** Mock Agent Mode：用于 UI 验证，无需真实 LLM */
+  mockMode: boolean;
+  /** 默认 Provider ID */
+  defaultProviderId: string | null;
+  /** 默认模型 ID */
+  defaultModelId: string | null;
+  /** 系统提示词 */
+  systemPrompt: string;
+  /** 最大上下文消息条数 */
+  maxContextMessages: number;
+  /** 是否默认流式输出 */
+  streamEnabled: boolean;
+  /** 请求超时（毫秒） */
+  timeoutMs: number;
+  /** 权限策略 */
+  permissions: AgentPermissionPolicy;
+  /** 系统通知开关 */
+  notificationsEnabled: boolean;
+}
+
+export const DEFAULT_AGENT_CHAT_CONFIG: AgentChatConfig = {
+  enabled: false,
+  mockMode: true,  // 默认开启 Mock 模式，便于 UI 验证
+  defaultProviderId: null,
+  defaultModelId: null,
+  systemPrompt: `你是 AcMind 的 AI 助手。
+
+你可以帮助用户：
+- 对话问答、翻译、写作、分析
+- 理解用户任务并把任务分发到工作台、自动工具、日程表或设置
+- 查看 AcMind 的暂存、收集、知识库内容
+- 提供整理建议、动作建议和任务建议
+- 使用结构化结果帮助 AcMind 形成可执行闭环
+
+默认请优先：
+- 判断用户意图属于对话、检索、整理、任务还是工具操作
+- 若需要执行动作，请给出明确的建议与目标页面
+- 若需要任务编排，请先拆成可确认的步骤
+- 若无法直接执行，请说明缺少的配置或上下文
+
+请用中文回复，保持简洁实用。`,
+  maxContextMessages: 30,
+  streamEnabled: true,
+  timeoutMs: 120000,
+  permissions: DEFAULT_AGENT_PERMISSION_POLICY,
+  notificationsEnabled: true,
+};
+
+// ─── Schedule Manager Settings ────────────────────────────────
+
+export interface ScheduleManagerSettings {
+  /** 桌面通知 */
+  desktopNotification?: boolean;
+  /** 声音提醒 */
+  soundNotification?: boolean;
+  /** 顶部 Notch 提醒 */
+  notchReminder?: boolean;
+  /** SMTP 服务器 */
+  smtpHost?: string;
+  /** 发件人邮箱 */
+  smtpFrom?: string;
+  /** 日历默认视图 */
+  defaultCalendarView?: 'day' | 'week' | 'month';
+  /** 一周起始日 */
+  weekStart?: 'sunday' | 'monday';
+  /** 启用 Obsidian 自动整理 */
+  obsidianAutoCleanup?: boolean;
+  /** Obsidian 整理时间 */
+  obsidianCleanupTime?: string;
+  /** 周期任务自动确认 */
+  autoConfirmRecurring?: boolean;
+  /** 执行失败通知方式 */
+  failureNotification?: 'none' | 'desktop' | 'email';
+}
+
+export const DEFAULT_SCHEDULE_MANAGER_SETTINGS: ScheduleManagerSettings = {
+  desktopNotification: true,
+  soundNotification: true,
+  notchReminder: true,
+  smtpHost: '',
+  smtpFrom: '',
+  defaultCalendarView: 'week',
+  weekStart: 'monday',
+  obsidianAutoCleanup: false,
+  obsidianCleanupTime: '01:00',
+  autoConfirmRecurring: false,
+  failureNotification: 'desktop',
+};
+
+// ─── Agent Chat IPC Channels ──────────────────────────────────
+
+export const AGENT_CHAT_IPC_CHANNELS = {
+  // 会话管理
+  SESSIONS_LIST: 'agentChat.sessions.list',
+  SESSIONS_GET: 'agentChat.sessions.get',
+  SESSIONS_CREATE: 'agentChat.sessions.create',
+  SESSIONS_UPDATE: 'agentChat.sessions.update',
+  SESSIONS_DELETE: 'agentChat.sessions.delete',
+
+  // 消息
+  MESSAGES_LIST: 'agentChat.messages.list',
+  SEND_MESSAGE: 'agentChat.send',
+  STOP_GENERATION: 'agentChat.stop',
+
+  // 流式推送（主进程 → 渲染进程）
+  STREAM_CHUNK: 'agentChat.stream.chunk',
+  STREAM_DONE: 'agentChat.stream.done',
+  STREAM_ERROR: 'agentChat.stream.error',
+
+  // 事件
+  MESSAGE_CHANGED: 'agentChat.message.changed',
+  SESSION_CHANGED: 'agentChat.session.changed',
+
+  // Phase B: Action Proposal
+  ACTION_CONFIRMATION_REQUIRED: 'agentChat.action.confirmationRequired',
+  ACTION_EXECUTED: 'agentChat.action.executed',
+  ACTION_CONFIRM: 'agentChat.action.confirm',
+  ACTION_CANCEL: 'agentChat.action.cancel',
+} as const;
+
+// ─── Agent Tasks IPC Channels (Phase C) ──────────────────────────
+
+export const AGENT_TASKS_IPC_CHANNELS = {
+  LIST: 'agentTasks.list',
+  GET: 'agentTasks.get',
+  CREATE: 'agentTasks.create',
+  UPDATE: 'agentTasks.update',
+  DELETE: 'agentTasks.delete',
+  RUN_NOW: 'agentTasks.runNow',
+  HISTORY: 'agentTasks.history',
+  CANCEL: 'agentTasks.cancel',
+  TASK_CHANGED: 'agentTasks.task.changed',
+} as const;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase C: Agent Task（任务执行器）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Agent Task 类型 */
+export interface AgentTask {
+  id: string;
+  sessionId: string;
+  name: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  skillName?: string;
+  inputParams: Record<string, unknown>;
+  result?: string;
+  error?: string;
+  startedAt?: number;
+  completedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Agent Task Event 类型 */
+export interface AgentTaskEvent {
+  id: string;
+  taskId: string;
+  eventType: 'started' | 'step' | 'tool_call' | 'result' | 'error';
+  description: string;
+  metadata: Record<string, unknown>;
+  createdAt: number;
+}
+
+/** Agent Task 表 DDL（参考，实际建表在 storage.ts SCHEMA_SQL 中）
+CREATE TABLE IF NOT EXISTS agent_tasks (
+  id TEXT PRIMARY KEY,
+  session_id TEXT REFERENCES chat_sessions(id),
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  skill_name TEXT,
+  input_params TEXT NOT NULL DEFAULT '{}',
+  result TEXT,
+  error TEXT,
+  started_at INTEGER,
+  completed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS agent_task_events (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL
+);
+*/
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase D: Scheduled Agent Task（定时任务）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Scheduled Agent Task 类型 */
+export interface ScheduledAgentTask {
+  id: string;
+  name: string;
+  cronExpression: string;
+  skillName: string;
+  inputParams: Record<string, unknown>;
+  enabled: boolean;
+  lastRunAt: number | null;
+  lastRunStatus: 'success' | 'error' | 'timeout' | null;
+  lastRunTaskId: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Scheduled Agent Task IPC Channels */
+export const SCHEDULED_AGENT_TASKS_IPC_CHANNELS = {
+  LIST: 'scheduledAgentTasks.list',
+  GET: 'scheduledAgentTasks.get',
+  CREATE: 'scheduledAgentTasks.create',
+  UPDATE: 'scheduledAgentTasks.update',
+  DELETE: 'scheduledAgentTasks.delete',
+  RUN_NOW: 'scheduledAgentTasks.runNow',
+  TASK_CHANGED: 'scheduledAgentTasks.task.changed',
+} as const;

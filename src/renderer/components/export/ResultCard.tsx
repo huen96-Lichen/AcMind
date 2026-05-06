@@ -1,5 +1,5 @@
 import type { ExportRecord, DistilledOutput, SourceItem } from '../../../shared/types';
-import { PinStackIcon } from '../../design-system/icons';
+import { AcMindIcon } from '../../design-system/icons';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,7 @@ function getSourceTypeLabel(sourceItem: SourceItem | null): string {
     case 'manual': return '手动录入';
     case 'vault_import': return '知识库';
     case 'audio': return '语音录音';
+    default: return sourceItem.source;
   }
 }
 
@@ -52,6 +53,7 @@ function getSourceTypeIcon(sourceItem: SourceItem | null): string {
     case 'url': return '🔗';
     case 'image': return '🖼';
     case 'text': return '📄';
+    default: return '📄';
   }
 }
 
@@ -179,7 +181,7 @@ export function ResultCard({
         background: 'rgba(0, 0, 0, 0.02)',
         marginBottom: '10px',
       }}>
-        <PinStackIcon name="sb-obsidian" size={12} style={{ color: 'var(--pm-text-tertiary)', flexShrink: 0 }} />
+        <AcMindIcon name="sb-obsidian" size={12} style={{ color: 'var(--pm-text-tertiary)', flexShrink: 0 }} />
         <span style={{
           fontSize: '11px', color: 'var(--pm-text-tertiary)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -197,7 +199,7 @@ export function ResultCard({
           }}
           title="在文件管理器中显示"
         >
-          <PinStackIcon name="duplicate" size={12} />
+          <AcMindIcon name="duplicate" size={12} />
         </button>
       </div>
 
@@ -223,7 +225,7 @@ export function ResultCard({
             className="acmind-btn acmind-btn-ghost motion-button"
             style={{ color: '#16A34A', fontSize: '12px', padding: '3px 8px', fontWeight: 500 }}
           >
-            <PinStackIcon name="sb-obsidian" size={12} style={{ marginRight: '4px' }} />
+            <AcMindIcon name="sb-obsidian" size={12} style={{ marginRight: '4px' }} />
             打开 Obsidian 文件
           </button>
         )}

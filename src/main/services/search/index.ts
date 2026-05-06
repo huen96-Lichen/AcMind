@@ -1,6 +1,8 @@
-// Search module barrel exports (keyword-only)
+// Search module barrel exports
 
 export { keywordSearch } from './keywordSearch';
+export { embeddingService } from './embeddingService';
+export { vectorSearch } from './vectorSearch';
 
 export type {
   HybridSearchOptions,

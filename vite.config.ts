@@ -29,6 +29,8 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'src/renderer/index.html'),
         capsule: path.resolve(__dirname, 'src/renderer/capsule.html'),
+        widget: path.resolve(__dirname, 'src/renderer/widget.html'),
+        dictation: path.resolve(__dirname, 'src/renderer/dictation.html'),
         'pinned-image': path.resolve(__dirname, 'src/renderer/pinned-image.html'),
       },
     },

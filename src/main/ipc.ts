@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import { ipcMain, shell, dialog, BrowserWindow, clipboard } from 'electron';
+import { ipcMain, shell, dialog, BrowserWindow, clipboard, Notification } from 'electron';
 import type {
   AppSettings,
   StorageStats,
@@ -35,7 +35,7 @@ import type {
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/types';
 import type { HybridSearchOptions, SearchResult } from './services/search/types';
-import { keywordSearch } from './services/search';
+import { keywordSearch, embeddingService, vectorSearch } from './services/search';
 import { documentImporter } from './services/parser';
 import type { ImportResult } from './services/parser/types';
 import { schedulerService } from './services/scheduler';
@@ -54,6 +54,9 @@ import { aiProviderService } from './services/aiHub/aiProviderService';
 import { vaultScanner } from './services/importer/vaultScanner';
 import { voiceDictionaryStore } from './voice/dictionary';
 import { asrProvider } from './voice/asr';
+import { getRecorderAvailability } from './voice/recorder';
+import { dictationCoordinator } from './voice/coordinator';
+import { getDictationHistoryStore } from './voice/history';
 import { clipboardWatcher } from './clipboardWatcher';
 import { captureRegistry } from './services/capture';
 import type { CaptureInput } from './services/capture';
@@ -63,6 +66,7 @@ import { voiceWatchService } from './services/capture/voiceWatchService';
 import { audioTranscriptionService } from './services/capture/audioTranscriptionService';
 import { pinnedImageController } from './pinnedImageController';
 import { ocrService } from './ocrService';
+import { shortcutManager } from './shortcutManager';
 
 // ---------------------------------------------------------------------------
 // IPC handler registration
@@ -71,9 +75,10 @@ import { ocrService } from './ocrService';
 export interface RegisterIpcHandlersDeps {
   permissionCoordinator: PermissionCoordinator;
   capsuleController?: { updateSettings: (settings: import('../shared/capsuleSettings').DesktopMuseCapsuleSettings) => void } | null;
+  widgetController?: { show: () => void; hide: () => void; destroy: () => void; isVisible: () => boolean } | null;
 }
 
-export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
+export async function registerIpcHandlers(deps: RegisterIpcHandlersDeps): Promise<void> {
   /**
    * Helper: safely register a single IPC handler so that one failure
    * does NOT prevent subsequent handlers from being registered.
@@ -148,6 +153,9 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       // Sync capsule controller when capsule settings change
       if (patch.capsule && deps.capsuleController) {
         deps.capsuleController.updateSettings(updated.capsule);
+      }
+      if (patch.screenshotShortcut || patch.dashboardShortcut || patch.dictation) {
+        shortcutManager.refresh(updated);
       }
       return updated;
     } catch (error) {
@@ -391,6 +399,45 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         error: error instanceof Error ? error.message : String(error),
       });
       return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SOURCE_ITEMS_IMPORT_FILE, async (_event, filePath: string) => {
+    try {
+      const sourceItem = storage.importFileAsSourceItem(filePath);
+      emitRecordsChanged('created', sourceItem.id);
+      return sourceItem;
+    } catch (error) {
+      logger.error('error', 'ipc', 'sourceItems.importFile', 'Failed to import file as source item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SOURCE_ITEMS_SAVE_URL, async (_event, url: string) => {
+    try {
+      const sourceItem = storage.saveUrlAsSourceItem(url);
+      emitRecordsChanged('created', sourceItem.id);
+      return sourceItem;
+    } catch (error) {
+      logger.error('error', 'ipc', 'sourceItems.saveUrl', 'Failed to save URL as source item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.SOURCE_ITEMS_UPDATE, async (_event, id: string, patch: Record<string, unknown>) => {
+    try {
+      storage.updateSourceItem(id, patch as Partial<import('../shared/types').SourceItem>);
+      emitRecordsChanged('updated', id);
+      return true;
+    } catch (error) {
+      logger.error('error', 'ipc', 'sourceItems.update', 'Failed to update source item', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
   });
 
@@ -1172,6 +1219,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
     }
   });
 
+  /** @deprecated Use DATASETS_V2_CREATE instead */
   safeHandle(IPC_CHANNELS.DATASETS_CREATE_SNAPSHOT, async (_event, data: { name: string; description?: string; splitConfig?: Record<string, unknown> }) => {
     try {
       const { randomUUID } = await import('node:crypto');
@@ -1510,7 +1558,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
   });
 
   // =========================================================================
-  // Phase 9: VaultKeeper 深度接入
+  // Phase 9: 外部处理服务深度接入
   // =========================================================================
 
   safeHandle(IPC_CHANNELS.VK_CHECK_HEALTH, async () => {
@@ -1576,7 +1624,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         metadata: sourceItem.metadata || {},
       };
       const jobId = await processingJobService.submitJob(captureRecord as any, sourceItem.id);
-      return { success: !!jobId, jobId, message: jobId ? '重新提交成功' : '不需要 VaultKeeper 处理或提交失败' };
+      return { success: !!jobId, jobId, message: jobId ? '重新提交成功' : '不需要外部处理或提交失败' };
     } catch (error) {
       logger.error('error', 'ipc', 'vk.resubmitJob', 'Resubmit job failed', {
         originalId,
@@ -1604,7 +1652,7 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
   safeHandle(IPC_CHANNELS.VK_GET_RECENT_JOBS, async (_event, limit?: number) => {
     try {
       const vkErrorTypes = [
-        'vaultkeeper_unavailable',
+        'external_service_unavailable',
         'external_job_failed',
         'external_result_invalid',
         'external_result_ingest_failed',
@@ -1639,12 +1687,12 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
   // 保留旧接口兼容
   safeHandle('vk.task.create', async (_event, params: unknown) => {
     const id = randomUUID();
-    logger.info('app', 'ipc', 'vk.task.create', 'VaultKeeper task created (legacy)', { id, params: typeof params === 'object' ? params : String(params) });
+    logger.info('app', 'ipc', 'vk.task.create', 'External task created (legacy)', { id, params: typeof params === 'object' ? params : String(params) });
     return { id };
   });
 
   // =========================================================================
-  // Phase 6: VaultKeeper Import
+  // Phase 6: External Import
   // =========================================================================
 
   safeHandle('import.scan', async (_event, params: { vaultPath: string; folderPath?: string; excludePatterns?: string[] }) => {
@@ -2234,8 +2282,9 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
     if (!db) return;
     try {
       keywordSearch.initTable(db);
+      embeddingService.initTable(db);
       searchInitialized = true;
-      logger.info('app', 'ipc', 'search', 'Search tables initialized');
+      logger.info('app', 'ipc', 'search', 'Search tables initialized (FTS5 + embeddings)');
     } catch (error) {
       logger.error('error', 'ipc', 'search', 'Failed to init search tables', {
         error: error instanceof Error ? error.message : String(error),
@@ -2243,48 +2292,126 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
     }
   }
 
-  // search.hybrid: Perform keyword search (vector search removed)
+  // search.hybrid: Perform hybrid search (keyword + vector with RRF fusion)
   safeHandle(
     IPC_CHANNELS.SEARCH_HYBRID,
     async (
       _event,
       query: string,
       options: HybridSearchOptions = { query },
+      embeddingConfig?: Record<string, unknown>,
     ): Promise<SearchResult[]> => {
       try {
         ensureSearchInit();
         const db = storage.db;
         if (!db) throw new Error('Database not initialized');
-        const results = keywordSearch.search(db, query, options.topK ?? 20);
-        return results.map((r, index) => {
-          // Resolve real createdAt from source_items / distilled_outputs
+
+        const topK = options.topK ?? 20;
+        const vectorWeight = options.vectorWeight ?? 0.6;
+        const keywordWeight = options.keywordWeight ?? 0.4;
+
+        // ── Keyword search (always available) ──
+        const keywordResults = keywordSearch.search(db, query, topK * 2);
+
+        // ── Vector search (if embeddings exist and provider available) ──
+        let vectorResults: Array<{ itemType: string; itemId: string; score: number }> = [];
+        const embeddingCount = embeddingService.count(db);
+
+        if (embeddingCount > 0 && embeddingConfig) {
+          try {
+            // Find an embedding-capable provider from settings
+            const currentSettings = settings.load();
+            const provider = currentSettings.providers?.find(
+              (p: { enabled: boolean; capabilities?: string[] }) =>
+                p.enabled && p.capabilities?.includes('embedding'),
+            );
+            if (provider) {
+              vectorResults = await vectorSearch.searchByQuery(
+                db, provider, query, topK * 2,
+                options.searchTargets?.length === 1
+                  ? options.searchTargets[0] === 'source_items' ? 'source_item' : 'distilled_output'
+                  : undefined,
+              );
+            }
+          } catch (error) {
+            logger.warn('search', 'ipc', 'search.hybrid', 'Vector search failed, falling back to keyword-only', {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        // ── Reciprocal Rank Fusion (RRF) ──
+        const fusedScores = new Map<string, { score: number; vectorScore: number | null; keywordScore: number | null; source: SearchResult['source'] }>();
+
+        // Add keyword results
+        for (let i = 0; i < keywordResults.length; i++) {
+          const r = keywordResults[i];
+          const rrfScore = keywordWeight / (i + 1 + 60); // RRF with k=60
+          const existing = fusedScores.get(r.itemId);
+          if (existing) {
+            existing.score += rrfScore;
+            existing.keywordScore = r.score;
+            existing.source = 'hybrid';
+          } else {
+            fusedScores.set(r.itemId, { score: rrfScore, vectorScore: null, keywordScore: r.score, source: 'keyword' });
+          }
+        }
+
+        // Add vector results
+        for (let i = 0; i < vectorResults.length; i++) {
+          const r = vectorResults[i];
+          const rrfScore = vectorWeight / (i + 1 + 60);
+          const existing = fusedScores.get(r.itemId);
+          if (existing) {
+            existing.score += rrfScore;
+            existing.vectorScore = r.score;
+            existing.source = 'hybrid';
+          } else {
+            fusedScores.set(r.itemId, { score: rrfScore, vectorScore: r.score, keywordScore: null, source: 'vector' });
+          }
+        }
+
+        // Sort by fused score and take top-K
+        const sorted = [...fusedScores.entries()]
+          .sort((a, b) => b[1].score - a[1].score)
+          .slice(0, topK);
+
+        // ── Build final results ──
+        return sorted.map(([itemId, scores], index) => {
+          // Determine item type from keyword results or vector results
+          const keywordHit = keywordResults.find(r => r.itemId === itemId);
+          const vectorHit = vectorResults.find(r => r.itemId === itemId);
+          const itemType = keywordHit?.itemType ?? vectorHit?.itemType ?? 'source_item';
+          const title = keywordHit?.title ?? '';
+
+          // Resolve real createdAt
           let createdAt = 0;
-          if (r.itemType === 'source_item') {
-            const si = storage.getSourceItem(r.itemId);
+          if (itemType === 'source_item') {
+            const si = storage.getSourceItem(itemId);
             createdAt = si?.createdAt ?? 0;
           } else {
-            const dos = storage.getDistilledOutputs({}).find(o => o.id === r.itemId);
+            const dos = storage.getDistilledOutputs({}).find(o => o.id === itemId);
             createdAt = dos?.createdAt ?? 0;
           }
 
           // Resolve associated ExportRecords
           let exportRecordIds: string[] = [];
-          if (r.itemType === 'source_item') {
-            exportRecordIds = storage.getExportRecords({ sourceItemId: r.itemId }).map(er => er.id);
+          if (itemType === 'source_item') {
+            exportRecordIds = storage.getExportRecords({ sourceItemId: itemId }).map(er => er.id);
           } else {
-            exportRecordIds = storage.getExportRecords({ distilledOutputId: r.itemId }).map(er => er.id);
+            exportRecordIds = storage.getExportRecords({ distilledOutputId: itemId }).map(er => er.id);
           }
 
           return {
-            id: r.itemId,
-            type: (r.itemType === 'source_item' ? 'source_item' : 'distilled_output') as SearchResult['type'],
-            title: r.title,
-            preview: r.snippet,
-            score: r.score,
-            vectorScore: null,
-            keywordScore: r.score,
+            id: itemId,
+            type: (itemType === 'source_item' ? 'source_item' : 'distilled_output') as SearchResult['type'],
+            title,
+            preview: keywordHit?.snippet ?? '',
+            score: scores.score,
+            vectorScore: scores.vectorScore,
+            keywordScore: scores.keywordScore,
             rank: index + 1,
-            source: 'keyword' as const,
+            source: scores.source,
             metadata: {
               createdAt,
               exportRecordIds,
@@ -2576,6 +2703,24 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       return { success: result.success, markdown: result.markdown, title: result.title, error: result.error, engine: result.engine };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.CALENDAR_SHOW_NOTIFICATION, async (_event, params: { title: string; body: string }) => {
+    try {
+      if (!params?.title?.trim()) return false;
+      const notification = new Notification({
+        title: params.title.trim(),
+        body: params.body?.trim() || '',
+        silent: false,
+      });
+      notification.show();
+      return true;
+    } catch (error) {
+      logger.error('error', 'ipc', 'calendar.showNotification', 'Failed to show notification', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
     }
   });
 
@@ -3333,7 +3478,11 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
 
   safeHandle(IPC_CHANNELS.WHISPER_DOWNLOAD_MODEL, async (_event, modelSize: string) => {
     try {
-      await audioTranscriptionService.downloadBundledWhisperModel(modelSize as 'tiny' | 'base' | 'small');
+      const targetModel = modelSize as 'tiny' | 'base' | 'small';
+      const progressEmitter = (progress: number) => {
+        _event.sender.send(IPC_CHANNELS.WHISPER_DOWNLOAD_PROGRESS, progress);
+      };
+      await audioTranscriptionService.downloadBundledWhisperModel(targetModel, progressEmitter);
       return {
         success: true,
         skipped: false,
@@ -3342,6 +3491,23 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
       };
     } catch (error) {
       logger.error('error', 'ipc', 'whisper.downloadModel', 'Failed to handle whisper model download', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.WHISPER_OPEN_CACHE_DIR, async () => {
+    try {
+      const cacheDir = audioTranscriptionService.getWhisperModelCacheDir();
+      mkdirSync(cacheDir, { recursive: true });
+      const result = await shell.openPath(cacheDir);
+      if (result) {
+        return { success: false, error: result };
+      }
+      return { success: true, path: cacheDir };
+    } catch (error) {
+      logger.error('error', 'ipc', 'whisper.openCacheDir', 'Failed to open whisper cache dir', {
         error: error instanceof Error ? error.message : String(error),
       });
       return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -3379,6 +3545,26 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         engine: null,
         message: error instanceof Error ? error.message : String(error),
         modelSize,
+      };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.WHISPER_REPAIR, async (event) => {
+    try {
+      const progressEmitter = (progress: number) => {
+        event.sender.send(IPC_CHANNELS.WHISPER_DOWNLOAD_PROGRESS, progress);
+      };
+      const result = await audioTranscriptionService.repairWhisperEnvironment(undefined, progressEmitter);
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('error', 'ipc', 'whisper.repair', 'Failed to repair whisper environment', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        success: false,
+        engine: null,
+        repaired: false,
+        message: error instanceof Error ? error.message : String(error),
       };
     }
   });
@@ -4448,6 +4634,87 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
     }
   });
 
+  safeHandle(IPC_CHANNELS.VOICE_GET_DICTATION_DIAGNOSTICS, async () => {
+    try {
+      const [recorder, asrStatus] = await Promise.all([
+        getRecorderAvailability(),
+        Promise.resolve(asrProvider.getStatus()),
+      ]);
+
+      const whisperStatus = await audioTranscriptionService.getRuntimeStatus();
+      const items: import('../shared/types').DictationDiagnosticItem[] = [
+        {
+          key: 'browser_microphone',
+          label: '浏览器麦克风',
+          ok: true,
+          message: '前端会在点击自检时尝试获取麦克风权限并立即释放。',
+        },
+        {
+          key: 'recorder_tool',
+          label: '录音工具',
+          ok: recorder.available,
+          message: recorder.message,
+        },
+        {
+          key: 'asr_provider',
+          label: 'ASR 配置',
+          ok: asrStatus.configured,
+          message: asrStatus.message,
+        },
+        {
+          key: 'whisper_runtime',
+          label: '本地转写引擎',
+          ok: whisperStatus.status === 'ready',
+          message: whisperStatus.message,
+        },
+      ];
+
+      return {
+        ok: items.every((item) => item.ok),
+        checkedAt: Date.now(),
+        items,
+      } satisfies import('../shared/types').DictationDiagnosticReport;
+    } catch (error) {
+      logger.error('error', 'ipc', 'voice.getDictationDiagnostics', 'Failed to build dictation diagnostics', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        ok: false,
+        checkedAt: Date.now(),
+        items: [],
+      } satisfies import('../shared/types').DictationDiagnosticReport;
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.VOICE_REQUEST_MICROPHONE_ACCESS, async () => {
+    try {
+      if (process.platform !== 'darwin') {
+        return { success: false, supported: false, granted: false, message: '麦克风授权请求仅在 macOS 上可用。' };
+      }
+
+      const { systemPreferences } = await import('electron');
+      const granted = await systemPreferences.askForMediaAccess('microphone');
+      return {
+        success: true,
+        supported: true,
+        granted,
+        message: granted
+          ? '麦克风权限已授权。'
+          : '麦克风权限尚未授权。请在系统提示中允许，或到系统设置中开启。',
+      };
+    } catch (error) {
+      logger.error('error', 'ipc', 'voice.requestMicrophoneAccess', 'Failed to request microphone access', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        success: false,
+        supported: false,
+        granted: false,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
   safeHandle(IPC_CHANNELS.VOICE_POLISH_TRANSCRIPT, async (_event, request: import('../shared/types').VoicePolishRequest) => {
     try {
       const { polishTranscriptLocally } = await import('./voice/polish');
@@ -4658,6 +4925,61 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
         error: error instanceof Error ? error.message : String(error),
       });
       return { success: false, text: '', error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ─── Dictation (OpenLess-inspired) ─────────────────────────────
+  safeHandle('dictation:start', async () => {
+    try {
+      await dictationCoordinator.beginSession();
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'dictation.start', 'Failed to start dictation', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('dictation:stop', async () => {
+    try {
+      await dictationCoordinator.endSession();
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'dictation.stop', 'Failed to stop dictation', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('dictation:cancel', async () => {
+    dictationCoordinator.cancelSession();
+    return { success: true };
+  });
+
+  safeHandle('dictation:getHistory', async (_event, params?: { limit?: number; offset?: number }) => {
+    try {
+      const store = getDictationHistoryStore(settings.getStorageRoot());
+      return store.list(params?.limit, params?.offset);
+    } catch (error) {
+      logger.error('error', 'ipc', 'dictation.getHistory', 'Failed to get history', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  });
+
+  safeHandle('dictation:clearHistory', async () => {
+    try {
+      const store = getDictationHistoryStore(settings.getStorageRoot());
+      store.clear();
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'dictation.clearHistory', 'Failed to clear history', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false };
     }
   });
 
@@ -4872,6 +5194,546 @@ export function registerIpcHandlers(deps: RegisterIpcHandlersDeps): void {
 
   safeHandle(IPC_CHANNELS.DATASETS_V2_DELETE, async (_event, { id }: { id: string }) => {
     return storage.deleteDataset(id);
+  });
+
+  // ─── ToolBench: GitHub Projects ──────────────────────────────────
+  safeHandle(IPC_CHANNELS.TOOLBENCH_LIST_GITHUB_PROJECTS, async () => {
+    try {
+      const projects = storage.listGithubProjects();
+      // Compute status based on localPath existence
+      const fs = await import('node:fs');
+      for (const p of projects) {
+        if (p.localPath) {
+          p.status = fs.existsSync(p.localPath) ? 'available' : 'missing_path';
+        } else if (!p.repoUrl) {
+          p.status = 'not_configured';
+        } else {
+          p.status = 'saved';
+        }
+      }
+      return { success: true, projects };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.listGithubProjects', 'Failed', { error });
+      return { success: false, projects: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_CREATE_GITHUB_PROJECT, async (_event, input: any) => {
+    try {
+      const id = `gh_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      storage.insertGithubProject({ id, ...input });
+      return { success: true, id };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.createGithubProject', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_UPDATE_GITHUB_PROJECT, async (_event, { id, patch }: { id: string; patch: any }) => {
+    try {
+      storage.updateGithubProject(id, patch);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.updateGithubProject', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_DELETE_GITHUB_PROJECT, async (_event, { id }: { id: string }) => {
+    try {
+      storage.deleteGithubProject(id);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.deleteGithubProject', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  // ─── ToolBench: Local Scripts ────────────────────────────────────
+  safeHandle(IPC_CHANNELS.TOOLBENCH_LIST_SCRIPTS, async () => {
+    try {
+      const scripts = storage.listLocalScripts();
+      return { success: true, scripts };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.listScripts', 'Failed', { error });
+      return { success: false, scripts: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_CREATE_SCRIPT, async (_event, input: any) => {
+    try {
+      const id = `script_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      storage.insertLocalScript({ id, ...input });
+      return { success: true, id };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.createScript', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_UPDATE_SCRIPT, async (_event, { id, patch }: { id: string; patch: any }) => {
+    try {
+      storage.updateLocalScript(id, patch);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.updateScript', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_DELETE_SCRIPT, async (_event, { id }: { id: string }) => {
+    try {
+      storage.deleteLocalScript(id);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.deleteScript', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  // ─── ToolBench: Utility actions ──────────────────────────────────
+  safeHandle(IPC_CHANNELS.TOOLBENCH_OPEN_URL, async (_event, { url }: { url: string }) => {
+    try {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return { success: false, error: '只允许 http/https 链接' };
+      }
+      await shell.openExternal(url);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.openUrl', 'Failed', { error });
+      return { success: false, error: '打开链接失败' };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_OPEN_PATH, async (_event, { path: dirPath }: { path: string }) => {
+    try {
+      const fs = await import('node:fs');
+      if (!fs.existsSync(dirPath)) {
+        return { success: false, error: '路径不存在' };
+      }
+      await shell.openPath(dirPath);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.openPath', 'Failed', { error });
+      return { success: false, error: '打开目录失败' };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_COPY_COMMAND, async (_event, { command }: { command: string }) => {
+    try {
+      clipboard.writeText(command);
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.copyCommand', 'Failed', { error });
+      return { success: false, error: '复制失败' };
+    }
+  });
+
+  // ─── ToolBench: Scan & Import ─────────────────────────────────────
+  safeHandle(IPC_CHANNELS.TOOLBENCH_SCAN_LOCAL_DIR, async (_event, { dirPath }: { dirPath: string }) => {
+    try {
+      const fs = await import('node:fs');
+      if (!fs.existsSync(dirPath)) {
+        return { success: false, error: '目录不存在', repos: [] };
+      }
+      const { gitRepoScanner } = await import('./services/importer/gitRepoScanner');
+      const repos = gitRepoScanner.scan(dirPath);
+      for (const repo of repos) {
+        const existing = storage.getGithubProjectByLocalPath(repo.localPath);
+        repo.alreadyImported = !!existing;
+      }
+      return { success: true, repos };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.scanLocalDir', 'Failed', { error });
+      return { success: false, error: String(error), repos: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_BATCH_IMPORT_PROJECTS, async (_event, { repos }: { repos: any[] }) => {
+    try {
+      let imported = 0;
+      let skipped = 0;
+      for (const repo of repos) {
+        const existing = storage.getGithubProjectByLocalPath(repo.localPath);
+        if (existing) { skipped++; continue; }
+        const id = `gh_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        storage.insertGithubProject({
+          id,
+          name: repo.name,
+          description: repo.description || '',
+          localPath: repo.localPath,
+          category: 'other',
+          tags: [],
+          status: 'available',
+        });
+        imported++;
+      }
+      return { success: true, imported, skipped };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.batchImportProjects', 'Failed', { error });
+      return { success: false, imported: 0, skipped: 0 };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.TOOLBENCH_PICK_DIRECTORY, async () => {
+    try {
+      const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, path: '' };
+      }
+      return { success: true, path: result.filePaths[0] };
+    } catch (error) {
+      logger.error('app', 'ipc', 'toolbench.pickDirectory', 'Failed', { error });
+      return { success: false, path: '' };
+    }
+  });
+
+  // ─── Dashboard Widget (独立仪表盘) ──────────────────────────────
+  safeHandle(IPC_CHANNELS.DASHBOARD_WIDGET_GET_MEDIA, async () => {
+    try {
+      const { getMediaInfo } = await import('./services/dashboard/mediaService');
+      const media = await getMediaInfo();
+      return { success: true, media };
+    } catch (error) {
+      logger.error('app', 'ipc', 'dashboardWidget.getMedia', 'Failed', { error });
+      return { success: false, media: { source: null, trackName: '', artist: '', album: '', duration: 0, position: 0, state: 'stopped', artworkDataUrl: null } };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DASHBOARD_WIDGET_MEDIA_CONTROL, async (_event, action: string) => {
+    try {
+      const { mediaControl } = await import('./services/dashboard/mediaService');
+      await mediaControl(action as 'playpause' | 'next' | 'previous');
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'dashboardWidget.mediaControl', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DASHBOARD_WIDGET_GET_CALENDAR, async () => {
+    try {
+      const { getTodayCalendarEvents } = await import('./services/dashboard/calendarService');
+      const events = await getTodayCalendarEvents();
+      return { success: true, events };
+    } catch (error) {
+      logger.error('app', 'ipc', 'dashboardWidget.getCalendar', 'Failed', { error });
+      return { success: false, events: [] };
+    }
+  });
+
+  safeHandle(IPC_CHANNELS.DASHBOARD_WIDGET_TOGGLE_WINDOW, async (_event, enabled: boolean) => {
+    try {
+      if (enabled) {
+        deps.widgetController?.show();
+      } else {
+        deps.widgetController?.hide();
+      }
+      return { success: true };
+    } catch (error) {
+      logger.error('app', 'ipc', 'dashboardWidget.toggleWindow', 'Failed', { error });
+      return { success: false };
+    }
+  });
+
+  // ─── Phase A: Agent Chat ──────────────────────────────────────
+  const { chatService } = await import('./services/chat/chatService');
+  const { AGENT_CHAT_IPC_CHANNELS } = await import('../shared/types');
+
+  // Sessions
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.SESSIONS_LIST, async (_event, filter?: { status?: 'active' | 'archived' | 'deleted'; limit?: number; offset?: number }) => {
+    try {
+      const sessions = chatService.listSessions(filter);
+      return { success: true, sessions };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.sessions.list', 'Failed to list sessions', { error });
+      return { success: false, sessions: [] };
+    }
+  });
+
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.SESSIONS_GET, async (_event, id: string) => {
+    try {
+      const session = chatService.getSession(id);
+      return { success: true, session };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.sessions.get', 'Failed to get session', { error });
+      return { success: false, session: null };
+    }
+  });
+
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.SESSIONS_CREATE, async (_event, params?: { title?: string; metadata?: import('../shared/types').ChatSessionMetadata; providerId?: string; modelId?: string }) => {
+    try {
+      const session = chatService.createSession(params);
+      return { success: true, session };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.sessions.create', 'Failed to create session', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.SESSIONS_UPDATE, async (_event, id: string, patch: Partial<import('../shared/types').ChatSession>) => {
+    try {
+      const session = chatService.updateSession(id, patch);
+      return { success: true, session };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.sessions.update', 'Failed to update session', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.SESSIONS_DELETE, async (_event, id: string) => {
+    try {
+      const success = chatService.deleteSession(id);
+      return { success };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.sessions.delete', 'Failed to delete session', { error });
+      return { success: false };
+    }
+  });
+
+  // Messages
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.MESSAGES_LIST, async (_event, sessionId: string, filter?: { limit?: number }) => {
+    try {
+      const messages = chatService.listMessages(sessionId, filter);
+      return { success: true, messages };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.messages.list', 'Failed to list messages', { error });
+      return { success: false, messages: [] };
+    }
+  });
+
+  safeHandle('agentChat.messages.createSystem', async (_event, sessionId: string, content: string) => {
+    try {
+      const message = chatService.createSystemMessage(sessionId, content);
+      return { success: true, message };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.messages.createSystem', 'Failed to create system message', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('agentChat.skills.list', async () => {
+    try {
+      const skills = skillRegistry.getAll().map((skill) => ({
+        name: skill.name,
+        description: skill.description,
+        category: skill.category,
+        requiresConfirmation: skill.requiresConfirmation,
+      }));
+      return { success: true, skills };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.skills.list', 'Failed to list skills', { error });
+      return { success: false, skills: [] };
+    }
+  });
+
+  // Send message (starts streaming)
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.SEND_MESSAGE, async (_event, params: { sessionId: string; content: string; providerId?: string }) => {
+    try {
+      // Get provider if specified
+      let provider: import('../shared/types').ProviderConfig | undefined;
+      if (params.providerId) {
+        const providers = storage.getProviderConfigs();
+        provider = providers.find(p => p.id === params.providerId && p.enabled);
+      } else {
+        // M8: 未传 providerId 时，回退到设置中的默认 provider
+        const appSettings = settings.load();
+        if (appSettings.agentChat?.defaultProviderId) {
+          const providers = storage.getProviderConfigs();
+          provider = providers.find(p => p.id === appSettings.agentChat.defaultProviderId && p.enabled);
+        }
+      }
+
+      const result = await chatService.sendMessage({
+        sessionId: params.sessionId,
+        content: params.content,
+        provider,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.send', 'Failed to send message', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Stop generation
+  safeHandle(AGENT_CHAT_IPC_CHANNELS.STOP_GENERATION, async () => {
+    try {
+      const stopped = chatService.stopGeneration();
+      return { success: true, stopped };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentChat.stop', 'Failed to stop generation', { error });
+      return { success: false };
+    }
+  });
+
+  // ─── Phase C: Agent Tasks ──────────────────────────────────────
+  const { agentTaskService } = await import('./services/chat/agentTaskService');
+  const { AGENT_TASKS_IPC_CHANNELS } = await import('../shared/types');
+  const { skillRegistry } = await import('./services/chat/skillRegistry');
+
+  // Register built-in skills
+  const { default: scanInboxSkill } = await import('./services/chat/skills/scanInboxSkill');
+  const { default: checkAcMindSkill } = await import('./services/chat/skills/checkAcMindSkill');
+  const { default: scanObsidianInboxSkill } = await import('./services/chat/skills/scanObsidianInboxSkill');
+  const { default: webScraperSkill } = await import('./services/chat/skills/webScraperSkill');
+  const { default: fileSearchSkill } = await import('./services/chat/skills/fileSearchSkill');
+  const { default: markdownGeneratorSkill } = await import('./services/chat/skills/markdownGeneratorSkill');
+  skillRegistry.register(scanInboxSkill);
+  skillRegistry.register(checkAcMindSkill);
+  skillRegistry.register(scanObsidianInboxSkill);
+  skillRegistry.register(webScraperSkill);
+  skillRegistry.register(fileSearchSkill);
+  skillRegistry.register(markdownGeneratorSkill);
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.LIST, async (_event, filter?: { status?: string; limit?: number; offset?: number }) => {
+    try {
+      const tasks = agentTaskService.listTasks(filter);
+      return { success: true, tasks };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.list', 'Failed to list tasks', { error });
+      return { success: false, tasks: [] };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.GET, async (_event, id: string) => {
+    try {
+      const task = agentTaskService.getTask(id);
+      return { success: true, task };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.get', 'Failed to get task', { error });
+      return { success: false, task: null };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.CREATE, async (_event, params: { sessionId: string; name: string; skillName?: string; inputParams?: Record<string, unknown> }) => {
+    try {
+      const task = agentTaskService.createTask(params);
+      return { success: true, task };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.create', 'Failed to create task', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.UPDATE, async (_event, id: string, updates: Partial<import('../shared/types').AgentTask>) => {
+    try {
+      agentTaskService.updateTask(id, updates);
+      const task = agentTaskService.getTask(id);
+      return { success: true, task };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.update', 'Failed to update task', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.DELETE, async (_event, id: string) => {
+    try {
+      const success = agentTaskService.deleteTask(id);
+      return { success };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.delete', 'Failed to delete task', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.RUN_NOW, async (_event, id: string) => {
+    try {
+      await agentTaskService.runTask(id);
+      const task = agentTaskService.getTask(id);
+      return { success: true, task };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.runNow', 'Failed to run task', { error });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.HISTORY, async (_event, taskId: string) => {
+    try {
+      const events = agentTaskService.getTaskEvents(taskId);
+      return { success: true, events };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.history', 'Failed to get task history', { error });
+      return { success: false, events: [] };
+    }
+  });
+
+  safeHandle(AGENT_TASKS_IPC_CHANNELS.CANCEL, async (_event, id: string) => {
+    try {
+      agentTaskService.cancelTask(id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'agentTasks.cancel', 'Failed to cancel task', { error });
+      return { success: false };
+    }
+  });
+
+  // ─── Phase D: Scheduled Agent Tasks IPC Handlers ───────────────────────
+
+  const { SCHEDULED_AGENT_TASKS_IPC_CHANNELS } = await import('../shared/types');
+
+  safeHandle(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.LIST, async () => {
+    try {
+      const tasks = schedulerService.listScheduledAgentTasks();
+      return { success: true, tasks };
+    } catch (error) {
+      logger.error('error', 'ipc', 'scheduledAgentTasks.list', 'Failed to list scheduled agent tasks', { error });
+      return { success: false, tasks: [] };
+    }
+  });
+
+  safeHandle(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.GET, async (_event, id: string) => {
+    try {
+      const task = schedulerService.getScheduledAgentTask(id);
+      return { success: true, task };
+    } catch (error) {
+      logger.error('error', 'ipc', 'scheduledAgentTasks.get', 'Failed to get scheduled agent task', { error });
+      return { success: false, task: null };
+    }
+  });
+
+  safeHandle(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.CREATE, async (_event, params: { name: string; cronExpression: string; skillName: string; inputParams?: Record<string, unknown>; enabled?: boolean }) => {
+    try {
+      const task = schedulerService.createScheduledAgentTask(params);
+      return { success: true, task };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('error', 'ipc', 'scheduledAgentTasks.create', 'Failed to create scheduled agent task', { error: errorMsg });
+      return { success: false, error: errorMsg };
+    }
+  });
+
+  safeHandle(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.UPDATE, async (_event, id: string, updates: Partial<import('../shared/types').ScheduledAgentTask>) => {
+    try {
+      const task = schedulerService.updateScheduledAgentTask(id, updates);
+      return { success: true, task };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('error', 'ipc', 'scheduledAgentTasks.update', 'Failed to update scheduled agent task', { error: errorMsg });
+      return { success: false, error: errorMsg };
+    }
+  });
+
+  safeHandle(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.DELETE, async (_event, id: string) => {
+    try {
+      schedulerService.deleteScheduledAgentTask(id);
+      return { success: true };
+    } catch (error) {
+      logger.error('error', 'ipc', 'scheduledAgentTasks.delete', 'Failed to delete scheduled agent task', { error });
+      return { success: false };
+    }
+  });
+
+  safeHandle(SCHEDULED_AGENT_TASKS_IPC_CHANNELS.RUN_NOW, async (_event, id: string) => {
+    try {
+      await schedulerService.runScheduledAgentTaskNow(id);
+      return { success: true };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('error', 'ipc', 'scheduledAgentTasks.runNow', 'Failed to run scheduled agent task', { error: errorMsg });
+      return { success: false, error: errorMsg };
+    }
   });
 
   logger.info('app', 'ipc', 'register', 'IPC handlers registered', {
