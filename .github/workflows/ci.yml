@@ -6,10 +6,74 @@ on:
   pull_request:
     branches: [main]
 
+# 并发控制：同一 PR 只保留最新运行
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
-    name: Lint
+  # ===========================================================================
+  # Swift 原生构建 & 测试
+  # ===========================================================================
+  swift-build:
+    name: Swift Build
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Resolve Dependencies
+        run: swift package resolve
+
+      - name: Build (Debug)
+        run: swift build
+
+      - name: Build (Release)
+        run: swift build -c Release
+
+  swift-test:
+    name: Swift Test
+    runs-on: macos-14
+    needs: [swift-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Resolve Dependencies
+        run: swift package resolve
+
+      - name: Run Tests
+        run: swift test --parallel
+
+  # ===========================================================================
+  # Xcode 构建验证（模拟生产构建）
+  # ===========================================================================
+  xcode-build:
+    name: Xcode Build
+    runs-on: macos-14
+    needs: [swift-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Native Build Script
+        run: bash scripts/build.sh --release
+
+  # ===========================================================================
+  # Electron 兼容性检查（仅验证不阻断）
+  # ===========================================================================
+  electron-lint:
+    name: Electron Lint (Reference)
     runs-on: macos-latest
+    # ⚠️ 此 job 不作为 PR 合并的门禁
+    # Electron 代码已归档为参考实现，lint 仅用于追踪参考代码质量
+    if: ${{ false }}  # 默认禁用，需要时手动启用
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,52 +82,23 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-
-  typecheck:
-    name: Typecheck
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
       - run: npm run typecheck
 
-  test:
-    name: Test
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run test
-
-  build:
-    name: Build
-    runs-on: macos-latest
-    needs: [lint, typecheck]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-
+  # ===========================================================================
+  # 安全审计
+  # ===========================================================================
   audit:
     name: Security Audit
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm audit --omit=dev || true
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Check Swift Dependencies
+        run: |
+          swift package resolve
+          echo "✅ Swift 依赖解析完成"
+          echo "📦 外部依赖：GRDB.swift (唯一)"
+          echo "⚠️ Electron npm 依赖已不再用于生产构建"

@@ -1,5 +1,50 @@
 # AcMind 工作日志
 
+## 2026-05-07 — 迁移边界冻结：Electron → Swift 目标架构
+
+### 完成事项
+
+1. **项目全面扫描**
+   - Electron 端：300+ 文件，34 个视图路由，~326 个 IPC handler，22+ 张 SQLite 表
+   - Swift 端：42 个 Swift 文件，5 个原生视图，13 个 WebView 页面映射
+   - 识别关键差距：存储层（JSON vs SQLite）、AI 蒸馏（Mock）、知识库/语音（空壳）
+
+2. **迁移边界冻结**
+   - 创建 [Swift 迁移总表](./superpowers/plans/2026-05-07-swift-migration-plan.md)
+   - 明确 Swift 架构唯一主线：App Shell → Features → AcMindKit → Platform
+   - 画出 25 个 Electron 模块到 Swift 模块的完整映射表
+   - 标出三类边界：必须原生(✅) / 可过渡(🔄) / 最后再删(⏳)
+
+3. **目标导航收敛**
+   - 冻结 6 项导航：Agent / Inbox / Schedule / Workbench / Tools / Settings
+   - 旧导航（工作台/暂存池/整理/知识库/工具台/设置）→ 新导航映射关系
+
+4. **优先级表制定**
+   - P1：存储层重写 + 核心链路（AI 蒸馏/导出）
+   - P2：导航六件套原生实现
+   - P3：过渡模块填充（Knowledge/Voice/Search）
+   - P4：清理收尾，移除 Electron 依赖
+
+5. **Electron 保留清单**
+   - File Converter、Import/Vault、Projects/Datasets、VaultKeeper、Onboarding、Error/Retry/Diagnostics
+   - 通过 WebViewBridge 在 Swift 壳内运行，P4 阶段处理
+
+6. **文档同步更新**
+   - `docs/ACMIND_PRODUCT_BOUNDARY.md` — 增加迁移边界章节 + 目标导航
+   - `docs/ARCHITECTURE.md` — 增加 Swift 目标架构 + 模块映射
+   - `docs/PROJECT_HANDOVER.md` — 增加迁移状态 + Swift 进展
+   - `docs/WORKLOG.md` — 本条记录
+
+### 修改文件清单
+
+- `docs/superpowers/plans/2026-05-07-swift-migration-plan.md` — 新建（迁移总表）
+- `docs/ACMIND_PRODUCT_BOUNDARY.md` — 增加迁移边界 + 目标导航
+- `docs/ARCHITECTURE.md` — 增加 Swift 目标架构 + 模块映射
+- `docs/PROJECT_HANDOVER.md` — 增加迁移状态 + Swift 进展
+- `docs/WORKLOG.md` — 本条记录
+
+---
+
 ## 2026-05-05 — Phase 2: 整理链路打通（Distill → Export）
 
 ### 完成事项

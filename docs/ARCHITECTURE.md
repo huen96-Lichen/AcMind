@@ -1,5 +1,8 @@
 # AcMind 架构文档
 
+> 最后更新：2026-05-07
+> ⚠️ **迁移边界已冻结**，详见 [Swift 迁移总表](./superpowers/plans/2026-05-07-swift-migration-plan.md)
+
 ## 产品定位
 
 AcMind 是一个 **local-first 桌面知识中枢**，核心链路为：
@@ -31,7 +34,9 @@ AcMind 不是 16 个参考项目的源码拼接，而是从 pinmind-main / pinst
 
 ## 总体架构
 
-AcMind 是一个 Electron 桌面应用，采用三层架构：
+### 当前架构：Electron 三层（逐步废弃）
+
+AcMind 当前是一个 Electron 桌面应用，采用三层架构：
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -48,6 +53,46 @@ AcMind 是一个 Electron 桌面应用，采用三层架构：
 │  - AI 蒸馏、采集、导出、调度                    │
 └─────────────────────────────────────────────┘
 ```
+
+### 目标架构：Swift 原生（迁移主线）
+
+> 已冻结（2026-05-07），完整迁移计划见 [Swift 迁移总表](./superpowers/plans/2026-05-07-swift-migration-plan.md)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  App Shell (SwiftUI + AppKit)                           │
+│  - NavigationSplitView 主布局                            │
+│  - AppDelegate 状态栏/通知/生命周期                       │
+│  - ServiceContainer DI 容器                             │
+├─────────────────────────────────────────────────────────┤
+│  Features (SwiftUI Views + ViewModels)                  │
+│  - Agent / Inbox / Schedule / Workbench / Tools / Settings │
+│  - CapsulePanel (NSPanel 浮动入口)                      │
+├─────────────────────────────────────────────────────────┤
+│  AcMindKit (独立 Swift Package)                          │
+│  - Models: 数据实体 (Codable + Sendable)                │
+│  - Protocols: 服务抽象接口                               │
+│  - Services: 业务逻辑实现 (actor 并发)                   │
+│    ├── AI/         Ollama + OpenAI + 任务队列            │
+│    ├── Input/      采集 + 剪贴板                         │
+│    ├── Storage/    SQLite 持久化 + 资产管理               │
+│    ├── Workflow/   蒸馏 + 导出                           │
+│    ├── Knowledge/  知识库 + 搜索                          │
+│    ├── Voice/      录音 + ASR + 润色                      │
+│    └── Settings/   配置 + 权限 + 快捷键                   │
+├─────────────────────────────────────────────────────────┤
+│  Platform (Apple Native Frameworks)                     │
+│  - CoreGraphics / AVFoundation / Vision / Security       │
+│  - WebKit (过渡期 WebView 桥接)                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 过渡策略
+
+- **P1**：存储层重写（JSON → SQLite）+ 核心链路（AI 蒸馏/导出）
+- **P2**：导航六件套原生实现（Agent/Inbox/Schedule/Workbench/Tools/Settings）
+- **P3**：过渡模块填充（Knowledge/Voice/Search）
+- **P4**：清理收尾，移除 Electron 依赖
 
 ## 模块结构
 
@@ -257,3 +302,46 @@ Capsule → Capture / Clipboard / Shelf → Inbox → Distill → Export → 沉
 - **页面**：`renderer/pages/` — 每个页面独立目录
 - **状态管理**：React Context + useState（无全局状态库）
 - **路由**：基于 `activeView` 状态的条件渲染（无 react-router）
+
+## Electron → Swift 模块映射
+
+> 完整映射表、优先级表和 Electron 保留清单见 [Swift 迁移总表](./superpowers/plans/2026-05-07-swift-migration-plan.md)
+
+### 必须原生（✅）
+
+| Electron 模块 | Swift 模块 | Swift 代码 |
+|--------------|-----------|-----------|
+| Capsule | CapsulePanel | `Features/Native/Capsule/CapsulePanel.swift` |
+| Capture | CaptureService | `AcMindKit/Services/Input/Capture/` |
+| Clipboard | ClipboardService | `AcMindKit/Services/Input/Clipboard/` |
+| Inbox | InboxView | `Features/Native/Inbox/InboxView.swift` |
+| Distill | DistillService | `AcMindKit/Services/Workflow/DistillService.swift` |
+| Export | ExportService | `AcMindKit/Services/Workflow/ExportService.swift` |
+| AI Runtime | AIRuntimeService | `AcMindKit/Services/AI/` |
+| Settings | SettingsService | `AcMindKit/Services/Settings/` |
+| Storage | Database + StorageService | `AcMindKit/Services/Storage/` |
+| Agent Chat | AgentView | `Features/Native/Agent/` |
+| Scheduler | 合并到 Schedule | `Features/Native/Schedule/` |
+| Design System | AcMindTheme | `Design/AcMindTheme.swift` |
+| Tray/Shortcut/Permission | AppDelegate | `App/AppDelegate.swift` |
+| Pipeline + Strategy | 合并到 Workflow/AI | 内嵌到 DistillService/AIRuntimeService |
+
+### 可过渡（🔄）
+
+| Electron 模块 | 过渡方式 |
+|--------------|---------|
+| Knowledge Base | WebViewBridge → P3 迁移到 Swift |
+| Voice | WebViewBridge → P3 迁移到 Swift |
+| Search | WebViewBridge → P3 迁移到 Swift |
+| Shelf | 合并到 Inbox 或保留 WebView |
+
+### 最后再删（⏳）
+
+| Electron 模块 | 保留原因 |
+|--------------|---------|
+| File Converter | 依赖 Python CLI，迁移成本高 |
+| Import/Vault | Obsidian 导入逻辑复杂 |
+| Projects/Datasets | 非核心功能 |
+| VaultKeeper | 需评估产品方向 |
+| Onboarding | UI 密集但非核心 |
+| Error/Retry/Diagnostics | 辅助功能 |

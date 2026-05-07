@@ -1,0 +1,246 @@
+import Foundation
+import Combine
+import AcMindKit
+
+// MARK: - Window State
+
+public enum WindowState: Sendable, Equatable {
+    case closed
+    case minimized
+    case normal
+    case fullscreen
+}
+
+// MARK: - App State
+
+/// 全局应用状态管理
+/// 职责：
+/// 1. 导航状态（当前选中的侧边栏项）
+/// 2. 窗口状态（主窗口、胶囊窗口）
+/// 3. 启动状态（从 ServiceContainer 同步）
+/// 4. 全局错误处理
+/// 5. 快捷键注册
+@MainActor
+public final class AppState: ObservableObject, Sendable {
+    // MARK: - Singleton
+
+    public static let shared = AppState()
+
+    // MARK: - Navigation State
+
+    @Published public var sidebarSelection: SidebarItem = .agent
+    @Published public var sidebarCollapsed = false
+
+    // MARK: - Window State
+
+    @Published public var mainWindowState: WindowState = .closed
+    @Published public var capsuleWindowState: WindowState = .closed
+    @Published public var isMainWindowKey = false
+
+    // MARK: - Launch State (from ServiceContainer)
+
+    @Published public var initializationPhase: InitializationPhase = .idle
+    @Published public var isInitializing = false
+    @Published public var initializationError: Error?
+    @Published public var isAppReady = false
+
+    // MARK: - Global Error State
+
+    @Published public var globalError: AppError?
+    @Published public var showErrorAlert = false
+
+    // MARK: - Feature Flags
+
+    @Published public var showOnboarding = false
+    @Published public var isFirstLaunch = false
+
+    // MARK: - Private
+
+    private var cancellables = Set<AnyCancellable>()
+    private var shortcutHandlers: [KeyboardShortcut: () -> Void] = [:]
+
+    private init() {
+        setupBindings()
+        checkFirstLaunch()
+    }
+
+    // MARK: - Setup
+
+    private func setupBindings() {
+        // 监听 ServiceContainer 的初始化状态
+        // 注意：由于 ServiceContainer 也是 @MainActor，这里使用定时轮询
+        Timer.publish(every: 0.1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    await self?.syncWithServiceContainer()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func syncWithServiceContainer() async {
+        guard ServiceContainer.isInitialized() else { return }
+
+        let container = ServiceContainer.shared
+
+        if initializationPhase != container.currentPhase {
+            initializationPhase = container.currentPhase
+        }
+        if isInitializing != (container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed) {
+            isInitializing = container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed
+        }
+        if let containerError = container.initializationError {
+            if initializationError?.localizedDescription != containerError.localizedDescription {
+                initializationError = containerError
+                showError(AppError.initializationFailed(containerError))
+            }
+        } else if initializationError != nil {
+            initializationError = nil
+        }
+        if isAppReady != container.isInitialized {
+            isAppReady = container.isInitialized
+        }
+    }
+
+    private func checkFirstLaunch() {
+        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
+        if !hasLaunchedBefore {
+            isFirstLaunch = true
+            showOnboarding = true
+            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+        }
+    }
+
+    // MARK: - Navigation
+
+    public func selectSidebarItem(_ item: SidebarItem) {
+        sidebarSelection = item
+    }
+
+    public func toggleSidebar() {
+        sidebarCollapsed.toggle()
+    }
+
+    // MARK: - Window Management
+
+    public func mainWindowDidOpen() {
+        mainWindowState = .normal
+    }
+
+    public func mainWindowDidClose() {
+        mainWindowState = .closed
+    }
+
+    public func mainWindowDidBecomeKey() {
+        isMainWindowKey = true
+    }
+
+    public func mainWindowDidResignKey() {
+        isMainWindowKey = false
+    }
+
+    public func capsuleWindowDidOpen() {
+        capsuleWindowState = .normal
+    }
+
+    public func capsuleWindowDidClose() {
+        capsuleWindowState = .closed
+    }
+
+    // MARK: - Error Handling
+
+    public func showError(_ error: AppError) {
+        globalError = error
+        showErrorAlert = true
+    }
+
+    public func clearError() {
+        globalError = nil
+        showErrorAlert = false
+    }
+
+    // MARK: - Shortcuts
+
+    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) {
+        shortcutHandlers[shortcut] = action
+    }
+
+    public func unregisterShortcut(_ shortcut: KeyboardShortcut) {
+        shortcutHandlers.removeValue(forKey: shortcut)
+    }
+
+    public func handleShortcut(_ shortcut: KeyboardShortcut) -> Bool {
+        if let action = shortcutHandlers[shortcut] {
+            action()
+            return true
+        }
+        return false
+    }
+
+    // MARK: - Launch Flow
+
+    public func markOnboardingComplete() {
+        showOnboarding = false
+        isFirstLaunch = false
+    }
+
+    public func retryInitialization() async {
+        initializationError = nil
+        do {
+            try await ServiceContainer.setup()
+        } catch {
+            showError(AppError.initializationFailed(error))
+        }
+    }
+}
+
+// MARK: - App Error
+
+public enum AppError: LocalizedError, Identifiable {
+    case initializationFailed(Error)
+    case serviceUnavailable(String)
+    case networkError(String)
+    case permissionDenied(SystemPermission)
+    case unknown(Error)
+
+    public var id: String {
+        switch self {
+        case .initializationFailed: return "initializationFailed"
+        case .serviceUnavailable(let name): return "serviceUnavailable.\(name)"
+        case .networkError: return "networkError"
+        case .permissionDenied(let permission): return "permissionDenied.\(permission.rawValue)"
+        case .unknown: return "unknown"
+        }
+    }
+
+    public var errorDescription: String? {
+        switch self {
+        case .initializationFailed(let error):
+            return "初始化失败: \(error.localizedDescription)"
+        case .serviceUnavailable(let name):
+            return "服务不可用: \(name)"
+        case .networkError(let message):
+            return "网络错误: \(message)"
+        case .permissionDenied(let permission):
+            return "权限被拒绝: \(permission.displayName)"
+        case .unknown(let error):
+            return "未知错误: \(error.localizedDescription)"
+        }
+    }
+
+    public var recoverySuggestion: String? {
+        switch self {
+        case .initializationFailed:
+            return "请尝试重新启动应用。如果问题持续，请检查日志。"
+        case .serviceUnavailable:
+            return "请检查服务配置或稍后重试。"
+        case .networkError:
+            return "请检查网络连接。"
+        case .permissionDenied:
+            return "请在系统设置中授予所需权限。"
+        case .unknown:
+            return "请尝试重新启动应用。"
+        }
+    }
+}

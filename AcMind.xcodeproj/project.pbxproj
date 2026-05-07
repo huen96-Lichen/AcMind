@@ -1,0 +1,896 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* AcMindApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000000 /* AcMindApp.swift */; };
+		A10000000000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ContentView.swift */; };
+		A10000000000000000000051 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* AppState.swift */; };
+		A10000000000000000000053 /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000052 /* SidebarItem.swift */; };
+		A10000000000000000000055 /* ServiceContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* ServiceContainer.swift */; };
+		A10000000000000000000057 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* AppDelegate.swift */; };
+		A1000000000000000000006B /* CapsulePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000069 /* CapsulePanel.swift */; };
+		A1000000000000000000006C /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006A /* InboxView.swift */; };
+		A1000000000000000000006F /* ScheduleNativeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006E /* ScheduleNativeView.swift */; };
+		A10000000000000000000073 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000083 /* AppSettings.swift */; };
+		A10000000000000000000074 /* DistilledNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000084 /* DistilledNote.swift */; };
+		A10000000000000000000075 /* ExportRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000085 /* ExportRecord.swift */; };
+		A10000000000000000000076 /* KnowledgeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000086 /* KnowledgeCard.swift */; };
+		A10000000000000000000077 /* VaultConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000087 /* VaultConfig.swift */; };
+		A10000000000000000000078 /* AIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000088 /* AIError.swift */; };
+		A10000000000000000000079 /* AIRuntimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000089 /* AIRuntimeService.swift */; };
+		A1000000000000000000007A /* SecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008A /* SecretStore.swift */; };
+		A1000000000000000000007B /* TaskQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008B /* TaskQueue.swift */; };
+		A1000000000000000000007C /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008C /* OllamaProvider.swift */; };
+		A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* OpenAICompatibleProvider.swift */; };
+		A1000000000000000000007E /* CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* CaptureService.swift */; };
+		A1000000000000000000007F /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ClipboardService.swift */; };
+		A10000000000000000000080 /* DistillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* DistillService.swift */; };
+		A10000000000000000000081 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* ExportService.swift */; };
+		A10000000000000000000082 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* KnowledgeService.swift */; };
+		A10000000000000000000096 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000093 /* SettingsService.swift */; };
+		A10000000000000000000097 /* AssetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* AssetStore.swift */; };
+		A10000000000000000000098 /* VoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000095 /* VoiceService.swift */; };
+		A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006D /* SettingsServiceProtocol.swift */; };
+		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Assets.xcassets */; };
+		A10000000000000000000059 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000058 /* index.html */; };
+		A10000000000000000000009 /* AcMindKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; };
+		A1000000000000000000000A /* AcMindKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000118 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000119 /* AppIntents.framework */; };
+		A1000000000000000000000C /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* SidebarView.swift */; };
+		A1000000000000000000000E /* WebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* WebViewContainer.swift */; };
+		A10000000000000000000010 /* WebViewBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000F /* WebViewBridge.swift */; };
+		A10000000000000000000012 /* WebViewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* WebViewPage.swift */; };
+		A10000000000000000000014 /* AcMindTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AcMindTheme.swift */; };
+		A10000000000000000000016 /* AcMindKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* AcMindKit.swift */; };
+		A10000000000000000000018 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Database.swift */; };
+		A1000000000000000000001A /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* StorageService.swift */; };
+		A1000000000000000000001E /* SourceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* SourceItem.swift */; };
+		A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* StorageServiceProtocol.swift */; };
+		A1000000000000000000005B /* VoiceServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000005A /* VoiceServiceProtocol.swift */; };
+		A1000000000000000000005D /* RecordingStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000005C /* RecordingStatus.swift */; };
+		A1000000000000000000010A /* AgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* AgentView.swift */; };
+		A1000000000000000000010B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000113 /* SettingsView.swift */; };
+		A1000000000000000000010C /* AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000114 /* AgentViewModel.swift */; };
+		A1000000000000000000010E /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010D /* SettingsViewModel.swift */; };
+		A10000000000000000000116 /* InboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000115 /* InboxViewModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000006 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000021;
+			remoteInfo = AcMindKit;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A10000000000000000000022 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A1000000000000000000000A /* AcMindKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000000 /* AcMindApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000050 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A10000000000000000000052 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
+		A10000000000000000000054 /* ServiceContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceContainer.swift; sourceTree = "<group>"; };
+		A10000000000000000000056 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A10000000000000000000058 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
+		A10000000000000000000008 /* AcMindKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AcMindKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000119 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		A1000000000000000000000B /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		A1000000000000000000000D /* WebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewContainer.swift; sourceTree = "<group>"; };
+		A1000000000000000000000F /* WebViewBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewBridge.swift; sourceTree = "<group>"; };
+		A10000000000000000000011 /* WebViewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewPage.swift; sourceTree = "<group>"; };
+		A10000000000000000000013 /* AcMindTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindTheme.swift; sourceTree = "<group>"; };
+		A10000000000000000000015 /* AcMindKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit.swift; sourceTree = "<group>"; };
+		A10000000000000000000017 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
+		A10000000000000000000019 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
+		A1000000000000000000001D /* SourceItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceItem.swift; sourceTree = "<group>"; };
+		A1000000000000000000001F /* StorageServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceProtocol.swift; sourceTree = "<group>"; };
+		A1000000000000000000006D /* SettingsServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsServiceProtocol.swift; sourceTree = "<group>"; };
+		A1000000000000000000005A /* VoiceServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceServiceProtocol.swift; sourceTree = "<group>"; };
+		A1000000000000000000005C /* RecordingStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingStatus.swift; sourceTree = "<group>"; };
+		A10000000000000000000071 /* KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeCard.swift; sourceTree = "<group>"; };
+		A10000000000000000000072 /* VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultConfig.swift; sourceTree = "<group>"; };
+		A10000000000000000000069 /* CapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Capsule/CapsulePanel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000006A /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/InboxView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000006E /* ScheduleNativeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleNativeView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000083 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AppSettings.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000084 /* DistilledNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/DistilledNote.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000085 /* ExportRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ExportRecord.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000086 /* KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/KnowledgeCard.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000087 /* VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/VaultConfig.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000088 /* AIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIError.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000089 /* AIRuntimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIRuntimeService.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008A /* SecretStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/SecretStore.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008B /* TaskQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/TaskQueue.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008C /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OllamaProvider.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008D /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008E /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/CaptureService.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008F /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000090 /* DistillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/DistillService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000091 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/ExportService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000092 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Knowledge/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000093 /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Settings/SettingsService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000094 /* AssetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/AssetStore.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000095 /* VoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/VoiceService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000023 /* AcMind.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AcMind.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000112 /* AgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000113 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000114 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/AgentViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000010D /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/SettingsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000115 /* InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/InboxViewModel.swift; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000024 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000009 /* AcMindKit.framework in Frameworks */,
+				A10000000000000000000118 /* AppIntents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000025 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000026 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000027 /* App */,
+				A10000000000000000000061 /* Features */,
+				A10000000000000000000062 /* Design */,
+				A10000000000000000000063 /* Resources */,
+				A10000000000000000000028 /* AcMindKit */,
+				A10000000000000000000029 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000027 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000000 /* AcMindApp.swift */,
+				A10000000000000000000056 /* AppDelegate.swift */,
+				A10000000000000000000050 /* AppState.swift */,
+				A10000000000000000000002 /* ContentView.swift */,
+				A10000000000000000000054 /* ServiceContainer.swift */,
+				A10000000000000000000052 /* SidebarItem.swift */,
+				A10000000000000000000117 /* ViewModels */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000061 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000002A /* Sidebar */,
+				A1000000000000000000002B /* WebView */,
+				A10000000000000000000064 /* Native */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000062 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000013 /* AcMindTheme.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000063 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000004 /* Assets.xcassets */,
+				A10000000000000000000065 /* WebViewApp */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000028 /* AcMindKit */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000066 /* Core */,
+				A1000000000000000000002D /* Models */,
+				A1000000000000000000002E /* Protocols */,
+				A1000000000000000000002F /* Services */,
+			);
+			path = AcMindKit;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000104 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000088 /* AIError.swift */,
+				A10000000000000000000089 /* AIRuntimeService.swift */,
+				A10000000000000000000106 /* Support */,
+				A10000000000000000000105 /* Providers */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000105 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008C /* OllamaProvider.swift */,
+				A1000000000000000000008D /* OpenAICompatibleProvider.swift */,
+			);
+			path = Providers;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000106 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008A /* SecretStore.swift */,
+				A1000000000000000000008B /* TaskQueue.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000064 /* Native */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000070 /* Schedule */,
+				A10000000000000000000067 /* Capsule */,
+				A10000000000000000000068 /* Inbox */,
+				A1000000000000000000010F /* Agent */,
+				A10000000000000000000110 /* Settings */,
+			);
+			path = Native;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000070 /* Schedule */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000006E /* ScheduleNativeView.swift */,
+			);
+			path = Schedule;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000065 /* WebViewApp */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000058 /* index.html */,
+			);
+			path = WebViewApp;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000066 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000015 /* AcMindKit.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000067 /* Capsule */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000069 /* CapsulePanel.swift */,
+			);
+			path = Capsule;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000068 /* Inbox */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000006A /* InboxView.swift */,
+			);
+			path = Inbox;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000100 /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000101 /* Capture */,
+				A10000000000000000000102 /* Clipboard */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000101 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008E /* CaptureService.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000102 /* Clipboard */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008F /* ClipboardService.swift */,
+			);
+			path = Clipboard;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000029 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000023 /* AcMind.app */,
+				A10000000000000000000008 /* AcMindKit.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000002A /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000000B /* SidebarView.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000002B /* WebView */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000000D /* WebViewContainer.swift */,
+				A1000000000000000000000F /* WebViewBridge.swift */,
+				A10000000000000000000011 /* WebViewPage.swift */,
+			);
+			path = WebView;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000002C /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000013 /* AcMindTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000002D /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000001D /* SourceItem.swift */,
+				A1000000000000000000005C /* RecordingStatus.swift */,
+				A10000000000000000000071 /* KnowledgeCard.swift */,
+				A10000000000000000000072 /* VaultConfig.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000002E /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000006D /* SettingsServiceProtocol.swift */,
+				A1000000000000000000001F /* StorageServiceProtocol.swift */,
+				A1000000000000000000005A /* VoiceServiceProtocol.swift */,
+			);
+			path = Protocols;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000002F /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000104 /* AI */,
+				A10000000000000000000100 /* Input */,
+				A10000000000000000000103 /* Workflow */,
+				A10000000000000000000030 /* Storage */,
+				A10000000000000000000107 /* Knowledge */,
+				A10000000000000000000108 /* Settings */,
+				A10000000000000000000109 /* Voice */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000103 /* Workflow */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000090 /* DistillService.swift */,
+				A10000000000000000000091 /* ExportService.swift */,
+			);
+			path = Workflow;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000107 /* Knowledge */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000092 /* KnowledgeService.swift */,
+			);
+			path = Knowledge;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000108 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000093 /* SettingsService.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000109 /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000095 /* VoiceService.swift */,
+			);
+			path = Voice;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000030 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000017 /* Database.swift */,
+				A10000000000000000000019 /* StorageService.swift */,
+				A10000000000000000000094 /* AssetStore.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000010F /* Agent */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000112 /* AgentView.swift */,
+			);
+			path = Agent;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000110 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000113 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000117 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000114 /* AgentViewModel.swift */,
+				A10000000000000000000115 /* InboxViewModel.swift */,
+				A1000000000000000000010D /* SettingsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000032 /* AcMind */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000033 /* Build configuration list for PBXNativeTarget "AcMind" */;
+			buildPhases = (
+				A10000000000000000000034 /* Sources */,
+				A1000000000000000000003A /* Resources */,
+				A10000000000000000000024 /* Frameworks */,
+				A10000000000000000000022 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000035 /* PBXTargetDependency */,
+			);
+			name = AcMind;
+			productName = AcMind;
+			productReference = A10000000000000000000023 /* AcMind.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000021 /* AcMindKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000036 /* Build configuration list for PBXNativeTarget "AcMindKit" */;
+			buildPhases = (
+				A10000000000000000000037 /* Sources */,
+				A10000000000000000000025 /* Frameworks */,
+				A10000000000000000000038 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AcMindKit;
+			productName = AcMindKit;
+			productReference = A10000000000000000000008 /* AcMindKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000006 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A10000000000000000000021 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					A10000000000000000000032 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A10000000000000000000039 /* Build configuration list for PBXProject "AcMind" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000000000000000000026;
+			productRefGroup = A10000000000000000000029 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000032 /* AcMind */,
+				A10000000000000000000021 /* AcMindKit */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000000000000000000003A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000005 /* Assets.xcassets in Resources */,
+				A10000000000000000000059 /* index.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000034 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* AcMindApp.swift in Sources */,
+				A10000000000000000000003 /* ContentView.swift in Sources */,
+				A10000000000000000000051 /* AppState.swift in Sources */,
+				A10000000000000000000053 /* SidebarItem.swift in Sources */,
+				A10000000000000000000055 /* ServiceContainer.swift in Sources */,
+				A10000000000000000000057 /* AppDelegate.swift in Sources */,
+				A1000000000000000000000C /* SidebarView.swift in Sources */,
+				A1000000000000000000000E /* WebViewContainer.swift in Sources */,
+				A10000000000000000000010 /* WebViewBridge.swift in Sources */,
+				A10000000000000000000012 /* WebViewPage.swift in Sources */,
+				A10000000000000000000014 /* AcMindTheme.swift in Sources */,
+				A1000000000000000000006B /* CapsulePanel.swift in Sources */,
+				A1000000000000000000006C /* InboxView.swift in Sources */,
+				A1000000000000000000006F /* ScheduleNativeView.swift in Sources */,
+				A1000000000000000000010A /* AgentView.swift in Sources */,
+				A1000000000000000000010B /* SettingsView.swift in Sources */,
+				A1000000000000000000010C /* AgentViewModel.swift in Sources */,
+				A1000000000000000000010E /* SettingsViewModel.swift in Sources */,
+				A10000000000000000000116 /* InboxViewModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000037 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000016 /* AcMindKit.swift in Sources */,
+				A10000000000000000000018 /* Database.swift in Sources */,
+				A1000000000000000000001A /* StorageService.swift in Sources */,
+				A1000000000000000000001E /* SourceItem.swift in Sources */,
+				A10000000000000000000073 /* AppSettings.swift in Sources */,
+				A10000000000000000000074 /* DistilledNote.swift in Sources */,
+				A10000000000000000000075 /* ExportRecord.swift in Sources */,
+				A10000000000000000000076 /* KnowledgeCard.swift in Sources */,
+				A10000000000000000000077 /* VaultConfig.swift in Sources */,
+				A10000000000000000000078 /* AIError.swift in Sources */,
+				A10000000000000000000079 /* AIRuntimeService.swift in Sources */,
+				A1000000000000000000007A /* SecretStore.swift in Sources */,
+				A1000000000000000000007B /* TaskQueue.swift in Sources */,
+				A1000000000000000000007C /* OllamaProvider.swift in Sources */,
+				A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */,
+				A1000000000000000000007E /* CaptureService.swift in Sources */,
+				A1000000000000000000007F /* ClipboardService.swift in Sources */,
+				A10000000000000000000080 /* DistillService.swift in Sources */,
+				A10000000000000000000081 /* ExportService.swift in Sources */,
+				A10000000000000000000082 /* KnowledgeService.swift in Sources */,
+				A10000000000000000000096 /* SettingsService.swift in Sources */,
+				A10000000000000000000097 /* AssetStore.swift in Sources */,
+				A10000000000000000000098 /* VoiceService.swift in Sources */,
+				A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */,
+				A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */,
+				A1000000000000000000005B /* VoiceServiceProtocol.swift in Sources */,
+				A1000000000000000000005D /* RecordingStatus.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000035 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000021 /* AcMindKit */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A1000000000000000000003B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1000000000000000000003C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A1000000000000000000003D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AcMind.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A1000000000000000000003E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AcMind.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A1000000000000000000003F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		A10000000000000000000040 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000033 /* Build configuration list for PBXNativeTarget "AcMind" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000003D /* Debug */,
+				A1000000000000000000003E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000036 /* Build configuration list for PBXNativeTarget "AcMindKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000003F /* Debug */,
+				A10000000000000000000040 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000039 /* Build configuration list for PBXProject "AcMind" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000003B /* Debug */,
+				A1000000000000000000003C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000006 /* Project object */;
+}
