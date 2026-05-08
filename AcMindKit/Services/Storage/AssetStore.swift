@@ -4,7 +4,7 @@ import AppKit
 /// Asset storage manager for binary files (images, audio, documents)
 /// Manages local file system storage with SQLite metadata tracking
 /// Compatible with Electron asset paths: ~/Library/Application Support/AcMind/assets/
-public actor AssetStore {
+public actor AssetStore: AssetStoreProtocol {
     private var assetsDir: URL
     private let db: Database
     
@@ -210,7 +210,7 @@ public actor AssetStore {
     }
     
     /// Check if asset file exists on disk
-    public func assetExists(asset: AssetFile) -> Bool {
+    public nonisolated func assetExists(asset: AssetFile) -> Bool {
         FileManager.default.fileExists(atPath: asset.filePath)
     }
     

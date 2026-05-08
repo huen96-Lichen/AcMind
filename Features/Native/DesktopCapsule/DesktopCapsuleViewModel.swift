@@ -1,0 +1,257 @@
+import SwiftUI
+import AppKit
+import AcMindKit
+
+// MARK: - Desktop Capsule View Model
+
+@MainActor
+final class DesktopCapsuleViewModel: ObservableObject {
+    // MARK: - State
+
+    @Published var isExpanded: Bool = false
+    @Published var executingAction: CapsuleActionType?
+    @Published var isExecuting: Bool = false
+    @Published var isHoveringPanel: Bool = false
+
+    // MARK: - Settings
+
+    @Published private(set) var settings: DesktopCapsuleSettings = .default
+
+    var enabledActions: [CapsuleActionConfig] {
+        settings.enabledActions
+    }
+
+    // MARK: - Load/Save Settings
+
+    func loadSettings() {
+        // 从 UserDefaults 加载
+        if let data = UserDefaults.standard.data(forKey: "AppSettings.desktopCapsule"),
+           let decoded = try? JSONDecoder().decode(DesktopCapsuleSettings.self, from: data) {
+            settings = decoded
+        }
+    }
+
+    func saveSettings() {
+        if let data = try? JSONEncoder().encode(settings) {
+            UserDefaults.standard.set(data, forKey: "AppSettings.desktopCapsule")
+        }
+    }
+
+    // MARK: - Expand/Collapse
+
+    func toggleExpand() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+            isExpanded.toggle()
+        }
+
+        // 调整窗口大小
+        if isExpanded {
+            let width = calculateExpandedWidth()
+            DesktopCapsulePanel.shared.resizeToExpanded(width: width)
+        } else {
+            DesktopCapsulePanel.shared.resizeToCollapsed()
+        }
+    }
+
+    func collapse() {
+        guard isExpanded else { return }
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+            isExpanded = false
+        }
+        DesktopCapsulePanel.shared.resizeToCollapsed()
+    }
+
+    private func calculateExpandedWidth() -> CGFloat {
+        let actionCount = CGFloat(enabledActions.count)
+        // 左侧圆形按钮 56 + 功能按钮 (44 * count) + 更多按钮 40 + padding
+        return 56 + (actionCount * 44) + 40 + 20
+    }
+
+    // MARK: - Execute Actions
+
+    func executeAction(_ type: CapsuleActionType) {
+        guard !isExecuting else { return }
+
+        executingAction = type
+        isExecuting = true
+
+        Task {
+            switch type {
+            case .screenshot:
+                await executeScreenshot()
+            case .voiceNote:
+                await executeVoiceNote()
+            case .urlToText:
+                await executeUrlToText()
+            case .scheduleAnalysis:
+                await executeScheduleAnalysis()
+            case .clipboard:
+                await executeClipboard()
+            case .quickText:
+                await executeQuickText()
+            case .fileCapture:
+                await executeFileCapture()
+            }
+
+            await MainActor.run {
+                executingAction = nil
+                isExecuting = false
+                collapse()
+            }
+        }
+    }
+
+    // MARK: - Action Implementations
+
+    private func executeScreenshot() async {
+        // 隐藏胶囊
+        DesktopCapsulePanel.shared.hide()
+
+        do {
+            let captureService = ServiceContainer.shared.captureService
+            let result = try await captureService.captureScreenshot(mode: .fullscreen)
+            print("截图成功: \(result.sourceItem.id)")
+
+            // 重新显示胶囊
+            await MainActor.run {
+                DesktopCapsulePanel.shared.show()
+            }
+        } catch {
+            print("截图失败: \(error)")
+            await MainActor.run {
+                DesktopCapsulePanel.shared.show()
+            }
+        }
+    }
+
+    private func executeVoiceNote() async {
+        // 显示语音输入界面
+        NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+    }
+
+    private func executeUrlToText() async {
+        // 显示 URL 输入对话框
+        await MainActor.run {
+            let alert = NSAlert()
+            alert.messageText = "URL转文字稿"
+            alert.informativeText = "请输入网页URL"
+
+            let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            textField.placeholderString = "https://..."
+            alert.accessoryView = textField
+
+            alert.addButton(withTitle: "转换")
+            alert.addButton(withTitle: "取消")
+
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn, let url = URL(string: textField.stringValue), textField.stringValue.hasPrefix("http") {
+                Task {
+                    do {
+                        let captureService = ServiceContainer.shared.captureService
+                        let result = try await captureService.captureFromWebpage(url: url)
+                        print("URL转换成功: \(result.sourceItem.id)")
+                    } catch {
+                        print("URL转换失败: \(error)")
+                    }
+                }
+            }
+        }
+    }
+
+    private func executeScheduleAnalysis() async {
+        // 打开日程视图
+        NotificationCenter.default.post(name: .companionShowSchedule, object: nil)
+    }
+
+    private func executeClipboard() async {
+        do {
+            let captureService = ServiceContainer.shared.captureService
+            if let result = try await captureService.captureFromClipboard() {
+                print("剪贴板采集成功: \(result.sourceItem.id)")
+            }
+        } catch {
+            print("剪贴板采集失败: \(error)")
+        }
+    }
+
+    private func executeQuickText() async {
+        // 显示快速文本输入
+        NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+    }
+
+    private func executeFileCapture() async {
+        // 隐藏胶囊
+        DesktopCapsulePanel.shared.hide()
+
+        await MainActor.run {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = true
+            panel.canChooseDirectories = false
+            panel.allowsMultipleSelection = false
+
+            guard panel.runModal() == .OK, let url = panel.url else {
+                DesktopCapsulePanel.shared.show()
+                return
+            }
+
+            Task {
+                do {
+                    let captureService = ServiceContainer.shared.captureService
+                    let result = try await captureService.captureFromFile(url: url)
+                    print("文件采集成功: \(result.sourceItem.id)")
+                } catch {
+                    print("文件采集失败: \(error)")
+                }
+
+                await MainActor.run {
+                    DesktopCapsulePanel.shared.show()
+                }
+            }
+        }
+    }
+
+    // MARK: - Settings
+
+    func openSettings() {
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.openSettings"),
+            object: nil,
+            userInfo: ["tab": "capsule"]
+        )
+    }
+
+    // MARK: - Update Settings
+
+    func updateSettings(_ newSettings: DesktopCapsuleSettings) {
+        settings = newSettings
+        saveSettings()
+    }
+
+    func addAction(_ type: CapsuleActionType) {
+        let newAction = CapsuleActionConfig(
+            type: type,
+            isEnabled: true,
+            order: settings.actions.count
+        )
+        settings.actions.append(newAction)
+        saveSettings()
+    }
+
+    func removeAction(id: UUID) {
+        settings.actions.removeAll { $0.id == id }
+        // 重新排序
+        for (index, _) in settings.actions.enumerated() {
+            settings.actions[index].order = index
+        }
+        saveSettings()
+    }
+
+    func reorderActions(from source: IndexSet, to destination: Int) {
+        settings.actions.move(fromOffsets: source, toOffset: destination)
+        // 重新排序
+        for (index, _) in settings.actions.enumerated() {
+            settings.actions[index].order = index
+        }
+        saveSettings()
+    }
+}

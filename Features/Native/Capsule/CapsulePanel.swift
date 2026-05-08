@@ -73,7 +73,7 @@ struct CapsuleContentView: View {
                 Button(action: { toggleExpand() }) {
                     Image(systemName: isExpanded ? "xmark.circle.fill" : "plus.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.primary)
                 }
                 .buttonStyle(PlainButtonStyle())
 
@@ -432,14 +432,14 @@ struct ScreenshotOptionsView: View {
                     icon: "crop",
                     title: "区域"
                 ) {
-                    onSelect(.area(rect: CGRect.zero))
+                    onSelect(.area)
                 }
 
                 ScreenshotModeButton(
                     icon: "uiwindow.split.2x1",
                     title: "窗口"
                 ) {
-                    onSelect(.window(windowID: 0))
+                    onSelect(.window)
                 }
             }
         }

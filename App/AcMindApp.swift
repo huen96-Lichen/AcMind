@@ -145,7 +145,7 @@ struct LaunchView: View {
             // Logo
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 64))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.primary)
 
             Text("AcMind")
                 .font(.largeTitle)
@@ -158,7 +158,7 @@ struct LaunchView: View {
 
                 Text("正在初始化: \(appState.initializationPhase.rawValue)")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondary)
             }
 
             // 错误显示
@@ -166,11 +166,11 @@ struct LaunchView: View {
                 VStack(spacing: 8) {
                     Text("初始化失败")
                         .font(.headline)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.red)
 
                     Text(error.localizedDescription)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondary)
                         .multilineTextAlignment(.center)
 
                     Button("重试") {

@@ -23,6 +23,10 @@ public protocol SettingsServiceProtocol: Sendable {
     func requestPermission(_ permission: SystemPermission) async throws
     func openSystemPreferences(for permission: SystemPermission) async
 
+    // Permissions (new API)
+    func checkPermissionKind(_ kind: AppPermissionKind) async -> AppPermissionStatus
+    func requestPermissionKind(_ kind: AppPermissionKind) async
+
     // Shortcuts
     func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws
     func unregisterShortcut(_ shortcut: KeyboardShortcut) async throws

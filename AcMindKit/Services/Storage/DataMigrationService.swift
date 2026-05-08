@@ -147,8 +147,9 @@ public actor DataMigrationService: Sendable {
     }
 
     private func migrationPlans() -> [Plan] {
-        [
-            Plan(name: "source_items") { source, target in
+        var plans: [Plan] = []
+
+        plans.append(Plan(name: "source_items") { source, target in
                 try self.migrateRows(
                     table: "source_items",
                     source: source,
@@ -203,8 +204,9 @@ public actor DataMigrationService: Sendable {
                         ]
                     }
                 )
-            },
-            Plan(name: "chat_sessions") { source, target in
+            })
+
+        plans.append(Plan(name: "chat_sessions") { source, target in
                 try self.migrateRows(
                     table: "chat_sessions",
                     source: source,
@@ -237,8 +239,9 @@ public actor DataMigrationService: Sendable {
                         ]
                     }
                 )
-            },
-            Plan(name: "chat_messages") { source, target in
+            })
+
+        plans.append(Plan(name: "chat_messages") { source, target in
                 try self.migrateRows(
                     table: "chat_messages",
                     source: source,
@@ -262,26 +265,11 @@ public actor DataMigrationService: Sendable {
                             action_proposals = excluded.action_proposals,
                             created_at = excluded.created_at
                     """,
-                    mapRow: { row in
-                        [
-                            row.string("id") ?? UUID().uuidString,
-                            row.string("session_id") ?? "",
-                            row.string("role") ?? "assistant",
-                            row.string("content") ?? "",
-                            row.string("status") ?? "pending",
-                            row.string("model_id") ?? row.string("model"),
-                            row.string("provider_id") ?? row.string("provider"),
-                            row.int("prompt_tokens") ?? row.int("tokens_in"),
-                            row.int("completion_tokens") ?? row.int("tokens_out"),
-                            row.int("latency_ms"),
-                            row.string("error") ?? row.string("error_message"),
-                            row.string("action_proposals") ?? "[]",
-                            row.int("created_at") ?? Int(Date().timeIntervalSince1970)
-                        ]
-                    }
+                    mapRow: Self.mapChatMessageRow
                 )
-            },
-            Plan(name: "app_settings") { source, target in
+            })
+
+        plans.append(Plan(name: "app_settings") { source, target in
                 try self.migrateRows(
                     table: "app_settings",
                     source: source,
@@ -294,8 +282,9 @@ public actor DataMigrationService: Sendable {
                         [row.string("key") ?? "", row.string("value") ?? ""]
                     }
                 )
-            },
-            Plan(name: "asset_files") { source, target in
+            })
+
+        plans.append(Plan(name: "asset_files") { source, target in
                 try self.migrateRows(
                     table: "asset_files",
                     source: source,
@@ -326,8 +315,9 @@ public actor DataMigrationService: Sendable {
                         ]
                     }
                 )
-            },
-            Plan(name: "clipboard_items") { source, target in
+            })
+
+        plans.append(Plan(name: "clipboard_items") { source, target in
                 try self.migrateRows(
                     table: "clipboard_items",
                     source: source,
@@ -356,8 +346,9 @@ public actor DataMigrationService: Sendable {
                         ]
                     }
                 )
-            },
-            Plan(name: "shelf_items") { source, target in
+            })
+
+        plans.append(Plan(name: "shelf_items") { source, target in
                 try self.migrateRows(
                     table: "shelf_items",
                     source: source,
@@ -384,8 +375,9 @@ public actor DataMigrationService: Sendable {
                         ]
                     }
                 )
-            },
-            Plan(name: "distilled_notes") { source, target in
+            })
+
+        plans.append(Plan(name: "distilled_notes") { source, target in
                 try self.migrateRows(
                     table: "distilled_notes",
                     source: source,
@@ -403,23 +395,11 @@ public actor DataMigrationService: Sendable {
                             created_at = excluded.created_at,
                             updated_at = excluded.updated_at
                     """,
-                    mapRow: { row in
-                        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
-                        let updatedAt = row.int("updated_at") ?? createdAt
-                        return [
-                            row.string("id") ?? UUID().uuidString,
-                            row.string("source_item_id") ?? "",
-                            row.string("title"),
-                            row.string("content") ?? row.string("summary"),
-                            row.string("tags"),
-                            row.string("category"),
-                            createdAt,
-                            updatedAt
-                        ]
-                    }
+                    mapRow: Self.mapDistilledNoteRow
                 )
-            },
-            Plan(name: "process_jobs") { source, target in
+            })
+
+        plans.append(Plan(name: "process_jobs") { source, target in
                 try self.migrateRows(
                     table: "process_jobs",
                     source: source,
@@ -454,8 +434,9 @@ public actor DataMigrationService: Sendable {
                         ]
                     }
                 )
-            },
-            Plan(name: "provider_configs") { source, target in
+            })
+
+        plans.append(Plan(name: "provider_configs") { source, target in
                 try self.migrateRows(
                     table: "provider_configs",
                     source: source,
@@ -476,27 +457,11 @@ public actor DataMigrationService: Sendable {
                             created_at = excluded.created_at,
                             updated_at = excluded.updated_at
                     """,
-                    mapRow: { row in
-                        let enabled = row.bool("enabled") ?? ((row.int("is_active") ?? 1) != 0)
-                        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
-                        let updatedAt = row.int("updated_at") ?? createdAt
-                        return [
-                            row.string("id") ?? UUID().uuidString,
-                            row.string("name") ?? "",
-                            row.string("provider_type") ?? row.string("type") ?? "ollama",
-                            row.string("tier") ?? "local_light",
-                            row.string("base_url") ?? "",
-                            row.string("api_key_ref") ?? row.string("api_key"),
-                            row.string("model_id") ?? row.string("default_model") ?? "",
-                            enabled,
-                            row.string("capabilities") ?? row.string("metadata_json") ?? "[]",
-                            createdAt,
-                            updatedAt
-                        ]
-                    }
+                    mapRow: Self.mapProviderConfigRow
                 )
-            },
-            Plan(name: "vault_config") { source, target in
+            })
+
+        plans.append(Plan(name: "vault_config") { source, target in
                 try self.migrateRows(
                     table: "vault_config",
                     source: source,
@@ -514,20 +479,95 @@ public actor DataMigrationService: Sendable {
                             auto_frontmatter = excluded.auto_frontmatter,
                             frontmatter_template = excluded.frontmatter_template
                     """,
-                    mapRow: { row in
-                        return [
-                            1,
-                            row.string("vault_path") ?? row.string("path") ?? "",
-                            row.string("default_folder") ?? row.string("name") ?? "Inbox",
-                            row.string("template") ?? "",
-                            row.string("path_rule") ?? "category_date",
-                            row.string("conflict_strategy") ?? "rename",
-                            row.bool("auto_frontmatter") ?? true,
-                            row.string("frontmatter_template") ?? row.string("metadata_json") ?? "{}"
-                        ]
-                    }
+                    mapRow: Self.mapVaultConfigRow
                 )
-            }
+            })
+
+        return plans
+    }
+
+    private static func mapDistilledNoteRow(_ row: SQLiteRow) -> [Any?] {
+        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+        let updatedAt = row.int("updated_at") ?? createdAt
+        let id = row.string("id") ?? UUID().uuidString
+        let sourceItemId = row.string("source_item_id") ?? ""
+        let content = row.string("content") ?? row.string("summary")
+
+        return [
+            id,
+            sourceItemId,
+            row.string("title"),
+            content,
+            row.string("tags"),
+            row.string("category"),
+            createdAt,
+            updatedAt
+        ]
+    }
+
+    private static func mapChatMessageRow(_ row: SQLiteRow) -> [Any?] {
+        let modelId = row.string("model_id") ?? row.string("model")
+        let providerId = row.string("provider_id") ?? row.string("provider")
+        let promptTokens = row.int("prompt_tokens") ?? row.int("tokens_in")
+        let completionTokens = row.int("completion_tokens") ?? row.int("tokens_out")
+        let error = row.string("error") ?? row.string("error_message")
+        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+
+        return [
+            row.string("id") ?? UUID().uuidString,
+            row.string("session_id") ?? "",
+            row.string("role") ?? "assistant",
+            row.string("content") ?? "",
+            row.string("status") ?? "pending",
+            modelId,
+            providerId,
+            promptTokens,
+            completionTokens,
+            row.int("latency_ms"),
+            error,
+            row.string("action_proposals") ?? "[]",
+            createdAt
+        ]
+    }
+
+    private static func mapProviderConfigRow(_ row: SQLiteRow) -> [Any?] {
+        let enabled = row.bool("enabled") ?? ((row.int("is_active") ?? 1) != 0)
+        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+        let updatedAt = row.int("updated_at") ?? createdAt
+        let providerType = row.string("provider_type") ?? row.string("type") ?? "ollama"
+        let apiKeyRef = row.string("api_key_ref") ?? row.string("api_key")
+        let modelId = row.string("model_id") ?? row.string("default_model") ?? ""
+        let capabilities = row.string("capabilities") ?? row.string("metadata_json") ?? "[]"
+
+        return [
+            row.string("id") ?? UUID().uuidString,
+            row.string("name") ?? "",
+            providerType,
+            row.string("tier") ?? "local_light",
+            row.string("base_url") ?? "",
+            apiKeyRef,
+            modelId,
+            enabled,
+            capabilities,
+            createdAt,
+            updatedAt
+        ]
+    }
+
+    private static func mapVaultConfigRow(_ row: SQLiteRow) -> [Any?] {
+        let vaultPath = row.string("vault_path") ?? row.string("path") ?? ""
+        let defaultFolder = row.string("default_folder") ?? row.string("name") ?? "Inbox"
+        let frontmatterTemplate = row.string("frontmatter_template") ?? row.string("metadata_json") ?? "{}"
+
+        return [
+            1,
+            vaultPath,
+            defaultFolder,
+            row.string("template") ?? "",
+            row.string("path_rule") ?? "category_date",
+            row.string("conflict_strategy") ?? "rename",
+            row.bool("auto_frontmatter") ?? true,
+            frontmatterTemplate
         ]
     }
 

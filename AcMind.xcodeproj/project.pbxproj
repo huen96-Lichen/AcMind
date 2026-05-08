@@ -9,59 +9,133 @@
 /* Begin PBXBuildFile section */
 		A10000000000000000000001 /* AcMindApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000000 /* AcMindApp.swift */; };
 		A10000000000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ContentView.swift */; };
-		A10000000000000000000051 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* AppState.swift */; };
-		A10000000000000000000053 /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000052 /* SidebarItem.swift */; };
-		A10000000000000000000055 /* ServiceContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* ServiceContainer.swift */; };
-		A10000000000000000000057 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* AppDelegate.swift */; };
-		A1000000000000000000006B /* CapsulePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000069 /* CapsulePanel.swift */; };
-		A1000000000000000000006C /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006A /* InboxView.swift */; };
-		A1000000000000000000006F /* ScheduleNativeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006E /* ScheduleNativeView.swift */; };
-		A10000000000000000000073 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000083 /* AppSettings.swift */; };
-		A10000000000000000000074 /* DistilledNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000084 /* DistilledNote.swift */; };
-		A10000000000000000000075 /* ExportRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000085 /* ExportRecord.swift */; };
-		A10000000000000000000076 /* KnowledgeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000086 /* KnowledgeCard.swift */; };
-		A10000000000000000000077 /* VaultConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000087 /* VaultConfig.swift */; };
-		A10000000000000000000078 /* AIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000088 /* AIError.swift */; };
-		A10000000000000000000079 /* AIRuntimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000089 /* AIRuntimeService.swift */; };
-		A1000000000000000000007A /* SecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008A /* SecretStore.swift */; };
-		A1000000000000000000007B /* TaskQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008B /* TaskQueue.swift */; };
-		A1000000000000000000007C /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008C /* OllamaProvider.swift */; };
-		A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* OpenAICompatibleProvider.swift */; };
-		A1000000000000000000007E /* CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* CaptureService.swift */; };
-		A1000000000000000000007F /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ClipboardService.swift */; };
-		A10000000000000000000080 /* DistillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* DistillService.swift */; };
-		A10000000000000000000081 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* ExportService.swift */; };
-		A10000000000000000000082 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* KnowledgeService.swift */; };
-		A10000000000000000000096 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000093 /* SettingsService.swift */; };
-		A10000000000000000000097 /* AssetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* AssetStore.swift */; };
-		A10000000000000000000098 /* VoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000095 /* VoiceService.swift */; };
-		A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006D /* SettingsServiceProtocol.swift */; };
-		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Assets.xcassets */; };
-		A10000000000000000000059 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000058 /* index.html */; };
+		A10000000000000000000005 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Resources/Assets.xcassets */; };
 		A10000000000000000000009 /* AcMindKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; };
 		A1000000000000000000000A /* AcMindKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		A10000000000000000000118 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000119 /* AppIntents.framework */; };
-		A1000000000000000000000C /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* SidebarView.swift */; };
-		A1000000000000000000000E /* WebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* WebViewContainer.swift */; };
-		A10000000000000000000010 /* WebViewBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000F /* WebViewBridge.swift */; };
-		A10000000000000000000012 /* WebViewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* WebViewPage.swift */; };
-		A10000000000000000000014 /* AcMindTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AcMindTheme.swift */; };
+		A1000000000000000000000C /* Features/Sidebar/SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* Features/Sidebar/SidebarView.swift */; };
+		A1000000000000000000000E /* Features/WebView/WebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* Features/WebView/WebViewContainer.swift */; };
+		A10000000000000000000010 /* Features/WebView/WebViewBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000F /* Features/WebView/WebViewBridge.swift */; };
+		A10000000000000000000012 /* Features/WebView/WebViewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* Features/WebView/WebViewPage.swift */; };
+		A10000000000000000000014 /* Design/AcMindTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* Design/AcMindTheme.swift */; };
 		A10000000000000000000016 /* AcMindKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* AcMindKit.swift */; };
 		A10000000000000000000018 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Database.swift */; };
 		A1000000000000000000001A /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* StorageService.swift */; };
 		A1000000000000000000001E /* SourceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* SourceItem.swift */; };
 		A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* StorageServiceProtocol.swift */; };
+		A10000000000000000000051 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* AppState.swift */; };
+		A10000000000000000000053 /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000052 /* SidebarItem.swift */; };
+		A10000000000000000000055 /* ServiceContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* ServiceContainer.swift */; };
+		A10000000000000000000057 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* AppDelegate.swift */; };
+		A10000000000000000000059 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000058 /* index.html */; };
 		A1000000000000000000005B /* VoiceServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000005A /* VoiceServiceProtocol.swift */; };
 		A1000000000000000000005D /* RecordingStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000005C /* RecordingStatus.swift */; };
-		A1000000000000000000010A /* AgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* AgentView.swift */; };
-		A1000000000000000000010B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000113 /* SettingsView.swift */; };
-		A1000000000000000000010C /* AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000114 /* AgentViewModel.swift */; };
-		A1000000000000000000010E /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010D /* SettingsViewModel.swift */; };
-		A10000000000000000000116 /* InboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000115 /* InboxViewModel.swift */; };
+		A1000000000000000000006B /* Features/Native/Capsule/CapsulePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000069 /* Features/Native/Capsule/CapsulePanel.swift */; };
+		A1000000000000000000006C /* Features/Native/Inbox/InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006A /* Features/Native/Inbox/InboxView.swift */; };
+		A100000000000000000002F1 /* App/ViewModels/InboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000115 /* App/ViewModels/InboxViewModel.swift */; };
+		A100000000000000000002F2 /* Features/Native/Inbox/Components/InboxHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002E2 /* Features/Native/Inbox/Components/InboxHeader.swift */; };
+		A100000000000000000002F3 /* Features/Native/Inbox/Components/InboxItemCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002E4 /* Features/Native/Inbox/Components/InboxItemCard.swift */; };
+		A100000000000000000002F4 /* Features/Native/Inbox/Components/InboxDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002E6 /* Features/Native/Inbox/Components/InboxDetailPanel.swift */; };
+		A100000000000000000002F5 /* Features/Native/Inbox/Components/InboxStatusTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002E8 /* Features/Native/Inbox/Components/InboxStatusTag.swift */; };
+		A100000000000000000002F6 /* Features/Native/Inbox/Components/InboxWaveformPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002EA /* Features/Native/Inbox/Components/InboxWaveformPreview.swift */; };
+		A1000000000000000000006F /* Features/Native/Schedule/ScheduleNativeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006E /* Features/Native/Schedule/ScheduleNativeView.swift */; };
+		A10000000000000000000073 /* AcMindKit/Models/AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000083 /* AcMindKit/Models/AppSettings.swift */; };
+		A10000000000000000000074 /* AcMindKit/Models/DistilledNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000084 /* AcMindKit/Models/DistilledNote.swift */; };
+		A10000000000000000000075 /* AcMindKit/Models/ExportRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000085 /* AcMindKit/Models/ExportRecord.swift */; };
+		A10000000000000000000076 /* AcMindKit/Models/KnowledgeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000086 /* AcMindKit/Models/KnowledgeCard.swift */; };
+		A10000000000000000000077 /* AcMindKit/Models/VaultConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000087 /* AcMindKit/Models/VaultConfig.swift */; };
+		A10000000000000000000078 /* AcMindKit/Services/AI/AIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000088 /* AcMindKit/Services/AI/AIError.swift */; };
+		A10000000000000000000079 /* AcMindKit/Services/AI/AIRuntimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000089 /* AcMindKit/Services/AI/AIRuntimeService.swift */; };
+		A1000000000000000000007A /* AcMindKit/Services/AI/Support/SecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008A /* AcMindKit/Services/AI/Support/SecretStore.swift */; };
+		A1000000000000000000007B /* AcMindKit/Services/AI/Support/TaskQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008B /* AcMindKit/Services/AI/Support/TaskQueue.swift */; };
+		A1000000000000000000007C /* AcMindKit/Services/AI/Providers/OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008C /* AcMindKit/Services/AI/Providers/OllamaProvider.swift */; };
+		A1000000000000000000007D /* AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift */; };
+		A1000000000000000000007E /* AcMindKit/Services/Input/Capture/CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* AcMindKit/Services/Input/Capture/CaptureService.swift */; };
+		A1000000000000000000007F /* AcMindKit/Services/Input/Clipboard/ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* AcMindKit/Services/Input/Clipboard/ClipboardService.swift */; };
+		A10000000000000000000080 /* AcMindKit/Services/Workflow/DistillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* AcMindKit/Services/Workflow/DistillService.swift */; };
+		A10000000000000000000081 /* AcMindKit/Services/Workflow/ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* AcMindKit/Services/Workflow/ExportService.swift */; };
+		A10000000000000000000082 /* AcMindKit/Services/Knowledge/KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* AcMindKit/Services/Knowledge/KnowledgeService.swift */; };
+		A10000000000000000000096 /* AcMindKit/Services/Settings/SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000093 /* AcMindKit/Services/Settings/SettingsService.swift */; };
+		A10000000000000000000097 /* AcMindKit/Services/Storage/AssetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* AcMindKit/Services/Storage/AssetStore.swift */; };
+		A10000000000000000000098 /* AcMindKit/Services/Voice/VoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000095 /* AcMindKit/Services/Voice/VoiceService.swift */; };
+		A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006D /* SettingsServiceProtocol.swift */; };
+		A1000000000000000000010A /* Features/Native/Agent/AgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* Features/Native/Agent/AgentView.swift */; };
+		A1000000000000000000010B /* Features/Native/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000113 /* Features/Native/Settings/SettingsView.swift */; };
+		A1000000000000000000010C /* App/ViewModels/AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000114 /* App/ViewModels/AgentViewModel.swift */; };
+		A1000000000000000000010E /* App/ViewModels/SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010D /* App/ViewModels/SettingsViewModel.swift */; };
+		A10000000000000000000121 /* Features/Native/Schedule/ScheduleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011A /* Features/Native/Schedule/ScheduleModels.swift */; };
+		A10000000000000000000122 /* Features/Native/Schedule/ScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011B /* Features/Native/Schedule/ScheduleViewModel.swift */; };
+		A10000000000000000000124 /* Features/Native/Schedule/ScheduleSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011C /* Features/Native/Schedule/ScheduleSidebar.swift */; };
+		A10000000000000000000126 /* Features/Native/Schedule/ScheduleToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011D /* Features/Native/Schedule/ScheduleToolbar.swift */; };
+		A10000000000000000000128 /* Features/Native/Schedule/WeekCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011E /* Features/Native/Schedule/WeekCalendarView.swift */; };
+		A1000000000000000000012A /* Features/Native/Schedule/MonthCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011F /* Features/Native/Schedule/MonthCalendarView.swift */; };
+		A1000000000000000000012C /* Features/Native/Schedule/YearCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000120 /* Features/Native/Schedule/YearCalendarView.swift */; };
+		A1000000000000000000012E /* Features/Native/Schedule/EventEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000012D /* Features/Native/Schedule/EventEditorView.swift */; };
+		A10000000000000000000131 /* AcMindKit/Services/Hotkeys/HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000130 /* AcMindKit/Services/Hotkeys/HotkeyManager.swift */; };
+		A10000000000000000000133 /* AcMindKit/Services/Permissions/PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000132 /* AcMindKit/Services/Permissions/PermissionManager.swift */; };
+		A10000000000000000000135 /* AcMindKit/Services/Storage/DataMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000134 /* AcMindKit/Services/Storage/DataMigrationService.swift */; };
+		A10000000000000000000137 /* AcMindKit/Services/Workflow/MarkdownBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000136 /* AcMindKit/Services/Workflow/MarkdownBuilder.swift */; };
+		A10000000000000000000140 /* Features/Companion/CompanionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000147 /* Features/Companion/CompanionTypes.swift */; };
+		A10000000000000000000141 /* Features/Companion/CompanionMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000148 /* Features/Companion/CompanionMockData.swift */; };
+		A10000000000000000000142 /* Features/Companion/CompanionLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000149 /* Features/Companion/CompanionLayer.swift */; };
+		A10000000000000000000143 /* Features/Companion/CompanionCapsule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014A /* Features/Companion/CompanionCapsule.swift */; };
+		A10000000000000000000144 /* Features/Companion/CompanionShortcutPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014B /* Features/Companion/CompanionShortcutPanel.swift */; };
+		A10000000000000000000145 /* Features/Companion/CompanionVoicePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014C /* Features/Companion/CompanionVoicePanel.swift */; };
+		A10000000000000000000146 /* Features/Companion/CompanionCapturePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014D /* Features/Companion/CompanionCapturePanel.swift */; };
+		A10000000000000000000154 /* Features/Native/Clipboard/ClipboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000158 /* Features/Native/Clipboard/ClipboardView.swift */; };
+		A10000000000000000000156 /* Features/Native/Workbench/WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015A /* Features/Native/Workbench/WorkbenchView.swift */; };
+		A10000000000000000000157 /* Features/Native/Tools/ToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015B /* Features/Native/Tools/ToolsView.swift */; };
+		A100000000000000000002B1 /* Features/Native/Tools/WebDigestPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B0 /* Features/Native/Tools/WebDigestPanel.swift */; };
+		A100000000000000000002B3 /* Features/Native/Tools/ToolPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B2 /* Features/Native/Tools/ToolPanels.swift */; };
+		A100000000000000000002B5 /* Features/Native/Tools/ToolAdvancedPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B4 /* Features/Native/Tools/ToolAdvancedPanels.swift */; };
+		A10000000000000000000160 /* AcMindKit/Services/Voice/Polish/VoicePolishMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000171 /* AcMindKit/Services/Voice/Polish/VoicePolishMode.swift */; };
+		A10000000000000000000161 /* AcMindKit/Services/Voice/Polish/PolishPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000172 /* AcMindKit/Services/Voice/Polish/PolishPrompts.swift */; };
+		A10000000000000000000162 /* AcMindKit/Services/Voice/Polish/PolishService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000173 /* AcMindKit/Services/Voice/Polish/PolishService.swift */; };
+		A10000000000000000000163 /* AcMindKit/Services/Voice/STT/STTRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000174 /* AcMindKit/Services/Voice/STT/STTRouter.swift */; };
+		A10000000000000000000164 /* AcMindKit/Services/Voice/STT/Transcriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000175 /* AcMindKit/Services/Voice/STT/Transcriber.swift */; };
+		A10000000000000000000165 /* AcMindKit/Services/Voice/STT/Local/AppleSpeechTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000176 /* AcMindKit/Services/Voice/STT/Local/AppleSpeechTranscriber.swift */; };
+		A10000000000000000000166 /* AcMindKit/Services/Voice/STT/Local/ProcessCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000177 /* AcMindKit/Services/Voice/STT/Local/ProcessCommandRunner.swift */; };
+		A10000000000000000000167 /* AcMindKit/Services/Voice/STT/Local/Qwen3ASRTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000178 /* AcMindKit/Services/Voice/STT/Local/Qwen3ASRTranscriber.swift */; };
+		A10000000000000000000168 /* AcMindKit/Services/Voice/STT/Local/SenseVoiceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000179 /* AcMindKit/Services/Voice/STT/Local/SenseVoiceTranscriber.swift */; };
+		A10000000000000000000169 /* AcMindKit/Services/Voice/STT/Local/SherpaOnnxDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000017A /* AcMindKit/Services/Voice/STT/Local/SherpaOnnxDecoder.swift */; };
+		A1000000000000000000016A /* AcMindKit/Services/Voice/STT/Local/WhisperKitTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000017B /* AcMindKit/Services/Voice/STT/Local/WhisperKitTranscriber.swift */; };
+		A1000000000000000000016B /* AcMindKit/Services/Voice/STT/Cloud/AliCloudTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000017C /* AcMindKit/Services/Voice/STT/Cloud/AliCloudTranscriber.swift */; };
+		A1000000000000000000016C /* AcMindKit/Services/Voice/STT/Cloud/DoubaoTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000017D /* AcMindKit/Services/Voice/STT/Cloud/DoubaoTranscriber.swift */; };
+		A1000000000000000000016D /* AcMindKit/Services/Voice/STT/Cloud/OpenAIWhisperTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000017E /* AcMindKit/Services/Voice/STT/Cloud/OpenAIWhisperTranscriber.swift */; };
+		A1000000000000000000016E /* AcMindKit/Services/Input/TextInjection/TextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000017F /* AcMindKit/Services/Input/TextInjection/TextInjector.swift */; };
+		A1000000000000000000016F /* AcMindKit/Services/Input/TextInjection/AXTextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000180 /* AcMindKit/Services/Input/TextInjection/AXTextInjector.swift */; };
+		A10000000000000000000170 /* AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000181 /* AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift */; };
+		A10000000000000000000182 /* AcMindKit/Models/DesktopCapsuleConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000184 /* AcMindKit/Models/DesktopCapsuleConfig.swift */; };
+		A10000000000000000000183 /* AcMindKit/Models/ScheduledAgentTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000185 /* AcMindKit/Models/ScheduledAgentTask.swift */; };
+		A100000000000000000002B6 /* AcMindKit/Services/Schedule/TimelineLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B7 /* AcMindKit/Services/Schedule/TimelineLayout.swift */; };
+		A10000000000000000000186 /* Features/Native/DesktopCapsule/DesktopCapsulePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000189 /* Features/Native/DesktopCapsule/DesktopCapsulePanel.swift */; };
+		A10000000000000000000187 /* Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000018A /* Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift */; };
+		A10000000000000000000188 /* Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000018B /* Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift */; };
+		A1000000000000000000018D /* Features/Companion/CompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000018E /* Features/Companion/CompanionView.swift */; };
+		A1000000000000000000018F /* Features/Companion/BatteryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000190 /* Features/Companion/BatteryService.swift */; };
+		A10000000000000000000191 /* Features/Companion/MusicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000192 /* Features/Companion/MusicService.swift */; };
+		A10000000000000000000193 /* Features/Companion/ShelfService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000194 /* Features/Companion/ShelfService.swift */; };
+		A10000000000000000000195 /* Features/Companion/NotchShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000196 /* Features/Companion/NotchShape.swift */; };
+		A1000000000000000000019B /* Features/Companion/NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019C /* Features/Companion/NotchPanel.swift */; };
+		A1000000000000000000019E /* Features/Companion/NotchToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019D /* Features/Companion/NotchToast.swift */; };
+		A100000000000000000001A2 /* Features/Companion/QuickNotePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019F /* Features/Companion/QuickNotePanel.swift */; };
+		A100000000000000000001AD /* AcMindKitTests/StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001AC /* AcMindKitTests/StorageTests.swift */; };
+		A100000000000000000001A3 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001A4 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift */; };
+		A100000000000000000001A5 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001A6 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift */; };
+		A100000000000000000001A7 /* AcMindKit/Services/UI/CompanionLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001A8 /* AcMindKit/Services/UI/CompanionLayout.swift */; };
+		A100000000000000000001AA /* AcMindKit/Services/Voice/STT/Local/LocalASRManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001AB /* AcMindKit/Services/Voice/STT/Local/LocalASRManager.swift */; };
+		B000000000000000000002C1 /* Features/Companion/Views/CompanionSettingsHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D1 /* Features/Companion/Views/CompanionSettingsHeader.swift */; };
+		B000000000000000000002C2 /* Features/Companion/Views/CompanionCapabilityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D2 /* Features/Companion/Views/CompanionCapabilityCard.swift */; };
+		B000000000000000000002C3 /* Features/Companion/Views/CapsuleSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D3 /* Features/Companion/Views/CapsuleSettingsCard.swift */; };
+		B000000000000000000002C4 /* Features/Companion/Views/VoiceSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D4 /* Features/Companion/Views/VoiceSettingsCard.swift */; };
+		B000000000000000000002C5 /* Features/Companion/Views/ShortcutSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D5 /* Features/Companion/Views/ShortcutSettingsCard.swift */; };
+		B000000000000000000002C6 /* Features/Companion/Views/CaptureSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D6 /* Features/Companion/Views/CaptureSettingsCard.swift */; };
+		B000000000000000000002C7 /* Features/Companion/Views/CapsulePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D7 /* Features/Companion/Views/CapsulePreview.swift */; };
+		B000000000000000000002C8 /* Features/Companion/Views/WaveformPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D8 /* Features/Companion/Views/WaveformPreview.swift */; };
+		B000000000000000000002C9 /* Features/Companion/Views/ShortcutKeycap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D9 /* Features/Companion/Views/ShortcutKeycap.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		A10000000000000000000007 /* PBXContainerItemProxy */ = {
+		A100000000000000000001B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A10000000000000000000006 /* Project object */;
 			proxyType = 1;
@@ -87,57 +161,132 @@
 /* Begin PBXFileReference section */
 		A10000000000000000000000 /* AcMindApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A10000000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000050 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		A10000000000000000000052 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
-		A10000000000000000000054 /* ServiceContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceContainer.swift; sourceTree = "<group>"; };
-		A10000000000000000000056 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		A10000000000000000000058 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
+		A10000000000000000000004 /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000008 /* AcMindKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AcMindKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000119 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
-		A1000000000000000000000B /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
-		A1000000000000000000000D /* WebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewContainer.swift; sourceTree = "<group>"; };
-		A1000000000000000000000F /* WebViewBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewBridge.swift; sourceTree = "<group>"; };
-		A10000000000000000000011 /* WebViewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewPage.swift; sourceTree = "<group>"; };
-		A10000000000000000000013 /* AcMindTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindTheme.swift; sourceTree = "<group>"; };
+		A1000000000000000000000B /* Features/Sidebar/SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sidebar/SidebarView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000000D /* Features/WebView/WebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/WebView/WebViewContainer.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000000F /* Features/WebView/WebViewBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/WebView/WebViewBridge.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000011 /* Features/WebView/WebViewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/WebView/WebViewPage.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000013 /* Design/AcMindTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/AcMindTheme.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000015 /* AcMindKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit.swift; sourceTree = "<group>"; };
 		A10000000000000000000017 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
 		A10000000000000000000019 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		A1000000000000000000001D /* SourceItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceItem.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* StorageServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceProtocol.swift; sourceTree = "<group>"; };
-		A1000000000000000000006D /* SettingsServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsServiceProtocol.swift; sourceTree = "<group>"; };
+		A10000000000000000000023 /* AcMind.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AcMind.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000050 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A10000000000000000000052 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
+		A10000000000000000000054 /* ServiceContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceContainer.swift; sourceTree = "<group>"; };
+		A10000000000000000000056 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A10000000000000000000058 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 		A1000000000000000000005A /* VoiceServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceServiceProtocol.swift; sourceTree = "<group>"; };
 		A1000000000000000000005C /* RecordingStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingStatus.swift; sourceTree = "<group>"; };
+		A10000000000000000000069 /* Features/Native/Capsule/CapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Capsule/CapsulePanel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000006A /* Features/Native/Inbox/InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/InboxView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000006D /* SettingsServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsServiceProtocol.swift; sourceTree = "<group>"; };
+		A1000000000000000000006E /* Features/Native/Schedule/ScheduleNativeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleNativeView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000071 /* KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeCard.swift; sourceTree = "<group>"; };
 		A10000000000000000000072 /* VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultConfig.swift; sourceTree = "<group>"; };
-		A10000000000000000000069 /* CapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Capsule/CapsulePanel.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000006A /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/InboxView.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000006E /* ScheduleNativeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleNativeView.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000083 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AppSettings.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000084 /* DistilledNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/DistilledNote.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000085 /* ExportRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ExportRecord.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000086 /* KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/KnowledgeCard.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000087 /* VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/VaultConfig.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000088 /* AIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIError.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000089 /* AIRuntimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIRuntimeService.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000008A /* SecretStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/SecretStore.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000008B /* TaskQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/TaskQueue.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000008C /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OllamaProvider.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000008D /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000008E /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/CaptureService.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000008F /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardService.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000090 /* DistillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/DistillService.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000091 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/ExportService.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000092 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Knowledge/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000093 /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Settings/SettingsService.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000094 /* AssetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/AssetStore.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000095 /* VoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/VoiceService.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000023 /* AcMind.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AcMind.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000112 /* AgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentView.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000113 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000114 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/AgentViewModel.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000010D /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/SettingsViewModel.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000115 /* InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/InboxViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000083 /* AcMindKit/Models/AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AppSettings.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000084 /* AcMindKit/Models/DistilledNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/DistilledNote.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000085 /* AcMindKit/Models/ExportRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ExportRecord.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000086 /* AcMindKit/Models/KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/KnowledgeCard.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000087 /* AcMindKit/Models/VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/VaultConfig.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000088 /* AcMindKit/Services/AI/AIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIError.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000089 /* AcMindKit/Services/AI/AIRuntimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIRuntimeService.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008A /* AcMindKit/Services/AI/Support/SecretStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/SecretStore.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008B /* AcMindKit/Services/AI/Support/TaskQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/TaskQueue.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008C /* AcMindKit/Services/AI/Providers/OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OllamaProvider.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008D /* AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008E /* AcMindKit/Services/Input/Capture/CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/CaptureService.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000008F /* AcMindKit/Services/Input/Clipboard/ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000090 /* AcMindKit/Services/Workflow/DistillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/DistillService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000091 /* AcMindKit/Services/Workflow/ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/ExportService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000092 /* AcMindKit/Services/Knowledge/KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Knowledge/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000093 /* AcMindKit/Services/Settings/SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Settings/SettingsService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000094 /* AcMindKit/Services/Storage/AssetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/AssetStore.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000095 /* AcMindKit/Services/Voice/VoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/VoiceService.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000010D /* App/ViewModels/SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/SettingsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000112 /* Features/Native/Agent/AgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000113 /* Features/Native/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000114 /* App/ViewModels/AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/AgentViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000115 /* App/ViewModels/InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/InboxViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002E2 /* Features/Native/Inbox/Components/InboxHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/Components/InboxHeader.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002E4 /* Features/Native/Inbox/Components/InboxItemCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/Components/InboxItemCard.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002E6 /* Features/Native/Inbox/Components/InboxDetailPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/Components/InboxDetailPanel.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002E8 /* Features/Native/Inbox/Components/InboxStatusTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/Components/InboxStatusTag.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002EA /* Features/Native/Inbox/Components/InboxWaveformPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/Components/InboxWaveformPreview.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000011A /* Features/Native/Schedule/ScheduleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleModels.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000011B /* Features/Native/Schedule/ScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000011C /* Features/Native/Schedule/ScheduleSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleSidebar.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000011D /* Features/Native/Schedule/ScheduleToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleToolbar.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000011E /* Features/Native/Schedule/WeekCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/WeekCalendarView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000011F /* Features/Native/Schedule/MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/MonthCalendarView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000120 /* Features/Native/Schedule/YearCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/YearCalendarView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000012D /* Features/Native/Schedule/EventEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/EventEditorView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000130 /* AcMindKit/Services/Hotkeys/HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Hotkeys/HotkeyManager.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000132 /* AcMindKit/Services/Permissions/PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Permissions/PermissionManager.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000134 /* AcMindKit/Services/Storage/DataMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/DataMigrationService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000136 /* AcMindKit/Services/Workflow/MarkdownBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/MarkdownBuilder.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002B7 /* AcMindKit/Services/Schedule/TimelineLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Schedule/TimelineLayout.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000147 /* Features/Companion/CompanionTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionTypes.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000148 /* Features/Companion/CompanionMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionMockData.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000149 /* Features/Companion/CompanionLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionLayer.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000014A /* Features/Companion/CompanionCapsule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionCapsule.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000014B /* Features/Companion/CompanionShortcutPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionShortcutPanel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000014C /* Features/Companion/CompanionVoicePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionVoicePanel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000014D /* Features/Companion/CompanionCapturePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionCapturePanel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000158 /* Features/Native/Clipboard/ClipboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Clipboard/ClipboardView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000015A /* Features/Native/Workbench/WorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Workbench/WorkbenchView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000015B /* Features/Native/Tools/ToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolsView.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002B0 /* Features/Native/Tools/WebDigestPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/WebDigestPanel.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002B2 /* Features/Native/Tools/ToolPanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolPanels.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000002B4 /* Features/Native/Tools/ToolAdvancedPanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolAdvancedPanels.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000171 /* AcMindKit/Services/Voice/Polish/VoicePolishMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/VoicePolishMode.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000172 /* AcMindKit/Services/Voice/Polish/PolishPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/PolishPrompts.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000173 /* AcMindKit/Services/Voice/Polish/PolishService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/PolishService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000174 /* AcMindKit/Services/Voice/STT/STTRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/STTRouter.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000175 /* AcMindKit/Services/Voice/STT/Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Transcriber.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000176 /* AcMindKit/Services/Voice/STT/Local/AppleSpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/AppleSpeechTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000177 /* AcMindKit/Services/Voice/STT/Local/ProcessCommandRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/ProcessCommandRunner.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000178 /* AcMindKit/Services/Voice/STT/Local/Qwen3ASRTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/Qwen3ASRTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000179 /* AcMindKit/Services/Voice/STT/Local/SenseVoiceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/SenseVoiceTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000017A /* AcMindKit/Services/Voice/STT/Local/SherpaOnnxDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/SherpaOnnxDecoder.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000017B /* AcMindKit/Services/Voice/STT/Local/WhisperKitTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/WhisperKitTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000017C /* AcMindKit/Services/Voice/STT/Cloud/AliCloudTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Cloud/AliCloudTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000017D /* AcMindKit/Services/Voice/STT/Cloud/DoubaoTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Cloud/DoubaoTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000017E /* AcMindKit/Services/Voice/STT/Cloud/OpenAIWhisperTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Cloud/OpenAIWhisperTranscriber.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000001AB /* AcMindKit/Services/Voice/STT/Local/LocalASRManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/STT/Local/LocalASRManager.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000017F /* AcMindKit/Services/Input/TextInjection/TextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/TextInjection/TextInjector.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000180 /* AcMindKit/Services/Input/TextInjection/AXTextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/TextInjection/AXTextInjector.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000181 /* AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000184 /* AcMindKit/Models/DesktopCapsuleConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/DesktopCapsuleConfig.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000185 /* AcMindKit/Models/ScheduledAgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ScheduledAgentTask.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000189 /* Features/Native/DesktopCapsule/DesktopCapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsulePanel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000018A /* Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000018B /* Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000018E /* Features/Companion/CompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000190 /* Features/Companion/BatteryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/BatteryService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000192 /* Features/Companion/MusicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/MusicService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000194 /* Features/Companion/ShelfService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/ShelfService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000196 /* Features/Companion/NotchShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchShape.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000019C /* Features/Companion/NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchPanel.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000019D /* Features/Companion/NotchToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchToast.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000019F /* Features/Companion/QuickNotePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/QuickNotePanel.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000001AC /* AcMindKitTests/StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/StorageTests.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000001A4 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/AIPromptService.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000001A6 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/AutoRedactorService.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000001A8 /* AcMindKit/Services/UI/CompanionLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/CompanionLayout.swift; sourceTree = SOURCE_ROOT; };
+		A100000000000000000001AE /* AcMindKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AcMindKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B000000000000000000002D1 /* Features/Companion/Views/CompanionSettingsHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CompanionSettingsHeader.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D2 /* Features/Companion/Views/CompanionCapabilityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CompanionCapabilityCard.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D3 /* Features/Companion/Views/CapsuleSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CapsuleSettingsCard.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D4 /* Features/Companion/Views/VoiceSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/VoiceSettingsCard.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D5 /* Features/Companion/Views/ShortcutSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/ShortcutSettingsCard.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D6 /* Features/Companion/Views/CaptureSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CaptureSettingsCard.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D7 /* Features/Companion/Views/CapsulePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CapsulePreview.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D8 /* Features/Companion/Views/WaveformPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/WaveformPreview.swift; sourceTree = SOURCE_ROOT; };
+		B000000000000000000002D9 /* Features/Companion/Views/ShortcutKeycap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/ShortcutKeycap.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,11 +295,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000009 /* AcMindKit.framework in Frameworks */,
-				A10000000000000000000118 /* AppIntents.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A10000000000000000000025 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A100000000000000000001B2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -168,7 +323,9 @@
 				A10000000000000000000062 /* Design */,
 				A10000000000000000000063 /* Resources */,
 				A10000000000000000000028 /* AcMindKit */,
+				A100000000000000000001AF /* AcMindKitTests */,
 				A10000000000000000000029 /* Products */,
+				DBD628752FADB37E0086FEF5 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -186,33 +343,6 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000061 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000002A /* Sidebar */,
-				A1000000000000000000002B /* WebView */,
-				A10000000000000000000064 /* Native */,
-			);
-			path = Features;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000062 /* Design */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000013 /* AcMindTheme.swift */,
-			);
-			path = Design;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000063 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000004 /* Assets.xcassets */,
-				A10000000000000000000065 /* WebViewApp */,
-			);
-			path = Resources;
-			sourceTree = "<group>";
-		};
 		A10000000000000000000028 /* AcMindKit */ = {
 			isa = PBXGroup;
 			children = (
@@ -224,117 +354,12 @@
 			path = AcMindKit;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000104 /* AI */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000088 /* AIError.swift */,
-				A10000000000000000000089 /* AIRuntimeService.swift */,
-				A10000000000000000000106 /* Support */,
-				A10000000000000000000105 /* Providers */,
-			);
-			path = AI;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000105 /* Providers */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000008C /* OllamaProvider.swift */,
-				A1000000000000000000008D /* OpenAICompatibleProvider.swift */,
-			);
-			path = Providers;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000106 /* Support */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000008A /* SecretStore.swift */,
-				A1000000000000000000008B /* TaskQueue.swift */,
-			);
-			path = Support;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000064 /* Native */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000070 /* Schedule */,
-				A10000000000000000000067 /* Capsule */,
-				A10000000000000000000068 /* Inbox */,
-				A1000000000000000000010F /* Agent */,
-				A10000000000000000000110 /* Settings */,
-			);
-			path = Native;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000070 /* Schedule */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000006E /* ScheduleNativeView.swift */,
-			);
-			path = Schedule;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000065 /* WebViewApp */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000058 /* index.html */,
-			);
-			path = WebViewApp;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000066 /* Core */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000015 /* AcMindKit.swift */,
-			);
-			path = Core;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000067 /* Capsule */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000069 /* CapsulePanel.swift */,
-			);
-			path = Capsule;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000068 /* Inbox */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000006A /* InboxView.swift */,
-			);
-			path = Inbox;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000100 /* Input */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000101 /* Capture */,
-				A10000000000000000000102 /* Clipboard */,
-			);
-			path = Input;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000101 /* Capture */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000008E /* CaptureService.swift */,
-			);
-			path = Capture;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000102 /* Clipboard */ = {
-			isa = PBXGroup;
-			children = (
-				A1000000000000000000008F /* ClipboardService.swift */,
-			);
-			path = Clipboard;
-			sourceTree = "<group>";
-		};
 		A10000000000000000000029 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000023 /* AcMind.app */,
 				A10000000000000000000008 /* AcMindKit.framework */,
+				A100000000000000000001AE /* AcMindKitTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -342,7 +367,7 @@
 		A1000000000000000000002A /* Sidebar */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000000B /* SidebarView.swift */,
+				A1000000000000000000000B /* Features/Sidebar/SidebarView.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -350,19 +375,11 @@
 		A1000000000000000000002B /* WebView */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000000D /* WebViewContainer.swift */,
-				A1000000000000000000000F /* WebViewBridge.swift */,
-				A10000000000000000000011 /* WebViewPage.swift */,
+				A1000000000000000000000D /* Features/WebView/WebViewContainer.swift */,
+				A1000000000000000000000F /* Features/WebView/WebViewBridge.swift */,
+				A10000000000000000000011 /* Features/WebView/WebViewPage.swift */,
 			);
 			path = WebView;
-			sourceTree = "<group>";
-		};
-		A1000000000000000000002C /* Theme */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000013 /* AcMindTheme.swift */,
-			);
-			path = Theme;
 			sourceTree = "<group>";
 		};
 		A1000000000000000000002D /* Models */ = {
@@ -372,6 +389,8 @@
 				A1000000000000000000005C /* RecordingStatus.swift */,
 				A10000000000000000000071 /* KnowledgeCard.swift */,
 				A10000000000000000000072 /* VaultConfig.swift */,
+				A10000000000000000000184 /* AcMindKit/Models/DesktopCapsuleConfig.swift */,
+				A10000000000000000000185 /* AcMindKit/Models/ScheduledAgentTask.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -396,41 +415,11 @@
 				A10000000000000000000107 /* Knowledge */,
 				A10000000000000000000108 /* Settings */,
 				A10000000000000000000109 /* Voice */,
+				A10000000000000000000138 /* Hotkeys */,
+				A10000000000000000000139 /* Permissions */,
+				A100000000000000000001A9 /* UI */,
 			);
 			path = Services;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000103 /* Workflow */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000090 /* DistillService.swift */,
-				A10000000000000000000091 /* ExportService.swift */,
-			);
-			path = Workflow;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000107 /* Knowledge */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000092 /* KnowledgeService.swift */,
-			);
-			path = Knowledge;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000108 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000093 /* SettingsService.swift */,
-			);
-			path = Settings;
-			sourceTree = "<group>";
-		};
-		A10000000000000000000109 /* Voice */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000095 /* VoiceService.swift */,
-			);
-			path = Voice;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000030 /* Storage */ = {
@@ -438,15 +427,226 @@
 			children = (
 				A10000000000000000000017 /* Database.swift */,
 				A10000000000000000000019 /* StorageService.swift */,
-				A10000000000000000000094 /* AssetStore.swift */,
+				A10000000000000000000094 /* AcMindKit/Services/Storage/AssetStore.swift */,
+				A10000000000000000000134 /* AcMindKit/Services/Storage/DataMigrationService.swift */,
 			);
 			path = Storage;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000061 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000002A /* Sidebar */,
+				A1000000000000000000002B /* WebView */,
+				A1000000000000000000014E /* Companion */,
+				A10000000000000000000064 /* Native */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000062 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000013 /* Design/AcMindTheme.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000063 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000004 /* Resources/Assets.xcassets */,
+				A10000000000000000000065 /* WebViewApp */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000064 /* Native */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000070 /* Schedule */,
+				A10000000000000000000067 /* Capsule */,
+				A1000000000000000000018C /* DesktopCapsule */,
+				A10000000000000000000068 /* Inbox */,
+				A1000000000000000000010F /* Agent */,
+				A10000000000000000000110 /* Settings */,
+				A1000000000000000000015C /* Clipboard */,
+				A1000000000000000000015D /* Workbench */,
+				A1000000000000000000015E /* Tools */,
+			);
+			path = Native;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000065 /* WebViewApp */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000058 /* index.html */,
+			);
+			path = WebViewApp;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000066 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000015 /* AcMindKit.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000067 /* Capsule */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000069 /* Features/Native/Capsule/CapsulePanel.swift */,
+			);
+			path = Capsule;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000068 /* Inbox */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000006A /* Features/Native/Inbox/InboxView.swift */,
+				A100000000000000000002F0 /* Components */,
+			);
+			path = Inbox;
+			sourceTree = "<group>";
+		};
+		A100000000000000000002F0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000002E2 /* Features/Native/Inbox/Components/InboxHeader.swift */,
+				A100000000000000000002E4 /* Features/Native/Inbox/Components/InboxItemCard.swift */,
+				A100000000000000000002E6 /* Features/Native/Inbox/Components/InboxDetailPanel.swift */,
+				A100000000000000000002E8 /* Features/Native/Inbox/Components/InboxStatusTag.swift */,
+				A100000000000000000002EA /* Features/Native/Inbox/Components/InboxWaveformPreview.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000070 /* Schedule */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000006E /* Features/Native/Schedule/ScheduleNativeView.swift */,
+				A1000000000000000000011A /* Features/Native/Schedule/ScheduleModels.swift */,
+				A1000000000000000000011B /* Features/Native/Schedule/ScheduleViewModel.swift */,
+				A1000000000000000000011C /* Features/Native/Schedule/ScheduleSidebar.swift */,
+				A1000000000000000000011D /* Features/Native/Schedule/ScheduleToolbar.swift */,
+				A1000000000000000000011E /* Features/Native/Schedule/WeekCalendarView.swift */,
+				A1000000000000000000011F /* Features/Native/Schedule/MonthCalendarView.swift */,
+				A10000000000000000000120 /* Features/Native/Schedule/YearCalendarView.swift */,
+				A1000000000000000000012D /* Features/Native/Schedule/EventEditorView.swift */,
+			);
+			path = Schedule;
+			sourceTree = "<group>";
+		};
+		A100000000000000000002B8 /* Schedule */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000002B7 /* AcMindKit/Services/Schedule/TimelineLayout.swift */,
+			);
+			path = Schedule;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000100 /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000101 /* Capture */,
+				A10000000000000000000102 /* Clipboard */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000101 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008E /* AcMindKit/Services/Input/Capture/CaptureService.swift */,
+				A100000000000000000001A6 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000102 /* Clipboard */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008F /* AcMindKit/Services/Input/Clipboard/ClipboardService.swift */,
+			);
+			path = Clipboard;
+			sourceTree = "<group>";
+		};
+		A100000000000000000001A9 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000001A8 /* AcMindKit/Services/UI/CompanionLayout.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000103 /* Workflow */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000090 /* AcMindKit/Services/Workflow/DistillService.swift */,
+				A10000000000000000000091 /* AcMindKit/Services/Workflow/ExportService.swift */,
+				A10000000000000000000136 /* AcMindKit/Services/Workflow/MarkdownBuilder.swift */,
+			);
+			path = Workflow;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000104 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000088 /* AcMindKit/Services/AI/AIError.swift */,
+				A10000000000000000000089 /* AcMindKit/Services/AI/AIRuntimeService.swift */,
+				A10000000000000000000106 /* Support */,
+				A10000000000000000000105 /* Providers */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000105 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008C /* AcMindKit/Services/AI/Providers/OllamaProvider.swift */,
+				A1000000000000000000008D /* AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift */,
+			);
+			path = Providers;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000106 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000008A /* AcMindKit/Services/AI/Support/SecretStore.swift */,
+				A1000000000000000000008B /* AcMindKit/Services/AI/Support/TaskQueue.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000107 /* Knowledge */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000092 /* AcMindKit/Services/Knowledge/KnowledgeService.swift */,
+			);
+			path = Knowledge;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000108 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000093 /* AcMindKit/Services/Settings/SettingsService.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000109 /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000095 /* AcMindKit/Services/Voice/VoiceService.swift */,
+			);
+			path = Voice;
 			sourceTree = "<group>";
 		};
 		A1000000000000000000010F /* Agent */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000112 /* AgentView.swift */,
+				A10000000000000000000112 /* Features/Native/Agent/AgentView.swift */,
 			);
 			path = Agent;
 			sourceTree = "<group>";
@@ -454,7 +654,7 @@
 		A10000000000000000000110 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000113 /* SettingsView.swift */,
+				A10000000000000000000113 /* Features/Native/Settings/SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -462,16 +662,162 @@
 		A10000000000000000000117 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000114 /* AgentViewModel.swift */,
-				A10000000000000000000115 /* InboxViewModel.swift */,
-				A1000000000000000000010D /* SettingsViewModel.swift */,
+				A10000000000000000000114 /* App/ViewModels/AgentViewModel.swift */,
+				A10000000000000000000115 /* App/ViewModels/InboxViewModel.swift */,
+				A1000000000000000000010D /* App/ViewModels/SettingsViewModel.swift */,
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000138 /* Hotkeys */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000130 /* AcMindKit/Services/Hotkeys/HotkeyManager.swift */,
+			);
+			path = Hotkeys;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000139 /* Permissions */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000132 /* AcMindKit/Services/Permissions/PermissionManager.swift */,
+			);
+			path = Permissions;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000014E /* Companion */ = {
+			isa = PBXGroup;
+			children = (
+				B000000000000000000002E0 /* Views */,
+				A10000000000000000000147 /* Features/Companion/CompanionTypes.swift */,
+				A10000000000000000000148 /* Features/Companion/CompanionMockData.swift */,
+				A10000000000000000000149 /* Features/Companion/CompanionLayer.swift */,
+				A1000000000000000000014A /* Features/Companion/CompanionCapsule.swift */,
+				A1000000000000000000014B /* Features/Companion/CompanionShortcutPanel.swift */,
+				A1000000000000000000014C /* Features/Companion/CompanionVoicePanel.swift */,
+				A1000000000000000000014D /* Features/Companion/CompanionCapturePanel.swift */,
+				A10000000000000000000190 /* Features/Companion/BatteryService.swift */,
+				A10000000000000000000192 /* Features/Companion/MusicService.swift */,
+				A10000000000000000000194 /* Features/Companion/ShelfService.swift */,
+				A10000000000000000000196 /* Features/Companion/NotchShape.swift */,
+				A1000000000000000000019C /* Features/Companion/NotchPanel.swift */,
+				A1000000000000000000019D /* Features/Companion/NotchToast.swift */,
+				A1000000000000000000019F /* Features/Companion/QuickNotePanel.swift */,
+				A1000000000000000000018E /* Features/Companion/CompanionView.swift */,
+			);
+			path = Companion;
+			sourceTree = "<group>";
+		};
+		B000000000000000000002E0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B000000000000000000002D1 /* Features/Companion/Views/CompanionSettingsHeader.swift */,
+				B000000000000000000002D2 /* Features/Companion/Views/CompanionCapabilityCard.swift */,
+				B000000000000000000002D3 /* Features/Companion/Views/CapsuleSettingsCard.swift */,
+				B000000000000000000002D4 /* Features/Companion/Views/VoiceSettingsCard.swift */,
+				B000000000000000000002D5 /* Features/Companion/Views/ShortcutSettingsCard.swift */,
+				B000000000000000000002D6 /* Features/Companion/Views/CaptureSettingsCard.swift */,
+				B000000000000000000002D7 /* Features/Companion/Views/CapsulePreview.swift */,
+				B000000000000000000002D8 /* Features/Companion/Views/WaveformPreview.swift */,
+				B000000000000000000002D9 /* Features/Companion/Views/ShortcutKeycap.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000015C /* Clipboard */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000158 /* Features/Native/Clipboard/ClipboardView.swift */,
+			);
+			path = Clipboard;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000015D /* Workbench */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000015A /* Features/Native/Workbench/WorkbenchView.swift */,
+			);
+			path = Workbench;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000015E /* Tools */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000015B /* Features/Native/Tools/ToolsView.swift */,
+				A100000000000000000002B0 /* Features/Native/Tools/WebDigestPanel.swift */,
+				A100000000000000000002B2 /* Features/Native/Tools/ToolPanels.swift */,
+				A100000000000000000002B4 /* Features/Native/Tools/ToolAdvancedPanels.swift */,
+			);
+			path = Tools;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000018C /* DesktopCapsule */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000189 /* Features/Native/DesktopCapsule/DesktopCapsulePanel.swift */,
+				A1000000000000000000018A /* Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift */,
+				A1000000000000000000018B /* Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift */,
+			);
+			path = DesktopCapsule;
+			sourceTree = "<group>";
+		};
+		A100000000000000000001AF /* AcMindKitTests */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000001AC /* AcMindKitTests/StorageTests.swift */,
+			);
+			path = AcMindKitTests;
+			sourceTree = "<group>";
+		};
+		DBD628752FADB37E0086FEF5 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000083 /* AcMindKit/Models/AppSettings.swift */,
+				A10000000000000000000084 /* AcMindKit/Models/DistilledNote.swift */,
+				A10000000000000000000085 /* AcMindKit/Models/ExportRecord.swift */,
+				A10000000000000000000086 /* AcMindKit/Models/KnowledgeCard.swift */,
+				A10000000000000000000087 /* AcMindKit/Models/VaultConfig.swift */,
+				A10000000000000000000171 /* AcMindKit/Services/Voice/Polish/VoicePolishMode.swift */,
+				A10000000000000000000172 /* AcMindKit/Services/Voice/Polish/PolishPrompts.swift */,
+				A10000000000000000000173 /* AcMindKit/Services/Voice/Polish/PolishService.swift */,
+				A100000000000000000001A4 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift */,
+				A10000000000000000000174 /* AcMindKit/Services/Voice/STT/STTRouter.swift */,
+				A10000000000000000000175 /* AcMindKit/Services/Voice/STT/Transcriber.swift */,
+				A10000000000000000000176 /* AcMindKit/Services/Voice/STT/Local/AppleSpeechTranscriber.swift */,
+				A10000000000000000000177 /* AcMindKit/Services/Voice/STT/Local/ProcessCommandRunner.swift */,
+				A10000000000000000000178 /* AcMindKit/Services/Voice/STT/Local/Qwen3ASRTranscriber.swift */,
+				A10000000000000000000179 /* AcMindKit/Services/Voice/STT/Local/SenseVoiceTranscriber.swift */,
+				A1000000000000000000017A /* AcMindKit/Services/Voice/STT/Local/SherpaOnnxDecoder.swift */,
+				A1000000000000000000017B /* AcMindKit/Services/Voice/STT/Local/WhisperKitTranscriber.swift */,
+				A1000000000000000000017C /* AcMindKit/Services/Voice/STT/Cloud/AliCloudTranscriber.swift */,
+				A1000000000000000000017D /* AcMindKit/Services/Voice/STT/Cloud/DoubaoTranscriber.swift */,
+				A1000000000000000000017E /* AcMindKit/Services/Voice/STT/Cloud/OpenAIWhisperTranscriber.swift */,
+				A1000000000000000000017F /* AcMindKit/Services/Input/TextInjection/TextInjector.swift */,
+				A10000000000000000000180 /* AcMindKit/Services/Input/TextInjection/AXTextInjector.swift */,
+				A10000000000000000000181 /* AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A10000000000000000000021 /* AcMindKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000036 /* Build configuration list for PBXNativeTarget "AcMindKit" */;
+			buildPhases = (
+				A10000000000000000000037 /* Sources */,
+				A10000000000000000000025 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AcMindKit;
+			productName = AcMindKit;
+			productReference = A10000000000000000000008 /* AcMindKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		A10000000000000000000032 /* AcMind */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000000000000000000033 /* Build configuration list for PBXNativeTarget "AcMind" */;
@@ -491,22 +837,23 @@
 			productReference = A10000000000000000000023 /* AcMind.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A10000000000000000000021 /* AcMindKit */ = {
+		A100000000000000000001B5 /* AcMindKitTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A10000000000000000000036 /* Build configuration list for PBXNativeTarget "AcMindKit" */;
+			buildConfigurationList = A100000000000000000001B6 /* Build configuration list for PBXNativeTarget "AcMindKitTests" */;
 			buildPhases = (
-				A10000000000000000000037 /* Sources */,
-				A10000000000000000000025 /* Frameworks */,
-				A10000000000000000000038 /* Headers */,
+				A100000000000000000001B3 /* Sources */,
+				A100000000000000000001B2 /* Frameworks */,
+				A100000000000000000001B4 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A100000000000000000001B1 /* PBXTargetDependency */,
 			);
-			name = AcMindKit;
-			productName = AcMindKit;
-			productReference = A10000000000000000000008 /* AcMindKit.framework */;
-			productType = "com.apple.product-type.framework";
+			name = AcMindKitTests;
+			productName = AcMindKitTests;
+			productReference = A100000000000000000001AE /* AcMindKitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -516,13 +863,20 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					A10000000000000000000021 = {
 						CreatedOnToolsVersion = 15.0;
 					};
 					A10000000000000000000032 = {
 						CreatedOnToolsVersion = 15.0;
+						RemoteSwiftPackageRefs = (
+							A100000000000000000001A0,
+						);
+					};
+					A100000000000000000001B5 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = A10000000000000000000021;
 					};
 				};
 			};
@@ -535,12 +889,16 @@
 				Base,
 			);
 			mainGroup = A10000000000000000000026;
+			packageReferences = (
+				A100000000000000000001A0 /* XCRemoteSwiftPackageReference "." */,
+			);
 			productRefGroup = A10000000000000000000029 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				A10000000000000000000032 /* AcMind */,
 				A10000000000000000000021 /* AcMindKit */,
+				A100000000000000000001B5 /* AcMindKitTests */,
 			);
 		};
 /* End PBXProject section */
@@ -550,8 +908,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000005 /* Assets.xcassets in Resources */,
+				A10000000000000000000005 /* Resources/Assets.xcassets in Resources */,
 				A10000000000000000000059 /* index.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A100000000000000000001B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -568,19 +933,65 @@
 				A10000000000000000000053 /* SidebarItem.swift in Sources */,
 				A10000000000000000000055 /* ServiceContainer.swift in Sources */,
 				A10000000000000000000057 /* AppDelegate.swift in Sources */,
-				A1000000000000000000000C /* SidebarView.swift in Sources */,
-				A1000000000000000000000E /* WebViewContainer.swift in Sources */,
-				A10000000000000000000010 /* WebViewBridge.swift in Sources */,
-				A10000000000000000000012 /* WebViewPage.swift in Sources */,
-				A10000000000000000000014 /* AcMindTheme.swift in Sources */,
-				A1000000000000000000006B /* CapsulePanel.swift in Sources */,
-				A1000000000000000000006C /* InboxView.swift in Sources */,
-				A1000000000000000000006F /* ScheduleNativeView.swift in Sources */,
-				A1000000000000000000010A /* AgentView.swift in Sources */,
-				A1000000000000000000010B /* SettingsView.swift in Sources */,
-				A1000000000000000000010C /* AgentViewModel.swift in Sources */,
-				A1000000000000000000010E /* SettingsViewModel.swift in Sources */,
-				A10000000000000000000116 /* InboxViewModel.swift in Sources */,
+				A1000000000000000000000C /* Features/Sidebar/SidebarView.swift in Sources */,
+				A1000000000000000000000E /* Features/WebView/WebViewContainer.swift in Sources */,
+				A10000000000000000000010 /* Features/WebView/WebViewBridge.swift in Sources */,
+				A10000000000000000000012 /* Features/WebView/WebViewPage.swift in Sources */,
+				A10000000000000000000014 /* Design/AcMindTheme.swift in Sources */,
+				A1000000000000000000006B /* Features/Native/Capsule/CapsulePanel.swift in Sources */,
+				A1000000000000000000006C /* Features/Native/Inbox/InboxView.swift in Sources */,
+				A100000000000000000002F1 /* App/ViewModels/InboxViewModel.swift in Sources */,
+				A100000000000000000002F2 /* Features/Native/Inbox/Components/InboxHeader.swift in Sources */,
+				A100000000000000000002F3 /* Features/Native/Inbox/Components/InboxItemCard.swift in Sources */,
+				A100000000000000000002F4 /* Features/Native/Inbox/Components/InboxDetailPanel.swift in Sources */,
+				A100000000000000000002F5 /* Features/Native/Inbox/Components/InboxStatusTag.swift in Sources */,
+				A100000000000000000002F6 /* Features/Native/Inbox/Components/WaveformPreview.swift in Sources */,
+				A1000000000000000000006F /* Features/Native/Schedule/ScheduleNativeView.swift in Sources */,
+				A10000000000000000000121 /* Features/Native/Schedule/ScheduleModels.swift in Sources */,
+				A10000000000000000000122 /* Features/Native/Schedule/ScheduleViewModel.swift in Sources */,
+				A10000000000000000000124 /* Features/Native/Schedule/ScheduleSidebar.swift in Sources */,
+				A10000000000000000000126 /* Features/Native/Schedule/ScheduleToolbar.swift in Sources */,
+				A10000000000000000000128 /* Features/Native/Schedule/WeekCalendarView.swift in Sources */,
+				A1000000000000000000012A /* Features/Native/Schedule/MonthCalendarView.swift in Sources */,
+				A1000000000000000000012C /* Features/Native/Schedule/YearCalendarView.swift in Sources */,
+				A1000000000000000000012E /* Features/Native/Schedule/EventEditorView.swift in Sources */,
+				A10000000000000000000140 /* Features/Companion/CompanionTypes.swift in Sources */,
+				A10000000000000000000141 /* Features/Companion/CompanionMockData.swift in Sources */,
+				A10000000000000000000142 /* Features/Companion/CompanionLayer.swift in Sources */,
+				A10000000000000000000143 /* Features/Companion/CompanionCapsule.swift in Sources */,
+				A10000000000000000000144 /* Features/Companion/CompanionShortcutPanel.swift in Sources */,
+				A10000000000000000000145 /* Features/Companion/CompanionVoicePanel.swift in Sources */,
+				A10000000000000000000146 /* Features/Companion/CompanionCapturePanel.swift in Sources */,
+				A1000000000000000000018F /* Features/Companion/BatteryService.swift in Sources */,
+				A10000000000000000000191 /* Features/Companion/MusicService.swift in Sources */,
+				A10000000000000000000193 /* Features/Companion/ShelfService.swift in Sources */,
+				A10000000000000000000195 /* Features/Companion/NotchShape.swift in Sources */,
+				A1000000000000000000019B /* Features/Companion/NotchPanel.swift in Sources */,
+				A1000000000000000000019E /* Features/Companion/NotchToast.swift in Sources */,
+				A100000000000000000001A2 /* Features/Companion/QuickNotePanel.swift in Sources */,
+				A1000000000000000000018D /* Features/Companion/CompanionView.swift in Sources */,
+				B000000000000000000002C1 /* Features/Companion/Views/CompanionSettingsHeader.swift in Sources */,
+				B000000000000000000002C2 /* Features/Companion/Views/CompanionCapabilityCard.swift in Sources */,
+				B000000000000000000002C3 /* Features/Companion/Views/CapsuleSettingsCard.swift in Sources */,
+				B000000000000000000002C4 /* Features/Companion/Views/VoiceSettingsCard.swift in Sources */,
+				B000000000000000000002C5 /* Features/Companion/Views/ShortcutSettingsCard.swift in Sources */,
+				B000000000000000000002C6 /* Features/Companion/Views/CaptureSettingsCard.swift in Sources */,
+				B000000000000000000002C7 /* Features/Companion/Views/CapsulePreview.swift in Sources */,
+				B000000000000000000002C8 /* Features/Companion/Views/WaveformPreview.swift in Sources */,
+				B000000000000000000002C9 /* Features/Companion/Views/ShortcutKeycap.swift in Sources */,
+				A10000000000000000000186 /* Features/Native/DesktopCapsule/DesktopCapsulePanel.swift in Sources */,
+				A10000000000000000000187 /* Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift in Sources */,
+				A10000000000000000000188 /* Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift in Sources */,
+				A1000000000000000000010A /* Features/Native/Agent/AgentView.swift in Sources */,
+				A1000000000000000000010B /* Features/Native/Settings/SettingsView.swift in Sources */,
+				A1000000000000000000010C /* App/ViewModels/AgentViewModel.swift in Sources */,
+				A1000000000000000000010E /* App/ViewModels/SettingsViewModel.swift in Sources */,
+				A10000000000000000000154 /* Features/Native/Clipboard/ClipboardView.swift in Sources */,
+				A10000000000000000000156 /* Features/Native/Workbench/WorkbenchView.swift in Sources */,
+				A10000000000000000000157 /* Features/Native/Tools/ToolsView.swift in Sources */,
+				A100000000000000000002B1 /* Features/Native/Tools/WebDigestPanel.swift in Sources */,
+				A100000000000000000002B3 /* Features/Native/Tools/ToolPanels.swift in Sources */,
+				A100000000000000000002B5 /* Features/Native/Tools/ToolAdvancedPanels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -592,29 +1003,65 @@
 				A10000000000000000000018 /* Database.swift in Sources */,
 				A1000000000000000000001A /* StorageService.swift in Sources */,
 				A1000000000000000000001E /* SourceItem.swift in Sources */,
-				A10000000000000000000073 /* AppSettings.swift in Sources */,
-				A10000000000000000000074 /* DistilledNote.swift in Sources */,
-				A10000000000000000000075 /* ExportRecord.swift in Sources */,
-				A10000000000000000000076 /* KnowledgeCard.swift in Sources */,
-				A10000000000000000000077 /* VaultConfig.swift in Sources */,
-				A10000000000000000000078 /* AIError.swift in Sources */,
-				A10000000000000000000079 /* AIRuntimeService.swift in Sources */,
-				A1000000000000000000007A /* SecretStore.swift in Sources */,
-				A1000000000000000000007B /* TaskQueue.swift in Sources */,
-				A1000000000000000000007C /* OllamaProvider.swift in Sources */,
-				A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */,
-				A1000000000000000000007E /* CaptureService.swift in Sources */,
-				A1000000000000000000007F /* ClipboardService.swift in Sources */,
-				A10000000000000000000080 /* DistillService.swift in Sources */,
-				A10000000000000000000081 /* ExportService.swift in Sources */,
-				A10000000000000000000082 /* KnowledgeService.swift in Sources */,
-				A10000000000000000000096 /* SettingsService.swift in Sources */,
-				A10000000000000000000097 /* AssetStore.swift in Sources */,
-				A10000000000000000000098 /* VoiceService.swift in Sources */,
+				A10000000000000000000073 /* AcMindKit/Models/AppSettings.swift in Sources */,
+				A10000000000000000000074 /* AcMindKit/Models/DistilledNote.swift in Sources */,
+				A10000000000000000000075 /* AcMindKit/Models/ExportRecord.swift in Sources */,
+				A10000000000000000000076 /* AcMindKit/Models/KnowledgeCard.swift in Sources */,
+				A10000000000000000000077 /* AcMindKit/Models/VaultConfig.swift in Sources */,
+				A10000000000000000000078 /* AcMindKit/Services/AI/AIError.swift in Sources */,
+				A10000000000000000000079 /* AcMindKit/Services/AI/AIRuntimeService.swift in Sources */,
+				A1000000000000000000007A /* AcMindKit/Services/AI/Support/SecretStore.swift in Sources */,
+				A1000000000000000000007B /* AcMindKit/Services/AI/Support/TaskQueue.swift in Sources */,
+				A1000000000000000000007C /* AcMindKit/Services/AI/Providers/OllamaProvider.swift in Sources */,
+				A1000000000000000000007D /* AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift in Sources */,
+				A1000000000000000000007E /* AcMindKit/Services/Input/Capture/CaptureService.swift in Sources */,
+				A1000000000000000000007F /* AcMindKit/Services/Input/Clipboard/ClipboardService.swift in Sources */,
+				A10000000000000000000080 /* AcMindKit/Services/Workflow/DistillService.swift in Sources */,
+				A10000000000000000000081 /* AcMindKit/Services/Workflow/ExportService.swift in Sources */,
+				A10000000000000000000082 /* AcMindKit/Services/Knowledge/KnowledgeService.swift in Sources */,
+				A10000000000000000000096 /* AcMindKit/Services/Settings/SettingsService.swift in Sources */,
+				A10000000000000000000097 /* AcMindKit/Services/Storage/AssetStore.swift in Sources */,
+				A10000000000000000000098 /* AcMindKit/Services/Voice/VoiceService.swift in Sources */,
 				A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */,
+				A10000000000000000000131 /* AcMindKit/Services/Hotkeys/HotkeyManager.swift in Sources */,
+				A10000000000000000000133 /* AcMindKit/Services/Permissions/PermissionManager.swift in Sources */,
+				A10000000000000000000135 /* AcMindKit/Services/Storage/DataMigrationService.swift in Sources */,
+				A10000000000000000000137 /* AcMindKit/Services/Workflow/MarkdownBuilder.swift in Sources */,
+				A10000000000000000000160 /* AcMindKit/Services/Voice/Polish/VoicePolishMode.swift in Sources */,
+				A10000000000000000000161 /* AcMindKit/Services/Voice/Polish/PolishPrompts.swift in Sources */,
+				A10000000000000000000162 /* AcMindKit/Services/Voice/Polish/PolishService.swift in Sources */,
+				A100000000000000000001A3 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift in Sources */,
+				A100000000000000000001A5 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift in Sources */,
+				A100000000000000000001A7 /* AcMindKit/Services/UI/CompanionLayout.swift in Sources */,
+				A10000000000000000000163 /* AcMindKit/Services/Voice/STT/STTRouter.swift in Sources */,
+				A10000000000000000000164 /* AcMindKit/Services/Voice/STT/Transcriber.swift in Sources */,
+				A10000000000000000000165 /* AcMindKit/Services/Voice/STT/Local/AppleSpeechTranscriber.swift in Sources */,
+				A10000000000000000000166 /* AcMindKit/Services/Voice/STT/Local/ProcessCommandRunner.swift in Sources */,
+				A10000000000000000000167 /* AcMindKit/Services/Voice/STT/Local/Qwen3ASRTranscriber.swift in Sources */,
+				A10000000000000000000168 /* AcMindKit/Services/Voice/STT/Local/SenseVoiceTranscriber.swift in Sources */,
+				A10000000000000000000169 /* AcMindKit/Services/Voice/STT/Local/SherpaOnnxDecoder.swift in Sources */,
+				A1000000000000000000016A /* AcMindKit/Services/Voice/STT/Local/WhisperKitTranscriber.swift in Sources */,
+				A100000000000000000001AA /* AcMindKit/Services/Voice/STT/Local/LocalASRManager.swift in Sources */,
+				A1000000000000000000016B /* AcMindKit/Services/Voice/STT/Cloud/AliCloudTranscriber.swift in Sources */,
+				A1000000000000000000016C /* AcMindKit/Services/Voice/STT/Cloud/DoubaoTranscriber.swift in Sources */,
+				A1000000000000000000016D /* AcMindKit/Services/Voice/STT/Cloud/OpenAIWhisperTranscriber.swift in Sources */,
+				A100000000000000000002B6 /* AcMindKit/Services/Schedule/TimelineLayout.swift in Sources */,
+				A1000000000000000000016E /* AcMindKit/Services/Input/TextInjection/TextInjector.swift in Sources */,
+				A1000000000000000000016F /* AcMindKit/Services/Input/TextInjection/AXTextInjector.swift in Sources */,
+				A10000000000000000000170 /* AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift in Sources */,
+				A10000000000000000000182 /* AcMindKit/Models/DesktopCapsuleConfig.swift in Sources */,
+				A10000000000000000000183 /* AcMindKit/Models/ScheduledAgentTask.swift in Sources */,
 				A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */,
 				A1000000000000000000005B /* VoiceServiceProtocol.swift in Sources */,
 				A1000000000000000000005D /* RecordingStatus.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A100000000000000000001B3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A100000000000000000001AD /* AcMindKitTests/StorageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -623,7 +1070,12 @@
 /* Begin PBXTargetDependency section */
 		A10000000000000000000035 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			productRef = A100000000000000000001A1 /* AcMindKit */;
+		};
+		A100000000000000000001B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
 			target = A10000000000000000000021 /* AcMindKit */;
+			targetProxy = A100000000000000000001B0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -662,6 +1114,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -686,6 +1139,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -725,6 +1179,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -742,6 +1197,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -749,44 +1205,61 @@
 		A1000000000000000000003D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
+				ENABLE_APP_INTENTS_METADATA_GENERATION = NO;
+				SWIFT_EMIT_CONST_VALUE_PROTOCOLS = "";
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = AcMind.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
+			INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+			INFOPLIST_KEY_NSHumanReadableCopyright = "";
+			INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcMind 需要使用麦克风进行语音输入和语音转文字。";
+			INFOPLIST_KEY_NSCameraUsageDescription = "AcMind 可能需要使用摄像头进行图像输入。";
+			INFOPLIST_KEY_NSAppleEventsUsageDescription = "AcMind 需要与系统和其他应用协作，以完成自动化和快捷操作。";
+			INFOPLIST_KEY_NSUserNotificationAlertStyle = "alert";
+			LD_RUNPATH_SEARCH_PATHS = (
+				"$(inherited)",
+				"@executable_path/../Frameworks",
+			);
+			MARKETING_VERSION = 1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SWIFT_EMIT_LOC_STRINGS = YES;
+			SWIFT_VERSION = 6.0;
+		};
+		name = Debug;
 		};
 		A1000000000000000000003E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
+				ENABLE_APP_INTENTS_METADATA_GENERATION = NO;
+				SWIFT_EMIT_CONST_VALUE_PROTOCOLS = "";
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = AcMind.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcMind 需要使用麦克风进行语音输入和语音转文字。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AcMind 可能需要使用摄像头进行图像输入。";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "AcMind 需要与系统和其他应用协作，以完成自动化和快捷操作。";
+				INFOPLIST_KEY_NSUserNotificationAlertStyle = "alert";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -794,9 +1267,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -806,11 +1278,13 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -820,9 +1294,12 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
+				ENABLE_APP_INTENTS_METADATA_GENERATION = NO;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -836,11 +1313,13 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -850,13 +1329,152 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
+				ENABLE_APP_INTENTS_METADATA_GENERATION = NO;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		A100000000000000000001B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A100000000000000000001B8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -890,7 +1508,31 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A100000000000000000001B6 /* Build configuration list for PBXNativeTarget "AcMindKitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A100000000000000000001B7 /* Debug */,
+				A100000000000000000001B8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A100000000000000000001A0 /* XCRemoteSwiftPackageReference "." */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = ../;
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A100000000000000000001A1 /* AcMindKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A100000000000000000001A0 /* XCRemoteSwiftPackageReference "." */;
+			productName = AcMindKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A10000000000000000000006 /* Project object */;
 }

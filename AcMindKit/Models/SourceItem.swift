@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - SourceItem（核心数据实体）
 
@@ -101,6 +102,54 @@ public enum SourceType: String, Codable, Sendable, Hashable, CaseIterable {
         case .unknownFile: return "文件"
         }
     }
+
+    public var color: Color {
+        switch self {
+        case .text: return .blue
+        case .image: return .green
+        case .audio: return .orange
+        case .video: return .purple
+        case .pdf: return .red
+        case .docx: return .cyan
+        case .screenshot: return .pink
+        case .webpage: return .indigo
+        case .unknownFile: return .gray
+        }
+    }
+
+    public var bgColor: Color {
+        color.opacity(0.15)
+    }
+
+    public var iconName: String {
+        switch self {
+        case .text: return "doc.text"
+        case .image: return "photo"
+        case .audio: return "waveform"
+        case .video: return "video"
+        case .pdf: return "doc.richtext"
+        case .docx: return "doc"
+        case .screenshot: return "camera.viewfinder"
+        case .webpage: return "globe"
+        case .unknownFile: return "doc.questionmark"
+        }
+    }
+
+    public static func inferred(fromFileURL url: URL) -> SourceType {
+        let ext = url.pathExtension.lowercased()
+        switch ext {
+        case "png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff":
+            return .image
+        case "pdf":
+            return .pdf
+        case "docx", "doc":
+            return .docx
+        case "txt", "md", "markdown":
+            return .text
+        default:
+            return .unknownFile
+        }
+    }
 }
 
 public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
@@ -128,6 +177,10 @@ public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
         case .capsule: return "胶囊"
         case .imported: return "导入"
         }
+    }
+
+    public var displayLabel: String {
+        displayName
     }
 }
 
@@ -165,6 +218,31 @@ public enum SourceItemStatus: String, Codable, Sendable, Hashable, CaseIterable 
         case .archived: return "已归档"
         case .deleted: return "已删除"
         }
+    }
+
+    public var displayLabel: String {
+        displayName
+    }
+
+    public var tagColor: Color {
+        switch self {
+        case .inbox: return .blue
+        case .pending: return .orange
+        case .capturing: return .cyan
+        case .captured: return .green
+        case .parsing: return .purple
+        case .parsed: return .teal
+        case .distilling: return .indigo
+        case .distilled: return .mint
+        case .exporting: return .pink
+        case .exported: return .green
+        case .archived: return .gray
+        case .deleted: return .red
+        }
+    }
+
+    public var tagBgColor: Color {
+        tagColor.opacity(0.15)
     }
 
     /// 是否为终态

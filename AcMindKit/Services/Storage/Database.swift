@@ -319,7 +319,7 @@ public actor Database {
     public static let shared = Database()
 
     nonisolated public let path: String
-    nonisolated public let version: Int = 21
+    nonisolated public let version: Int = 23
 
     private var connection: SQLiteConnection?
     private var isReady = false
@@ -371,15 +371,18 @@ public actor Database {
                 type TEXT NOT NULL DEFAULT 'text',
                 source TEXT NOT NULL DEFAULT 'manual',
                 content_path TEXT NOT NULL DEFAULT '',
-                content_text TEXT,
-                content_type TEXT,
+                content_text TEXT,  -- RESERVED: not mapped to SourceItem Model; future use for inline content
+                content_type TEXT,  -- RESERVED: not mapped to SourceItem Model; future use for MIME type
                 content_hash TEXT,
                 preview_text TEXT,
                 ocr_text TEXT,
+                transcript TEXT,
+                polished_transcript TEXT,
                 source_app TEXT,
                 original_url TEXT,
                 tags TEXT,
                 vault_import_path TEXT,
+                metadata TEXT NOT NULL DEFAULT '{}',
                 created_at INTEGER NOT NULL DEFAULT (unixepoch()),
                 updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
                 status TEXT NOT NULL DEFAULT 'inbox',
@@ -409,6 +412,8 @@ public actor Database {
             "CREATE INDEX IF NOT EXISTS idx_ai_tasks_source_item_id ON ai_tasks(source_item_id)",
             "CREATE INDEX IF NOT EXISTS idx_ai_tasks_status ON ai_tasks(status)",
             """
+            -- LEGACY: distilled_outputs is superseded by distilled_notes (v22).
+            -- Retained for backward compatibility; no Model/CRUD. Safe to drop in future migration.
             CREATE TABLE IF NOT EXISTS distilled_outputs (
                 id TEXT PRIMARY KEY,
                 source_item_id TEXT NOT NULL REFERENCES source_items(id) ON DELETE CASCADE,
@@ -670,6 +675,8 @@ public actor Database {
                 input TEXT NOT NULL DEFAULT '{}',
                 output TEXT,
                 error TEXT,
+                progress REAL,
+                result TEXT,
                 created_at INTEGER NOT NULL DEFAULT (unixepoch()),
                 started_at INTEGER,
                 finished_at INTEGER
@@ -681,6 +688,25 @@ public actor Database {
 
         for statement in statements {
             try db().execute(statement)
+        }
+
+        // Migration v22: add missing columns to source_items (idempotent)
+        let v22Migrations: [String] = [
+            "ALTER TABLE source_items ADD COLUMN transcript TEXT",
+            "ALTER TABLE source_items ADD COLUMN polished_transcript TEXT",
+            "ALTER TABLE source_items ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'"
+        ]
+        for sql in v22Migrations {
+            try? db().execute(sql)  // ignore "duplicate column" errors for existing DBs
+        }
+
+        // Migration v23: add progress/result columns to process_jobs (idempotent)
+        let v23Migrations: [String] = [
+            "ALTER TABLE process_jobs ADD COLUMN progress REAL",
+            "ALTER TABLE process_jobs ADD COLUMN result TEXT"
+        ]
+        for sql in v23Migrations {
+            try? db().execute(sql)
         }
     }
 
@@ -698,10 +724,12 @@ public actor Database {
         let sql = """
         INSERT INTO source_items (
             id, capture_item_id, type, source, content_path, preview_text, ocr_text,
-            source_app, original_url, tags, vault_import_path, created_at, updated_at, status, title,
+            transcript, polished_transcript,
+            source_app, original_url, tags, vault_import_path, metadata,
+            created_at, updated_at, status, title,
             content_text, content_type, content_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             capture_item_id = excluded.capture_item_id,
             type = excluded.type,
@@ -709,10 +737,13 @@ public actor Database {
             content_path = excluded.content_path,
             preview_text = excluded.preview_text,
             ocr_text = excluded.ocr_text,
+            transcript = excluded.transcript,
+            polished_transcript = excluded.polished_transcript,
             source_app = excluded.source_app,
             original_url = excluded.original_url,
             tags = excluded.tags,
             vault_import_path = excluded.vault_import_path,
+            metadata = excluded.metadata,
             created_at = excluded.created_at,
             updated_at = excluded.updated_at,
             status = excluded.status,
@@ -730,10 +761,13 @@ public actor Database {
             item.contentPath,
             item.previewText,
             item.ocrText,
+            item.transcript,
+            item.polishedTranscript,
             item.sourceApp,
             item.originalUrl,
             item.tags,
             item.vaultImportPath,
+            item.metadata ?? "{}",
             item.createdAt,
             Int(Date().timeIntervalSince1970),
             item.status,
@@ -922,6 +956,79 @@ public actor Database {
         try await insertKnowledgeCard(card)
     }
 
+    public func listKnowledgeCards(status: KnowledgeCardStatus?) async throws -> [KnowledgeCard] {
+        var sql = "SELECT * FROM knowledge_cards"
+        if status != nil {
+            sql += " WHERE status = ?"
+        }
+        sql += " ORDER BY updated_at DESC"
+
+        let args: [Any] = status != nil ? [status!.rawValue] : []
+
+        return try db().query(sql, arguments: args) { row in
+            self.rowToKnowledgeCard(row)
+        }
+    }
+
+    // MARK: - Clipboard Items
+
+    public func insertClipboardItem(_ item: ClipboardItem) async throws {
+        try db().execute(
+            """
+            INSERT INTO clipboard_items (id, type, content, text_content, source_app, is_pinned, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            arguments: [
+                item.id,
+                item.type.rawValue,
+                item.content,
+                item.textContent,
+                item.sourceApp ?? NSNull(),
+                item.isPinned ? 1 : 0,
+                Int(item.createdAt.timeIntervalSince1970)
+            ]
+        )
+    }
+
+    public func listClipboardItems(limit: Int?) async throws -> [ClipboardItem] {
+        let limitClause = limit != nil ? "LIMIT \(limit!)" : ""
+        return try db().query(
+            "SELECT * FROM clipboard_items ORDER BY is_pinned DESC, created_at DESC \(limitClause)"
+        ) { row in
+            ClipboardItem(
+                id: row.string("id") ?? UUID().uuidString,
+                type: ClipboardContentType(rawValue: row.string("type") ?? "text") ?? .text,
+                content: row.string("content"),
+                textContent: row.string("text_content"),
+                sourceApp: row.string("source_app"),
+                isPinned: row.int("is_pinned") == 1,
+                createdAt: Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? 0))
+            )
+        }
+    }
+
+    public func updateClipboardItem(_ item: ClipboardItem) async throws {
+        try db().execute(
+            """
+            UPDATE clipboard_items SET
+                type = ?, content = ?, text_content = ?, source_app = ?, is_pinned = ?
+            WHERE id = ?
+            """,
+            arguments: [
+                item.type.rawValue,
+                item.content ?? NSNull(),
+                item.textContent ?? NSNull(),
+                item.sourceApp ?? NSNull(),
+                item.isPinned ? 1 : 0,
+                item.id
+            ]
+        )
+    }
+
+    public func deleteClipboardItem(id: String) async throws {
+        try db().execute("DELETE FROM clipboard_items WHERE id = ?", arguments: [id])
+    }
+
     // MARK: - Settings
 
     public func getSetting(key: String) async throws -> String? {
@@ -945,6 +1052,13 @@ public actor Database {
     public func importFromJSON(_ items: [SourceItem]) async throws -> Int {
         var count = 0
         for item in items {
+            // Skip if already exists (dedup by id)
+            let existing = try db().query(
+                "SELECT COUNT(*) AS cnt FROM source_items WHERE id = ?",
+                arguments: [item.id],
+                mapper: { row in row.int("cnt") ?? 0 }
+            )
+            if (existing.first ?? 0) > 0 { continue }
             try await insertSourceItem(SourceItemRecord(from: item))
             count += 1
         }
@@ -962,6 +1076,235 @@ public actor Database {
             return legacyPath
         }
         return nil
+    }
+
+    // MARK: - Process Jobs
+
+    public func insertProcessJob(_ job: ProcessJob) async throws {
+        let inputJSON = job.input.map { String(data: (try? JSONEncoder().encode($0)) ?? Data(), encoding: .utf8) ?? "{}" } ?? "{}"
+        let outputJSON: String? = job.output.map { String(data: (try? JSONEncoder().encode($0)) ?? Data(), encoding: .utf8) ?? "{}" }
+        try db().execute(
+            """
+            INSERT INTO process_jobs (id, source_item_id, job_type, status, input, output, error, progress, result, created_at, started_at, finished_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                status = excluded.status,
+                output = excluded.output,
+                error = excluded.error,
+                progress = excluded.progress,
+                result = excluded.result,
+                started_at = excluded.started_at,
+                finished_at = excluded.finished_at
+            """,
+            arguments: [
+                job.id, job.sourceItemId as Any, job.jobType.rawValue, job.status.rawValue,
+                inputJSON, outputJSON as Any, job.error as Any,
+                job.progress as Any, job.result as Any,
+                Int(job.createdAt.timeIntervalSince1970),
+                job.startedAt.map { Int($0.timeIntervalSince1970) } as Any,
+                job.finishedAt.map { Int($0.timeIntervalSince1970) } as Any
+            ]
+        )
+    }
+
+    public func getProcessJob(id: String) async throws -> ProcessJob? {
+        try db().queryOne("SELECT * FROM process_jobs WHERE id = ? LIMIT 1", arguments: [id]) { row in
+            self.rowToProcessJob(row)
+        }
+    }
+
+    public func listProcessJobs(status: ProcessJobStatus? = nil) async throws -> [ProcessJob] {
+        var sql = "SELECT * FROM process_jobs"
+        var args: [Any] = []
+        if let status = status {
+            sql += " WHERE status = ?"
+            args.append(status.rawValue)
+        }
+        sql += " ORDER BY created_at DESC"
+        return try db().query(sql, arguments: args) { row in
+            self.rowToProcessJob(row)
+        }
+    }
+
+    public func updateProcessJobStatus(id: String, status: ProcessJobStatus, progress: Double?, result: String?) async throws {
+        try db().execute(
+            "UPDATE process_jobs SET status = ?, progress = ?, result = ? WHERE id = ?",
+            arguments: [status.rawValue, progress as Any, result as Any, id]
+        )
+    }
+
+    public func deleteProcessJob(id: String) async throws {
+        try db().execute("DELETE FROM process_jobs WHERE id = ?", arguments: [id])
+    }
+
+    private func rowToProcessJob(_ row: SQLiteRow) -> ProcessJob {
+        let inputStr = row.string("input") ?? "{}"
+        let outputStr = row.string("output")
+        let input: [String: AnyCodable]? = (try? JSONDecoder().decode([String: AnyCodable].self, from: inputStr.data(using: .utf8) ?? Data()))
+        let output: [String: AnyCodable]? = outputStr.flatMap { try? JSONDecoder().decode([String: AnyCodable].self, from: $0.data(using: .utf8) ?? Data()) }
+        return ProcessJob(
+            id: row.string("id") ?? UUID().uuidString,
+            sourceItemId: row.string("source_item_id"),
+            jobType: ProcessJobType(rawValue: row.string("job_type") ?? "ocr") ?? .ocr,
+            status: ProcessJobStatus(rawValue: row.string("status") ?? "queued") ?? .queued,
+            input: input,
+            output: output,
+            error: row.string("error"),
+            createdAt: Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? Int(Date().timeIntervalSince1970))),
+            startedAt: row.int("started_at").map { Date(timeIntervalSince1970: TimeInterval($0)) },
+            finishedAt: row.int("finished_at").map { Date(timeIntervalSince1970: TimeInterval($0)) },
+            progress: row.double("progress"),
+            result: row.string("result")
+        )
+    }
+
+    private func rowToKnowledgeCard(_ row: SQLiteRow) -> KnowledgeCard {
+        let tags = (row.string("tags") ?? "").split(separator: ",").map(String.init)
+        let status = KnowledgeCardStatus(rawValue: row.string("status") ?? "active") ?? .active
+        let createdAt = Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? 0))
+        let updatedAt = Date(timeIntervalSince1970: TimeInterval(row.int("updated_at") ?? 0))
+
+        return KnowledgeCard(
+            id: row.string("id") ?? UUID().uuidString,
+            sourceItemId: row.string("source_item_id") ?? "",
+            distilledOutputId: row.string("distilled_output_id"),
+            exportRecordId: row.string("export_record_id"),
+            canonicalTitle: row.string("canonical_title") ?? row.string("title") ?? "",
+            summary: row.string("summary"),
+            category: row.string("category"),
+            tags: tags,
+            body: row.string("body"),
+            valueScore: row.double("value_score"),
+            confidence: row.double("confidence"),
+            status: status,
+            vaultFilePath: row.string("vault_file_path"),
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    // MARK: - Knowledge Edges
+
+    public func insertKnowledgeEdge(_ edge: KnowledgeEdge) async throws {
+        try db().execute(
+            """
+            INSERT INTO knowledge_edges (id, from_knowledge_card_id, to_knowledge_card_id, relation_type, status, confidence, reason, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                relation_type = excluded.relation_type,
+                status = excluded.status,
+                confidence = excluded.confidence,
+                reason = excluded.reason,
+                updated_at = excluded.updated_at
+            """,
+            arguments: [
+                edge.id, edge.fromKnowledgeCardId, edge.toKnowledgeCardId, edge.relationType,
+                edge.status.rawValue,
+                edge.confidence as Any,
+                edge.reason as Any,
+                Int(edge.createdAt.timeIntervalSince1970),
+                Int(edge.updatedAt.timeIntervalSince1970)
+            ]
+        )
+    }
+
+    public func listKnowledgeEdges(fromCardId: String? = nil, toCardId: String? = nil) async throws -> [KnowledgeEdge] {
+        var sql = "SELECT * FROM knowledge_edges"
+        var args: [Any] = []
+        if let fromId = fromCardId {
+            sql += " WHERE from_knowledge_card_id = ?"
+            args.append(fromId)
+        } else if let toId = toCardId {
+            sql += " WHERE to_knowledge_card_id = ?"
+            args.append(toId)
+        }
+        sql += " ORDER BY created_at DESC"
+        return try db().query(sql, arguments: args) { row in
+            self.rowToKnowledgeEdge(row)
+        }
+    }
+
+    public func deleteKnowledgeEdge(id: String) async throws {
+        try db().execute("DELETE FROM knowledge_edges WHERE id = ?", arguments: [id])
+    }
+
+    private func rowToKnowledgeEdge(_ row: SQLiteRow) -> KnowledgeEdge {
+        KnowledgeEdge(
+            id: row.string("id") ?? UUID().uuidString,
+            fromKnowledgeCardId: row.string("from_knowledge_card_id") ?? "",
+            toKnowledgeCardId: row.string("to_knowledge_card_id") ?? "",
+            relationType: row.string("relation_type") ?? "",
+            status: EdgeStatus(rawValue: row.string("status") ?? "suggested") ?? .suggested,
+            confidence: row.double("confidence"),
+            reason: row.string("reason"),
+            createdAt: Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? Int(Date().timeIntervalSince1970))),
+            updatedAt: Date(timeIntervalSince1970: TimeInterval(row.int("updated_at") ?? Int(Date().timeIntervalSince1970)))
+        )
+    }
+
+    // MARK: - Scheduled Agent Tasks
+
+    public func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {
+        let paramsJSON = task.inputParams.isEmpty ? "{}" : (String(data: (try? JSONEncoder().encode(task.inputParams)) ?? Data(), encoding: .utf8) ?? "{}")
+        try db().execute(
+            """
+            INSERT INTO scheduled_agent_tasks (id, name, cron_expression, skill_name, input_params, enabled, last_run_at, last_run_status, last_run_task_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                cron_expression = excluded.cron_expression,
+                skill_name = excluded.skill_name,
+                input_params = excluded.input_params,
+                enabled = excluded.enabled,
+                last_run_at = excluded.last_run_at,
+                last_run_status = excluded.last_run_status,
+                last_run_task_id = excluded.last_run_task_id,
+                updated_at = excluded.updated_at
+            """,
+            arguments: [
+                task.id, task.name, task.cronExpression, task.skillName, paramsJSON,
+                task.enabled ? 1 : 0,
+                task.lastRunAt.map { Int($0.timeIntervalSince1970) } as Any,
+                task.lastRunStatus as Any,
+                task.lastRunTaskId as Any,
+                Int(task.createdAt.timeIntervalSince1970),
+                Int(task.updatedAt.timeIntervalSince1970)
+            ]
+        )
+    }
+
+    public func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? {
+        try db().queryOne("SELECT * FROM scheduled_agent_tasks WHERE id = ? LIMIT 1", arguments: [id]) { row in
+            self.rowToScheduledAgentTask(row)
+        }
+    }
+
+    public func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] {
+        try db().query("SELECT * FROM scheduled_agent_tasks ORDER BY created_at DESC") { row in
+            self.rowToScheduledAgentTask(row)
+        }
+    }
+
+    public func deleteScheduledAgentTask(id: String) async throws {
+        try db().execute("DELETE FROM scheduled_agent_tasks WHERE id = ?", arguments: [id])
+    }
+
+    private func rowToScheduledAgentTask(_ row: SQLiteRow) -> ScheduledAgentTask {
+        let paramsStr = row.string("input_params") ?? "{}"
+        let params: [String: String] = (try? JSONDecoder().decode([String: String].self, from: paramsStr.data(using: .utf8) ?? Data())) ?? [:]
+        return ScheduledAgentTask(
+            id: row.string("id") ?? UUID().uuidString,
+            name: row.string("name") ?? "",
+            cronExpression: row.string("cron_expression") ?? "",
+            skillName: row.string("skill_name") ?? "",
+            inputParams: params,
+            enabled: (row.int("enabled") ?? 1) == 1,
+            lastRunAt: row.int("last_run_at").map { Date(timeIntervalSince1970: TimeInterval($0)) },
+            lastRunStatus: row.string("last_run_status"),
+            lastRunTaskId: row.string("last_run_task_id"),
+            createdAt: Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? Int(Date().timeIntervalSince1970))),
+            updatedAt: Date(timeIntervalSince1970: TimeInterval(row.int("updated_at") ?? Int(Date().timeIntervalSince1970)))
+        )
     }
 
     // MARK: - Asset Files
@@ -1044,10 +1387,13 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
     public var contentHash: String?
     public var previewText: String?
     public var ocrText: String?
+    public var transcript: String?
+    public var polishedTranscript: String?
     public var sourceApp: String?
     public var originalUrl: String?
     public var tags: String?
     public var vaultImportPath: String?
+    public var metadata: String?
     public var createdAt: Int
     public var updatedAt: Int
     public var status: String
@@ -1064,10 +1410,13 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
         contentHash: String? = nil,
         previewText: String? = nil,
         ocrText: String? = nil,
+        transcript: String? = nil,
+        polishedTranscript: String? = nil,
         sourceApp: String? = nil,
         originalUrl: String? = nil,
         tags: String? = nil,
         vaultImportPath: String? = nil,
+        metadata: String? = nil,
         createdAt: Int = Int(Date().timeIntervalSince1970),
         updatedAt: Int = Int(Date().timeIntervalSince1970),
         status: String = "inbox",
@@ -1083,10 +1432,13 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
         self.contentHash = contentHash
         self.previewText = previewText
         self.ocrText = ocrText
+        self.transcript = transcript
+        self.polishedTranscript = polishedTranscript
         self.sourceApp = sourceApp
         self.originalUrl = originalUrl
         self.tags = tags
         self.vaultImportPath = vaultImportPath
+        self.metadata = metadata
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.status = status
@@ -1104,10 +1456,13 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
         self.contentHash = item.contentHash
         self.previewText = item.previewText
         self.ocrText = item.ocrText
+        self.transcript = item.transcript
+        self.polishedTranscript = item.polishedTranscript
         self.sourceApp = item.sourceApp
         self.originalUrl = item.originalUrl
         self.tags = item.tags.isEmpty ? nil : String(data: (try? JSONEncoder().encode(item.tags)) ?? Data(), encoding: .utf8)
         self.vaultImportPath = item.vaultImportPath
+        self.metadata = item.metadata.isEmpty ? nil : String(data: (try? JSONEncoder().encode(item.metadata)) ?? Data(), encoding: .utf8)
         self.createdAt = Int(item.createdAt.timeIntervalSince1970)
         self.updatedAt = Int((item.updatedAt ?? item.createdAt).timeIntervalSince1970)
         self.status = item.status.rawValue
@@ -1125,10 +1480,13 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
         self.contentHash = row.string("content_hash")
         self.previewText = row.string("preview_text")
         self.ocrText = row.string("ocr_text")
+        self.transcript = row.string("transcript")
+        self.polishedTranscript = row.string("polished_transcript")
         self.sourceApp = row.string("source_app")
         self.originalUrl = row.string("original_url")
         self.tags = row.string("tags")
         self.vaultImportPath = row.string("vault_import_path")
+        self.metadata = row.string("metadata")
         self.createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
         self.updatedAt = row.int("updated_at") ?? self.createdAt
         self.status = row.string("status") ?? "inbox"
@@ -1146,11 +1504,15 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
             contentHash: contentHash,
             previewText: previewText,
             ocrText: ocrText,
+            transcript: transcript,
+            polishedTranscript: polishedTranscript,
             sourceApp: sourceApp,
             originalUrl: originalUrl,
             tags: decodedTags(),
             captureItemId: captureItemId,
             vaultImportPath: vaultImportPath,
+            assetFileIds: [],
+            metadata: decodedMetadata(),
             createdAt: Date(timeIntervalSince1970: TimeInterval(createdAt)),
             updatedAt: Date(timeIntervalSince1970: TimeInterval(updatedAt))
         )
@@ -1163,6 +1525,15 @@ public struct SourceItemRecord: Sendable, Codable, Equatable {
             return decoded
         }
         return tags.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    private func decodedMetadata() -> [String: String] {
+        guard let metadata, !metadata.isEmpty else { return [:] }
+        if let data = metadata.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            return decoded
+        }
+        return [:]
     }
 }
 

@@ -6,6 +6,8 @@ dist/
 out/
 release/
 coverage/
+.build/
+build/
 
 # Logs and runtime data
 logs/
@@ -24,6 +26,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.code-workspace
+**/xcuserdata/
 
 # Temporary files
 *.tmp
@@ -33,9 +36,13 @@ Thumbs.db
 
 # Local assistant / tool state
 .trae/
+.acmind-tmp/
 
 # User data (Obsidian vault)
 ~/PinMind/
 
 # Reference source code (not part of AcMind build)
-临时文件夹/
+临时/
+
+# Local session artifacts
+session-*.json

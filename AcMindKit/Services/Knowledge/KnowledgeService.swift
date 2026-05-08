@@ -17,11 +17,24 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
     // MARK: - State
     
     private var cards: [String: KnowledgeCard] = [:]
+    private var isLoaded = false
     
     // MARK: - Initialization
     
     public init(storage: StorageServiceProtocol = StorageService()) {
         self.storage = storage
+    }
+    
+    /// 从数据库加载历史卡片（启动时调用）
+    public func setup() async throws {
+        guard !isLoaded else { return }
+        
+        // 从数据库加载所有卡片
+        let allCards = try await storage.listKnowledgeCards(status: nil)
+        for card in allCards {
+            cards[card.id] = card
+        }
+        isLoaded = true
     }
     
     // MARK: - CRUD
@@ -123,12 +136,26 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         guard var card = cards[id] else {
             throw KnowledgeError.cardNotFound
         }
-        
+
         card.status = .deleted
         card.updatedAt = Date()
         cards[id] = card
-        
+
         try? await storage.updateKnowledgeCard(card)
+    }
+
+    // MARK: - Knowledge Edges
+
+    public func addEdge(_ edge: KnowledgeEdge) async throws {
+        try await storage.insertKnowledgeEdge(edge)
+    }
+
+    public func listEdges(fromCardId: String?, toCardId: String?) async throws -> [KnowledgeEdge] {
+        try await storage.listKnowledgeEdges(fromCardId: fromCardId, toCardId: toCardId)
+    }
+
+    public func deleteEdge(id: String) async throws {
+        try await storage.deleteKnowledgeEdge(id: id)
     }
     
     public func archiveCard(id: String) async throws {

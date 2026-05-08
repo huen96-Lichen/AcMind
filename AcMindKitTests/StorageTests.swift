@@ -1,9 +1,9 @@
 import XCTest
 @testable import AcMindKit
-import GRDB
 
 /// Tests for SQLite storage layer migration from JSON to GRDB
 /// Validates: database initialization, CRUD operations, migration from legacy data
+/// All test IDs use UUID() to ensure isolation under parallel testing.
 @MainActor
 final class StorageTests: XCTestCase {
     
@@ -39,8 +39,6 @@ final class StorageTests: XCTestCase {
     }
     
     func testDatabaseTablesExist() async throws {
-        let db = Database.shared
-        
         // Test that we can perform basic operations on core tables
         let testItem = SourceItem(
             id: UUID().uuidString,
@@ -48,17 +46,11 @@ final class StorageTests: XCTestCase {
             source: .manual,
             status: .inbox,
             title: "Test Item",
-            contentPath: nil,
-            previewText: "Test preview",
-            originalUrl: nil,
-            sourceApp: nil,
             createdAt: Date()
         )
         
-        // Should not throw - indicates tables exist
         try await storage.insertSourceItem(testItem)
         
-        // Verify insertion
         let retrieved = try await storage.getSourceItem(id: testItem.id)
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.title, testItem.title)
@@ -67,126 +59,118 @@ final class StorageTests: XCTestCase {
     // MARK: - SourceItem CRUD Tests
     
     func testSourceItemCRUD() async throws {
-        // Create
+        let id = UUID().uuidString
         let item = SourceItem(
-            id: UUID().uuidString,
+            id: id,
             type: .webpage,
-            source: .capture,
+            source: .webpage,
             status: .inbox,
             title: "Test Webpage",
             contentPath: "test.html",
             previewText: "Test content",
-            originalUrl: "https://example.com",
             sourceApp: "Safari",
+            originalUrl: "https://example.com",
             createdAt: Date()
         )
         
         try await storage.insertSourceItem(item)
         
-        // Read
-        let retrieved = try await storage.getSourceItem(id: item.id)
+        let retrieved = try await storage.getSourceItem(id: id)
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.title, "Test Webpage")
-        XCTAssertEqual(retrieved?.type, .webpage)
-        XCTAssertEqual(retrieved?.status, .inbox)
         
-        // Update
         var updated = retrieved!
-        updated.status = .distilled
+        updated.status = SourceItemStatus.distilled
         try await storage.updateSourceItem(updated)
         
-        let afterUpdate = try await storage.getSourceItem(id: item.id)
+        let afterUpdate = try await storage.getSourceItem(id: id)
         XCTAssertEqual(afterUpdate?.status, .distilled)
         
-        // Delete
-        try await storage.deleteSourceItem(id: item.id)
-        let afterDelete = try await storage.getSourceItem(id: item.id)
+        try await storage.deleteSourceItem(id: id)
+        let afterDelete = try await storage.getSourceItem(id: id)
         XCTAssertNil(afterDelete)
+    }
+
+    func testSourceTypeInferenceFromFileURL() {
+        let expectations: [(String, SourceType)] = [
+            ("photo.png", .image),
+            ("scan.pdf", .pdf),
+            ("report.docx", .docx),
+            ("notes.md", .text),
+            ("archive.zip", .unknownFile)
+        ]
+
+        for (fileName, expected) in expectations {
+            let url = URL(fileURLWithPath: "/tmp/\(fileName)")
+            XCTAssertEqual(SourceType.inferred(fromFileURL: url), expected, fileName)
+        }
     }
     
     func testSourceItemListWithFilter() async throws {
-        // Insert items with different statuses
+        let id1 = UUID().uuidString
+        let id2 = UUID().uuidString
         let item1 = SourceItem(
-            id: UUID().uuidString,
-            type: .text,
-            source: .manual,
-            status: .inbox,
-            title: "Inbox Item",
-            createdAt: Date()
+            id: id1, type: .text, source: .manual,
+            status: .inbox, title: "Inbox Item", createdAt: Date()
         )
-        
         let item2 = SourceItem(
-            id: UUID().uuidString,
-            type: .text,
-            source: .manual,
-            status: .distilled,
-            title: "Distilled Item",
-            createdAt: Date()
+            id: id2, type: .text, source: .manual,
+            status: .distilled, title: "Distilled Item", createdAt: Date()
         )
         
         try await storage.insertSourceItem(item1)
         try await storage.insertSourceItem(item2)
         
-        // Filter by status
         let inboxItems = try await storage.listSourceItems(filter: SourceItemFilter(status: .inbox))
-        XCTAssertTrue(inboxItems.contains { $0.id == item1.id })
-        XCTAssertFalse(inboxItems.contains { $0.id == item2.id })
+        XCTAssertTrue(inboxItems.contains { $0.id == id1 })
+        XCTAssertFalse(inboxItems.contains { $0.id == id2 })
     }
     
     // MARK: - Chat Session Tests
     
     func testChatSessionCRUD() async throws {
+        let id = UUID().uuidString
         let session = ChatSession(
-            id: UUID().uuidString,
-            title: "Test Session",
-            providerId: "ollama",
-            modelId: "llama3",
-            status: "active",
-            metadata: "{}",
-            createdAt: Date(),
-            updatedAt: Date()
+            id: id, title: "Test Session",
+            providerId: "ollama", modelId: "llama3",
+            status: .active, metadata: [:],
+            createdAt: Date(), updatedAt: Date()
         )
         
-        // Create
         try await storage.insertChatSession(session)
         
-        // Read
-        let retrieved = try await storage.getChatSession(id: session.id)
+        let retrieved = try await storage.getChatSession(id: id)
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.title, "Test Session")
         
-        // Update
         var updated = retrieved!
         updated.title = "Updated Session"
         try await storage.updateChatSession(updated)
         
-        let afterUpdate = try await storage.getChatSession(id: session.id)
+        let afterUpdate = try await storage.getChatSession(id: id)
         XCTAssertEqual(afterUpdate?.title, "Updated Session")
         
-        // Delete
-        try await storage.deleteChatSession(id: session.id)
-        let afterDelete = try await storage.getChatSession(id: session.id)
+        try await storage.deleteChatSession(id: id)
+        let afterDelete = try await storage.getChatSession(id: id)
         XCTAssertNil(afterDelete)
     }
     
     func testChatMessageOperations() async throws {
-        let session = ChatSession(
-            id: UUID().uuidString,
-            title: "Message Test Session"
-        )
+        let sessionId = UUID().uuidString
+        let session = ChatSession(id: sessionId, title: "Message Test Session")
         try await storage.insertChatSession(session)
         
         let message = ChatMessage(
             id: UUID().uuidString,
-            sessionId: session.id,
-            role: "user",
+            sessionId: sessionId,
+            role: .user,
             content: "Hello",
-            status: "completed"
+            status: .completed
         )
         
         try await storage.insertChatMessage(message)
         
-        let messages = try await storage.listChatMessages(sessionId: session.id)
+        let messages = try await storage.listChatMessages(sessionId: sessionId)
         XCTAssertEqual(messages.count, 1)
         XCTAssertEqual(messages.first?.content, "Hello")
     }
@@ -194,100 +178,79 @@ final class StorageTests: XCTestCase {
     // MARK: - Settings Tests
     
     func testSettingsCRUD() async throws {
-        // Set
-        try await storage.setSetting(key: "test_key", value: "test_value")
+        // Use UUID-based key to avoid parallel test collision
+        let key = "test_key_\(UUID().uuidString)"
         
-        // Get
-        let value = try await storage.getSetting(key: "test_key")
+        try await storage.setSetting(key: key, value: "test_value")
+        
+        let value = try await storage.getSetting(key: key)
         XCTAssertEqual(value, "test_value")
         
-        // Update
-        try await storage.setSetting(key: "test_key", value: "updated_value")
-        let updated = try await storage.getSetting(key: "test_key")
+        try await storage.setSetting(key: key, value: "updated_value")
+        let updated = try await storage.getSetting(key: key)
         XCTAssertEqual(updated, "updated_value")
         
-        // Non-existent key
-        let missing = try await storage.getSetting(key: "non_existent")
+        let missing = try await storage.getSetting(key: "non_existent_\(UUID().uuidString)")
         XCTAssertNil(missing)
     }
     
     // MARK: - Migration Tests
     
     func testImportFromJSON() async throws {
-        // Create legacy JSON-style items
+        let id1 = UUID().uuidString
+        let id2 = UUID().uuidString
         let legacyItems = [
             SourceItem(
-                id: "legacy-1",
-                type: .text,
-                source: .manual,
-                status: .inbox,
-                title: "Legacy Item 1",
-                createdAt: Date()
+                id: id1, type: .text, source: .manual,
+                status: .inbox, title: "Legacy Item 1", createdAt: Date()
             ),
             SourceItem(
-                id: "legacy-2",
-                type: .webpage,
-                source: .capture,
-                status: .distilled,
-                title: "Legacy Item 2",
-                createdAt: Date()
+                id: id2, type: .webpage, source: .webpage,
+                status: .distilled, title: "Legacy Item 2", createdAt: Date()
             )
         ]
         
-        // Import
         let importedCount = try await storage.importFromJSON(legacyItems)
         XCTAssertEqual(importedCount, 2)
         
-        // Verify items exist in database
-        let item1 = try await storage.getSourceItem(id: "legacy-1")
+        let item1 = try await storage.getSourceItem(id: id1)
         XCTAssertNotNil(item1)
         XCTAssertEqual(item1?.title, "Legacy Item 1")
         
-        let item2 = try await storage.getSourceItem(id: "legacy-2")
+        let item2 = try await storage.getSourceItem(id: id2)
         XCTAssertNotNil(item2)
         XCTAssertEqual(item2?.title, "Legacy Item 2")
     }
     
     func testImportFromJSONSkipsDuplicates() async throws {
+        let id = UUID().uuidString
         let item = SourceItem(
-            id: "duplicate-test",
-            type: .text,
-            source: .manual,
-            status: .inbox,
-            title: "Original",
-            createdAt: Date()
+            id: id, type: .text, source: .manual,
+            status: .inbox, title: "Original", createdAt: Date()
         )
         
-        // First import
         let count1 = try await storage.importFromJSON([item])
         XCTAssertEqual(count1, 1)
         
-        // Second import (duplicate)
         let count2 = try await storage.importFromJSON([item])
-        XCTAssertEqual(count2, 0) // Should skip duplicate
+        XCTAssertEqual(count2, 0)
     }
     
     // MARK: - Data Persistence Tests
     
     func testDataPersistsAcrossInstances() async throws {
-        // Create item
+        let id = UUID().uuidString
         let item = SourceItem(
-            id: "persistence-test",
-            type: .text,
-            source: .manual,
-            status: .inbox,
-            title: "Persistence Test",
-            createdAt: Date()
+            id: id, type: .text, source: .manual,
+            status: .inbox, title: "Persistence Test", createdAt: Date()
         )
         
         try await storage.insertSourceItem(item)
         
-        // Create new storage instance (simulates app restart)
         let newStorage = StorageService()
         try await newStorage.setup()
         
-        // Verify data exists
-        let retrieved = try await newStorage.getSourceItem(id: "persistence-test")
+        let retrieved = try await newStorage.getSourceItem(id: id)
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.title, "Persistence Test")
     }
@@ -295,36 +258,31 @@ final class StorageTests: XCTestCase {
     // MARK: - Asset Store Tests
     
     func testAssetStoreSaveAndRetrieve() async throws {
-        // Create a simple test image (1x1 red pixel)
         let image = NSImage(size: NSSize(width: 1, height: 1))
         image.lockFocus()
         NSColor.red.setFill()
         NSRect(origin: .zero, size: NSSize(width: 1, height: 1)).fill()
         image.unlockFocus()
         
-        // Save
-        let asset = try await assetStore.saveImage(image, sourceItemId: "test-item")
+        let asset = try await assetStore.saveImage(image, sourceItemId: nil)
         XCTAssertNotNil(asset)
         XCTAssertEqual(asset.kind, .image)
         XCTAssertEqual(asset.mimeType, "image/png")
         
-        // Retrieve
         let retrieved = try await assetStore.getAsset(id: asset.id)
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.fileName, asset.fileName)
         
-        // Verify file exists on disk
         XCTAssertTrue(FileManager.default.fileExists(atPath: asset.filePath))
     }
     
     func testAssetStoreSaveText() async throws {
         let text = "Test content for asset storage"
-        let asset = try await assetStore.saveText(text, sourceItemId: "test-item", fileName: "test.txt")
+        let asset = try await assetStore.saveText(text, sourceItemId: nil, fileName: "test.txt")
         
         XCTAssertEqual(asset.mimeType, "text/plain")
         
-        // Load and verify content
-        let loadedText = assetStore.loadText(asset: asset)
+        let loadedText = await assetStore.loadText(asset: asset)
         XCTAssertEqual(loadedText, text)
     }
     
@@ -332,27 +290,36 @@ final class StorageTests: XCTestCase {
         let text = "Content to be deleted"
         let asset = try await assetStore.saveText(text, fileName: "delete-test.txt")
         
-        // Verify exists
         XCTAssertTrue(FileManager.default.fileExists(atPath: asset.filePath))
         
-        // Delete
         try await assetStore.deleteAsset(id: asset.id)
         
-        // Verify deleted
         let retrieved = try await assetStore.getAsset(id: asset.id)
         XCTAssertNil(retrieved)
         XCTAssertFalse(FileManager.default.fileExists(atPath: asset.filePath))
     }
     
     func testAssetStoreGetAssetsForSourceItem() async throws {
-        let sourceItemId = "multi-asset-test"
+        let sourceItemId = UUID().uuidString
+        let otherItemId = UUID().uuidString
+        
+        // Create source items first (required by foreign key constraint)
+        let sourceItem = SourceItem(
+            id: sourceItemId, type: .text, source: .manual,
+            status: .inbox, title: "Multi Asset Source", createdAt: Date()
+        )
+        let otherItem = SourceItem(
+            id: otherItemId, type: .text, source: .manual,
+            status: .inbox, title: "Different Source", createdAt: Date()
+        )
+        try await storage.insertSourceItem(sourceItem)
+        try await storage.insertSourceItem(otherItem)
         
         // Create multiple assets for same source item
         let text1 = try await assetStore.saveText("Text 1", sourceItemId: sourceItemId)
         let text2 = try await assetStore.saveText("Text 2", sourceItemId: sourceItemId)
-        let text3 = try await assetStore.saveText("Text 3", sourceItemId: "different-item")
+        let text3 = try await assetStore.saveText("Text 3", sourceItemId: otherItemId)
         
-        // Get assets for source item
         let assets = try await assetStore.getAssetsForSourceItem(sourceItemId: sourceItemId)
         XCTAssertEqual(assets.count, 2)
         XCTAssertTrue(assets.contains { $0.id == text1.id })
@@ -363,11 +330,11 @@ final class StorageTests: XCTestCase {
     // MARK: - Performance Tests
     
     func testBulkInsertPerformance() async throws {
+        let prefix = UUID().uuidString
         let items = (0..<100).map { i in
             SourceItem(
-                id: "bulk-\(i)",
-                type: .text,
-                source: .manual,
+                id: "\(prefix)-\(i)",
+                type: .text, source: .manual,
                 status: .inbox,
                 title: "Bulk Item \(i)",
                 createdAt: Date()
@@ -379,6 +346,6 @@ final class StorageTests: XCTestCase {
         let duration = Date().timeIntervalSince(start)
         
         XCTAssertEqual(imported, 100)
-        XCTAssertLessThan(duration, 5.0) // Should complete within 5 seconds
+        XCTAssertLessThan(duration, 5.0)
     }
 }

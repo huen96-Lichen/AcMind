@@ -1,42 +1,50 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-const packageJson = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')
-) as {
-  version: string;
-};
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import electron from 'vite-plugin-electron'
+import renderer from 'vite-plugin-electron-renderer'
+import path from 'path'
 
 export default defineConfig({
-  root: path.resolve(__dirname, 'src/renderer'),
-  base: './',
-  plugins: [react()],
-  define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version)
-  },
+  root: 'src/renderer',
+  plugins: [
+    react(),
+    electron([
+      {
+        entry: path.resolve(__dirname, 'src/main/index.ts'),
+        onstart(args) {
+          args.startup()
+        },
+        vite: {
+          build: {
+            outDir: path.resolve(__dirname, 'dist-electron/main'),
+            rollupOptions: {
+              external: ['better-sqlite3', 'electron-log']
+            }
+          }
+        }
+      },
+      {
+        entry: path.resolve(__dirname, 'src/preload/index.ts'),
+        onstart(args) {
+          args.reload()
+        },
+        vite: {
+          build: {
+            outDir: path.resolve(__dirname, 'dist-electron/preload')
+          }
+        }
+      }
+    ]),
+    renderer()
+  ],
   resolve: {
     alias: {
-      '@renderer': path.resolve(__dirname, 'src/renderer'),
+      '@': path.resolve(__dirname, 'src'),
       '@shared': path.resolve(__dirname, 'src/shared')
     }
   },
   build: {
-    outDir: path.resolve(__dirname, 'dist/renderer'),
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'src/renderer/index.html'),
-        capsule: path.resolve(__dirname, 'src/renderer/capsule.html'),
-        widget: path.resolve(__dirname, 'src/renderer/widget.html'),
-        dictation: path.resolve(__dirname, 'src/renderer/dictation.html'),
-        'pinned-image': path.resolve(__dirname, 'src/renderer/pinned-image.html'),
-      },
-    },
-  },
-  server: {
-    port: 5173,
-    strictPort: true
+    outDir: path.resolve(__dirname, 'dist'),
+    emptyOutDir: true
   }
-});
+})

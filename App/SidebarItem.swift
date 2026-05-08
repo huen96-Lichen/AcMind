@@ -8,9 +8,14 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     case schedule = "schedule"
     case workbench = "workbench"
     case tools = "tools"
+    case companion = "companion"
     case settings = "settings"
 
     public var id: String { rawValue }
+
+    public static var mainItems: [SidebarItem] {
+        [.agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
+    }
 
     public var displayName: String {
         switch self {
@@ -20,6 +25,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .schedule: return "日程"
         case .workbench: return "工作台"
         case .tools: return "工具"
+        case .companion: return "随身"
         case .settings: return "设置"
         }
     }
@@ -34,6 +40,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .schedule: return "calendar"
         case .workbench: return "square.grid.2x2"
         case .tools: return "wrench.fill"
+        case .companion: return "capsule.portrait.fill"
         case .settings: return "gearshape.fill"
         }
     }
@@ -46,6 +53,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .schedule: return KeyboardShortcut(key: "4", modifiers: [.command])
         case .workbench: return KeyboardShortcut(key: "5", modifiers: [.command])
         case .tools: return KeyboardShortcut(key: "6", modifiers: [.command])
+        case .companion: return KeyboardShortcut(key: "7", modifiers: [.command])
         case .settings: return KeyboardShortcut(key: ",", modifiers: [.command])
         }
     }

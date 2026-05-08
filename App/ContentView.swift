@@ -2,114 +2,147 @@ import SwiftUI
 import AcMindKit
 
 // MARK: - Content View
+// AcMind 主应用框架
 
-/// 主内容视图
-/// 使用 NavigationSplitView 实现原生 macOS 三栏布局
 struct ContentView: View {
-    @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var container: ServiceContainer
+    @State private var selectedItem: SidebarItem = .agent
+    @State private var showVoicePanel = false
+    @State private var showCapturePanel = false
+    @State private var showQuickNote = false
 
     var body: some View {
         NavigationSplitView {
-            // 侧边栏
-            SidebarView()
-                .frame(minWidth: 180, idealWidth: 200)
+            MainSidebar(selectedItem: $selectedItem)
         } detail: {
-            // 详情区域
-            detailContent
-                .frame(minWidth: 600, minHeight: 400)
+            MainContent(selectedItem: selectedItem)
         }
-        .navigationSplitViewStyle(.balanced)
-    }
-
-    // MARK: - Detail Content
-
-    @ViewBuilder
-    private var detailContent: some View {
-        switch appState.sidebarSelection {
-        case .agent:
-            AgentView()
-                .environmentObject(AgentViewModel(
-                    storage: container.storageService,
-                    aiRuntime: container.aiRuntime
-                ))
-
-        case .inbox:
-            InboxView()
-                .environmentObject(InboxViewModel(
-                    storage: container.storageService
-                ))
-
-        case .clipboard:
-            ClipboardPlaceholderView()
-
-        case .schedule:
-            ScheduleNativeView()
-
-        case .workbench:
-            WorkbenchPlaceholderView()
-
-        case .tools:
-            ToolsPlaceholderView()
-
-        case .settings:
-            SettingsView()
-                .environmentObject(SettingsViewModel(
-                    settings: container.settingsService
-                ))
+        .sheet(isPresented: $showVoicePanel) {
+            CompanionVoicePanel()
+        }
+        .sheet(isPresented: $showCapturePanel) {
+            CompanionCapturePanel()
+        }
+        .sheet(isPresented: $showQuickNote) {
+            QuickNotePanel()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShowAgent)) { _ in
+            selectedItem = .agent
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShowInbox)) { _ in
+            selectedItem = .inbox
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShowSchedule)) { _ in
+            selectedItem = .schedule
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShowVoicePanel)) { _ in
+            showVoicePanel = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShowCapturePanel)) { _ in
+            showCapturePanel = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShowQuickNote)) { _ in
+            showQuickNote = true
         }
     }
 }
 
-// MARK: - Placeholder Views
+// MARK: - Main Sidebar
 
-struct WorkbenchPlaceholderView: View {
+struct MainSidebar: View {
+    @Binding var selectedItem: SidebarItem
+    @State private var hoveredItem: SidebarItem?
+
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "square.grid.2x2")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
-
-            Text("工作台")
-                .font(.title)
-
-            Text("知识沉淀与自动化工具")
-                .foregroundStyle(.secondary)
+        List(selection: $selectedItem) {
+            Section {
+                ForEach(SidebarItem.mainItems) { item in
+                    SidebarItemView(
+                        item: item,
+                        isSelected: selectedItem == item,
+                        isHovered: hoveredItem == item
+                    )
+                    .tag(item)
+                    .onHover { isHovered in
+                        hoveredItem = isHovered ? item : nil
+                    }
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .listStyle(.sidebar)
+        .frame(minWidth: 200)
     }
 }
 
-struct ToolsPlaceholderView: View {
+// MARK: - Sidebar Item View
+
+struct SidebarItemView: View {
+    let item: SidebarItem
+    let isSelected: Bool
+    let isHovered: Bool
+
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
+        HStack(spacing: 10) {
+            Image(systemName: item.icon)
+                .font(.system(size: 16, weight: .medium))
+                .frame(width: 20)
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
 
-            Text("自动工具")
-                .font(.title)
+            Text(item.title)
+                .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
 
-            Text("批量处理与自动化")
-                .foregroundStyle(.secondary)
+            Spacer()
+
+            if let shortcut = item.shortcut {
+                Text(shortcut.displayString)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.secondary)
+                    .opacity(0.7)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.accentColor : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
+        )
+        .foregroundStyle(isSelected ? Color.white : Color.primary)
+        .contentShape(Rectangle())
     }
 }
 
-private struct ClipboardPlaceholderView: View {
+// MARK: - Main Content
+
+struct MainContent: View {
+    let selectedItem: SidebarItem
+
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
-
-            Text("剪贴板")
-                .font(.title)
-
-            Text("剪贴板历史和快速收集")
-                .foregroundStyle(.secondary)
+        Group {
+            switch selectedItem {
+            case .agent:
+                AgentView()
+                    .navigationTitle("Agent")
+            case .inbox:
+                InboxView()
+                    .navigationTitle("收集箱")
+            case .clipboard:
+                ClipboardView()
+                    .navigationTitle("剪贴板")
+            case .schedule:
+                ScheduleNativeView()
+                    .navigationTitle("日程")
+            case .workbench:
+                WorkbenchView()
+                    .navigationTitle("工作台")
+            case .tools:
+                ToolsView()
+                    .navigationTitle("工具")
+            case .companion:
+                CompanionView()
+                    .navigationTitle("随身")
+            case .settings:
+                SettingsView()
+                    .navigationTitle("设置")
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

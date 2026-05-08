@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>AcMind</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.acore.acmind</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2024 AcMind. All rights reserved.</string>
+    
+    <!-- 语音识别权限 -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>AcMind 需要使用语音识别功能来进行语音转文字，以便您可以通过语音输入快速记录想法和笔记。</string>
+    
+    <!-- 麦克风权限 -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>AcMind 需要访问麦克风来录制语音，以便进行语音转文字。</string>
+    
+    <!-- 辅助功能权限 -->
+    <key>NSAccessibilityUsageDescription</key>
+    <string>AcMind 需要辅助功能权限来提供全局快捷键、控制音乐播放和系统级交互功能。</string>
+    
+    <!-- 屏幕录制权限 -->
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>AcMind 需要屏幕录制权限来进行截图和区域选择，以便捕获屏幕内容。</string>
+    
+    <!-- 网络访问 -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSAllowsArbitraryLoadsInWebContent</key>
+        <true/>
+    </dict>
+</dict>
+</plist>

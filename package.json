@@ -2,111 +2,36 @@
   "name": "acmind",
   "version": "0.10.0",
   "description": "Local-first desktop AI information hub",
-  "main": "main.js",
   "author": "",
   "license": "MIT",
+  "private": true,
   "scripts": {
-    "clean": "rimraf dist",
-    "dev": "node scripts/fix-esbuild-binary.mjs && concurrently -k \"npm:dev:renderer\" \"npm:dev:main\" \"npm:dev:preload\" \"npm:dev:electron\"",
-    "dev:renderer": "vite",
-    "dev:main": "esbuild src/main/index.ts --bundle --platform=node --format=cjs --external:electron --external:better-sqlite3 --external:jsdom --external:@mozilla/readability --external:dommatrix --external:pdf-parse --external:pdfjs-dist --outfile=dist/main/index.cjs --sourcemap --watch",
-    "dev:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload/index.cjs --sourcemap --watch",
-    "dev:electron": "wait-on tcp:5173 file:dist/main/index.cjs file:dist/preload/index.cjs && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electronmon dist/main/index.cjs --no-sandbox",
-    "build": "npm run clean && node scripts/fix-esbuild-binary.mjs && npm run build:main && npm run build:preload && npm run build:renderer",
-    "build:main": "esbuild src/main/index.ts --bundle --platform=node --format=cjs --external:electron --external:better-sqlite3 --external:jsdom --external:@mozilla/readability --external:dommatrix --external:pdf-parse --external:pdfjs-dist --outfile=dist/main/index.cjs --minify",
-    "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload/index.cjs --minify",
-    "build:renderer": "vite build",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "check": "npm run typecheck && npm run lint && npm run build",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "audit:deps": "npm audit --omit=dev",
-    "prepare": "husky",
-    "trainer": "node ./training/bin/acmind-trainer.mjs",
-    "trainer:validate": "node ./training/bin/acmind-trainer.mjs snapshot validate ./training/examples/sample-snapshot/manifest.json",
-    "package": "npm run package:mac:arm64",
-    "package:mac:arm64": "npm run build && electron-builder --mac dmg --arm64",
-    "package:local": "npm run build && cross-env SKIP_NOTARIZE=1 electron-builder --mac dmg --arm64 -c.mac.identity=null"
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix --max-warnings=100"
-    ],
-    "*.{ts,tsx,css,md,json}": [
-      "prettier --write"
-    ]
+    "dev": "vite",
+    "build": "vite build && electron-builder",
+    "build:vite": "vite build",
+    "dev:electron": "vite --mode electron",
+    "start": "electron .",
+    "preview": "vite preview",
+    "build:release": "vite build && electron-builder --mac"
   },
   "dependencies": {
-    "@mozilla/readability": "^0.6.0",
-    "better-sqlite3": "^11.0.0",
-    "cron-parser": "^5.5.0",
-    "dommatrix": "^0.1.1",
-    "electron-updater": "^6.8.3",
-    "jsdom": "^29.1.0",
-    "mammoth": "^1.12.0",
-    "node-cron": "^4.2.1",
-    "pdf-parse": "^2.4.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "better-sqlite3": "^11.7.0",
+    "electron-log": "^5.2.4"
   },
   "devDependencies": {
-    "@esbuild/linux-arm64": "^0.28.0",
-    "@eslint/js": "^9.39.4",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/jsdom": "^28.0.1",
-    "@types/node": "^22.12.0",
-    "@types/pdf-parse": "^1.1.5",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.7",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
-    "@vitejs/plugin-react": "^4.4.1",
-    "autoprefixer": "^10.4.21",
-    "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3",
-    "electron": "^35.1.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.0.2",
     "electron-builder": "^25.1.8",
-    "electronmon": "^2.0.2",
-    "esbuild": "^0.28.0",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
-    "postcss": "^8.5.6",
-    "prettier": "^3.8.3",
-    "rimraf": "^6.0.1",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3",
-    "vite": "^6.2.4",
-    "vitest": "^4.1.5",
-    "wait-on": "^8.0.3"
-  },
-  "build": {
-    "appId": "com.acore.acmind",
-    "productName": "AcMind",
-    "mac": {
-      "category": "public.app-category.productivity",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "extendInfo": {
-        "NSMicrophoneUsageDescription": "AcMind 需要访问麦克风来进行语音听写和语音收集。"
-      },
-      "target": [
-        "dmg"
-      ]
-    },
-    "files": [
-      "dist/**/*",
-      "assets/icons/**/*",
-      "package.json"
-    ]
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-arm64-gnu": "^4.60.2"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.1.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vite-plugin-electron": "^0.28.8",
+    "vite-plugin-electron-renderer": "^0.14.6"
   }
 }

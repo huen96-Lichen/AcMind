@@ -59,7 +59,7 @@ public final class AppState: ObservableObject, Sendable {
     private var cancellables = Set<AnyCancellable>()
     private var shortcutHandlers: [KeyboardShortcut: () -> Void] = [:]
 
-    private init() {
+    public init() {
         setupBindings()
         checkFirstLaunch()
     }

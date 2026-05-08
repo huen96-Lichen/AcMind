@@ -24,6 +24,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var defaultExportTarget: ExportTarget
     public var autoFrontmatter: Bool
 
+    // 桌面胶囊
+    public var desktopCapsule: DesktopCapsuleSettings
+
     public init(
         theme: AppTheme = .system,
         language: String = "zh-CN",
@@ -33,7 +36,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         autoCaptureClipboard: Bool = true,
         captureScreenshotHotkey: String? = nil,
         defaultExportTarget: ExportTarget = .obsidian,
-        autoFrontmatter: Bool = true
+        autoFrontmatter: Bool = true,
+        desktopCapsule: DesktopCapsuleSettings = .default
     ) {
         self.theme = theme
         self.language = language
@@ -44,6 +48,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.captureScreenshotHotkey = captureScreenshotHotkey
         self.defaultExportTarget = defaultExportTarget
         self.autoFrontmatter = autoFrontmatter
+        self.desktopCapsule = desktopCapsule
     }
 }
 
@@ -71,18 +76,18 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
     public var defaultProvider: String
     public var defaultLanguage: String
     public var autoPolish: Bool
-    public var polishMode: PolishMode
+    public var voicePolishMode: VoicePolishMode
 
     public init(
         defaultProvider: String = "whisper",
         defaultLanguage: String = "zh",
         autoPolish: Bool = true,
-        polishMode: PolishMode = .standard
+        voicePolishMode: VoicePolishMode = .light
     ) {
         self.defaultProvider = defaultProvider
         self.defaultLanguage = defaultLanguage
         self.autoPolish = autoPolish
-        self.polishMode = polishMode
+        self.voicePolishMode = voicePolishMode
     }
 }
 
@@ -98,6 +103,20 @@ public enum PolishMode: String, Codable, Sendable, Hashable, CaseIterable {
         case .none: return "无"
         case .standard: return "标准"
         case .aggressive: return "强力"
+        }
+    }
+}
+
+public extension PolishMode {
+    /// 映射到语音润色侧的四档模式
+    var asVoicePolishMode: VoicePolishMode {
+        switch self {
+        case .none:
+            return .none
+        case .standard:
+            return .light
+        case .aggressive:
+            return .formal
         }
     }
 }
@@ -175,6 +194,20 @@ public enum ModifierKey: String, Codable, Sendable, Hashable, CaseIterable {
         case .option: return "⌥"
         case .control: return "⌃"
         case .shift: return "⇧"
+        }
+    }
+}
+
+// MARK: - SystemPermission → AppPermissionKind
+
+public extension SystemPermission {
+    var toAppPermissionKind: AppPermissionKind {
+        switch self {
+        case .microphone: return .microphone
+        case .screenRecording: return .screenRecording
+        case .accessibility: return .accessibility
+        case .fullDiskAccess: return .fullDiskAccess
+        case .notifications: return .notifications
         }
     }
 }

@@ -27,20 +27,33 @@ public enum RecordingStatus: String, Codable, Sendable, Hashable, CaseIterable {
 
 public enum RecordingPolishMode: String, Codable, Sendable, Hashable, CaseIterable {
     case none
-    case standard
+    case raw
+    case light
+    case structured
     case formal
-    case casual
 
     public static var allCases: [RecordingPolishMode] {
-        [.none, .standard, .formal, .casual]
+        [.none, .raw, .light, .structured, .formal]
     }
 
     public var displayName: String {
         switch self {
         case .none: return "不润色"
-        case .standard: return "标准"
-        case .formal: return "正式"
-        case .casual: return "随意"
+        case .raw: return "原文整理"
+        case .light: return "轻度润色"
+        case .structured: return "结构化整理"
+        case .formal: return "正式表达"
+        }
+    }
+    
+    /// 转换到语音润色层使用的 VoicePolishMode
+    public var toVoicePolishMode: VoicePolishMode {
+        switch self {
+        case .none: return .none
+        case .raw: return .raw
+        case .light: return .light
+        case .structured: return .structured
+        case .formal: return .formal
         }
     }
 }
@@ -120,10 +133,19 @@ public struct CaptureResult: Sendable, Equatable {
     }
 }
 
-public enum ScreenshotMode: Sendable, Hashable, Equatable {
-    case fullscreen
-    case area(rect: CGRect)
-    case window(windowID: CGWindowID)
+public enum ScreenshotMode: String, Sendable, Hashable, Equatable {
+    case fullscreen = "fullscreen"
+    case area = "area"
+    case window = "window"
+    
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "fullscreen": self = .fullscreen
+        case "area": self = .area
+        case "window": self = .window
+        default: return nil
+        }
+    }
 }
 
 // MARK: - ShelfItem（文件架条目）

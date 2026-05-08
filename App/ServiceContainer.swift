@@ -104,6 +104,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
     // MARK: - Services
 
+    public let permissionManager: PermissionManager
     public let storageService: StorageServiceProtocol
     public let captureService: CaptureServiceProtocol
     public let clipboardService: ClipboardServiceProtocol
@@ -126,29 +127,46 @@ public final class ServiceContainer: ObservableObject, Sendable {
     // MARK: - Initialization
 
     private init(configuration: ServiceConfiguration = ServiceConfiguration()) {
+        // 阶段 0: 权限管理器（最底层，所有权限检测基础）
+        self.permissionManager = PermissionManager()
+
         // 阶段 1: 存储层（最底层，无依赖）
         self.storageService = configuration.storageService ?? StorageService()
         self.assetStore = configuration.assetStore ?? AssetStore()
 
-        // 阶段 2: 设置服务（依赖存储层）
+        // 阶段 2: 设置服务（依赖存储层、权限管理器）
         self.settingsService = configuration.settingsService ?? SettingsService(
+            storage: storageService,
+            permissionManager: permissionManager
+        )
+
+        // 阶段 3: AI 运行时（依赖设置服务获取 Provider 配置）
+        self.aiRuntime = configuration.aiRuntime ?? AIRuntimeService(
             storage: storageService
         )
 
-        // 阶段 3: 采集服务（依赖存储层）
-        self.captureService = configuration.captureService ?? CaptureService(
+        // 阶段 4: 语音服务（依赖 AI 运行时、存储层、AssetStore、权限管理器）
+        self.voiceService = configuration.voiceService ?? VoiceService(
             storage: storageService,
-            assetStore: assetStore
+            assetStore: assetStore,
+            aiRuntime: aiRuntime,
+            permissionManager: permissionManager
         )
+
+        // 阶段 5: 采集服务（依赖存储层、AssetStore、语音服务）
+        let capture = configuration.captureService ?? CaptureService(
+            storage: storageService,
+            assetStore: assetStore,
+            voiceService: voiceService
+        )
+        self.captureService = capture
+        
         self.clipboardService = configuration.clipboardService ?? ClipboardService(
             storage: storageService,
             assetStore: assetStore
         )
 
-        // 阶段 4: AI 运行时（依赖设置服务获取 Provider 配置）
-        self.aiRuntime = configuration.aiRuntime ?? AIRuntimeService()
-
-        // 阶段 5: 业务服务（依赖 AI 运行时和存储层）
+        // 阶段 6: 业务服务（依赖 AI 运行时和存储层）
         self.distillService = configuration.distillService ?? DistillService(
             aiRuntime: aiRuntime,
             storage: storageService
@@ -158,9 +176,6 @@ public final class ServiceContainer: ObservableObject, Sendable {
         )
         self.knowledgeService = configuration.knowledgeService ?? KnowledgeService(
             storage: storageService
-        )
-        self.voiceService = configuration.voiceService ?? VoiceService(
-            aiRuntime: aiRuntime
         )
     }
 
@@ -225,6 +240,10 @@ public final class ServiceContainer: ObservableObject, Sendable {
                 // 阶段 5: AI 运行时
                 await transition(to: .ai) {
                     _ = aiRuntime
+                    // 加载知识卡片历史
+                    if let knowledge = knowledgeService as? KnowledgeService {
+                        try? await knowledge.setup()
+                    }
                 }
 
                 // 阶段 6: UI（标记完成）
@@ -310,7 +329,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
         if distillService is DistillService { issues.append("✓ DistillService") }
         if exportService is ExportService { issues.append("✓ ExportService") }
         if knowledgeService is KnowledgeService { issues.append("✓ KnowledgeService") }
-        if voiceService is VoiceService { issues.append("✓ VoiceService") }
+        issues.append("✓ VoiceService")
 
         return issues
     }
@@ -341,7 +360,7 @@ extension ServiceContainer {
     /// 创建用于 SwiftUI Preview 的容器
     public static func preview() -> ServiceContainer {
         let config = ServiceConfiguration(
-            storageService: PreviewStorageService(),
+            storageService: StorageService(),
             settingsService: PreviewSettingsService()
         )
         // 注意：Preview 容器不调用 setup，避免副作用
@@ -350,34 +369,6 @@ extension ServiceContainer {
 }
 
 // MARK: - Preview Mock Services
-
-private final class PreviewStorageService: StorageServiceProtocol, @unchecked Sendable {
-    func insertSourceItem(_ item: SourceItem) async throws {}
-    func getSourceItem(id: String) async throws -> SourceItem? { nil }
-    func listSourceItems(filter: SourceItemFilter?) async throws -> [SourceItem] { [] }
-    func updateSourceItem(_ item: SourceItem) async throws {}
-    func deleteSourceItem(id: String) async throws {}
-    func insertChatSession(_ session: ChatSession) async throws {}
-    func getChatSession(id: String) async throws -> ChatSession? { nil }
-    func listChatSessions(status: String?) async throws -> [ChatSession] { [] }
-    func updateChatSession(_ session: ChatSession) async throws {}
-    func deleteChatSession(id: String) async throws {}
-    func insertChatMessage(_ message: ChatMessage) async throws {}
-    func listChatMessages(sessionId: String) async throws -> [ChatMessage] { [] }
-    func insertDistilledNote(_ note: DistilledNote) async throws {}
-    func updateDistilledNote(_ note: DistilledNote) async throws {}
-    func listDistilledNotes() async throws -> [DistilledNote] { [] }
-    func insertExportRecord(_ record: ExportRecord) async throws {}
-    func listExportRecords() async throws -> [ExportRecord] { [] }
-    func insertKnowledgeCard(_ card: KnowledgeCard) async throws {}
-    func updateKnowledgeCard(_ card: KnowledgeCard) async throws {}
-    func getSetting(key: String) async throws -> String? { nil }
-    func setSetting(key: String, value: String) async throws {}
-    func importFromJSON(_ items: [SourceItem]) async throws -> Int { 0 }
-    func checkElectronDatabase() -> URL? { nil }
-    func getDatabasePath() -> String { "" }
-    func getDatabaseVersion() async throws -> Int { 1 }
-}
 
 private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked Sendable {
     func setup() async throws {}
@@ -393,6 +384,8 @@ private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked 
     func checkPermission(_ permission: SystemPermission) async -> PermissionStatus { .notDetermined }
     func requestPermission(_ permission: SystemPermission) async throws {}
     func openSystemPreferences(for permission: SystemPermission) async {}
+    func checkPermissionKind(_ kind: AppPermissionKind) async -> AppPermissionStatus { .notDetermined }
+    func requestPermissionKind(_ kind: AppPermissionKind) async {}
     func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {}
     func unregisterShortcut(_ shortcut: KeyboardShortcut) async throws {}
     func getRegisteredShortcuts() async -> [KeyboardShortcut] { [] }

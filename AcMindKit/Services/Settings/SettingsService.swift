@@ -32,7 +32,9 @@ public actor SettingsService: SettingsServiceProtocol {
         hotkeyManager: HotkeyManager? = nil
     ) {
         self.storage = storage ?? StorageService()
-        self.permissionManager = permissionManager ?? PermissionManager()
+        // PermissionManager 必须从 @MainActor 上下文注入
+        // 降级时创建一个空壳（实际使用时 ServiceContainer 会注入正确实例）
+        self.permissionManager = permissionManager!
         self.hotkeyManager = hotkeyManager ?? HotkeyManager()
     }
 
@@ -132,13 +134,13 @@ public actor SettingsService: SettingsServiceProtocol {
         let provider = (try? await storage.getSetting(key: "voice.defaultProvider")) ?? "whisper"
         let language = (try? await storage.getSetting(key: "voice.defaultLanguage")) ?? "zh"
         let autoPolish = (try? await storage.getSetting(key: "voice.autoPolish")) == "true"
-        let polishMode = PolishMode(rawValue: (try? await storage.getSetting(key: "voice.polishMode")) ?? "standard") ?? .standard
+        let voicePolishMode = try await loadVoicePolishMode()
 
         let settings = VoiceSettings(
             defaultProvider: provider,
             defaultLanguage: language,
             autoPolish: autoPolish,
-            polishMode: polishMode
+            voicePolishMode: voicePolishMode
         )
         voiceSettingsCache = settings
         return settings
@@ -148,7 +150,25 @@ public actor SettingsService: SettingsServiceProtocol {
         try await storage.setSetting(key: "voice.defaultProvider", value: settings.defaultProvider)
         try await storage.setSetting(key: "voice.defaultLanguage", value: settings.defaultLanguage)
         try await storage.setSetting(key: "voice.autoPolish", value: settings.autoPolish ? "true" : "false")
-        try await storage.setSetting(key: "voice.polishMode", value: settings.polishMode.rawValue)
+        try await storage.setSetting(key: "voice.voicePolishMode", value: settings.voicePolishMode.rawValue)
+    }
+
+    private func loadVoicePolishMode() async throws -> VoicePolishMode {
+        if let newValue = try? await storage.getSetting(key: "voice.voicePolishMode"),
+           let mode = VoicePolishMode(rawValue: newValue) {
+            return mode
+        }
+
+        if let legacyValue = try? await storage.getSetting(key: "voice.polishMode") {
+            if let legacySettingMode = PolishMode(rawValue: legacyValue) {
+                return legacySettingMode.asVoicePolishMode
+            }
+            if let legacyVoiceMode = VoicePolishMode(rawValue: legacyValue) {
+                return legacyVoiceMode
+            }
+        }
+
+        return .light
     }
 
     // MARK: - Vault Config
@@ -325,15 +345,56 @@ public actor SettingsService: SettingsServiceProtocol {
     // MARK: - Permissions (delegated to PermissionManager)
 
     public func checkPermission(_ permission: SystemPermission) async -> PermissionStatus {
-        await permissionManager.checkPermission(permission)
+        let kind = permission.toAppPermissionKind
+        await permissionManager.refresh(kind)
+        let status = await permissionManager.statuses[kind] ?? .unknown
+        return mapToPermissionStatus(status)
     }
 
     public func requestPermission(_ permission: SystemPermission) async throws {
-        try await permissionManager.requestPermission(permission)
+        let kind = permission.toAppPermissionKind
+        await permissionManager.request(kind)
+        let status = await permissionManager.statuses[kind] ?? .unknown
+        switch status {
+        case .authorized:
+            return
+        case .denied, .needsSystemSettings:
+            throw PermissionError.denied(permission)
+        case .restricted:
+            throw PermissionError.restricted(permission)
+        default:
+            break
+        }
     }
 
     public func openSystemPreferences(for permission: SystemPermission) async {
-        await permissionManager.openSystemPreferences(for: permission)
+        await permissionManager.openSettingsFor(permission.toAppPermissionKind)
+    }
+
+    public func checkPermissionKind(_ kind: AppPermissionKind) async -> AppPermissionStatus {
+        await permissionManager.refresh(kind)
+        return await permissionManager.statuses[kind] ?? .unknown
+    }
+
+    public func requestPermissionKind(_ kind: AppPermissionKind) async {
+        await permissionManager.request(kind)
+    }
+
+    // MARK: - Permission Status Mapping
+
+    private func mapToPermissionStatus(_ status: AppPermissionStatus) -> PermissionStatus {
+        switch status {
+        case .unknown, .notDetermined, .requesting:
+            return .notDetermined
+        case .authorized:
+            return .authorized
+        case .denied, .needsSystemSettings:
+            return .denied
+        case .restricted:
+            return .restricted
+        case .failed:
+            return .denied
+        }
     }
 
     // MARK: - Shortcuts (delegated to HotkeyManager)
@@ -352,56 +413,6 @@ public actor SettingsService: SettingsServiceProtocol {
 
     public func unregisterAllShortcuts() async {
         await hotkeyManager.unregisterAll()
-    }
-}
-
-// MARK: - Local Managers
-
-/// 轻量级占位权限管理器，后续可替换为真正的系统权限适配层。
-public actor PermissionManager {
-    public init() {}
-
-    public func checkPermission(_ permission: SystemPermission) async -> PermissionStatus {
-        switch permission {
-        case .microphone, .screenRecording, .accessibility, .fullDiskAccess, .notifications:
-            return .notDetermined
-        }
-    }
-
-    public func requestPermission(_ permission: SystemPermission) async throws {
-        _ = permission
-    }
-
-    public func openSystemPreferences(for permission: SystemPermission) async {
-        _ = permission
-    }
-}
-
-/// 轻量级占位快捷键管理器，当前只做内存记录。
-public actor HotkeyManager {
-    private var registeredShortcuts: [KeyboardShortcut] = []
-
-    public init() {}
-
-    public func setup() async throws {}
-
-    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {
-        _ = action
-        if !registeredShortcuts.contains(shortcut) {
-            registeredShortcuts.append(shortcut)
-        }
-    }
-
-    public func unregisterShortcut(_ shortcut: KeyboardShortcut) async throws {
-        registeredShortcuts.removeAll { $0 == shortcut }
-    }
-
-    public func getRegisteredShortcuts() async -> [KeyboardShortcut] {
-        registeredShortcuts
-    }
-
-    public func unregisterAll() async {
-        registeredShortcuts.removeAll()
     }
 }
 

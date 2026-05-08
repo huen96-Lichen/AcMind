@@ -2,259 +2,552 @@ import SwiftUI
 import AcMindKit
 
 // MARK: - Clipboard View
+// 剪贴板 - 复制、截图、临时材料历史
 
-/// 剪贴板历史视图
-/// 功能：
-/// 1. 显示剪贴板历史列表（文本/图片/文件/URL）
-/// 2. 支持搜索和类型过滤
-/// 3. 支持 pin/unpin/删除/复制/保存到 Inbox
-/// 4. 显示统计信息
+enum ViewMode {
+    case list
+    case grid
+}
+
 struct ClipboardView: View {
     @StateObject private var viewModel = ClipboardViewModel()
-    @State private var showingClearConfirmation = false
-    @State private var selectedItem: ClipboardItem?
-    
+    @State private var viewMode: ViewMode = .grid
+
     var body: some View {
-        VStack(spacing: 0) {
-            // 工具栏
-            toolbar
-            
-            Divider()
-            
-            // 统计信息
-            statsBar
-            
-            Divider()
-            
-            // 过滤栏
-            filterBar
-            
-            // 列表
-            listView
-        }
-        .frame(minWidth: 400, minHeight: 500)
-        .alert("错误", isPresented: $viewModel.showError) {
-            Button("确定") { viewModel.clearError() }
-        } message: {
-            Text(viewModel.errorMessage ?? "未知错误")
-        }
-        .alert("清空历史", isPresented: $showingClearConfirmation) {
-            Button("取消", role: .cancel) {}
-            Button("清空", role: .destructive) {
-                Task { await viewModel.clearHistory() }
+        HStack(spacing: 0) {
+            // 侧边栏统计面板
+            sidebar
+                .frame(width: 180)
+                .background(Color(NSColor.controlBackgroundColor))
+                .overlay(
+                    Rectangle()
+                        .fill(Color(NSColor.separatorColor))
+                        .frame(width: 1)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing),
+                    alignment: .trailing
+                )
+
+            // 主内容区
+            VStack(spacing: 0) {
+                // 头部
+                header
+
+                Divider()
+
+                // 筛选栏
+                filterBar
+
+                // 内容
+                content
             }
-        } message: {
-            Text("这将删除所有未固定的剪贴板历史。固定项目将被保留。")
-        }
-        .sheet(item: $selectedItem) { item in
-            ClipboardItemDetailView(item: item, viewModel: viewModel)
+            .background(Color(NSColor.windowBackgroundColor))
         }
     }
-    
-    // MARK: - Toolbar
-    
-    private var toolbar: some View {
+
+    // MARK: - Header
+
+    private var header: some View {
         HStack {
-            // 标题
-            VStack(alignment: .leading, spacing: 2) {
-                Text("剪贴板历史")
-                    .font(.headline)
-                
-                Text(viewModel.isWatching ? "监听中" : "已暂停")
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("剪贴板")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text(String(viewModel.items.count))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(4)
+                }
+
+                Text("\(viewModel.items.count) 条内容 · 自动保存")
                     .font(.caption)
-                    .foregroundStyle(viewModel.isWatching ? .green : .secondary)
+                    .foregroundStyle(Color.secondary)
             }
-            
+
             Spacer()
-            
-            // 搜索框
+
+            // 搜索
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                
-                TextField("搜索...", text: $viewModel.searchQuery)
+                    .foregroundStyle(Color.secondary)
+                    .font(.caption)
+
+                TextField("搜索剪贴板内容...", text: $viewModel.searchQuery)
                     .textFieldStyle(.plain)
-                
-                if !viewModel.searchQuery.isEmpty {
-                    Button(action: { viewModel.searchQuery = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+                    .frame(width: 200)
             }
-            .padding(6)
-            .background(Color.secondary.opacity(0.1))
-            .cornerRadius(6)
-            .frame(width: 200)
-            
-            // 暂停/恢复按钮
-            Button(action: {
-                Task {
-                    if viewModel.isWatching {
-                        await viewModel.pauseWatching()
-                    } else {
-                        await viewModel.resumeWatching()
-                    }
+            .padding(8)
+            .background(Color(NSColor.textBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+
+            // 视图切换
+            HStack(spacing: 0) {
+                Button(action: { viewMode = .list }) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 14))
+                        .padding(6)
+                        .background(viewMode == .list ? Color.accentColor.opacity(0.1) : Color.clear)
+                        .foregroundStyle(viewMode == .list ? Color.accentColor : Color.secondary)
+                        .cornerRadius(4)
                 }
-            }) {
-                Image(systemName: viewModel.isWatching ? "pause.circle" : "play.circle")
-                    .font(.title3)
+                .buttonStyle(PlainButtonStyle())
+                .help("列表视图")
+
+                Button(action: { viewMode = .grid }) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 14))
+                        .padding(6)
+                        .background(viewMode == .grid ? Color.accentColor.opacity(0.1) : Color.clear)
+                        .foregroundStyle(viewMode == .grid ? Color.accentColor : Color.secondary)
+                        .cornerRadius(4)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .help("网格视图")
             }
-            .buttonStyle(.plain)
-            .help(viewModel.isWatching ? "暂停监听" : "恢复监听")
-            
+            .background(Color(NSColor.textBackgroundColor))
+            .cornerRadius(8)
+
             // 清空按钮
-            Button(action: { showingClearConfirmation = true }) {
+            Button(action: { viewModel.clearAll() }) {
                 Image(systemName: "trash")
-                    .font(.title3)
+                    .font(.system(size: 16))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PlainButtonStyle())
             .help("清空历史")
+            .foregroundStyle(Color.secondary)
         }
         .padding()
     }
-    
-    // MARK: - Stats Bar
-    
-    private var statsBar: some View {
-        HStack(spacing: 16) {
-            StatBadge(
-                icon: "doc.text",
-                count: viewModel.stats.textCount,
-                color: .blue,
-                label: "文本"
-            )
-            
-            StatBadge(
-                icon: "photo",
-                count: viewModel.stats.imageCount,
-                color: .green,
-                label: "图片"
-            )
-            
-            StatBadge(
-                icon: "doc",
-                count: viewModel.stats.fileCount,
-                color: .orange,
-                label: "文件"
-            )
-            
-            StatBadge(
-                icon: "link",
-                count: viewModel.stats.urlCount,
-                color: .purple,
-                label: "链接"
-            )
-            
-            Divider()
-                .frame(height: 20)
-            
-            HStack(spacing: 4) {
-                Image(systemName: "pin.fill")
-                    .foregroundStyle(.yellow)
-                Text("\(viewModel.stats.pinnedCount)")
+
+    // MARK: - Filter Bar
+
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(ClipboardFilter.allCases, id: \.self) { filter in
+                        Button(action: { viewModel.filter = filter }) {
+                            HStack(spacing: 4) {
+                                if let icon = filter.icon {
+                                    Image(systemName: icon)
+                                        .font(.system(size: 12))
+                                }
+                                Text(filter.displayName)
+                                    .font(.caption)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(viewModel.filter == filter ? Color.accentColor : Color.secondary.opacity(0.1))
+                            .foregroundStyle(viewModel.filter == filter ? Color.white : Color.primary)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+
+                    Menu {
+                        Button("文档") { viewModel.filter = .document }
+                        Button("代码") { viewModel.filter = .code }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 12))
+                            Text("更多")
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.secondary.opacity(0.1))
+                        .foregroundStyle(Color.primary)
+                        .cornerRadius(6)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // 排序按钮
+            Button(action: {}) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 12))
+                    Text("最新")
+                        .font(.caption)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color.secondary.opacity(0.1))
+                .foregroundStyle(Color.secondary)
+                .cornerRadius(6)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .overlay(
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(height: 1)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom),
+            alignment: .bottom
+        )
+    }
+
+    // MARK: - Sidebar
+
+    private var sidebar: some View {
+        VStack(spacing: 16) {
+            // 剪贴板统计
+            VStack(alignment: .leading, spacing: 12) {
+                Text("剪贴板统计")
                     .font(.caption)
                     .fontWeight(.medium)
-            }
-            
-            Spacer()
-            
-            Text("共 \(viewModel.stats.totalCount) 项")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-    }
-    
-    // MARK: - Filter Bar
-    
-    private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                FilterChip(
-                    title: "全部",
-                    isSelected: viewModel.selectedType == nil,
-                    action: { viewModel.selectedType = nil }
-                )
-                
-                ForEach(ClipboardContentType.allCases) { type in
-                    FilterChip(
-                        title: type.displayName,
-                        icon: viewModel.typeIcon(for: type),
-                        isSelected: viewModel.selectedType == type,
-                        color: viewModel.typeColor(for: type),
-                        action: { viewModel.selectedType = type }
+                    .foregroundStyle(Color.secondary)
+                    .padding(.top, 16)
+
+                // 总条目
+                StatRow(label: "总条目", value: "\(viewModel.items.count)", icon: "doc.on.doc")
+                // 今日新增
+                StatRow(label: "今日新增", value: "\(viewModel.todayCount)", icon: "calendar.badge.plus")
+
+                Divider()
+
+                // 各类型统计
+                ForEach(ClipboardFilter.allCases.filter { $0 != .all }, id: \.self) { filter in
+                    StatRow(
+                        label: filter.displayName,
+                        value: "\(viewModel.count(of: filter))",
+                        icon: filter.icon
                     )
                 }
             }
-            .padding(.horizontal)
-        }
-        .padding(.vertical, 8)
-    }
-    
-    // MARK: - List View
-    
-    private var listView: some View {
-        List {
-            if viewModel.filteredItems.isEmpty {
-                Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: "clipboard")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.secondary.opacity(0.5))
-                        
-                        Text(viewModel.searchQuery.isEmpty ? "暂无剪贴板历史" : "没有找到匹配项")
-                            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+
+            Spacer()
+
+            // 存储使用
+            VStack(alignment: .leading, spacing: 8) {
+                Text("存储使用")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.secondary)
+
+                StorageProgressView(used: viewModel.storageUsed, total: viewModel.storageTotal)
+
+                Text("\(formatStorage(viewModel.storageUsed)) / \(formatStorage(viewModel.storageTotal))")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+            }
+            .padding(.horizontal, 12)
+
+            Divider()
+
+            // 用户信息
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.circle")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.accentColor)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("AcMind")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                        Text("Pro")
+                            .font(.caption2)
+                            .foregroundStyle(Color.accentColor)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 200)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 16)
+        }
+    }
+
+    // MARK: - Content
+
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.filteredItems.isEmpty {
+            emptyState
+        } else {
+            switch viewMode {
+            case .list:
+                clipboardList
+            case .grid:
+                clipboardGrid
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "doc.on.clipboard")
+                .font(.system(size: 64))
+                .foregroundStyle(Color.secondary.opacity(0.3))
+
+            Text("剪贴板为空")
+                .font(.title3)
+                .foregroundStyle(Color.secondary)
+
+            Text("复制内容后将自动记录")
+                .font(.body)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Clipboard List
+
+    private var clipboardList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(viewModel.filteredItems) { item in
+                    ClipboardItemRow(item: item, viewModel: viewModel)
+
+                    Divider()
+                        .padding(.leading, 56)
+                }
+            }
+        }
+    }
+
+    // MARK: - Clipboard Grid
+
+    private var clipboardGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 320))], spacing: 16) {
+                ForEach(viewModel.filteredItems) { item in
+                    ClipboardItemCard(item: item, viewModel: viewModel)
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    // MARK: - Helper Functions
+
+    private func formatStorage(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
+    }
+}
+
+// MARK: - Stat Row
+
+struct StatRow: View {
+    let label: String
+    let value: String
+    let icon: String?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondary)
+            } else {
+                Color.clear.frame(width: 14)
+            }
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(Color.secondary)
+            Spacer()
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
+        }
+    }
+}
+
+// MARK: - Storage Progress View
+
+struct StorageProgressView: View {
+    let used: Int64
+    let total: Int64
+
+    var percentage: Double {
+        guard total > 0 else { return 0 }
+        return Double(used) / Double(total)
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.accentColor)
+                        .frame(width: geometry.size.width * min(percentage, 1), height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+}
+
+// MARK: - Clipboard Item Card
+
+struct ClipboardItemCard: View {
+    let item: ClipboardItem
+    @ObservedObject var viewModel: ClipboardViewModel
+    @State private var isHovered = false
+    @State private var isFavorite = false
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // 图片预览区域
+            if item.type == .screenshot {
+                ZStack(alignment: .topTrailing) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.secondary.opacity(0.1))
+                        .aspectRatio(4/3, contentMode: .fit)
+
+                    Image(systemName: "photo")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.secondary.opacity(0.3))
+
+                    // 收藏按钮
+                    Button(action: { isFavorite.toggle() }) {
+                        Image(systemName: isFavorite ? "star.fill" : "star")
+                            .font(.system(size: 14))
+                            .foregroundStyle(isFavorite ? .yellow : .white)
+                            .padding(4)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(4)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(4)
+                    .opacity(isHovered ? 1 : 0)
                 }
             } else {
-                // Pinned Items Section
-                let pinnedItems = viewModel.filteredItems.filter { $0.isPinned }
-                if !pinnedItems.isEmpty {
-                    Section {
-                        ForEach(pinnedItems) { item in
-                            ClipboardItemRow(
-                                item: item,
-                                viewModel: viewModel,
-                                onSelect: { selectedItem = item }
-                            )
-                        }
-                    } header: {
-                        HStack {
-                            Image(systemName: "pin.fill")
-                                .foregroundStyle(.yellow)
-                            Text("固定")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
+                ZStack(alignment: .topTrailing) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(item.type.color.opacity(0.1))
+                        .aspectRatio(4/3, contentMode: .fit)
+
+                    VStack(spacing: 4) {
+                        Image(systemName: item.type.icon)
+                            .font(.system(size: 24))
+                            .foregroundStyle(item.type.color)
+
+                        Text(item.type.displayName)
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
                     }
+
+                    // 收藏按钮
+                    Button(action: { isFavorite.toggle() }) {
+                        Image(systemName: isFavorite ? "star.fill" : "star")
+                            .font(.system(size: 14))
+                            .foregroundStyle(isFavorite ? .yellow : .white)
+                            .padding(4)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(4)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(4)
+                    .opacity(isHovered ? 1 : 0)
                 }
-                
-                // Unpinned Items Section
-                let unpinnedItems = viewModel.filteredItems.filter { !$0.isPinned }
-                if !unpinnedItems.isEmpty {
-                    Section {
-                        ForEach(unpinnedItems) { item in
-                            ClipboardItemRow(
-                                item: item,
-                                viewModel: viewModel,
-                                onSelect: { selectedItem = item }
-                            )
-                        }
-                    } header: {
-                        if !pinnedItems.isEmpty {
-                            Text("历史")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
+            }
+
+            // 内容信息
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.preview)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .lineLimit(2)
+                    .foregroundStyle(Color.primary)
+
+                HStack(spacing: 4) {
+                    Text(item.type.displayName)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+
+                    Text("•")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+
+                    Text(formatTime(item.timestamp))
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+
+                // 标签
+                HStack(spacing: 4) {
+                    TagView(label: item.type.displayName, color: item.type.color)
+                    
+                    if item.type == .screenshot {
+                        TagView(label: "剪贴板", color: .gray)
+                    } else if item.type == .text {
+                        TagView(label: "文本笔记", color: .blue)
+                    } else if item.type == .link {
+                        TagView(label: "项目地址", color: .orange)
                     }
                 }
             }
         }
-        .listStyle(.plain)
+        .padding(12)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .contextMenu {
+            Button("复制") {
+                viewModel.copyToClipboard(item)
+            }
+
+            Button("发送到收集箱") {
+                viewModel.sendToInbox(item)
+            }
+
+            Button("发送到工作台") {
+                viewModel.sendToWorkspace(item)
+            }
+
+            Divider()
+
+            Button("删除") {
+                viewModel.deleteItem(item)
+            }
+        }
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Tag View
+
+struct TagView: View {
+    let label: String
+    let color: Color
+
+    var body: some View {
+        Text(label)
+            .font(.caption)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.1))
+            .foregroundStyle(color)
+            .cornerRadius(4)
     }
 }
 
@@ -263,336 +556,310 @@ struct ClipboardView: View {
 struct ClipboardItemRow: View {
     let item: ClipboardItem
     @ObservedObject var viewModel: ClipboardViewModel
-    let onSelect: () -> Void
-    
     @State private var isHovered = false
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // 类型图标
             ZStack {
-                Circle()
-                    .fill(viewModel.typeColor(for: item.type).opacity(0.2))
-                    .frame(width: 36, height: 36)
-                
-                Image(systemName: viewModel.typeIcon(for: item.type))
-                    .foregroundStyle(viewModel.typeColor(for: item.type))
-                    .font(.system(size: 14, weight: .medium))
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(item.type.color.opacity(0.1))
+                    .frame(width: 40, height: 40)
+
+                Image(systemName: item.type.icon)
+                    .font(.system(size: 18))
+                    .foregroundStyle(item.type.color)
             }
-            
-            // 内容预览
+
+            // 内容
             VStack(alignment: .leading, spacing: 4) {
-                Text(previewText)
+                Text(item.preview)
+                    .font(.body)
                     .lineLimit(2)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.primary)
-                
+
                 HStack(spacing: 8) {
-                    if item.isPinned {
-                        Image(systemName: "pin.fill")
-                            .foregroundStyle(.yellow)
-                            .font(.caption)
-                    }
-                    
-                    if let sourceApp = item.sourceApp {
-                        Text(sourceApp)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    Text(viewModel.formatDate(item.createdAt))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    Text(item.type.displayName)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+
+                    Text("•")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+
+                    Text(formatTime(item.timestamp))
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             // 操作按钮
             if isHovered {
                 HStack(spacing: 8) {
-                    // Pin/Unpin
-                    Button(action: {
-                        Task {
-                            if item.isPinned {
-                                await viewModel.unpinItem(id: item.id)
-                            } else {
-                                await viewModel.pinItem(id: item.id)
-                            }
-                        }
-                    }) {
-                        Image(systemName: item.isPinned ? "pin.slash" : "pin")
-                    }
-                    .buttonStyle(.plain)
-                    .help(item.isPinned ? "取消固定" : "固定")
-                    
-                    // Copy
-                    Button(action: {
-                        Task { await viewModel.copyItem(id: item.id) }
-                    }) {
+                    Button(action: { viewModel.copyToClipboard(item) }) {
                         Image(systemName: "doc.on.doc")
                     }
                     .buttonStyle(.plain)
                     .help("复制")
-                    
-                    // Save to Inbox
-                    Button(action: {
-                        Task { await viewModel.saveToInbox(id: item.id) }
-                    }) {
+
+                    Button(action: { viewModel.sendToInbox(item) }) {
                         Image(systemName: "tray.and.arrow.down")
                     }
                     .buttonStyle(.plain)
-                    .help("保存到 Inbox")
-                    
-                    // Delete
-                    Button(action: {
-                        Task { await viewModel.deleteItem(id: item.id) }
-                    }) {
-                        Image(systemName: "trash")
+                    .help("发送到收集箱")
+
+                    Button(action: { viewModel.sendToWorkspace(item) }) {
+                        Image(systemName: "folder")
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.red)
+                    .help("发送到工作台")
+
+                    Button(action: { viewModel.deleteItem(item) }) {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.red)
                     .help("删除")
                 }
             }
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
         .onHover { hovering in
             isHovered = hovering
         }
-        .onTapGesture {
-            onSelect()
-        }
         .contextMenu {
-            Button {
-                Task { await viewModel.copyItem(id: item.id) }
-            } label: {
-                Label("复制", systemImage: "doc.on.doc")
+            Button("复制") {
+                viewModel.copyToClipboard(item)
             }
-            
-            Button {
-                Task { await viewModel.saveToInbox(id: item.id) }
-            } label: {
-                Label("保存到 Inbox", systemImage: "tray.and.arrow.down")
+
+            Button("发送到收集箱") {
+                viewModel.sendToInbox(item)
             }
-            
+
+            Button("发送到工作台") {
+                viewModel.sendToWorkspace(item)
+            }
+
             Divider()
-            
-            if item.isPinned {
-                Button {
-                    Task { await viewModel.unpinItem(id: item.id) }
-                } label: {
-                    Label("取消固定", systemImage: "pin.slash")
-                }
-            } else {
-                Button {
-                    Task { await viewModel.pinItem(id: item.id) }
-                } label: {
-                    Label("固定", systemImage: "pin")
-                }
-            }
-            
-            Divider()
-            
-            Button(role: .destructive) {
-                Task { await viewModel.deleteItem(id: item.id) }
-            } label: {
-                Label("删除", systemImage: "trash")
+
+            Button("删除") {
+                viewModel.deleteItem(item)
             }
         }
     }
-    
-    private var previewText: String {
-        let text = viewModel.previewText(for: item)
-        return text.isEmpty ? "(空内容)" : text
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
-// MARK: - Clipboard Item Detail View
+// MARK: - Clipboard Item Types
 
-struct ClipboardItemDetailView: View {
-    let item: ClipboardItem
-    @ObservedObject var viewModel: ClipboardViewModel
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(alignment: .leading, spacing: 16) {
-                // 头部信息
-                HStack {
-                    ZStack {
-                        Circle()
-                            .fill(viewModel.typeColor(for: item.type).opacity(0.2))
-                            .frame(width: 48, height: 48)
-                        
-                        Image(systemName: viewModel.typeIcon(for: item.type))
-                            .foregroundStyle(viewModel.typeColor(for: item.type))
-                            .font(.system(size: 20, weight: .medium))
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.type.displayName)
-                            .font(.headline)
-                        
-                        Text(viewModel.formatDate(item.createdAt))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    if item.isPinned {
-                        Image(systemName: "pin.fill")
-                            .foregroundStyle(.yellow)
-                            .font(.title2)
-                    }
+enum ClipboardItemType: String, CaseIterable {
+    case text
+    case screenshot
+    case link
+
+    var icon: String {
+        switch self {
+        case .text: return "text.quote"
+        case .screenshot: return "photo"
+        case .link: return "link"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .text: return .blue
+        case .screenshot: return .green
+        case .link: return .orange
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .text: return "文本"
+        case .screenshot: return "截图"
+        case .link: return "链接"
+        }
+    }
+}
+
+enum ClipboardFilter: CaseIterable {
+    case all
+    case text
+    case screenshot
+    case link
+    case document
+    case code
+
+    var displayName: String {
+        switch self {
+        case .all: return "全部"
+        case .text: return "文本"
+        case .screenshot: return "图片"
+        case .link: return "链接"
+        case .document: return "文档"
+        case .code: return "代码"
+        }
+    }
+
+    var icon: String? {
+        switch self {
+        case .all: return "square.stack.3d.up"
+        case .text: return "text.quote"
+        case .screenshot: return "photo"
+        case .link: return "link"
+        case .document: return "doc.text"
+        case .code: return "curlybraces"
+        }
+    }
+}
+
+// MARK: - Clipboard Item
+
+struct ClipboardItem: Identifiable {
+    let id = UUID()
+    let content: String
+    let preview: String
+    let type: ClipboardItemType
+    let timestamp: Date
+}
+
+// MARK: - View Model
+
+@MainActor
+class ClipboardViewModel: ObservableObject {
+    private let clipboardService: ClipboardServiceProtocol
+
+    @Published var items: [ClipboardItem] = []
+    @Published var searchQuery = ""
+    @Published var filter: ClipboardFilter = .all
+
+    // 统计属性
+    var todayCount: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return items.filter { calendar.startOfDay(for: $0.timestamp) >= today }.count
+    }
+
+    var storageUsed: Int64 {
+        // Mock 数据
+        return 2_400_000_000
+    }
+
+    var storageTotal: Int64 {
+        // Mock 数据
+        return 20_000_000_000
+    }
+
+    func count(of filter: ClipboardFilter) -> Int {
+        switch filter {
+        case .all: return items.count
+        case .text: return items.filter { $0.type == .text }.count
+        case .screenshot: return items.filter { $0.type == .screenshot }.count
+        case .link: return items.filter { $0.type == .link }.count
+        case .document: return 0
+        case .code: return 0
+        }
+    }
+
+    var filteredItems: [ClipboardItem] {
+        items.filter { item in
+            let matchesSearch = searchQuery.isEmpty ||
+                item.content.localizedCaseInsensitiveContains(searchQuery) ||
+                item.preview.localizedCaseInsensitiveContains(searchQuery)
+
+            let matchesFilter: Bool = {
+                switch filter {
+                case .all: return true
+                case .text: return item.type == .text
+                case .screenshot: return item.type == .screenshot
+                case .link: return item.type == .link
+                case .document: return false
+                case .code: return false
                 }
-                
-                Divider()
-                
-                // 内容区域
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        switch item.type {
-                        case .text, .url:
-                            Text(item.textContent ?? item.content ?? "")
-                                .font(.system(size: 14, design: .monospaced))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                        case .image:
-                            if let assetId = item.content,
-                               let asset = try? awaitAsset(id: assetId),
-                               let image = loadImage(asset: asset) {
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .scaledToFit
-                                    .frame(maxHeight: 300)
-                            } else {
-                                Text("无法加载图片")
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                        case .file:
-                            if let paths = item.content?.split(separator: "\n") {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(Array(paths), id: \.self) { path in
-                                        HStack {
-                                            Image(systemName: "doc")
-                                            Text(String(path))
-                                                .lineLimit(1)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            }()
+
+            return matchesSearch && matchesFilter
+        }
+    }
+
+    init(clipboardService: ClipboardServiceProtocol? = nil) {
+        self.clipboardService = clipboardService ?? ServiceContainer.shared.clipboardService
+        loadItems()
+    }
+
+    private func loadItems() {
+        Task {
+            do {
+                let serviceItems = try await clipboardService.listItems(filter: nil)
+                items = serviceItems.map { item in
+                    ClipboardItem(
+                        content: item.textContent ?? item.content ?? "",
+                        preview: String(item.textContent?.prefix(100) ?? item.content?.prefix(100) ?? ""),
+                        type: mapContentType(item.type),
+                        timestamp: item.createdAt
+                    )
                 }
-                
-                Spacer()
-                
-                // 操作按钮
-                HStack(spacing: 12) {
-                    Button("关闭") {
-                        dismiss()
-                    }
-                    .keyboardShortcut(.escape, modifiers: [])
-                    
-                    Spacer()
-                    
-                    Button {
-                        Task { await viewModel.copyItem(id: item.id) }
-                    } label: {
-                        Label("复制", systemImage: "doc.on.doc")
-                    }
-                    
-                    Button {
-                        Task { await viewModel.saveToInbox(id: item.id) }
-                    } label: {
-                        Label("保存到 Inbox", systemImage: "tray.and.arrow.down")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .padding()
-            .frame(minWidth: 400, minHeight: 300)
-            .navigationTitle("剪贴板详情")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { dismiss() }
-                }
+            } catch {
+                print("加载剪贴板数据失败: \(error.localizedDescription)")
             }
         }
     }
-    
-    private func awaitAsset(id: String) -> AssetFile? {
-        // 简化处理，实际应该使用 async/await
-        nil
-    }
-    
-    private func loadImage(asset: AssetFile) -> NSImage? {
-        NSImage(contentsOfFile: asset.filePath)
-    }
-}
 
-// MARK: - Helper Views
-
-struct StatBadge: View {
-    let icon: String
-    let count: Int
-    let color: Color
-    let label: String
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .font(.caption)
-            
-            Text("\(count)")
-                .font(.caption)
-                .fontWeight(.medium)
+    private func mapContentType(_ type: ClipboardContentType) -> ClipboardItemType {
+        switch type {
+        case .text: return .text
+        case .image: return .screenshot
+        case .url: return .link
+        case .file: return .text
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(color.opacity(0.1))
-        .cornerRadius(4)
     }
-}
 
-struct FilterChip: View {
-    let title: String
-    var icon: String? = nil
-    let isSelected: Bool
-    var color: Color = .primary
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.caption)
-                }
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(isSelected ? .medium : .regular)
+    func copyToClipboard(_ item: ClipboardItem) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(item.content, forType: .string)
+    }
+
+    func sendToInbox(_ item: ClipboardItem) {
+        Task {
+            do {
+                _ = try await clipboardService.saveToInbox(id: item.id.uuidString)
+            } catch {
+                print("发送到收集箱失败: \(error.localizedDescription)")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(isSelected ? color.opacity(0.2) : Color.secondary.opacity(0.1))
-            .foregroundStyle(isSelected ? color : .primary)
-            .cornerRadius(16)
         }
-        .buttonStyle(.plain)
+    }
+
+    func sendToWorkspace(_ item: ClipboardItem) {
+        // 发送到工作台 - 保留占位
+    }
+
+    func deleteItem(_ item: ClipboardItem) {
+        Task {
+            do {
+                try await clipboardService.deleteItem(id: item.id.uuidString)
+                loadItems()
+            } catch {
+                print("删除失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func clearAll() {
+        Task {
+            do {
+                try await clipboardService.clearHistory()
+                loadItems()
+            } catch {
+                print("清空历史失败: \(error.localizedDescription)")
+            }
+        }
     }
 }
-
-// MARK: - Extensions
-
-extension ClipboardContentType: Identifiable {
-    public var id: String { rawValue }
-}
-
-extension ClipboardItem: Identifiable {}

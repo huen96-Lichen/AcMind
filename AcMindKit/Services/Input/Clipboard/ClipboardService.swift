@@ -216,18 +216,22 @@ public final class ClipboardService: ClipboardServiceProtocol {
     // MARK: - Persistence
     
     private func loadHistory() async {
-        // 从数据库加载历史记录
-        // 这里简化处理，实际应该查询 clipboard_items 表
-        // items = try? await storage.listClipboardItems()
+        do {
+            items = try await storage.listClipboardItems(limit: maxHistoryItems)
+            // 重建去重缓存
+            recentHashes = items.prefix(maxRecentHashes).map { hashForItem($0) }
+        } catch {
+            print("加载剪贴板历史失败: \(error)")
+            items = []
+        }
     }
     
     private func saveItemToDatabase(_ item: ClipboardItem) async throws {
-        // 保存到数据库
-        // try await storage.insertClipboardItem(item)
+        try await storage.insertClipboardItem(item)
     }
     
     private func deleteItemFromDatabase(id: String) async throws {
-        // try await storage.deleteClipboardItem(id: id)
+        try await storage.deleteClipboardItem(id: id)
     }
     
     // MARK: - Query
@@ -275,7 +279,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
         items.insert(item, at: 0)
         
         // 持久化
-        try? await saveItemToDatabase(items[0])
+        try? await storage.updateClipboardItem(items[0])
     }
     
     public func unpinItem(id: String) async throws {
@@ -291,7 +295,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
         items.insert(item, at: pinnedCount)
         
         // 持久化
-        try? await saveItemToDatabase(items[pinnedCount])
+        try? await storage.updateClipboardItem(items[pinnedCount])
     }
     
     // MARK: - Delete

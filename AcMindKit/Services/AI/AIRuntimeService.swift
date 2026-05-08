@@ -16,10 +16,12 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     private var configs: [ProviderConfig] = []
     private var defaultProviderId: String?
     private let taskQueue: TaskQueue
+    private let storage: StorageServiceProtocol
     
     // MARK: - Initialization
     
-    public init() {
+    public init(storage: StorageServiceProtocol? = nil) {
+        self.storage = storage ?? StorageService()
         self.taskQueue = TaskQueue(maxConcurrent: 2)
     }
     
@@ -183,8 +185,75 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     }
     
     public func runDistillation(sourceItemIds: [String]) async throws -> DistilledNote {
-        // TODO: 从数据库加载多个 SourceItem 并合并
-        throw AIError.notImplemented("批量蒸馏尚未实现")
+        guard !sourceItemIds.isEmpty else {
+            throw AIError.invalidInput("sourceItemIds 不能为空")
+        }
+        
+        // 从数据库加载所有 SourceItem
+        var sourceItems: [SourceItem] = []
+        var failedIds: [String] = []
+        
+        for id in sourceItemIds {
+            do {
+                if let item = try await storage.getSourceItem(id: id) {
+                    sourceItems.append(item)
+                } else {
+                    failedIds.append(id)
+                }
+            } catch {
+                failedIds.append(id)
+            }
+        }
+        
+        guard !sourceItems.isEmpty else {
+            throw AIError.invalidInput("所有 SourceItem 都未找到: \(failedIds.joined(separator: ", "))")
+        }
+        
+        // 合并文本内容
+        let combinedText = sourceItems.enumerated().map { index, item in
+            let content = item.previewText ?? item.transcript ?? item.ocrText ?? ""
+            return "【内容 \(index + 1)】\n\(content)"
+        }.joined(separator: "\n\n---\n\n")
+        
+        // 创建合并后的虚拟 SourceItem
+        let mergedItem = SourceItem(
+            type: .text,
+            source: .manual,
+            status: .captured,
+            title: "批量蒸馏 (\(sourceItems.count) 条)",
+            previewText: combinedText,
+            metadata: [
+                "sourceItemIds": sourceItemIds.joined(separator: ","),
+                "failedIds": failedIds.joined(separator: ",")
+            ]
+        )
+        
+        // 调用单条蒸馏
+        var note = try await runDistillation(sourceItem: mergedItem)
+        
+        // 更新关联的 sourceItemId 为第一个成功的
+        if let first = sourceItems.first {
+            note = DistilledNote(
+                id: note.id,
+                sourceItemId: first.id,
+                title: note.title,
+                summary: note.summary,
+                category: note.category,
+                tags: note.tags,
+                documentType: note.documentType,
+                contentMarkdown: note.contentMarkdown,
+                valueScore: note.valueScore,
+                cleanSuggestion: note.cleanSuggestion,
+                confidence: note.confidence,
+                reviewStatus: note.reviewStatus,
+                reviewedAt: note.reviewedAt,
+                acceptedKnowledgeCardId: note.acceptedKnowledgeCardId,
+                createdAt: note.createdAt,
+                updatedAt: note.updatedAt
+            )
+        }
+        
+        return note
     }
     
     private func buildDistillationMessages(sourceItem: SourceItem) -> [ChatMessage] {
@@ -290,13 +359,5 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             )
             providers[config.id] = provider
         }
-    }
-}
-
-// MARK: - AI Error Extension
-
-extension AIError {
-    public static func notImplemented(_ message: String) -> AIError {
-        return .requestFailed("功能未实现: \(message)")
     }
 }

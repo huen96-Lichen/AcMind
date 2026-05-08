@@ -7,9 +7,10 @@ import AVFoundation
 /// 职责：
 /// 1. 录音控制（开始/停止）
 /// 2. 录音文件保存到 AssetStore
-/// 3. ASR 转写（支持本地/云端）
-/// 4. 润色处理
-/// 5. 状态管理和回调
+/// 3. ASR 转写（支持本地/云端，通过 STTRouter）
+/// 4. 润色处理（通过 PolishService）
+/// 5. 文本插入（通过 TextInjector）
+/// 6. 状态管理和回调
 public actor VoiceService: VoiceServiceProtocol {
     
     // MARK: - Dependencies
@@ -17,6 +18,12 @@ public actor VoiceService: VoiceServiceProtocol {
     private let storage: StorageServiceProtocol
     private let assetStore: AssetStore
     private let aiRuntime: AIRuntimeProtocol?
+    private nonisolated let permissionManager: PermissionManager?
+    
+    // 新增模块
+    private var sttRouter: STTRouter?
+    private var textInjector: TextInjector?
+    private var polishService: PolishService?
     
     // MARK: - State
     
@@ -28,8 +35,9 @@ public actor VoiceService: VoiceServiceProtocol {
     
     // MARK: - ASR Configuration
     
-    private var asrProvider: ASRProvider = .whisperLocal
+    private var sttProvider: STTProvider = .appleSpeech
     
+    // Legacy: 保留旧枚举以兼容
     public enum ASRProvider: String, Sendable, CaseIterable {
         case whisperLocal = "whisper_local"
         case whisperAPI = "whisper_api"
@@ -42,6 +50,15 @@ public actor VoiceService: VoiceServiceProtocol {
             case .system: return "系统听写"
             }
         }
+        
+        /// 转换到新的 STTProvider
+        public var toSTTProvider: STTProvider {
+            switch self {
+            case .whisperLocal: return .senseVoice
+            case .whisperAPI: return .openAI
+            case .system: return .appleSpeech
+            }
+        }
     }
     
     // MARK: - Initialization
@@ -49,11 +66,27 @@ public actor VoiceService: VoiceServiceProtocol {
     public init(
         storage: StorageServiceProtocol? = nil,
         assetStore: AssetStore? = nil,
-        aiRuntime: AIRuntimeProtocol? = nil
+        aiRuntime: AIRuntimeProtocol? = nil,
+        permissionManager: PermissionManager? = nil,
+        sttRouter: STTRouter? = nil,
+        textInjector: TextInjector? = nil
     ) {
         self.storage = storage ?? StorageService()
         self.assetStore = assetStore ?? AssetStore()
         self.aiRuntime = aiRuntime ?? AIRuntimeService()
+        self.permissionManager = permissionManager
+        self.sttRouter = sttRouter
+        self.textInjector = textInjector ?? AXTextInjector()
+        
+        // 初始化润色服务
+        if let aiRuntime = self.aiRuntime {
+            self.polishService = PolishService(aiRuntime: aiRuntime)
+        }
+        
+        // 初始化 STTRouter（如果未提供）
+        if self.sttRouter == nil {
+            self.sttRouter = STTRouter(provider: .appleSpeech)
+        }
     }
     
     // MARK: - Status Handler
@@ -78,6 +111,9 @@ public actor VoiceService: VoiceServiceProtocol {
         guard permissionGranted else {
             throw VoiceError.permissionDenied
         }
+        
+        // 配置音频会话（macOS 版本为空实现）
+        configureAudioSession()
         
         // 停止之前的录音
         if recorder?.isRecording == true {
@@ -136,7 +172,7 @@ public actor VoiceService: VoiceServiceProtocol {
             assetFileIds: [assetFile.id],
             metadata: [
                 "duration": String(duration),
-                "asrProvider": asrProvider.rawValue
+                "asrProvider": sttProvider.rawValue
             ]
         )
         
@@ -167,14 +203,36 @@ public actor VoiceService: VoiceServiceProtocol {
     // MARK: - Transcription
     
     public func transcribe(audioURL: URL) async throws -> String {
-        switch asrProvider {
-        case .whisperLocal:
-            return try await transcribeWithLocalWhisper(audioURL: audioURL)
-        case .whisperAPI:
-            return try await transcribeWithWhisperAPI(audioURL: audioURL)
-        case .system:
-            return try await transcribeWithSystem(audioURL: audioURL)
+        // 优先使用新的 STTRouter
+        if let router = sttRouter {
+            let audioFile = AudioFile(url: audioURL)
+            return try await router.transcribe(audioFile: audioFile)
         }
+        
+        // Fallback 到旧实现
+        switch sttProvider {
+        case .openAI:
+            return try await transcribeWithWhisperAPI(audioURL: audioURL)
+        case .appleSpeech:
+            return try await transcribeWithAppleSpeech(audioURL: audioURL)
+        default:
+            return try await transcribeWithWhisperAPI(audioURL: audioURL)
+        }
+    }
+    
+    /// 流式转写
+    public func transcribeStream(
+        audioURL: URL,
+        onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
+    ) async throws -> String {
+        guard let router = sttRouter else {
+            let text = try await transcribe(audioURL: audioURL)
+            await onUpdate(TranscriptionSnapshot(text: text, isFinal: true))
+            return text
+        }
+        
+        let audioFile = AudioFile(url: audioURL)
+        return try await router.transcribeStream(audioFile: audioFile, onUpdate: onUpdate)
     }
     
     private func performTranscription(sourceItem: SourceItem, assetFile: AssetFile) async {
@@ -193,8 +251,8 @@ public actor VoiceService: VoiceServiceProtocol {
             // 应用润色（如果开启）
             if let settings = try? await getVoiceSettings(),
                settings.autoPolish,
-               settings.polishMode != .none {
-                let polished = try await polishTranscript(transcript, mode: settings.polishMode)
+               settings.voicePolishMode != .none {
+                let polished = try await polishTranscript(transcript, mode: settings.voicePolishMode)
                 updatedItem.polishedTranscript = polished
                 try await storage.updateSourceItem(updatedItem)
             }
@@ -205,6 +263,13 @@ public actor VoiceService: VoiceServiceProtocol {
             updateStatus(.error)
             print("转写失败: \(error)")
         }
+    }
+    
+    /// 使用 Apple Speech 转写
+    private func transcribeWithAppleSpeech(audioURL: URL) async throws -> String {
+        let transcriber = AppleSpeechTranscriber()
+        let audioFile = AudioFile(url: audioURL)
+        return try await transcriber.transcribe(audioFile: audioFile)
     }
     
     private func transcribeWithLocalWhisper(audioURL: URL) async throws -> String {
@@ -313,26 +378,39 @@ public actor VoiceService: VoiceServiceProtocol {
     }
     
     private func transcribeWithSystem(audioURL: URL) async throws -> String {
-        // 使用 macOS 系统听写
-        // 需要实现 SFSpeechRecognizer 调用
-        throw VoiceError.asrNotAvailable("系统听写尚未实现")
+        // 使用 Apple SFSpeechRecognizer 系统语音识别
+        let transcriber = AppleSpeechTranscriber()
+        let audioFile = AudioFile(url: audioURL)
+        return try await transcriber.transcribe(audioFile: audioFile)
     }
     
     // MARK: - Polish
     
-    public func polishTranscript(_ text: String, mode: PolishMode) async throws -> String {
+    public func polishTranscript(_ text: String, mode: VoicePolishMode) async throws -> String {
         guard mode != .none else { return text }
         
+        // 优先使用新的 PolishService
+        if let service = polishService {
+            return try await service.polish(text: text, mode: mode)
+        }
+        
+        // Fallback 到旧实现
         guard let aiRuntime = aiRuntime else {
             throw VoiceError.polishFailed("AI Runtime 未初始化")
         }
         
         let prompt: String
         switch mode {
-        case .standard:
-            prompt = "请润色以下文本，使其更通顺、专业：\n\n\(text)"
-        case .aggressive:
-            prompt = "请将以下文本进行更强力的润色与重写，使其表达更凝练、专业：\n\n\(text)"
+        case .light:
+            prompt = "请润色以下文本，使其更通顺：\n\n\(text)"
+        case .structured:
+            prompt = "请将以下文本整理为结构化格式：\n\n\(text)"
+        case .formal:
+            prompt = "请将以下文本改写为正式表达：\n\n\(text)"
+        case .raw:
+            prompt = "请整理以下文本，仅补全标点：\n\n\(text)"
+        case .aiPrompt:
+            prompt = "请将以下文本整理为结构化 AI prompt 格式：\n\n\(text)"
         case .none:
             return text
         }
@@ -344,6 +422,21 @@ public actor VoiceService: VoiceServiceProtocol {
         
         let response = try await aiRuntime.chat(messages: messages)
         return response.content
+    }
+    
+    /// 润色并插入到光标位置
+    public func polishAndInsert(
+        text: String,
+        mode: VoicePolishMode,
+        providerId: String? = nil,
+        model: String? = nil
+    ) async throws {
+        let polished = try await polishTranscript(text, mode: mode)
+        
+        // 插入到光标位置
+        if let injector = textInjector {
+            try injector.insert(text: polished)
+        }
     }
     
     // MARK: - Status
@@ -360,20 +453,54 @@ public actor VoiceService: VoiceServiceProtocol {
     // MARK: - Configuration
     
     public func setASRProvider(_ provider: ASRProvider) {
-        asrProvider = provider
+        sttProvider = provider.toSTTProvider
+        sttRouter?.setProvider(provider.toSTTProvider)
     }
     
     public func getASRProvider() -> ASRProvider {
-        asrProvider
+        switch sttProvider {
+        case .senseVoice, .whisperKit, .qwen3ASR, .funASR:
+            return .whisperLocal
+        case .openAI, .groq:
+            return .whisperAPI
+        case .appleSpeech:
+            return .system
+        default:
+            return .system
+        }
+    }
+    
+    /// 设置 STT Provider
+    public func setSTTProvider(_ provider: STTProvider) {
+        sttProvider = provider
+        sttRouter?.setProvider(provider)
+    }
+    
+    /// 获取 STT Provider
+    public func getSTTProvider() -> STTProvider {
+        sttProvider
     }
     
     // MARK: - Helpers
     
+    private func configureAudioSession() {
+        // macOS 不需要配置音频会话，iOS 才需要
+        // 这里可以保留为空或添加 macOS 特定的音频配置
+    }
+    
     private func requestMicrophonePermission() async -> Bool {
-        await withCheckedContinuation { continuation in
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                continuation.resume(returning: granted)
-            }
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        
+        switch status {
+        case .authorized:
+            return true
+        case .notDetermined:
+            let granted = await AVCaptureDevice.requestAccess(for: .audio)
+            return granted
+        case .denied, .restricted:
+            return false
+        @unknown default:
+            return false
         }
     }
     

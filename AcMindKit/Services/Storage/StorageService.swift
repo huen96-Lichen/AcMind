@@ -109,6 +109,42 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.updateKnowledgeCard(card)
     }
 
+    public func listKnowledgeCards(status: KnowledgeCardStatus?) async throws -> [KnowledgeCard] {
+        try await db.listKnowledgeCards(status: status)
+    }
+
+    // MARK: - Knowledge Edge Operations
+
+    public func insertKnowledgeEdge(_ edge: KnowledgeEdge) async throws {
+        try await db.insertKnowledgeEdge(edge)
+    }
+
+    public func listKnowledgeEdges(fromCardId: String?, toCardId: String?) async throws -> [KnowledgeEdge] {
+        try await db.listKnowledgeEdges(fromCardId: fromCardId, toCardId: toCardId)
+    }
+
+    public func deleteKnowledgeEdge(id: String) async throws {
+        try await db.deleteKnowledgeEdge(id: id)
+    }
+
+    // MARK: - Clipboard Item Operations
+
+    public func insertClipboardItem(_ item: ClipboardItem) async throws {
+        try await db.insertClipboardItem(item)
+    }
+
+    public func listClipboardItems(limit: Int?) async throws -> [ClipboardItem] {
+        try await db.listClipboardItems(limit: limit)
+    }
+
+    public func updateClipboardItem(_ item: ClipboardItem) async throws {
+        try await db.updateClipboardItem(item)
+    }
+
+    public func deleteClipboardItem(id: String) async throws {
+        try await db.deleteClipboardItem(id: id)
+    }
+
     // MARK: - Settings Operations
     
     public func getSetting(key: String) async throws -> String? {

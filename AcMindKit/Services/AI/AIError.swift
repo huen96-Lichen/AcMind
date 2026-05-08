@@ -14,6 +14,8 @@ public enum AIError: Error, LocalizedError {
     case modelNotFound(String)
     case contextTooLong
     case contentFiltered(String)
+    case invalidInput(String)
+    case notImplemented(String)
     
     public var errorDescription: String? {
         switch self {
@@ -37,6 +39,10 @@ public enum AIError: Error, LocalizedError {
             return "上下文长度超限"
         case .contentFiltered(let reason):
             return "内容被过滤: \(reason)"
+        case .invalidInput(let message):
+            return "输入无效: \(message)"
+        case .notImplemented(let message):
+            return "功能未实现: \(message)"
         }
     }
     
@@ -62,6 +68,10 @@ public enum AIError: Error, LocalizedError {
             return "请减少输入内容长度"
         case .contentFiltered:
             return "请修改输入内容"
+        case .invalidInput:
+            return "请检查输入参数"
+        case .notImplemented:
+            return "该功能正在开发中"
         }
     }
 }

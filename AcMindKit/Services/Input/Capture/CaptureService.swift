@@ -12,23 +12,31 @@ import ScreenCaptureKit
 /// 3. 网页采集
 /// 4. 手动文本输入
 /// 5. 剪贴板图片/文本
-/// 6. 语音输入（占位）
+/// 6. 语音输入
 /// 7. OCR 文本提取
-public final class CaptureService: CaptureServiceProtocol {
+public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     
     private let storage: StorageServiceProtocol
     private let assetStore: AssetStore
+    private var voiceService: (any VoiceServiceProtocol)?
     
     // MARK: - Initialization
     
     public init(
         storage: StorageServiceProtocol? = nil,
-        assetStore: AssetStore? = nil
+        assetStore: AssetStore? = nil,
+        voiceService: (any VoiceServiceProtocol)? = nil
     ) {
         self.storage = storage ?? StorageService()
         self.assetStore = assetStore ?? AssetStore()
+        self.voiceService = voiceService
+    }
+    
+    /// 设置语音服务（延迟注入）
+    public func setVoiceService(_ service: any VoiceServiceProtocol) {
+        self.voiceService = service
     }
     
     // MARK: - Screenshot Capture
@@ -99,22 +107,30 @@ public final class CaptureService: CaptureServiceProtocol {
     }
     
     private func captureArea() async throws -> NSImage {
-        // 使用系统截图工具的 area 模式
-        // 实际实现需要调用 screencapture 命令或自定义选择框
         return try await MainActor.run {
-            // 临时实现：使用全屏截图
-            guard let displayID = CGMainDisplayID() as CGDirectDisplayID? else {
-                throw CaptureError.captureFailed("无法获取主显示器")
+            // 使用系统 screencapture 命令进行区域选择截图
+            let tempFile = FileManager.default.temporaryDirectory
+                .appendingPathComponent("screenshot_area_\(Date().timeIntervalSince1970).png")
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            process.arguments = ["-i", "-r", tempFile.path]
+            
+            try process.run()
+            process.waitUntilExit()
+            
+            guard process.terminationStatus == 0, FileManager.default.fileExists(atPath: tempFile.path) else {
+                throw CaptureError.captureFailed("区域选择被取消或失败")
             }
             
-            guard let cgImage = CGDisplayCreateImage(displayID) else {
-                throw CaptureError.captureFailed("无法创建屏幕图像")
+            guard let image = NSImage(contentsOf: tempFile) else {
+                throw CaptureError.captureFailed("无法读取截图文件")
             }
             
-            return NSImage(
-                cgImage: cgImage,
-                size: NSSize(width: cgImage.width, height: cgImage.height)
-            )
+            // 清理临时文件
+            try? FileManager.default.removeItem(at: tempFile)
+            
+            return image
         }
     }
     
@@ -228,21 +244,7 @@ public final class CaptureService: CaptureServiceProtocol {
     
     public func captureFromFile(url: URL) async throws -> CaptureResult {
         let assetFile = try await assetStore.copyFile(from: url, preserveName: true)
-        
-        let ext = url.pathExtension.lowercased()
-        let type: SourceType
-        switch ext {
-        case "png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff":
-            type = .image
-        case "pdf":
-            type = .pdf
-        case "docx", "doc":
-            type = .docx
-        case "txt", "md", "markdown":
-            type = .text
-        default:
-            type = .unknownFile
-        }
+        let type = SourceType.inferred(fromFileURL: url)
         
         let sourceItem = SourceItem(
             type: type,
@@ -369,11 +371,106 @@ public final class CaptureService: CaptureServiceProtocol {
         return CaptureResult(sourceItem: sourceItem, assetFiles: [assetFile])
     }
     
-    // MARK: - Voice Capture (Placeholder)
+    // MARK: - Voice Capture
+    
+    /// 开始语音录制
+    /// - Returns: 录音会话 ID（用于后续停止录音）
+    public func startVoiceRecording() async throws -> String {
+        guard let voiceService = voiceService else {
+            throw CaptureError.serviceUnavailable("语音服务未初始化，请先在设置中配置 VoiceService")
+        }
+        
+        try await voiceService.startRecording()
+        return "voice_recording_\(Date().timeIntervalSince1970)"
+    }
+    
+    /// 停止语音录制并获取结果
+    /// - Parameter sessionId: 录音会话 ID
+    /// - Returns: 采集结果
+    public func stopVoiceRecording(sessionId: String) async throws -> CaptureResult {
+        guard let voiceService = voiceService else {
+            throw CaptureError.serviceUnavailable("语音服务未初始化")
+        }
+        
+        // 停止录音并获取 SourceItem ID
+        let sourceItemId = try await voiceService.stopRecording()
+        
+        // 获取完整的 SourceItem
+        guard let sourceItem = try await storage.getSourceItem(id: sourceItemId) else {
+            throw CaptureError.captureFailed("语音记录保存失败")
+        }
+        
+        // 获取关联的 AssetFile
+        var assetFiles: [AssetFile] = []
+        if let assetId = sourceItem.assetFileIds.first {
+            if let asset = try? await assetStore.getAsset(id: assetId) {
+                assetFiles.append(asset)
+            }
+        }
+        
+        return CaptureResult(sourceItem: sourceItem, assetFiles: assetFiles)
+    }
     
     public func captureFromVoice() async throws -> CaptureResult {
-        // TODO: 实现语音输入
-        throw CaptureError.notImplemented("语音输入尚未实现")
+        guard let voiceService = voiceService else {
+            throw CaptureError.serviceUnavailable("语音服务未初始化，请先在设置中配置 VoiceService")
+        }
+        
+        // 开始录音
+        try await voiceService.startRecording()
+        
+        // 等待录音完成（这里简化处理，实际应该通过 UI 触发停止）
+        // 调用者应该先调用 startRecording，然后稍后调用 stopRecording
+        // 这里我们提供一个便捷方法：录音 5 秒后自动停止
+        try await Task.sleep(nanoseconds: 5_000_000_000)
+        
+        // 停止录音并获取 SourceItem ID
+        let sourceItemId = try await voiceService.stopRecording()
+        
+        // 获取完整的 SourceItem
+        guard let sourceItem = try await storage.getSourceItem(id: sourceItemId) else {
+            throw CaptureError.captureFailed("语音记录保存失败")
+        }
+        
+        // 获取关联的 AssetFile
+        var assetFiles: [AssetFile] = []
+        if let assetId = sourceItem.assetFileIds.first {
+            if let asset = try? await assetStore.getAsset(id: assetId) {
+                assetFiles.append(asset)
+            }
+        }
+        
+        return CaptureResult(sourceItem: sourceItem, assetFiles: assetFiles)
+    }
+    
+    /// 从现有音频文件进行语音识别采集
+    /// - Parameter audioURL: 音频文件 URL
+    /// - Returns: 采集结果
+    public func captureFromVoiceFile(audioURL: URL) async throws -> CaptureResult {
+        guard let voiceService = voiceService else {
+            throw CaptureError.serviceUnavailable("语音服务未初始化，请先在设置中配置 VoiceService")
+        }
+        
+        // 转写音频
+        let transcript = try await voiceService.transcribe(audioURL: audioURL)
+        
+        // 保存音频文件到 AssetStore
+        let assetFile = try await assetStore.copyFile(from: audioURL, preserveName: false)
+        
+        // 创建 SourceItem
+        let sourceItem = SourceItem(
+            type: .audio,
+            source: .voice,
+            status: .parsed, // 已经有转写结果
+            title: "语音记录 \(formatDate())",
+            previewText: transcript.prefix(200).description,
+            transcript: transcript,
+            assetFileIds: [assetFile.id]
+        )
+        
+        try await storage.insertSourceItem(sourceItem)
+        
+        return CaptureResult(sourceItem: sourceItem, assetFiles: [assetFile])
     }
     
     // MARK: - OCR
@@ -408,10 +505,45 @@ public final class CaptureService: CaptureServiceProtocol {
     
     // MARK: - Permission
     
+    /// 请求屏幕录制权限
+    /// 先尝试系统 API 请求，失败则回退到仅检查
     private func requestScreenCapturePermission() async -> Bool {
-        await MainActor.run {
-            CGPreflightScreenCaptureAccess()
+        print("[AcMind.Capture] requesting screen capture permission")
+        
+        // 先检查当前权限状态
+        let preflight = CGPreflightScreenCaptureAccess()
+        print("[AcMind.Capture] preflight result: \(preflight)")
+        if preflight {
+            return true
         }
+        
+        // 尝试触发系统权限提示
+        let requested = CGRequestScreenCaptureAccess()
+        print("[AcMind.Capture] request result: \(requested)")
+        if requested {
+            return true
+        }
+        
+        // 权限被拒绝，显示提示对话框
+        await MainActor.run {
+            let alert = NSAlert()
+            alert.messageText = "需要屏幕录制权限"
+            alert.informativeText = "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcMind 权限"
+            alert.addButton(withTitle: "打开设置")
+            alert.addButton(withTitle: "取消")
+            
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        }
+        
+        // 再次检查
+        let hasAccess = CGPreflightScreenCaptureAccess()
+        print("[AcMind.Capture] final check result: \(hasAccess)")
+        return hasAccess
     }
     
     // MARK: - Helpers
@@ -430,7 +562,7 @@ public enum CaptureError: Error, LocalizedError {
     case captureFailed(String)
     case downloadFailed(String)
     case ocrFailed(String)
-    case notImplemented(String)
+    case serviceUnavailable(String)
     case invalidURL
     case fileNotFound
     
@@ -444,8 +576,8 @@ public enum CaptureError: Error, LocalizedError {
             return "下载失败: \(message)"
         case .ocrFailed(let message):
             return "OCR 失败: \(message)"
-        case .notImplemented(let feature):
-            return "\(feature)"
+        case .serviceUnavailable(let feature):
+            return feature
         case .invalidURL:
             return "无效的 URL"
         case .fileNotFound:
@@ -463,8 +595,8 @@ public enum CaptureError: Error, LocalizedError {
             return "请检查网络连接和 URL 是否正确"
         case .ocrFailed:
             return "请确保图片包含可识别的文本"
-        case .notImplemented:
-            return "该功能将在后续版本推出"
+        case .serviceUnavailable:
+            return "请在设置中配置语音服务后再使用此功能"
         default:
             return nil
         }

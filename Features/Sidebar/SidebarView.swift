@@ -97,7 +97,7 @@ struct SidebarItemBadge: View {
         if count > 0 {
             Text("\(count)")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.red)

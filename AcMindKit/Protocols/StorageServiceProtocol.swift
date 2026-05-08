@@ -27,10 +27,23 @@ public protocol StorageServiceProtocol: Sendable {
 
     // Export records
     func insertExportRecord(_ record: ExportRecord) async throws
+    func listExportRecords() async throws -> [ExportRecord]
 
     // Knowledge cards
     func insertKnowledgeCard(_ card: KnowledgeCard) async throws
     func updateKnowledgeCard(_ card: KnowledgeCard) async throws
+    func listKnowledgeCards(status: KnowledgeCardStatus?) async throws -> [KnowledgeCard]
+
+    // Knowledge edges
+    func insertKnowledgeEdge(_ edge: KnowledgeEdge) async throws
+    func listKnowledgeEdges(fromCardId: String?, toCardId: String?) async throws -> [KnowledgeEdge]
+    func deleteKnowledgeEdge(id: String) async throws
+
+    // Clipboard items
+    func insertClipboardItem(_ item: ClipboardItem) async throws
+    func listClipboardItems(limit: Int?) async throws -> [ClipboardItem]
+    func updateClipboardItem(_ item: ClipboardItem) async throws
+    func deleteClipboardItem(id: String) async throws
 
     // Settings
     func getSetting(key: String) async throws -> String?
@@ -114,6 +127,7 @@ public protocol AIRuntimeProtocol: Sendable {
     func cancelJob(id: String) async throws
     func runDistillation(sourceItem: SourceItem) async throws -> DistilledNote
     func chat(messages: [ChatMessage]) async throws -> ChatResponse
+    func chat(messages: [ChatMessage], providerId: String, model: String?) async throws -> ChatResponse
     func chatStream(messages: [ChatMessage]) -> AsyncThrowingStream<ChatResponse, Error>
 }
 
@@ -134,7 +148,13 @@ public protocol KnowledgeServiceProtocol: Sendable {
     func searchCards(query: String) async throws -> [KnowledgeCard]
     func searchVault(query: String) async throws -> [VaultSearchResult]
     func createCard(from note: DistilledNote) async throws -> KnowledgeCard
+    func updateCard(_ card: KnowledgeCard) async throws
     func deleteCard(id: String) async throws
+
+    // Knowledge Edges
+    func addEdge(_ edge: KnowledgeEdge) async throws
+    func listEdges(fromCardId: String?, toCardId: String?) async throws -> [KnowledgeEdge]
+    func deleteEdge(id: String) async throws
 }
 
 public struct KnowledgeCardFilter: Sendable, Equatable {
@@ -147,4 +167,17 @@ public struct KnowledgeCardFilter: Sendable, Equatable {
         self.category = category
         self.tags = tags
     }
+}
+
+// MARK: - AssetStoreProtocol
+
+public protocol AssetStoreProtocol: Sendable {
+    func setup() async throws
+    func getAsset(id: String) async throws -> AssetFile?
+    func getAssetsForSourceItem(sourceItemId: String) async throws -> [AssetFile]
+    func listAssets(kind: AssetFileKind?) async throws -> [AssetFile]
+    func deleteAsset(id: String) async throws
+    func deleteAssetsForSourceItem(sourceItemId: String) async throws
+    func assetExists(asset: AssetFile) -> Bool
+    func getTotalSize() async throws -> Int64
 }

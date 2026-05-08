@@ -13,6 +13,8 @@ public actor HotkeyManager {
     private var registeredHotkeys: [KeyboardShortcut: HotkeyRegistration] = [:]
     private var eventHandler: EventHandlerRef?
     
+    public init() {}
+    
     // MARK: - Setup
     
     public func setup() async throws {
@@ -24,7 +26,7 @@ public actor HotkeyManager {
     
     public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {
         // 检查冲突
-        if let existing = registeredHotkeys[shortcut] {
+        if registeredHotkeys[shortcut] != nil {
             throw HotkeyError.alreadyRegistered(shortcut)
         }
         
@@ -267,11 +269,6 @@ public enum HotkeyError: Error, LocalizedError {
 // MARK: - KeyboardShortcut Extension
 
 extension KeyboardShortcut {
-    public var displayString: String {
-        let modString = modifiers.map(\.displayName).joined()
-        return "\(modString)\(key.uppercased())"
-    }
-    
     public var carbonKeyCode: UInt32 {
         // 返回 Carbon 键码
         let keyMap: [String: UInt32] = [
