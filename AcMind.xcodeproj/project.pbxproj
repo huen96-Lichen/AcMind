@@ -38,6 +38,8 @@
 		A100000000000000000002F5 /* Features/Native/Inbox/Components/InboxStatusTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002E8 /* Features/Native/Inbox/Components/InboxStatusTag.swift */; };
 		A100000000000000000002F6 /* Features/Native/Inbox/Components/InboxWaveformPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002EA /* Features/Native/Inbox/Components/InboxWaveformPreview.swift */; };
 		A1000000000000000000006F /* Features/Native/Schedule/ScheduleNativeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006E /* Features/Native/Schedule/ScheduleNativeView.swift */; };
+		A10000000000000000000310 /* Features/Native/Schedule/ScheduleDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030D /* Features/Native/Schedule/ScheduleDashboardView.swift */; };
+		A10000000000000000000312 /* Features/Native/Shared/AppSurfaceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000311 /* Features/Native/Shared/AppSurfaceStyle.swift */; };
 		A10000000000000000000073 /* AcMindKit/Models/AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000083 /* AcMindKit/Models/AppSettings.swift */; };
 		A10000000000000000000074 /* AcMindKit/Models/DistilledNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000084 /* AcMindKit/Models/DistilledNote.swift */; };
 		A10000000000000000000075 /* AcMindKit/Models/ExportRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000085 /* AcMindKit/Models/ExportRecord.swift */; };
@@ -59,7 +61,9 @@
 		A10000000000000000000098 /* AcMindKit/Services/Voice/VoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000095 /* AcMindKit/Services/Voice/VoiceService.swift */; };
 		A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006D /* SettingsServiceProtocol.swift */; };
 		A1000000000000000000010A /* Features/Native/Agent/AgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* Features/Native/Agent/AgentView.swift */; };
+		A1000000000000000000030E /* Features/Native/Agent/AgentDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030B /* Features/Native/Agent/AgentDashboardView.swift */; };
 		A1000000000000000000010B /* Features/Native/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000113 /* Features/Native/Settings/SettingsView.swift */; };
+		A1000000000000000000030F /* Features/Native/Settings/SettingsSuiteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030C /* Features/Native/Settings/SettingsSuiteView.swift */; };
 		A1000000000000000000010C /* App/ViewModels/AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000114 /* App/ViewModels/AgentViewModel.swift */; };
 		A1000000000000000000010E /* App/ViewModels/SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010D /* App/ViewModels/SettingsViewModel.swift */; };
 		A10000000000000000000121 /* Features/Native/Schedule/ScheduleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011A /* Features/Native/Schedule/ScheduleModels.swift */; };
@@ -118,6 +122,18 @@
 		A1000000000000000000019B /* Features/Companion/NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019C /* Features/Companion/NotchPanel.swift */; };
 		A1000000000000000000019E /* Features/Companion/NotchToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019D /* Features/Companion/NotchToast.swift */; };
 		A100000000000000000001A2 /* Features/Companion/QuickNotePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019F /* Features/Companion/QuickNotePanel.swift */; };
+		A100000000000000000002F7 /* Features/Companion/NotchV2DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* Features/Companion/NotchV2DesignTokens.swift */; };
+		A100000000000000000002F8 /* Features/Companion/NotchV2Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000302 /* Features/Companion/NotchV2Card.swift */; };
+		A100000000000000000002F9 /* Features/Companion/NotchV2ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000303 /* Features/Companion/NotchV2ViewModel.swift */; };
+		A100000000000000000002FA /* Features/Companion/NotchV2TopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000304 /* Features/Companion/NotchV2TopBar.swift */; };
+		A100000000000000000002FB /* Features/Companion/NotchV2RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000305 /* Features/Companion/NotchV2RootView.swift */; };
+		A100000000000000000002FC /* Features/Companion/NotchV2CollapsedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000306 /* Features/Companion/NotchV2CollapsedView.swift */; };
+		A100000000000000000002FD /* Features/Companion/NotchV2ExpandedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* Features/Companion/NotchV2ExpandedView.swift */; };
+		A100000000000000000002FE /* Features/Companion/NotchV2OverviewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000308 /* Features/Companion/NotchV2OverviewPage.swift */; };
+		A100000000000000000002FF /* Features/Companion/NotchV2MusicPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000309 /* Features/Companion/NotchV2MusicPage.swift */; };
+		A10000000000000000000300 /* Features/Companion/NotchV2AgentPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030A /* Features/Companion/NotchV2AgentPage.swift */; };
+		A10000000000000000000413 /* Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000411 /* Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift */; };
+		A10000000000000000000414 /* Features/Companion/DynamicContinent/DynamicContinentPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* Features/Companion/DynamicContinent/DynamicContinentPages.swift */; };
 		A100000000000000000001AD /* AcMindKitTests/StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001AC /* AcMindKitTests/StorageTests.swift */; };
 		A100000000000000000001A3 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001A4 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift */; };
 		A100000000000000000001A5 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001A6 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift */; };
@@ -185,6 +201,8 @@
 		A1000000000000000000006A /* Features/Native/Inbox/InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/InboxView.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000006D /* SettingsServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsServiceProtocol.swift; sourceTree = "<group>"; };
 		A1000000000000000000006E /* Features/Native/Schedule/ScheduleNativeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleNativeView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000030D /* Features/Native/Schedule/ScheduleDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleDashboardView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000311 /* Features/Native/Shared/AppSurfaceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/AppSurfaceStyle.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000071 /* KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeCard.swift; sourceTree = "<group>"; };
 		A10000000000000000000072 /* VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultConfig.swift; sourceTree = "<group>"; };
 		A10000000000000000000083 /* AcMindKit/Models/AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AppSettings.swift; sourceTree = SOURCE_ROOT; };
@@ -208,7 +226,9 @@
 		A10000000000000000000095 /* AcMindKit/Services/Voice/VoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/VoiceService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000010D /* App/ViewModels/SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/SettingsViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000112 /* Features/Native/Agent/AgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000030B /* Features/Native/Agent/AgentDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000113 /* Features/Native/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000030C /* Features/Native/Settings/SettingsSuiteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsSuiteView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000114 /* App/ViewModels/AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/AgentViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000115 /* App/ViewModels/InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/InboxViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000002E2 /* Features/Native/Inbox/Components/InboxHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Inbox/Components/InboxHeader.swift; sourceTree = SOURCE_ROOT; };
@@ -273,6 +293,18 @@
 		A1000000000000000000019C /* Features/Companion/NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchPanel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000019D /* Features/Companion/NotchToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchToast.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000019F /* Features/Companion/QuickNotePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/QuickNotePanel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000301 /* Features/Companion/NotchV2DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2DesignTokens.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000302 /* Features/Companion/NotchV2Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2Card.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000303 /* Features/Companion/NotchV2ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2ViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000304 /* Features/Companion/NotchV2TopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2TopBar.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000305 /* Features/Companion/NotchV2RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2RootView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000306 /* Features/Companion/NotchV2CollapsedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2CollapsedView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000307 /* Features/Companion/NotchV2ExpandedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2ExpandedView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000308 /* Features/Companion/NotchV2OverviewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2OverviewPage.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000309 /* Features/Companion/NotchV2MusicPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2MusicPage.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000030A /* Features/Companion/NotchV2AgentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2AgentPage.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000411 /* Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000412 /* Features/Companion/DynamicContinent/DynamicContinentPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentPages.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000001AC /* AcMindKitTests/StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/StorageTests.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000001A4 /* AcMindKit/Services/Voice/Polish/AIPromptService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/AIPromptService.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000001A6 /* AcMindKit/Services/Input/Capture/AutoRedactorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/AutoRedactorService.swift; sourceTree = SOURCE_ROOT; };
@@ -470,6 +502,7 @@
 				A10000000000000000000068 /* Inbox */,
 				A1000000000000000000010F /* Agent */,
 				A10000000000000000000110 /* Settings */,
+				A10000000000000000000313 /* Shared */,
 				A1000000000000000000015C /* Clipboard */,
 				A1000000000000000000015D /* Workbench */,
 				A1000000000000000000015E /* Tools */,
@@ -525,6 +558,7 @@
 		A10000000000000000000070 /* Schedule */ = {
 			isa = PBXGroup;
 			children = (
+				A1000000000000000000030D /* Features/Native/Schedule/ScheduleDashboardView.swift */,
 				A1000000000000000000006E /* Features/Native/Schedule/ScheduleNativeView.swift */,
 				A1000000000000000000011A /* Features/Native/Schedule/ScheduleModels.swift */,
 				A1000000000000000000011B /* Features/Native/Schedule/ScheduleViewModel.swift */,
@@ -646,6 +680,7 @@
 		A1000000000000000000010F /* Agent */ = {
 			isa = PBXGroup;
 			children = (
+				A1000000000000000000030B /* Features/Native/Agent/AgentDashboardView.swift */,
 				A10000000000000000000112 /* Features/Native/Agent/AgentView.swift */,
 			);
 			path = Agent;
@@ -654,9 +689,18 @@
 		A10000000000000000000110 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A1000000000000000000030C /* Features/Native/Settings/SettingsSuiteView.swift */,
 				A10000000000000000000113 /* Features/Native/Settings/SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000313 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000311 /* Features/Native/Shared/AppSurfaceStyle.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000117 /* ViewModels */ = {
@@ -703,6 +747,16 @@
 				A1000000000000000000019C /* Features/Companion/NotchPanel.swift */,
 				A1000000000000000000019D /* Features/Companion/NotchToast.swift */,
 				A1000000000000000000019F /* Features/Companion/QuickNotePanel.swift */,
+				A10000000000000000000301 /* Features/Companion/NotchV2DesignTokens.swift */,
+				A10000000000000000000302 /* Features/Companion/NotchV2Card.swift */,
+				A10000000000000000000303 /* Features/Companion/NotchV2ViewModel.swift */,
+				A10000000000000000000304 /* Features/Companion/NotchV2TopBar.swift */,
+				A10000000000000000000305 /* Features/Companion/NotchV2RootView.swift */,
+				A10000000000000000000306 /* Features/Companion/NotchV2CollapsedView.swift */,
+				A10000000000000000000307 /* Features/Companion/NotchV2ExpandedView.swift */,
+				A10000000000000000000308 /* Features/Companion/NotchV2OverviewPage.swift */,
+				A10000000000000000000309 /* Features/Companion/NotchV2MusicPage.swift */,
+				A1000000000000000000030A /* Features/Companion/NotchV2AgentPage.swift */,
 				A1000000000000000000018E /* Features/Companion/CompanionView.swift */,
 			);
 			path = Companion;
@@ -947,6 +1001,7 @@
 				A100000000000000000002F5 /* Features/Native/Inbox/Components/InboxStatusTag.swift in Sources */,
 				A100000000000000000002F6 /* Features/Native/Inbox/Components/WaveformPreview.swift in Sources */,
 				A1000000000000000000006F /* Features/Native/Schedule/ScheduleNativeView.swift in Sources */,
+				A10000000000000000000310 /* Features/Native/Schedule/ScheduleDashboardView.swift in Sources */,
 				A10000000000000000000121 /* Features/Native/Schedule/ScheduleModels.swift in Sources */,
 				A10000000000000000000122 /* Features/Native/Schedule/ScheduleViewModel.swift in Sources */,
 				A10000000000000000000124 /* Features/Native/Schedule/ScheduleSidebar.swift in Sources */,
@@ -969,6 +1024,18 @@
 				A1000000000000000000019B /* Features/Companion/NotchPanel.swift in Sources */,
 				A1000000000000000000019E /* Features/Companion/NotchToast.swift in Sources */,
 				A100000000000000000001A2 /* Features/Companion/QuickNotePanel.swift in Sources */,
+				A100000000000000000002F7 /* Features/Companion/NotchV2DesignTokens.swift in Sources */,
+				A100000000000000000002F8 /* Features/Companion/NotchV2Card.swift in Sources */,
+				A100000000000000000002F9 /* Features/Companion/NotchV2ViewModel.swift in Sources */,
+				A100000000000000000002FA /* Features/Companion/NotchV2TopBar.swift in Sources */,
+				A100000000000000000002FB /* Features/Companion/NotchV2RootView.swift in Sources */,
+				A100000000000000000002FC /* Features/Companion/NotchV2CollapsedView.swift in Sources */,
+				A100000000000000000002FD /* Features/Companion/NotchV2ExpandedView.swift in Sources */,
+				A100000000000000000002FE /* Features/Companion/NotchV2OverviewPage.swift in Sources */,
+				A100000000000000000002FF /* Features/Companion/NotchV2MusicPage.swift in Sources */,
+				A10000000000000000000300 /* Features/Companion/NotchV2AgentPage.swift in Sources */,
+				A10000000000000000000413 /* Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift in Sources */,
+				A10000000000000000000414 /* Features/Companion/DynamicContinent/DynamicContinentPages.swift in Sources */,
 				A1000000000000000000018D /* Features/Companion/CompanionView.swift in Sources */,
 				B000000000000000000002C1 /* Features/Companion/Views/CompanionSettingsHeader.swift in Sources */,
 				B000000000000000000002C2 /* Features/Companion/Views/CompanionCapabilityCard.swift in Sources */,
@@ -983,7 +1050,10 @@
 				A10000000000000000000187 /* Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift in Sources */,
 				A10000000000000000000188 /* Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift in Sources */,
 				A1000000000000000000010A /* Features/Native/Agent/AgentView.swift in Sources */,
+				A1000000000000000000030E /* Features/Native/Agent/AgentDashboardView.swift in Sources */,
 				A1000000000000000000010B /* Features/Native/Settings/SettingsView.swift in Sources */,
+				A1000000000000000000030F /* Features/Native/Settings/SettingsSuiteView.swift in Sources */,
+				A10000000000000000000312 /* Features/Native/Shared/AppSurfaceStyle.swift in Sources */,
 				A1000000000000000000010C /* App/ViewModels/AgentViewModel.swift in Sources */,
 				A1000000000000000000010E /* App/ViewModels/SettingsViewModel.swift in Sources */,
 				A10000000000000000000154 /* Features/Native/Clipboard/ClipboardView.swift in Sources */,

@@ -16,6 +16,7 @@ struct ContentView: View {
         } detail: {
             MainContent(selectedItem: selectedItem)
         }
+        .background(AppSurfaceTokens.background.ignoresSafeArea())
         .sheet(isPresented: $showVoicePanel) {
             CompanionVoicePanel()
         }
@@ -119,7 +120,7 @@ struct MainContent: View {
         Group {
             switch selectedItem {
             case .agent:
-                AgentView()
+                AgentDashboardView()
                     .navigationTitle("Agent")
             case .inbox:
                 InboxView()
@@ -128,7 +129,7 @@ struct MainContent: View {
                 ClipboardView()
                     .navigationTitle("剪贴板")
             case .schedule:
-                ScheduleNativeView()
+                ScheduleDashboardView()
                     .navigationTitle("日程")
             case .workbench:
                 WorkbenchView()
@@ -140,7 +141,7 @@ struct MainContent: View {
                 CompanionView()
                     .navigationTitle("随身")
             case .settings:
-                SettingsView()
+                SettingsSuiteView()
                     .navigationTitle("设置")
             }
         }

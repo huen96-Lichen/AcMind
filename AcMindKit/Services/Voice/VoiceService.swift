@@ -31,7 +31,7 @@ public actor VoiceService: VoiceServiceProtocol {
     private var currentRecordingURL: URL?
     private var status: RecordingStatus = .idle
     private var recordingStartTime: Date?
-    private var statusHandler: ((RecordingStatus) -> Void)?
+    private var statusHandler: (@Sendable (RecordingStatus) -> Void)?
     
     // MARK: - ASR Configuration
     
@@ -91,7 +91,7 @@ public actor VoiceService: VoiceServiceProtocol {
     
     // MARK: - Status Handler
     
-    public func setStatusHandler(_ handler: @escaping (RecordingStatus) -> Void) {
+    public func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) {
         self.statusHandler = handler
     }
     

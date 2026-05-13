@@ -110,6 +110,7 @@ public class MusicService: ObservableObject {
     @Published public var repeatMode: RepeatMode = .off
 
     private var updateTimer: Timer?
+    private var currentArtworkData: Data?
 
     // MARK: - Initialization
 
@@ -175,8 +176,10 @@ public class MusicService: ObservableObject {
         timestampDate = Date()
         if let artworkData = snapshot.artworkData, let image = NSImage(data: artworkData) {
             albumArt = image
+            currentArtworkData = artworkData
         } else {
             albumArt = nil
+            currentArtworkData = nil
         }
 
         Self.logger.debug(
@@ -191,6 +194,7 @@ public class MusicService: ObservableObject {
             title: songTitle,
             artist: artistName,
             album: album,
+            artwork: currentArtworkData,
             isPlaying: isPlaying,
             duration: songDuration,
             currentTime: elapsedTime,

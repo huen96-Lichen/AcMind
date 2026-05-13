@@ -8,33 +8,45 @@ public struct CompanionMenuBarLayout {
     // MARK: - 尺寸参数
     
     /// 收起态高度
-    public static let collapsedHeight: CGFloat = 30
+    public static let collapsedHeight: CGFloat = 33
+    
+    /// 收起态宽度
+    public static let collapsedWidth: CGFloat = 240
     
     /// 收起态最小宽度
-    public static let collapsedMinWidth: CGFloat = 240
+    public static let collapsedMinWidth: CGFloat = collapsedWidth
     
     /// 收起态最大宽度
-    public static let collapsedMaxWidth: CGFloat = 420
+    public static let collapsedMaxWidth: CGFloat = collapsedWidth
     
     /// 展开态宽度
-    public static let expandedWidth: CGFloat = 720
+    public static let expandedWidth: CGFloat = 880
+    
+    /// 展开态高度
+    public static let expandedHeight: CGFloat = 440
     
     /// 展开态最大高度占屏幕比例
-    public static let expandedMaxHeightRatio: CGFloat = 0.6
+    public static let expandedMaxHeightRatio: CGFloat = 0.58
+
+    /// 模块间距
+    public static let moduleSpacing: CGFloat = 20
+
+    /// 底部间隙
+    public static let moduleBottomInset: CGFloat = 12
     
     // MARK: - 定位参数
     
     /// 菜单栏顶部内边距
-    public static let menuBarTopPadding: CGFloat = 2
+    public static let menuBarTopPadding: CGFloat = 0
     
     /// 菜单栏侧边内边距
-    public static let menuBarSidePadding: CGFloat = 12
+    public static let menuBarSidePadding: CGFloat = 0
     
     /// 物理刘海估计宽度
     public static let hardwareNotchEstimatedWidth: CGFloat = 210
     
     /// 物理刘海避让间距
-    public static let hardwareNotchAvoidanceGap: CGFloat = 16
+    public static let hardwareNotchAvoidanceGap: CGFloat = 0
     
     /// 左侧 App 菜单预留宽度
     public static let leftMenuReserve: CGFloat = 120
@@ -45,10 +57,10 @@ public struct CompanionMenuBarLayout {
     // MARK: - 圆角参数
     
     /// 收起态圆角
-    public static let cornerRadiusCollapsed: CGFloat = 16
+    public static let cornerRadiusCollapsed: CGFloat = 18
     
     /// 展开态圆角
-    public static let cornerRadiusExpanded: CGFloat = 28
+    public static let cornerRadiusExpanded: CGFloat = 30
     
     // MARK: - 动画参数
     
@@ -63,6 +75,7 @@ public struct CompanionMenuBarLayout {
     
     /// 弹簧阻尼参数
     public static let springDamping: CGFloat = 0.86
+
 }
 
 // MARK: - Companion Screen Positioning
@@ -76,7 +89,7 @@ public struct CompanionScreenPositioning {
     }
     
     /// 获取菜单栏高度
-    private static var menuBarHeight: CGFloat {
+    public static var menuBarHeight: CGFloat {
         let screen = mainScreen
         return max(screen.safeAreaInsets.top, 22)
     }
@@ -105,45 +118,11 @@ public struct CompanionScreenPositioning {
     /// 计算收起态胶囊位置
     public static func collapsedFrame(preferredWidth: CGFloat = CompanionMenuBarLayout.collapsedMinWidth) -> CGRect {
         let screen = mainScreen
-        let visibleFrame = screen.visibleFrame
         let screenFrame = screen.frame
         
         let width = min(max(preferredWidth, CompanionMenuBarLayout.collapsedMinWidth), CompanionMenuBarLayout.collapsedMaxWidth)
-        
-        if hasHardwareNotch() {
-            return collapsedFrameWithNotch(width: width, screen: screen, visibleFrame: visibleFrame)
-        } else {
-            let x = visibleFrame.midX - width / 2
-            let y = visibleFrame.maxY - CompanionMenuBarLayout.collapsedHeight - CompanionMenuBarLayout.menuBarTopPadding
-            
-            return CGRect(
-                x: x,
-                y: y,
-                width: width,
-                height: CompanionMenuBarLayout.collapsedHeight
-            )
-        }
-    }
-    
-    /// 有刘海设备的收起态位置计算
-    private static func collapsedFrameWithNotch(width: CGFloat, screen: NSScreen, visibleFrame: NSRect) -> CGRect {
-        let screenFrame = screen.frame
-        let notch = notchRect()
-        
-        let rightSlotWidth = screenFrame.maxX - notch.maxX - CompanionMenuBarLayout.hardwareNotchAvoidanceGap - CompanionMenuBarLayout.rightSystemReserve
-        let leftSlotWidth = notch.minX - CompanionMenuBarLayout.hardwareNotchAvoidanceGap - CompanionMenuBarLayout.leftMenuReserve
-        
-        var x: CGFloat
-        
-        if rightSlotWidth >= width {
-            x = notch.maxX + CompanionMenuBarLayout.hardwareNotchAvoidanceGap + (rightSlotWidth - width) / 2
-        } else if leftSlotWidth >= width {
-            x = CompanionMenuBarLayout.leftMenuReserve + (leftSlotWidth - width) / 2
-        } else {
-            x = visibleFrame.midX - width / 2
-        }
-        
-        let y = visibleFrame.maxY - CompanionMenuBarLayout.collapsedHeight - CompanionMenuBarLayout.menuBarTopPadding
+        let x = screenFrame.midX - width / 2
+        let y = screenFrame.maxY - CompanionMenuBarLayout.collapsedHeight
         
         return CGRect(
             x: x,
@@ -154,25 +133,19 @@ public struct CompanionScreenPositioning {
     }
     
     /// 计算展开态面板位置
-    public static func expandedFrame(anchorFrame: CGRect) -> CGRect {
+    public static func expandedFrame(anchorFrame _: CGRect) -> CGRect {
         let screen = mainScreen
-        let visibleFrame = screen.visibleFrame
-        
         let width = CompanionMenuBarLayout.expandedWidth
-        let maxHeight = visibleFrame.height * CompanionMenuBarLayout.expandedMaxHeightRatio
-        
-        let x = anchorFrame.midX - width / 2
-        let clampedX = max(visibleFrame.minX + CompanionMenuBarLayout.menuBarSidePadding, min(x, visibleFrame.maxX - width - CompanionMenuBarLayout.menuBarSidePadding))
-        let y = anchorFrame.minY - maxHeight - 8
-        
-        let clampedY = max(visibleFrame.minY, y)
-        let actualHeight = maxHeight - (anchorFrame.minY - clampedY)
-        
+        let height = CompanionMenuBarLayout.expandedHeight
+        let x = screen.frame.midX - width / 2
+        let clampedX = max(screen.frame.minX, min(x, screen.frame.maxX - width))
+        let y = screen.frame.maxY - height
+
         return CGRect(
             x: clampedX,
-            y: clampedY,
+            y: y,
             width: width,
-            height: max(actualHeight, 200)
+            height: height
         )
     }
     

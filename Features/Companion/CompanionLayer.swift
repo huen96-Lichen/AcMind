@@ -25,10 +25,7 @@ struct CompanionLayer: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.showCapsule {
-            CompanionCapsule()
-                .padding(.top, 8)
-        }
+        EmptyView()
     }
 
     // MARK: - Panels Overlay

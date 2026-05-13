@@ -10,7 +10,9 @@ import AcMindKit
 final class NotchPanel: NSPanel {
     static let shared = NotchPanel()
 
-    private var hostingView: NSHostingView<CompanionCapsule>?
+    private let viewModel = NotchV2ViewModel()
+    private var hostingView: NSHostingView<NotchV2RootView>?
+    private var isExpanded = false
 
     private init() {
         // 初始尺寸，后续会根据内容自适应
@@ -48,11 +50,15 @@ final class NotchPanel: NSPanel {
 
     private func setupContentView() {
         // 直接使用 NSHostingView，不使用自定义容器
-        let capsule = CompanionCapsule()
+        let capsule = NotchV2RootView(viewModel: viewModel) { [weak self] expanded in
+            self?.setExpanded(expanded, animated: true)
+        }
         let hosting = NSHostingView(rootView: capsule)
-        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.translatesAutoresizingMaskIntoConstraints = true
+        hosting.autoresizingMask = [.width, .height]
         self.contentView = hosting
         self.hostingView = hosting
+        syncWindowSize(with: CompanionScreenPositioning.collapsedFrame().size)
     }
 
     // MARK: - Screen Observer
@@ -74,15 +80,47 @@ final class NotchPanel: NSPanel {
 
     /// 将面板定位到屏幕顶部菜单栏区域
     func positionAtTopCenter() {
-        let collapsedFrame = CompanionScreenPositioning.collapsedFrame()
-        setFrame(collapsedFrame, display: true)
+        let frame = isExpanded
+            ? CompanionScreenPositioning.expandedFrame(anchorFrame: CompanionScreenPositioning.collapsedFrame())
+            : CompanionScreenPositioning.collapsedFrame()
+        syncWindowSize(with: frame.size)
+        setFrame(frame, display: true)
+        hostingView?.frame = NSRect(origin: .zero, size: frame.size)
         
-        print("[NotchPanel] Positioning: frame=\(frame), hasNotch=\(CompanionScreenPositioning.hasHardwareNotch())")
+        print("[NotchPanel] Positioning: frame=\(frame), realWidth=\(self.frame.width), realHeight=\(self.frame.height), hasNotch=\(CompanionScreenPositioning.hasHardwareNotch())")
+    }
+
+    func setExpanded(_ expanded: Bool, animated: Bool) {
+        guard isExpanded != expanded else { return }
+        isExpanded = expanded
+        viewModel.isExpanded = expanded
+        if expanded {
+            viewModel.selectedPage = .overview
+        }
+
+        let targetFrame = expanded
+            ? CompanionScreenPositioning.expandedFrame(anchorFrame: frame)
+            : CompanionScreenPositioning.collapsedFrame()
+
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = expanded ? CompanionMenuBarLayout.expandDuration : CompanionMenuBarLayout.collapseDuration
+                animator().setFrame(targetFrame, display: true)
+            }
+        } else {
+            setFrame(targetFrame, display: true)
+        }
+        syncWindowSize(with: targetFrame.size)
+        hostingView?.frame = NSRect(origin: .zero, size: targetFrame.size)
+        print("[NotchPanel] setExpanded(\(expanded)): frame=\(targetFrame), realWidth=\(self.frame.width), realHeight=\(self.frame.height)")
     }
 
     // MARK: - Show / Hide
 
     func show() {
+        viewModel.isExpanded = true
+        viewModel.selectedPage = .overview
+        isExpanded = true
         positionAtTopCenter()
         makeKeyAndOrderFront(nil)
         orderFrontRegardless()
@@ -100,5 +138,12 @@ final class NotchPanel: NSPanel {
         } else {
             show()
         }
+    }
+
+    private func syncWindowSize(with size: CGSize) {
+        minSize = size
+        maxSize = size
+        contentMinSize = size
+        contentMaxSize = size
     }
 }
