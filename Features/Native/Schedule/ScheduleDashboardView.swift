@@ -1,457 +1,519 @@
 import SwiftUI
-import AppKit
 
 enum ScheduleDashboardMode: String, CaseIterable, Identifiable {
-    case day
-    case week
-    case month
-    case year
+    case day = "日"
+    case week = "周"
+    case month = "月"
+    case year = "年"
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .day: return "日"
-        case .week: return "周"
-        case .month: return "月"
-        case .year: return "年"
-        }
-    }
 }
 
 struct ScheduleDashboardView: View {
-    @StateObject private var viewModel = ScheduleViewModel()
-    @State private var dashboardMode: ScheduleDashboardMode = .day
+    @State private var mode: ScheduleDashboardMode = .week
+    @State private var selectedDayIndex: Int = 2
 
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                ACPageHeader(
+                    title: "日程",
+                    subtitle: "个人效率与时间管理页面，周视图和日视图优先。"
+                ) {
+                    HStack(spacing: 12) {
+                        ACSegmentedControl(ScheduleDashboardMode.allCases, selection: $mode) { option, isSelected in
+                            Text(option.rawValue)
+                                .font(ACTypography.captionMedium)
+                                .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
+                        }
+                        .frame(width: 232)
 
-            Divider()
-                .overlay(AppSurfaceTokens.separator)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    topBar
-                    content
+                        ACButton("今天", kind: .secondary) {}
+                        ACButton("新建", kind: .primary) {}
+                    }
                 }
-                .padding(28)
+                .frame(height: ACLayout.headerHeightMedium)
+
+                HStack(alignment: .top, spacing: ACLayout.gapL) {
+                    leftSidebar
+                        .frame(width: 300)
+
+                    centerSurface
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                    rightInspector
+                        .frame(width: 280)
+                }
             }
+            .padding(.horizontal, ACLayout.pagePaddingX)
+            .padding(.top, ACLayout.pagePaddingY)
+            .padding(.bottom, ACLayout.pagePaddingBottom)
+            .frame(maxWidth: 1512, alignment: .center)
         }
-        .background(AppSurfaceTokens.islandBackground.ignoresSafeArea())
-        .sheet(isPresented: $viewModel.isCreatingEvent) {
-            ScheduleEventEditorSheet(viewModel: viewModel)
+        .background(ACColors.pageBackground.ignoresSafeArea())
+    }
+
+    private var leftSidebar: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ACCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("今日概览")
+                        .font(ACTypography.cardTitle)
+                        .foregroundStyle(ACColors.primaryText)
+                    ScheduleStatCard(title: "已安排", value: "6", subtitle: "项任务")
+                    ScheduleStatCard(title: "专注", value: "4.5", subtitle: "小时")
+                    ScheduleStatCard(title: "饱和度", value: "72%", subtitle: "偏满")
+                }
+            }
+            .frame(width: 244, height: 146, alignment: .topLeading)
+
+            ACCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("分类")
+                        .font(ACTypography.cardTitle)
+                        .foregroundStyle(ACColors.primaryText)
+
+                    VStack(spacing: 8) {
+                        ForEach(scheduleCategories) { category in
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(category.color)
+                                    .frame(width: 8, height: 8)
+                                Text(category.title)
+                                    .font(ACTypography.captionMedium)
+                                    .foregroundStyle(ACColors.primaryText)
+                                Spacer(minLength: 0)
+                                Text(category.count)
+                                    .font(ACTypography.miniMedium)
+                                    .foregroundStyle(ACColors.secondaryText)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(width: 244, height: 204, alignment: .topLeading)
+
+            ACCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("工作饱和度")
+                        .font(ACTypography.cardTitle)
+                        .foregroundStyle(ACColors.primaryText)
+                    VStack(spacing: 8) {
+                        ForEach(weekHeatmap) { day in
+                            HStack(spacing: 8) {
+                                Text(day.label)
+                                    .font(ACTypography.miniMedium)
+                                    .foregroundStyle(ACColors.tertiaryText)
+                                    .frame(width: 24, alignment: .leading)
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(day.tint)
+                                    .frame(height: 16)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(width: 244, height: 120, alignment: .topLeading)
+
+            Spacer(minLength: 0)
         }
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("日程表")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                Text("今日待办、饱和度和分类总览")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
+    private var centerSurface: some View {
+        ACDetailPanel(width: nil, padding: 16) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(mode == .day ? "日视图" : mode == .week ? "周视图" : mode == .month ? "月视图" : "年视图")
+                            .font(ACTypography.sectionTitle)
+                            .foregroundStyle(ACColors.primaryText)
+                        Text("主时间轴是视觉中心，支持快速浏览与创建。")
+                            .font(ACTypography.caption)
+                            .foregroundStyle(ACColors.secondaryText)
+                    }
 
-            AppSurfaceCard(title: "今日概览", subtitle: "高密度时间管理") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ScheduleKeyValueRow(key: "待办", value: "\(viewModel.todayEventCount)")
-                    ScheduleKeyValueRow(key: "专注分钟", value: "\(viewModel.todayFocusMinutes)")
-                    ScheduleKeyValueRow(key: "饱和度", value: "\(viewModel.todayWorkloadPercent)%")
+                    Spacer(minLength: 0)
+
+                    ACBadge("可用", kind: .green)
+                }
+
+                switch mode {
+                case .day:
+                    dayView
+                case .week:
+                    weekView
+                case .month:
+                    monthView
+                case .year:
+                    yearView
                 }
             }
+        }
+    }
 
-            AppSurfaceCard(title: "分类", subtitle: "快速切换") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(viewModel.categories.prefix(6)) { category in
-                        HStack(spacing: 8) {
-                            Circle().fill(category.color).frame(width: 8, height: 8)
-                            Text(category.name)
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Spacer()
-                            Text("\(viewModel.todayCount(for: category.id))")
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        }
-                        .font(.system(size: 13, weight: .medium))
+    private var rightInspector: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ACDetailPanel(width: 280, padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("下一事件")
+                        .font(ACTypography.panelTitle)
+                        .foregroundStyle(ACColors.primaryText)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("产品例会")
+                            .font(ACTypography.itemTitle)
+                            .foregroundStyle(ACColors.primaryText)
+                        Text("14:00 - 15:00")
+                            .font(ACTypography.caption)
+                            .foregroundStyle(ACColors.secondaryText)
+                        Text("还有 32 分钟")
+                            .font(ACTypography.captionMedium)
+                            .foregroundStyle(ACColors.accentBlue)
                     }
                 }
             }
 
-            AppSurfaceCard(title: "工作饱和度", subtitle: "最近 7 天") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-                    ForEach(viewModel.weekWorkloadDays.prefix(7)) { day in
-                        VStack(spacing: 6) {
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(heatColor(for: day.workloadPercent))
-                                .frame(height: 18)
-                            Text(day.date, format: .dateTime.weekday(.narrow))
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(AppSurfaceTokens.tertiaryText)
+            ACDetailPanel(width: 280, padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("日视图")
+                        .font(ACTypography.panelTitle)
+                        .foregroundStyle(ACColors.primaryText)
+
+                    VStack(spacing: 8) {
+                        ForEach(weekAgenda, id: \.id) { event in
+                            HStack(spacing: 10) {
+                                ACTypeIcon("calendar", tint: event.tint, background: event.tint.opacity(0.12), size: 28)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(event.title)
+                                        .font(ACTypography.captionMedium)
+                                        .foregroundStyle(ACColors.primaryText)
+                                    Text(event.time)
+                                        .font(ACTypography.mini)
+                                        .foregroundStyle(ACColors.secondaryText)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                }
+            }
+
+            ACDetailPanel(width: 280, padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("热力信息")
+                        .font(ACTypography.panelTitle)
+                        .foregroundStyle(ACColors.primaryText)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(weekHeatmap) { info in
+                            HStack(spacing: 10) {
+                                Text(info.label)
+                                    .font(ACTypography.captionMedium)
+                                    .foregroundStyle(ACColors.secondaryText)
+                                    .frame(width: 18, alignment: .leading)
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(info.tint)
+                                    .frame(height: 10)
+                            }
                         }
                     }
                 }
             }
 
             Spacer(minLength: 0)
-
-            Button {
-                viewModel.openCreateEvent()
-            } label: {
-                HStack {
-                    Image(systemName: "plus")
-                    Text("快速新建任务")
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(AppSurfaceTokens.cardBackgroundStrong)
-                )
-            }
-            .buttonStyle(.plain)
-        }
-        .frame(width: 280)
-        .padding(20)
-        .background(AppSurfaceTokens.islandBackgroundSoft)
-    }
-
-    private var topBar: some View {
-        HStack(spacing: 14) {
-            Text(viewModel.viewTitle)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-
-            Spacer()
-
-            Picker("模式", selection: $dashboardMode) {
-                ForEach(ScheduleDashboardMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 220)
-
-            Button {
-                viewModel.goToPrevious()
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(.bordered)
-
-            Button {
-                viewModel.goToToday()
-            } label: {
-                Text("今天")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(AppSurfaceTokens.accentPurple)
-
-            Button {
-                viewModel.goToNext()
-            } label: {
-                Image(systemName: "chevron.right")
-            }
-            .buttonStyle(.bordered)
         }
     }
 
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            switch dashboardMode {
-            case .day:
-                dayOverview
-            case .week:
-                weekOverview
-            case .month:
-                monthOverview
-            case .year:
-                yearOverview
-            }
-        }
-    }
+    private var dayView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(dayTimeline) { slot in
+                HStack(alignment: .top, spacing: 12) {
+                    Text(slot.time)
+                        .font(ACTypography.captionMedium)
+                        .foregroundStyle(ACColors.accentBlue)
+                        .frame(width: 52, alignment: .leading)
 
-    private var dayOverview: some View {
-        HStack(alignment: .top, spacing: 20) {
-            AppSurfaceCard(title: "今日日程", subtitle: "双击时间块快速创建") {
-                VStack(alignment: .leading, spacing: 12) {
-                    if viewModel.todayEvents.isEmpty {
-                        Text("今天还没有安排")
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    } else {
-                        ForEach(viewModel.todayEvents.prefix(6)) { event in
-                            Button {
-                                viewModel.selectDate(event.startAt)
-                            } label: {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Text(event.startAt, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute())
-                                        .foregroundStyle(AppSurfaceTokens.accentPurple)
-                                        .frame(width: 56, alignment: .leading)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(event.title)
-                                            .foregroundStyle(AppSurfaceTokens.primaryText)
-                                        Text(event.categoryId.isEmpty ? "未分类" : viewModel.categoryName(for: event.categoryId))
-                                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                            .fill(ACColors.softFill)
+                            .frame(height: 40)
+
+                        if let event = slot.event {
+                            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                                .fill(event.tint.opacity(0.16))
+                                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                                .overlay(
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(event.title)
+                                                .font(ACTypography.captionMedium)
+                                                .foregroundStyle(ACColors.primaryText)
+                                            Text(event.subtitle)
+                                                .font(ACTypography.mini)
+                                                .foregroundStyle(ACColors.secondaryText)
+                                        }
+                                        Spacer(minLength: 0)
+                                        ACBadge(event.badgeTitle, kind: event.badgeKind)
                                     }
-                                    Spacer()
-                                }
-                                .font(.system(size: 13, weight: .medium))
-                                .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.plain)
+                                    .padding(.horizontal, 12)
+                                )
+                        } else {
+                            Text("双击添加日程")
+                                .font(ACTypography.mini)
+                                .foregroundStyle(ACColors.tertiaryText)
+                                .padding(.horizontal, 12)
                         }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            VStack(spacing: 20) {
-                AppSurfaceCard(title: "日视图", subtitle: "时间块与快速创建") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach([9, 11, 14, 16, 19], id: \.self) { hour in
-                            HStack(spacing: 10) {
-                                Text(String(format: "%02d:00", hour))
-                                    .foregroundStyle(AppSurfaceTokens.accentPurple)
-                                    .frame(width: 56, alignment: .leading)
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(AppSurfaceTokens.cardBackground)
-                                    .frame(height: 34)
-                                    .overlay(
-                                        Text("双击添加任务")
-                                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                                            .font(.system(size: 12, weight: .medium))
-                                    )
-                                    .onTapGesture(count: 2) {
-                                        viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
-                                    }
-                            }
-                        }
-                    }
-                }
-
-                AppSurfaceCard(title: "下一事件", subtitle: "即将开始") {
-                    if let next = viewModel.todayEvents.first {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(next.title)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text("\(next.startAt.formatted(date: .omitted, time: .shortened)) - \(next.endAt.formatted(date: .omitted, time: .shortened))")
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        }
-                    } else {
-                        Text("今天暂无事件")
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    }
-                }
-            }
-            .frame(width: 300)
-        }
-    }
-
-    private var weekOverview: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            AppSurfaceCard(title: "周视图", subtitle: "一周饱和度与事件密度") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 7), spacing: 12) {
-                    ForEach(viewModel.weekWorkloadDays) { day in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(day.date, format: .dateTime.weekday(.narrow))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(heatColor(for: day.workloadPercent))
-                                .frame(height: 38)
-                            Text("\(day.eventCount) 项")
-                                .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                    }
-                }
-            }
-
-            AppSurfaceCard(title: "本周事件", subtitle: "统一宽度内容区") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(viewModel.currentWeekEvents.prefix(8)) { event in
-                        ScheduleKeyValueRow(key: event.title, value: event.startAt.formatted(date: .omitted, time: .shortened))
                     }
                 }
             }
         }
     }
 
-    private var monthOverview: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            AppSurfaceCard(title: "月视图", subtitle: "事件分布") {
-                let days = Array(1...30)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
-                    ForEach(days, id: \.self) { day in
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(day % 5 == 0 ? AppSurfaceTokens.accentPurple.opacity(0.85) : AppSurfaceTokens.cardBackground)
-                            .frame(height: 42)
-                            .overlay(
-                                Text("\(day)")
-                                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                                    .font(.system(size: 12, weight: .semibold))
-                            )
-                    }
-                }
-            }
-
-            AppSurfaceCard(title: "本月事件", subtitle: "摘要") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(viewModel.currentMonthEvents.prefix(6)) { event in
-                        ScheduleKeyValueRow(key: event.title, value: event.startAt.formatted(date: .abbreviated, time: .omitted))
-                    }
-                }
-            }
-        }
-    }
-
-    private var yearOverview: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            AppSurfaceCard(title: "年视图", subtitle: "年度热力图") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 13), spacing: 4) {
-                    ForEach(viewModel.yearlyWorkloadDays.prefix(130)) { day in
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(heatColor(for: day.workloadPercent))
-                            .frame(height: 14)
-                    }
-                }
-            }
-
-            HStack(spacing: 20) {
-                AppSurfaceCard(title: "年度统计", subtitle: "活跃日") {
-                    ScheduleKeyValueRow(key: "活跃日", value: "\(viewModel.yearlyStats.activeDays)")
-                    ScheduleKeyValueRow(key: "平均饱和度", value: "\(viewModel.yearlyStats.avgWorkload)%")
-                }
-                AppSurfaceCard(title: "分类状态", subtitle: "今年累计") {
+    private var weekView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                ForEach(weekColumns) { column in
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.categories.prefix(4)) { category in
-                            ScheduleKeyValueRow(key: category.name, value: "\(viewModel.weekCount(for: category.id))")
-                        }
+                        Text(column.day)
+                            .font(ACTypography.captionMedium)
+                            .foregroundStyle(column.isToday ? ACColors.accentBlue : ACColors.secondaryText)
+                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                            .fill(column.tint)
+                            .frame(height: column.height)
+                        Text("\(column.count) 项")
+                            .font(ACTypography.mini)
+                            .foregroundStyle(ACColors.tertiaryText)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-        }
-    }
 
-    private func heatColor(for percent: Int) -> Color {
-        switch percent {
-        case 0:
-            return AppSurfaceTokens.cardBackground
-        case 1..<25:
-            return AppSurfaceTokens.accentPurple.opacity(0.25)
-        case 25..<50:
-            return AppSurfaceTokens.accentPurple.opacity(0.45)
-        case 50..<75:
-            return AppSurfaceTokens.accentPurple.opacity(0.7)
-        default:
-            return AppSurfaceTokens.accentPurple
-        }
-    }
-}
-
-private struct ScheduleEventEditorSheet: View {
-    @ObservedObject var viewModel: ScheduleViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var title = ""
-    @State private var selectedCategoryId = "personal"
-    @State private var startHour = 9
-    @State private var startMinute = 0
-    @State private var durationMinutes = 60
-    @State private var isAllDay = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("取消") {
-                    viewModel.closeCreateEvent()
-                    dismiss()
-                }
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-
-                Spacer()
-
-                Text("新建日程")
-                    .font(.system(size: 15, weight: .semibold))
-
-                Spacer()
-
-                Button("保存") {
-                    viewModel.createEvent(
-                        title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                        categoryId: selectedCategoryId,
-                        startHour: startHour,
-                        startMinute: startMinute,
-                        durationMinutes: durationMinutes,
-                        isAllDay: isAllDay
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(weekAgenda, id: \.id) { event in
+                    HStack(spacing: 12) {
+                        ACTypeIcon("calendar", tint: event.tint, background: event.tint.opacity(0.12), size: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.title)
+                                .font(ACTypography.captionMedium)
+                                .foregroundStyle(ACColors.primaryText)
+                            Text(event.subtitle)
+                                .font(ACTypography.mini)
+                                .foregroundStyle(ACColors.secondaryText)
+                        }
+                        Spacer(minLength: 0)
+                        Text(event.time)
+                            .font(ACTypography.caption)
+                            .foregroundStyle(ACColors.secondaryText)
+                    }
+                    .padding(10)
+                    .background(ACColors.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                            .stroke(ACColors.border, lineWidth: 1)
                     )
-                    dismiss()
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .buttonStyle(.borderedProminent)
-                .tint(AppSurfaceTokens.accentPurple)
-            }
-            .padding(20)
-            .background(AppSurfaceTokens.islandBackground)
-
-            Divider().overlay(AppSurfaceTokens.separator)
-
-            VStack(alignment: .leading, spacing: 16) {
-                TextField("输入日程标题", text: $title)
-                    .textFieldStyle(.roundedBorder)
-
-                Picker("分类", selection: $selectedCategoryId) {
-                    ForEach(viewModel.categories) { category in
-                        Text(category.name).tag(category.id)
-                    }
-                }
-
-                Toggle("全天", isOn: $isAllDay)
-
-                HStack {
-                    Picker("开始", selection: $startHour) {
-                        ForEach(0..<24, id: \.self) { hour in
-                            Text(String(format: "%02d:00", hour)).tag(hour)
-                        }
-                    }
-                    .frame(width: 120)
-
-                    Picker("分钟", selection: $startMinute) {
-                        ForEach([0, 15, 30, 45], id: \.self) { minute in
-                            Text(String(format: "%02d", minute)).tag(minute)
-                        }
-                    }
-                    .frame(width: 100)
-                }
-
-                Picker("时长", selection: $durationMinutes) {
-                    ForEach([15, 30, 45, 60, 90, 120, 180], id: \.self) { duration in
-                        Text("\(duration) 分钟").tag(duration)
-                    }
                 }
             }
-            .padding(20)
-            .background(AppSurfaceTokens.islandBackgroundSoft)
         }
-        .frame(width: 440, height: 340)
+    }
+
+    private var monthView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
+                ForEach(monthGrid) { day in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(day.label)
+                            .font(ACTypography.miniMedium)
+                            .foregroundStyle(day.isCurrentMonth ? ACColors.primaryText : ACColors.tertiaryText)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(day.tint)
+                            .frame(height: 22)
+                    }
+                    .padding(8)
+                    .background(ACColors.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                            .stroke(ACColors.border, lineWidth: 1)
+                    )
+                }
+            }
+        }
+    }
+
+    private var yearView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                ForEach(yearSummary) { item in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(item.title)
+                            .font(ACTypography.captionMedium)
+                            .foregroundStyle(ACColors.secondaryText)
+                        Text(item.value)
+                            .font(ACTypography.sectionTitle)
+                            .foregroundStyle(ACColors.primaryText)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ACColors.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                            .stroke(ACColors.border, lineWidth: 1)
+                    )
+                }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 14), spacing: 4) {
+                ForEach(yearHeatmap) { cell in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(cell.tint)
+                        .frame(height: 10)
+                }
+            }
+        }
     }
 }
 
-private struct ScheduleKeyValueRow: View {
-    let key: String
+private struct ScheduleCategorySummary: Identifiable {
+    let id = UUID()
+    let title: String
+    let count: String
+    let color: Color
+}
+
+private struct ScheduleHeatRow: Identifiable {
+    let id = UUID()
+    let label: String
+    let tint: Color
+}
+
+private struct ScheduleTimelineSlot: Identifiable {
+    let id = UUID()
+    let time: String
+    let event: ScheduleTimelineEvent?
+}
+
+private struct ScheduleTimelineEvent: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let time: String
+    let tint: Color
+    let badgeTitle: String
+    let badgeKind: ACBadge.Kind
+}
+
+private struct ScheduleWeekColumn: Identifiable {
+    let id = UUID()
+    let day: String
+    let count: Int
+    let height: CGFloat
+    let tint: Color
+    let isToday: Bool
+}
+
+private struct ScheduleMonthDay: Identifiable {
+    let id = UUID()
+    let label: String
+    let tint: Color
+    let isCurrentMonth: Bool
+}
+
+private struct ScheduleYearSummary: Identifiable {
+    let id = UUID()
+    let title: String
     let value: String
+}
+
+private struct ScheduleYearHeatCell: Identifiable {
+    let id = UUID()
+    let tint: Color
+}
+
+private struct ScheduleStatCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
 
     var body: some View {
         HStack {
-            Text(key)
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Spacer()
-            Text(value)
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(ACTypography.miniMedium)
+                    .foregroundStyle(ACColors.secondaryText)
+                Text("\(value) \(subtitle)")
+                    .font(ACTypography.captionMedium)
+                    .foregroundStyle(ACColors.primaryText)
+            }
+            Spacer(minLength: 0)
         }
-        .font(.system(size: 13, weight: .medium))
+        .padding(10)
+        .background(ACColors.cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                .stroke(ACColors.border, lineWidth: 1)
+        )
     }
+}
+
+private let scheduleCategories: [ScheduleCategorySummary] = [
+    .init(title: "工作", count: "3", color: ACColors.accentBlue),
+    .init(title: "会议", count: "2", color: ACColors.accentPurple),
+    .init(title: "学习", count: "1", color: ACColors.accentGreen),
+    .init(title: "生活", count: "2", color: ACColors.accentOrange)
+]
+
+private let weekHeatmap: [ScheduleHeatRow] = [
+    .init(label: "M", tint: ACColors.accentBlue.opacity(0.72)),
+    .init(label: "T", tint: ACColors.accentBlue.opacity(0.54)),
+    .init(label: "W", tint: ACColors.accentBlue.opacity(0.82)),
+    .init(label: "T", tint: ACColors.accentBlue.opacity(0.42)),
+    .init(label: "F", tint: ACColors.accentBlue.opacity(0.66))
+]
+
+private let dayTimeline: [ScheduleTimelineSlot] = [
+    .init(time: "09:00", event: nil),
+    .init(time: "10:00", event: .init(title: "产品评审", subtitle: "会议 / 45 分钟", time: "10:00", tint: ACColors.accentBlue, badgeTitle: "会议", badgeKind: .blue)),
+    .init(time: "11:00", event: .init(title: "需求同步", subtitle: "团队 / 30 分钟", time: "11:00", tint: ACColors.accentPurple, badgeTitle: "同步", badgeKind: .purple)),
+    .init(time: "14:00", event: .init(title: "设计审查", subtitle: "视觉 / 60 分钟", time: "14:00", tint: ACColors.accentGreen, badgeTitle: "设计", badgeKind: .green)),
+    .init(time: "16:00", event: nil),
+    .init(time: "18:00", event: .init(title: "复盘总结", subtitle: "总结 / 30 分钟", time: "18:00", tint: ACColors.accentOrange, badgeTitle: "复盘", badgeKind: .orange))
+]
+
+private let weekColumns: [ScheduleWeekColumn] = [
+    .init(day: "一", count: 3, height: 62, tint: ACColors.accentBlue.opacity(0.52), isToday: false),
+    .init(day: "二", count: 5, height: 88, tint: ACColors.accentBlue.opacity(0.70), isToday: false),
+    .init(day: "三", count: 4, height: 74, tint: ACColors.accentBlue.opacity(0.60), isToday: true),
+    .init(day: "四", count: 2, height: 48, tint: ACColors.accentBlue.opacity(0.38), isToday: false),
+    .init(day: "五", count: 6, height: 96, tint: ACColors.accentBlue.opacity(0.78), isToday: false),
+    .init(day: "六", count: 1, height: 34, tint: ACColors.accentBlue.opacity(0.22), isToday: false),
+    .init(day: "日", count: 0, height: 18, tint: ACColors.softFill, isToday: false)
+]
+
+private let weekAgenda: [ScheduleTimelineEvent] = [
+    .init(title: "产品评审", subtitle: "周会 / 上午", time: "09:30", tint: ACColors.accentBlue, badgeTitle: "会议", badgeKind: .blue),
+    .init(title: "需求同步", subtitle: "团队 / 中午", time: "11:00", tint: ACColors.accentPurple, badgeTitle: "同步", badgeKind: .purple),
+    .init(title: "代码检查", subtitle: "工程 / 下午", time: "15:00", tint: ACColors.accentGreen, badgeTitle: "开发", badgeKind: .green)
+]
+
+private let monthGrid: [ScheduleMonthDay] = (1...28).map { day in
+    .init(
+        label: "\(day)",
+        tint: [ACColors.accentBlue.opacity(0.15), ACColors.accentPurple.opacity(0.15), ACColors.accentGreen.opacity(0.15), ACColors.softFill].randomElement() ?? ACColors.softFill,
+        isCurrentMonth: true
+    )
+}
+
+private let yearSummary: [ScheduleYearSummary] = [
+    .init(title: "活跃日", value: "218"),
+    .init(title: "平均饱和度", value: "64%"),
+    .init(title: "高峰周", value: "第 23 周")
+]
+
+private let yearHeatmap: [ScheduleYearHeatCell] = (0..<98).map { index in
+    let palette: [Color] = [
+        ACColors.softFill,
+        ACColors.accentBlue.opacity(0.14),
+        ACColors.accentBlue.opacity(0.28),
+        ACColors.accentBlue.opacity(0.44)
+    ]
+    return .init(tint: palette[index % palette.count])
 }

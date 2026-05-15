@@ -2,6 +2,7 @@ import Foundation
 import AcMindKit
 
 public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
+    case dynamicSurface = "dynamicSurface"
     case agent = "agent"
     case inbox = "inbox"
     case clipboard = "clipboard"
@@ -14,11 +15,12 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public static var mainItems: [SidebarItem] {
-        [.agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
+        [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
     }
 
     public var displayName: String {
         switch self {
+        case .dynamicSurface: return "灵动胶囊/大陆"
         case .agent: return "Agent"
         case .inbox: return "收集箱"
         case .clipboard: return "剪贴板"
@@ -34,6 +36,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
 
     public var icon: String {
         switch self {
+        case .dynamicSurface: return "capsule.portrait.fill"
         case .agent: return "bubble.left.fill"
         case .inbox: return "tray.fill"
         case .clipboard: return "doc.on.clipboard"
@@ -47,6 +50,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
 
     public var shortcut: KeyboardShortcut? {
         switch self {
+        case .dynamicSurface: return KeyboardShortcut(key: "8", modifiers: [.command])
         case .agent: return KeyboardShortcut(key: "1", modifiers: [.command])
         case .inbox: return KeyboardShortcut(key: "2", modifiers: [.command])
         case .clipboard: return KeyboardShortcut(key: "3", modifiers: [.command])

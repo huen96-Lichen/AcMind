@@ -62,6 +62,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var companionVoiceSaveToInbox: Bool = true
     @Published public var companionShortcutsEnabled: Bool = true
     @Published public var companionCaptureEnabled: Bool = true
+    @Published public var companionCollapsedContentSettings: CompanionCollapsedContentSettings = .default
 
     // 随身权限状态 (new types)
     @Published public var microphonePermissionStatus: CompanionPermissionStatus = .notDetermined
@@ -155,6 +156,13 @@ public final class SettingsViewModel: ObservableObject {
                 companionShortcutsEnabled = config.shortcutsEnabled
                 companionCaptureEnabled = config.captureEnabled
             }
+
+            if let data = UserDefaults.standard.data(forKey: CompanionCollapsedContentStorage.key),
+               let decoded = try? JSONDecoder().decode(CompanionCollapsedContentSettings.self, from: data) {
+                companionCollapsedContentSettings = decoded
+            } else {
+                companionCollapsedContentSettings = .default
+            }
         } catch {
             let config = CompanionConfiguration.default
             companionCapsuleEnabled = config.capsuleEnabled
@@ -165,6 +173,7 @@ public final class SettingsViewModel: ObservableObject {
             companionVoiceSaveToInbox = config.voiceSaveToInbox
             companionShortcutsEnabled = config.shortcutsEnabled
             companionCaptureEnabled = config.captureEnabled
+            companionCollapsedContentSettings = .default
         }
 
         // 从 PermissionManager 获取真实权限状态
@@ -221,7 +230,7 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     public func saveCompanionSettings() async {
-        let config = CompanionConfiguration(
+            let config = CompanionConfiguration(
             capsuleEnabled: companionCapsuleEnabled,
             capsulePosition: companionCapsulePosition.rawValue,
             capsuleExpandedByDefault: companionCapsuleExpanded,
@@ -236,6 +245,10 @@ public final class SettingsViewModel: ObservableObject {
             let jsonData = try JSONEncoder().encode(config)
             let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
             try await storage.setSetting(key: "companion_config", value: jsonString)
+
+            let collapsedData = try JSONEncoder().encode(companionCollapsedContentSettings)
+            UserDefaults.standard.set(collapsedData, forKey: CompanionCollapsedContentStorage.key)
+            NotificationCenter.default.post(name: .companionCollapsedContentSettingsChanged, object: nil)
         } catch {
             showError(message: "保存随身配置失败: \(error.localizedDescription)")
         }

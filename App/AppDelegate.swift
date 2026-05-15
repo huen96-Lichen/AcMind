@@ -17,7 +17,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var launchWindowController: LaunchWindowController?
     var mainWindowController: MainWindowController?
-    var capsuleWindowController: CapsuleWindowController?
 
     // MARK: - Notch Panel
 
@@ -65,15 +64,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 try await ServiceContainer.setup()
                 await MainActor.run {
+                    _ = NotchPanel.shared
+                    _ = DesktopCapsulePanel.shared
                     self.hideLaunchWindow()
                     self.showMainWindow()
-                    // 显示刘海面板
-                    if self.notchPanelEnabled {
-                        self.showNotchPanel()
-                    }
-                    // 显示胶囊
-                    if self.desktopCapsuleEnabled {
-                        self.showDesktopCapsule()
+                    DispatchQueue.main.async {
+                        self.restoreDynamicSurface()
                     }
                 }
             } catch {
@@ -130,18 +126,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func showCapsuleWindow() {
-        if capsuleWindowController == nil {
-            capsuleWindowController = CapsuleWindowController()
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        capsuleWindowController?.showWindow(nil)
-        capsuleWindowController?.window?.setFrame(AppWindowGeometry.capsuleFrame, display: true)
-        capsuleWindowController?.window?.makeKeyAndOrderFront(nil)
-        capsuleWindowController?.window?.orderFrontRegardless()
-        appState.capsuleWindowDidOpen()
-    }
-
     func showLaunchWindow() {
         if launchWindowController == nil {
             launchWindowController = LaunchWindowController()
@@ -158,38 +142,66 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         launchWindowController = nil
     }
 
-    func hideCapsuleWindow() {
-        capsuleWindowController?.close()
-        appState.capsuleWindowDidClose()
-    }
-
     // MARK: - Notch Panel
 
     func showNotchPanel() {
-        NotchPanel.shared.show()
+        NSApp.activate(ignoringOtherApps: true)
+        DynamicSurfaceCoordinator.shared.transition(to: .continentCompact, reason: .manualCommand)
     }
 
     func hideNotchPanel() {
-        NotchPanel.shared.hide()
+        if DynamicSurfaceCoordinator.shared.visibilityState == .continentCompact || DynamicSurfaceCoordinator.shared.visibilityState == .continentExpanded {
+            DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .manualCommand)
+        }
     }
 
     func toggleNotchPanel() {
-        NotchPanel.shared.toggle()
+        DynamicSurfaceCoordinator.shared.transition(to: .continentCompact, reason: .manualCommand)
     }
 
     // MARK: - Desktop Capsule
 
     func showDesktopCapsule() {
-        DesktopCapsulePanel.shared.restorePosition()
-        DesktopCapsulePanel.shared.show()
+        NSApp.activate(ignoringOtherApps: true)
+        DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .manualCommand)
     }
 
     func hideDesktopCapsule() {
-        DesktopCapsulePanel.shared.hide()
+        if DynamicSurfaceCoordinator.shared.visibilityState == .capsuleCompact {
+            DynamicSurfaceCoordinator.shared.transition(to: .continentCompact, reason: .manualCommand)
+        }
     }
 
     func toggleDesktopCapsule() {
-        DesktopCapsulePanel.shared.toggle()
+        DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .manualCommand)
+    }
+
+    private func restoreDynamicSurface() {
+        NSApp.activate(ignoringOtherApps: true)
+        let coordinator = DynamicSurfaceCoordinator.shared
+        let lastState = coordinator.visibilityState
+        let preferredState: DynamicSurfaceVisibilityState
+
+        switch lastState {
+        case .continentCompact, .continentExpanded:
+            if notchPanelEnabled {
+                preferredState = lastState
+            } else if desktopCapsuleEnabled {
+                preferredState = .capsuleCompact
+            } else {
+                preferredState = .capsuleCompact
+            }
+        case .capsuleCompact:
+            if desktopCapsuleEnabled {
+                preferredState = .capsuleCompact
+            } else if notchPanelEnabled {
+                preferredState = .continentCompact
+            } else {
+                preferredState = .capsuleCompact
+            }
+        }
+
+        coordinator.transition(to: preferredState, reason: .startup)
     }
 
     // MARK: - Status Bar
@@ -375,7 +387,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showCapsuleFromMenu() {
-        showCapsuleWindow()
+        showDesktopCapsule()
     }
 
     @objc private func toggleDesktopCapsuleFromMenu() {
@@ -621,38 +633,6 @@ extension MainWindowController: NSWindowDelegate {
     }
 }
 
-// MARK: - Capsule Window Controller
-
-class CapsuleWindowController: NSWindowController {
-    convenience init() {
-        let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 60),
-            styleMask: [.nonactivatingPanel, .titled, .closable, .resizable, .fullSizeContentView, .hudWindow],
-            backing: .buffered,
-            defer: false
-        )
-
-        window.title = "AcMind Capsule"
-        window.isFloatingPanel = true
-        window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace]
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-
-        // 设置内容视图
-        let contentView = CapsuleContentView()
-        window.contentView = NSHostingView(rootView: contentView)
-
-        self.init(window: window)
-
-        setupWindowDelegate()
-    }
-
-    private func setupWindowDelegate() {
-        window?.delegate = self
-    }
-}
-
 // MARK: - Launch Window Controller
 
 class LaunchWindowController: NSWindowController {
@@ -685,11 +665,4 @@ class LaunchWindowController: NSWindowController {
 enum AppWindowGeometry {
     static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 800)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
-    static let capsuleFrame = NSRect(x: 320, y: 260, width: 400, height: 60)
-}
-
-extension CapsuleWindowController: NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        AppState.shared.capsuleWindowDidClose()
-    }
 }

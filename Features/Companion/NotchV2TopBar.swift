@@ -155,7 +155,7 @@ struct NotchV2TopBar: View {
     }
 }
 
-    private struct TopBarSafeAreaDebugOverlay: View {
+private struct TopBarSafeAreaDebugOverlay: View {
     private let containerWidth: CGFloat = 880
     private let topBarHeight: CGFloat = 36
     private let topBarY: CGFloat = 20

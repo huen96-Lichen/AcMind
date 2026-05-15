@@ -748,7 +748,7 @@ class CompanionCapsuleViewModel: ObservableObject {
         
         // 截图完成后需要重新显示刘海
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            NotchPanel.shared.show()
+            DynamicSurfaceCoordinator.shared.transition(to: .continentCompact, reason: .capture)
         }
         isExpanded = false
     }

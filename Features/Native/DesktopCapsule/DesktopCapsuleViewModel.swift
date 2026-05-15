@@ -2,6 +2,20 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
+// MARK: - Desktop Capsule Layout Metrics
+
+enum DesktopCapsuleLayoutMetrics {
+    static let collapsedDiameter: CGFloat = 52
+    static let collapsedGlyphSize: CGFloat = 42
+    static let height: CGFloat = 52
+    static let contentLeadingInset: CGFloat = 52
+    static let contentTrailingInset: CGFloat = 12
+    static let actionSlotWidth: CGFloat = 44
+    static let actionSlotSpacing: CGFloat = 0
+    static let menuSlotWidth: CGFloat = 40
+    static let sidePadding: CGFloat = 8
+}
+
 // MARK: - Desktop Capsule View Model
 
 @MainActor
@@ -12,6 +26,10 @@ final class DesktopCapsuleViewModel: ObservableObject {
     @Published var executingAction: CapsuleActionType?
     @Published var isExecuting: Bool = false
     @Published var isHoveringPanel: Bool = false
+    @Published var isHoverEmphasized: Bool = false
+
+    private var hoverOpenTask: Task<Void, Never>?
+    private var hoverCollapseTask: Task<Void, Never>?
 
     // MARK: - Settings
 
@@ -40,9 +58,8 @@ final class DesktopCapsuleViewModel: ObservableObject {
     // MARK: - Expand/Collapse
 
     func toggleExpand() {
-        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
-            isExpanded.toggle()
-        }
+        cancelHoverTasks()
+        isExpanded.toggle()
 
         // 调整窗口大小
         if isExpanded {
@@ -53,18 +70,84 @@ final class DesktopCapsuleViewModel: ObservableObject {
         }
     }
 
+    func setExpanded(_ expanded: Bool) {
+        isExpanded = expanded
+    }
+
     func collapse() {
         guard isExpanded else { return }
-        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
-            isExpanded = false
-        }
+        cancelHoverTasks()
+        isExpanded = false
         DesktopCapsulePanel.shared.resizeToCollapsed()
+    }
+
+    func setPanelHovered(_ hovering: Bool) {
+        isHoveringPanel = hovering
+        isHoverEmphasized = hovering
+        cancelHoverTasks()
+
+        if hovering {
+            guard !isExpanded, coordinatorAllowsHoverOpen else { return }
+            scheduleHoverOpen()
+        } else {
+            isHoverEmphasized = false
+            guard isExpanded, canAutoCollapse else { return }
+            scheduleHoverCollapse()
+        }
+    }
+
+    var expandedWidth: CGFloat {
+        calculateExpandedWidth()
     }
 
     private func calculateExpandedWidth() -> CGFloat {
         let actionCount = CGFloat(enabledActions.count)
-        // 左侧圆形按钮 56 + 功能按钮 (44 * count) + 更多按钮 40 + padding
-        return 56 + (actionCount * 44) + 40 + 20
+        return DesktopCapsuleLayoutMetrics.collapsedDiameter
+            + DesktopCapsuleLayoutMetrics.sidePadding
+            + (actionCount * DesktopCapsuleLayoutMetrics.actionSlotWidth)
+            + DesktopCapsuleLayoutMetrics.menuSlotWidth
+            + DesktopCapsuleLayoutMetrics.contentTrailingInset
+    }
+
+    private func cancelHoverTasks() {
+        hoverOpenTask?.cancel()
+        hoverCollapseTask?.cancel()
+        hoverOpenTask = nil
+        hoverCollapseTask = nil
+    }
+
+    private func scheduleHoverOpen() {
+        hoverOpenTask?.cancel()
+        hoverOpenTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, !self.isExpanded else { return }
+                self.isExpanded = true
+                let width = self.calculateExpandedWidth()
+                DesktopCapsulePanel.shared.resizeToExpanded(width: width)
+            }
+        }
+    }
+
+    private func scheduleHoverCollapse() {
+        hoverCollapseTask?.cancel()
+        hoverCollapseTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.isExpanded, !self.isHoveringPanel, self.canAutoCollapse else { return }
+                self.collapse()
+            }
+        }
+    }
+
+    private var coordinatorAllowsHoverOpen: Bool {
+        DynamicSurfaceCoordinator.shared.dragPhase == .idle && !isExecuting
+    }
+
+    private var canAutoCollapse: Bool {
+        DynamicSurfaceCoordinator.shared.dragPhase == .idle && !isExecuting
     }
 
     // MARK: - Execute Actions
@@ -114,12 +197,12 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
             // 重新显示胶囊
             await MainActor.run {
-                DesktopCapsulePanel.shared.show()
+                DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .capture)
             }
         } catch {
             print("截图失败: \(error)")
             await MainActor.run {
-                DesktopCapsulePanel.shared.show()
+                DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .capture)
             }
         }
     }
@@ -190,7 +273,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
             panel.allowsMultipleSelection = false
 
             guard panel.runModal() == .OK, let url = panel.url else {
-                DesktopCapsulePanel.shared.show()
+                DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .capture)
                 return
             }
 
@@ -204,7 +287,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
                 }
 
                 await MainActor.run {
-                    DesktopCapsulePanel.shared.show()
+                    DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .capture)
                 }
             }
         }

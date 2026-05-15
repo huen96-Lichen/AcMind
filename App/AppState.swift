@@ -34,7 +34,6 @@ public final class AppState: ObservableObject, Sendable {
     // MARK: - Window State
 
     @Published public var mainWindowState: WindowState = .closed
-    @Published public var capsuleWindowState: WindowState = .closed
     @Published public var isMainWindowKey = false
 
     // MARK: - Launch State (from ServiceContainer)
@@ -138,14 +137,6 @@ public final class AppState: ObservableObject, Sendable {
 
     public func mainWindowDidResignKey() {
         isMainWindowKey = false
-    }
-
-    public func capsuleWindowDidOpen() {
-        capsuleWindowState = .normal
-    }
-
-    public func capsuleWindowDidClose() {
-        capsuleWindowState = .closed
     }
 
     // MARK: - Error Handling

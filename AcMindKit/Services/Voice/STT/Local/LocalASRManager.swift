@@ -215,7 +215,7 @@ public actor LocalASRManager: @unchecked Sendable {
         let fileHandle = try FileHandle(forWritingTo: tempFile)
         
         for try await byte in asyncBytes {
-            try fileHandle.write(Data([byte]))
+            fileHandle.write(Data([byte]))
             downloadedBytes += 1
             
             if downloadedBytes % 1024 == 0 {

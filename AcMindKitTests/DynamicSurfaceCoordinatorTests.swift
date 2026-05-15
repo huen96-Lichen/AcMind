@@ -1,0 +1,251 @@
+import XCTest
+import AppKit
+@testable import AcMindKit
+
+@MainActor
+final class DynamicSurfaceCoordinatorTests: XCTestCase {
+    private let capsulePositionKey = "DesktopCapsule.position"
+    private let continentScreenKey = "DynamicSurface.continentTopDockScreenID"
+    private let visibilityStateKey = "DynamicSurface.visibilityState"
+
+    override func setUp() {
+        super.setUp()
+        clearPersistedState()
+    }
+
+    override func tearDown() {
+        clearPersistedState()
+        super.tearDown()
+    }
+
+    func testTopDockHotZoneUsesNinetySixPixels() throws {
+        guard let screen = NSScreen.main else {
+            throw XCTSkip("No main screen available")
+        }
+
+        let topPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 1)
+        let lowerPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 120)
+
+        XCTAssertTrue(CompanionScreenPositioning.isPointInTopDockHotZone(topPoint, screen: screen))
+        XCTAssertFalse(CompanionScreenPositioning.isPointInTopDockHotZone(lowerPoint, screen: screen))
+    }
+
+    func testCapsuleDragCommitsToContinentWhenEndingInTopHotZone() throws {
+        guard let screen = NSScreen.main else {
+            throw XCTSkip("No main screen available")
+        }
+
+        let coordinator = DynamicSurfaceCoordinator()
+        let capsule = MockSurfaceAdapter()
+        let continent = MockSurfaceAdapter()
+        coordinator.registerCapsuleAdapter(capsule)
+        coordinator.registerContinentAdapter(continent)
+
+        let topPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 4)
+        coordinator.capsuleDragBegan(at: topPoint)
+        coordinator.capsuleDragChanged(to: topPoint)
+
+        XCTAssertTrue(capsule.isVisible)
+        XCTAssertFalse(continent.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+
+        coordinator.capsuleDragEnded(at: topPoint)
+
+        XCTAssertEqual(coordinator.visibilityState, .continentCompact)
+        XCTAssertEqual(coordinator.dragPhase, .idle)
+        XCTAssertTrue(capsule.didHide)
+        XCTAssertTrue(continent.didShowCompact)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+    }
+
+    func testCapsuleToContinentHidesCapsule() throws {
+        guard let screen = NSScreen.main else {
+            throw XCTSkip("No main screen available")
+        }
+
+        let coordinator = DynamicSurfaceCoordinator()
+        let capsule = MockSurfaceAdapter()
+        let continent = MockSurfaceAdapter()
+        coordinator.registerCapsuleAdapter(capsule)
+        coordinator.registerContinentAdapter(continent)
+
+        let topPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 4)
+        coordinator.capsuleDragBegan(at: topPoint)
+        coordinator.capsuleDragChanged(to: topPoint)
+        coordinator.capsuleDragEnded(at: topPoint)
+
+        XCTAssertEqual(coordinator.visibilityState, .continentCompact)
+        XCTAssertFalse(capsule.isVisible)
+        XCTAssertTrue(continent.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+    }
+
+    func testContinentDragReturnsToCapsuleWhenEndingInDesktopZone() throws {
+        guard let screen = NSScreen.main else {
+            throw XCTSkip("No main screen available")
+        }
+
+        let coordinator = DynamicSurfaceCoordinator()
+        let capsule = MockSurfaceAdapter()
+        let continent = MockSurfaceAdapter()
+        coordinator.registerCapsuleAdapter(capsule)
+        coordinator.registerContinentAdapter(continent)
+
+        let topPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 4)
+        let desktopPoint = CGPoint(x: screen.frame.midX, y: max(screen.frame.minY + 80, screen.frame.maxY - 200))
+
+        coordinator.continentLongPressBegan(at: topPoint)
+        coordinator.continentDragChanged(to: desktopPoint)
+
+        XCTAssertTrue(continent.isVisible)
+        XCTAssertFalse(capsule.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+
+        coordinator.continentDragEnded(at: desktopPoint)
+
+        XCTAssertEqual(coordinator.visibilityState, .capsuleCompact)
+        XCTAssertEqual(coordinator.dragPhase, .idle)
+        XCTAssertTrue(continent.didHide)
+        XCTAssertTrue(capsule.didShowCompact)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+    }
+
+    func testContinentToCapsuleHidesContinent() throws {
+        guard let screen = NSScreen.main else {
+            throw XCTSkip("No main screen available")
+        }
+
+        let coordinator = DynamicSurfaceCoordinator()
+        let capsule = MockSurfaceAdapter()
+        let continent = MockSurfaceAdapter()
+        coordinator.registerCapsuleAdapter(capsule)
+        coordinator.registerContinentAdapter(continent)
+
+        let topPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 4)
+        let desktopPoint = CGPoint(x: screen.frame.midX, y: max(screen.frame.minY + 80, screen.frame.maxY - 200))
+
+        coordinator.continentLongPressBegan(at: topPoint)
+        coordinator.continentDragChanged(to: desktopPoint)
+        coordinator.continentDragEnded(at: desktopPoint)
+
+        XCTAssertEqual(coordinator.visibilityState, .capsuleCompact)
+        XCTAssertFalse(continent.isVisible)
+        XCTAssertTrue(capsule.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+    }
+
+    func testOnlyOneSurfaceVisibleAfterRestore() throws {
+        let persistedCoordinator = DynamicSurfaceCoordinator()
+        let persistedCapsule = MockSurfaceAdapter()
+        let persistedContinent = MockSurfaceAdapter()
+        persistedCoordinator.registerCapsuleAdapter(persistedCapsule)
+        persistedCoordinator.registerContinentAdapter(persistedContinent)
+        persistedCoordinator.transition(to: .continentCompact, reason: .manualCommand)
+
+        let restoredCoordinator = DynamicSurfaceCoordinator()
+        let restoredCapsule = MockSurfaceAdapter()
+        let restoredContinent = MockSurfaceAdapter()
+        restoredCoordinator.registerCapsuleAdapter(restoredCapsule)
+        restoredCoordinator.registerContinentAdapter(restoredContinent)
+        restoredCoordinator.restoreLastSurface()
+
+        XCTAssertEqual(restoredCoordinator.visibilityState, .continentCompact)
+        XCTAssertTrue(restoredContinent.isVisible)
+        XCTAssertFalse(restoredCapsule.isVisible)
+        XCTAssertEqual(restoredCapsule.visibleSurfaceCount + restoredContinent.visibleSurfaceCount, 1)
+    }
+
+    func testPreviewDoesNotCommitVisibilityBeforeMouseUp() throws {
+        guard let screen = NSScreen.main else {
+            throw XCTSkip("No main screen available")
+        }
+
+        let coordinator = DynamicSurfaceCoordinator()
+        let capsule = MockSurfaceAdapter()
+        let continent = MockSurfaceAdapter()
+        coordinator.registerCapsuleAdapter(capsule)
+        coordinator.registerContinentAdapter(continent)
+
+        let topPoint = CGPoint(x: screen.frame.midX, y: screen.frame.maxY - 4)
+        coordinator.capsuleDragBegan(at: topPoint)
+        coordinator.capsuleDragChanged(to: topPoint)
+
+        XCTAssertEqual(coordinator.visibilityState, .capsuleCompact)
+        XCTAssertTrue(capsule.isVisible)
+        XCTAssertFalse(continent.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+        XCTAssertEqual(continent.didShowCompactCount, 0)
+
+        coordinator.capsuleDragEnded(at: topPoint)
+
+        XCTAssertEqual(coordinator.visibilityState, .continentCompact)
+        XCTAssertTrue(continent.isVisible)
+        XCTAssertFalse(capsule.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+    }
+
+    func testDirectShowCannotLeaveBothPanelsVisible() throws {
+        let coordinator = DynamicSurfaceCoordinator()
+        let capsule = MockSurfaceAdapter()
+        let continent = MockSurfaceAdapter()
+        coordinator.registerCapsuleAdapter(capsule)
+        coordinator.registerContinentAdapter(continent)
+
+        coordinator.transition(to: .capsuleCompact, reason: .manualCommand)
+        coordinator.transition(to: .continentCompact, reason: .manualCommand)
+
+        XCTAssertTrue(continent.isVisible)
+        XCTAssertFalse(capsule.isVisible)
+        XCTAssertEqual(capsule.visibleSurfaceCount + continent.visibleSurfaceCount, 1)
+    }
+
+    private func clearPersistedState() {
+        UserDefaults.standard.removeObject(forKey: capsulePositionKey)
+        UserDefaults.standard.removeObject(forKey: continentScreenKey)
+        UserDefaults.standard.removeObject(forKey: visibilityStateKey)
+    }
+}
+
+@MainActor
+private final class MockSurfaceAdapter: DynamicSurfacePanelAdapter {
+    private(set) var didShowCompact = false
+    private(set) var didShowExpanded = false
+    private(set) var didHide = false
+    private(set) var beginPreviewCount = 0
+    private(set) var endPreviewCount = 0
+    private(set) var didShowCompactCount = 0
+    private(set) var didShowExpandedCount = 0
+    private(set) var isVisible = false
+
+    func showCompact(on screen: NSScreen?, at point: CGPoint?, animated: Bool) {
+        didShowCompact = true
+        didShowCompactCount += 1
+        isVisible = true
+    }
+
+    func showExpanded(on screen: NSScreen?, at point: CGPoint?, animated: Bool) {
+        didShowExpanded = true
+        didShowExpandedCount += 1
+        isVisible = true
+    }
+
+    func hide(animated: Bool) {
+        didHide = true
+        isVisible = false
+    }
+
+    func beginDragPreview() {
+        beginPreviewCount += 1
+    }
+
+    func updateDragPreview(mouseLocation: CGPoint, phase: DynamicSurfaceDragPhase) {
+    }
+
+    func endDragPreview() {
+        endPreviewCount += 1
+    }
+
+    var visibleSurfaceCount: Int {
+        isVisible ? 1 : 0
+    }
+}

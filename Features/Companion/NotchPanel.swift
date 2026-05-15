@@ -17,7 +17,7 @@ final class NotchPanel: NSPanel {
     private init() {
         // 初始尺寸，后续会根据内容自适应
         super.init(
-            contentRect: CompanionScreenPositioning.collapsedFrame(),
+            contentRect: CompanionScreenPositioning.collapsedFrame(on: NSScreen.main),
             styleMask: [.nonactivatingPanel, .hudWindow, .borderless],
             backing: .buffered,
             defer: false
@@ -26,6 +26,7 @@ final class NotchPanel: NSPanel {
         setupPanel()
         setupContentView()
         setupScreenObserver()
+        DynamicSurfaceCoordinator.shared.registerContinentAdapter(ContinentPanelAdapter(panel: self))
     }
 
     // MARK: - Panel Setup
@@ -58,7 +59,7 @@ final class NotchPanel: NSPanel {
         hosting.autoresizingMask = [.width, .height]
         self.contentView = hosting
         self.hostingView = hosting
-        syncWindowSize(with: CompanionScreenPositioning.collapsedFrame().size)
+        syncWindowSize(with: CompanionScreenPositioning.collapsedFrame(on: NSScreen.main).size)
     }
 
     // MARK: - Screen Observer
@@ -80,14 +81,48 @@ final class NotchPanel: NSPanel {
 
     /// 将面板定位到屏幕顶部菜单栏区域
     func positionAtTopCenter() {
+        let currentFrame = self.frame
+        let screen = CompanionScreenPositioning.screen(for: CGPoint(x: currentFrame.midX, y: currentFrame.midY))
         let frame = isExpanded
-            ? CompanionScreenPositioning.expandedFrame(anchorFrame: CompanionScreenPositioning.collapsedFrame())
-            : CompanionScreenPositioning.collapsedFrame()
+            ? CompanionScreenPositioning.expandedFrame(centeredOnX: currentFrame.midX, on: screen)
+            : CompanionScreenPositioning.collapsedFrame(centeredOnX: currentFrame.midX, on: screen)
         syncWindowSize(with: frame.size)
         setFrame(frame, display: true)
         hostingView?.frame = NSRect(origin: .zero, size: frame.size)
         
         print("[NotchPanel] Positioning: frame=\(frame), realWidth=\(self.frame.width), realHeight=\(self.frame.height), hasNotch=\(CompanionScreenPositioning.hasHardwareNotch())")
+    }
+
+    func showCompact(on screen: NSScreen? = nil, at point: CGPoint? = nil, animated: Bool = true) {
+        viewModel.isExpanded = false
+        isExpanded = false
+
+        let frame: CGRect
+        let targetScreen = screen ?? NSScreen.main ?? NSScreen.screens.first
+        if let point {
+            frame = CompanionScreenPositioning.collapsedFrame(on: targetScreen ?? CompanionScreenPositioning.screen(for: point))
+        } else {
+            frame = CompanionScreenPositioning.collapsedFrame(on: targetScreen)
+        }
+
+        syncWindowSize(with: frame.size)
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = CompanionMenuBarLayout.surfaceMorphDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                animator().setFrame(frame, display: true)
+            }
+        } else {
+            setFrame(frame, display: true)
+        }
+        hostingView?.frame = NSRect(origin: .zero, size: frame.size)
+        makeKeyAndOrderFront(nil)
+        orderFrontRegardless()
+    }
+
+    func showExpanded(on screen: NSScreen? = nil, at point: CGPoint? = nil, animated: Bool = true) {
+        showCompact(on: screen, at: point, animated: animated)
+        setExpanded(true, animated: animated)
     }
 
     func setExpanded(_ expanded: Bool, animated: Bool) {
@@ -98,13 +133,15 @@ final class NotchPanel: NSPanel {
             viewModel.selectedPage = .overview
         }
 
+        let screen = CompanionScreenPositioning.screen(for: CGPoint(x: frame.midX, y: frame.midY))
         let targetFrame = expanded
-            ? CompanionScreenPositioning.expandedFrame(anchorFrame: frame)
-            : CompanionScreenPositioning.collapsedFrame()
+            ? CompanionScreenPositioning.expandedFrame(centeredOnX: frame.midX, on: screen)
+            : CompanionScreenPositioning.collapsedFrame(centeredOnX: frame.midX, on: screen)
 
         if animated {
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = expanded ? CompanionMenuBarLayout.expandDuration : CompanionMenuBarLayout.collapseDuration
+                context.duration = CompanionMenuBarLayout.surfaceMorphDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                 animator().setFrame(targetFrame, display: true)
             }
         } else {
@@ -113,6 +150,22 @@ final class NotchPanel: NSPanel {
         syncWindowSize(with: targetFrame.size)
         hostingView?.frame = NSRect(origin: .zero, size: targetFrame.size)
         print("[NotchPanel] setExpanded(\(expanded)): frame=\(targetFrame), realWidth=\(self.frame.width), realHeight=\(self.frame.height)")
+    }
+
+    func moveCompact(to point: CGPoint, on screen: NSScreen? = nil, animated: Bool = false) {
+        let targetScreen = screen ?? CompanionScreenPositioning.screen(for: point) ?? NSScreen.main ?? NSScreen.screens.first
+        let frame = CompanionScreenPositioning.collapsedFrame(centeredOnX: targetScreen?.frame.midX ?? point.x, on: targetScreen)
+        syncWindowSize(with: frame.size)
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = CompanionMenuBarLayout.surfaceMorphDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                animator().setFrame(frame, display: true)
+            }
+        } else {
+            setFrame(frame, display: true)
+        }
+        hostingView?.frame = NSRect(origin: .zero, size: frame.size)
     }
 
     // MARK: - Show / Hide

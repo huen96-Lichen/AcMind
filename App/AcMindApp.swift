@@ -57,7 +57,7 @@ struct AcMindCommands: Commands {
             .keyboardShortcut("0", modifiers: .command)
 
             Button("显示胶囊") {
-                appDelegate?.showCapsuleWindow()
+                appDelegate?.showDesktopCapsule()
             }
             .keyboardShortcut(KeyEquivalent(" "), modifiers: [.command, .shift])
 

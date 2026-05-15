@@ -2,19 +2,19 @@ import SwiftUI
 import AppKit
 
 enum AppSurfaceTokens {
-    static let background = Color(nsColor: .windowBackgroundColor)
+    static let background = ACColors.pageBackground
     static let islandBackground = background
-    static let islandBackgroundSoft = Color(nsColor: .underPageBackgroundColor)
-    static let cardBackground = Color.white
-    static let cardBackgroundSoft = Color(nsColor: .controlBackgroundColor)
-    static let cardBackgroundStrong = Color(nsColor: .selectedContentBackgroundColor)
-    static let separator = Color.black.opacity(0.08)
-    static let primaryText = Color(nsColor: .labelColor)
-    static let secondaryText = Color(nsColor: .secondaryLabelColor)
-    static let tertiaryText = Color(nsColor: .tertiaryLabelColor)
-    static let accentPurple = Color(red: 0.72, green: 0.12, blue: 0.90)
-    static let accentGreen = Color(red: 0.25, green: 0.75, blue: 0.35)
-    static let cardRadius: CGFloat = 20
+    static let islandBackgroundSoft = ACColors.pageBackground
+    static let cardBackground = ACColors.cardBackground
+    static let cardBackgroundSoft = ACColors.softFill
+    static let cardBackgroundStrong = ACColors.selectedFill
+    static let separator = ACColors.border
+    static let primaryText = ACColors.primaryText
+    static let secondaryText = ACColors.secondaryText
+    static let tertiaryText = ACColors.tertiaryText
+    static let accentPurple = ACColors.accentPurple
+    static let accentGreen = ACColors.accentGreen
+    static let cardRadius: CGFloat = ACLayout.cardRadius
 }
 
 struct AppSurfaceCard<Content: View>: View {

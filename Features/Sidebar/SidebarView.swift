@@ -52,29 +52,31 @@ struct SidebarItemRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: item.icon)
-                .frame(width: 20, height: 20)
-                .foregroundStyle(isSelected ? .white : .primary)
+                .font(.system(size: ACLayout.iconL, weight: .medium))
+                .frame(width: ACLayout.iconL, height: ACLayout.iconL)
+                .foregroundStyle(isSelected ? .white : ACColors.primaryText)
 
             Text(item.title)
-                .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                .font(isSelected ? ACTypography.bodyMedium : ACTypography.body)
+                .foregroundStyle(isSelected ? .white : ACColors.primaryText)
 
             Spacer()
 
             // 快捷键提示
             if let shortcut = item.shortcut {
                 Text(shortcutDisplay(shortcut))
-                    .font(.system(size: 11))
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
-                    .padding(.horizontal, 6)
+                    .font(ACTypography.mini)
+                    .foregroundStyle(isSelected ? .white.opacity(0.8) : ACColors.secondaryText)
+                    .padding(.horizontal, ACLayout.gapS - 2)
                     .padding(.vertical, 2)
-                    .background(isSelected ? Color.white.opacity(0.2) : Color.secondary.opacity(0.1))
-                    .cornerRadius(4)
+                    .background(isSelected ? Color.white.opacity(0.2) : ACColors.softFill)
+                    .clipShape(RoundedRectangle(cornerRadius: ACLayout.tinyRadius, style: .continuous))
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(isSelected ? Color.accentColor : Color.clear)
-        .cornerRadius(6)
+        .padding(.vertical, ACLayout.gapXS)
+        .padding(.horizontal, ACLayout.gapS)
+        .background(isSelected ? ACColors.accentBlue : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
         .contentShape(Rectangle())
     }
 
@@ -96,12 +98,12 @@ struct SidebarItemBadge: View {
     var body: some View {
         if count > 0 {
             Text("\(count)")
-                .font(.system(size: 11, weight: .medium))
+                .font(ACTypography.miniMedium)
                 .foregroundStyle(Color.white)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, ACLayout.gapS - 2)
                 .padding(.vertical, 2)
                 .background(Color.red)
-                .cornerRadius(10)
+                .clipShape(RoundedRectangle(cornerRadius: ACLayout.capsuleRadius, style: .continuous))
         }
     }
 }

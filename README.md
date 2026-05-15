@@ -64,7 +64,6 @@ AcMindKit/            # Swift Package 核心库
     └── Settings/     # 配置 + 权限 + 快捷键
 Features/             # 原生视图
 ├── Native/           # Agent/Inbox/Schedule/Settings/Capsule
-├── WebView/          # WebViewBridge 过渡模块
 └── Companion/        # Companion 浮层
 Design/               # 设计系统
 Resources/            # 资源文件
@@ -72,13 +71,7 @@ scripts/              # 构建脚本
 docs/                 # 文档
 ```
 
-详细架构说明见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
-
-## 开发指南
-
-- [开发流程](docs/DEVELOPMENT.md)
-- [验收标准](docs/ACCEPTANCE.md)
-- [迁移边界](docs/PHASE0_BOUNDARY_FREEZE.md)
+详细架构说明以源码结构和设计系统为准，当前仓库里的 `docs/Design/` 只保留了少量参考资料。
 
 ## 技术栈
 
@@ -90,10 +83,6 @@ docs/                 # 文档
 | 数据库 | GRDB.swift (SQLite) |
 | 并发 | Swift Actor |
 | CI | GitHub Actions |
-
-## ⚠️ Electron 归档说明
-
-Electron 代码已归档为参考实现（`src.legacy/`），不再参与生产构建。相关依赖和脚本已移除，如需查阅 Electron 实现细节，参见 [docs/electron-decommission-guide.md](docs/electron-decommission-guide.md)。
 
 ## License
 

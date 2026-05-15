@@ -1,4 +1,5 @@
 import SwiftUI
+import AcMindKit
 
 public struct NotchV2RootView: View {
     @ObservedObject var viewModel: NotchV2ViewModel
@@ -22,7 +23,10 @@ public struct NotchV2RootView: View {
         .frame(width: viewModel.isExpanded ? NotchV2DesignTokens.expandedWidth : NotchV2DesignTokens.collapsedWidth,
                height: viewModel.isExpanded ? viewModel.expandedHeight : NotchV2DesignTokens.collapsedHeight,
                alignment: .top)
-        .animation(.spring(response: 0.38, dampingFraction: 0.86), value: viewModel.isExpanded)
+        .animation(.spring(response: CompanionMenuBarLayout.surfaceMorphResponse, dampingFraction: CompanionMenuBarLayout.surfaceMorphDamping), value: viewModel.isExpanded)
+        .onHover { hovering in
+            viewModel.setPanelHovered(hovering)
+        }
         .onChange(of: viewModel.isExpanded) { _, newValue in
             onExpansionChange(newValue)
         }

@@ -40,15 +40,15 @@ struct DynamicContinentSchedulePage: View {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Text(item.0)
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(DynamicContinentDesignTokens.accentPurple)
+                                .foregroundStyle(NotchV2DesignTokens.accentPurple)
                                 .frame(width: 54, alignment: .leading)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.1)
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+                                    .foregroundStyle(NotchV2DesignTokens.primaryText)
                                 Text("当前可用")
                                     .font(.system(size: 9, weight: .regular))
-                                    .foregroundStyle(DynamicContinentDesignTokens.tertiaryText)
+                                    .foregroundStyle(NotchV2DesignTokens.tertiaryText)
                             }
                             Spacer()
                         }
@@ -62,17 +62,17 @@ struct DynamicContinentSchedulePage: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("编排音乐联动")
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+                            .foregroundStyle(NotchV2DesignTokens.primaryText)
                         Text("状态：等待下一条指令")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
                         Text("来源：音乐模块")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
 
                         HStack(spacing: 8) {
-                            NotchV2StatusPill(title: "继续", accent: DynamicContinentDesignTokens.accentPurple)
-                            NotchV2StatusPill(title: "查看日志", accent: DynamicContinentDesignTokens.cardBackgroundStrong)
+                            NotchV2StatusPill(title: "继续", accent: NotchV2DesignTokens.accentPurple)
+                            NotchV2StatusPill(title: "查看日志", accent: NotchV2DesignTokens.cardBackgroundStrong)
                         }
                     }
                 }
@@ -82,10 +82,10 @@ struct DynamicContinentSchedulePage: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("16:30 音乐联动评估")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+                            .foregroundStyle(NotchV2DesignTokens.primaryText)
                         Text("还剩 2 项任务")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -97,15 +97,15 @@ struct DynamicContinentSchedulePage: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("今日剩余 2 项")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+                            .foregroundStyle(NotchV2DesignTokens.primaryText)
                         Text("负载状态：稳定")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     }
 
                     VStack(spacing: 8) {
-                        NotchV2StatusPill(icon: "plus", title: "新增日程", accent: DynamicContinentDesignTokens.innerCardBackground)
-                        NotchV2StatusPill(icon: "sparkles", title: "今日总结", accent: DynamicContinentDesignTokens.innerCardBackground)
+                        NotchV2StatusPill(icon: "plus", title: "新增日程", accent: NotchV2DesignTokens.innerCardBackground)
+                        NotchV2StatusPill(icon: "sparkles", title: "今日总结", accent: NotchV2DesignTokens.innerCardBackground)
                     }
                 }
             }

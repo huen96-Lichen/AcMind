@@ -8,10 +8,10 @@ public struct CompanionMenuBarLayout {
     // MARK: - 尺寸参数
     
     /// 收起态高度
-    public static let collapsedHeight: CGFloat = 33
+    public static let collapsedHeight: CGFloat = 30
     
     /// 收起态宽度
-    public static let collapsedWidth: CGFloat = 240
+    public static let collapsedWidth: CGFloat = 228
     
     /// 收起态最小宽度
     public static let collapsedMinWidth: CGFloat = collapsedWidth
@@ -60,21 +60,33 @@ public struct CompanionMenuBarLayout {
     public static let cornerRadiusCollapsed: CGFloat = 18
     
     /// 展开态圆角
-    public static let cornerRadiusExpanded: CGFloat = 30
+    public static let cornerRadiusExpanded: CGFloat = 12
     
     // MARK: - 动画参数
     
     /// 展开动画时长
     public static let expandDuration: TimeInterval = 0.22
-    
+
     /// 收起动画时长
     public static let collapseDuration: TimeInterval = 0.18
+
+    /// 统一形变动画时长
+    public static let surfaceMorphDuration: TimeInterval = 0.24
+
+    /// 统一形变弹簧响应
+    public static let surfaceMorphResponse: CGFloat = 0.32
+
+    /// 统一形变弹簧阻尼
+    public static let surfaceMorphDamping: CGFloat = 0.84
     
     /// 弹簧响应参数
     public static let springResponse: CGFloat = 0.28
     
     /// 弹簧阻尼参数
     public static let springDamping: CGFloat = 0.86
+
+    /// 顶部吸附热区高度
+    public static let topDockHotZoneHeight: CGFloat = 96
 
 }
 
@@ -133,11 +145,16 @@ public struct CompanionScreenPositioning {
     }
     
     /// 计算展开态面板位置
-    public static func expandedFrame(anchorFrame _: CGRect) -> CGRect {
-        let screen = mainScreen
+    public static func expandedFrame(anchorFrame: CGRect) -> CGRect {
+        return expandedFrame(anchoredTo: anchorFrame)
+    }
+
+    /// 计算以现有 frame 为锚点的展开态面板位置
+    public static func expandedFrame(anchoredTo anchorFrame: CGRect) -> CGRect {
+        let screen = self.screen(for: CGPoint(x: anchorFrame.midX, y: anchorFrame.midY)) ?? mainScreen
         let width = CompanionMenuBarLayout.expandedWidth
         let height = CompanionMenuBarLayout.expandedHeight
-        let x = screen.frame.midX - width / 2
+        let x = anchorFrame.minX
         let clampedX = max(screen.frame.minX, min(x, screen.frame.maxX - width))
         let y = screen.frame.maxY - height
 
@@ -148,7 +165,100 @@ public struct CompanionScreenPositioning {
             height: height
         )
     }
-    
+
+    /// 计算以顶部中心点为锚点的展开态面板位置
+    public static func expandedFrame(centeredOnX anchorX: CGFloat, on screen: NSScreen? = nil) -> CGRect {
+        let targetScreen = screen ?? mainScreen
+        let width = CompanionMenuBarLayout.expandedWidth
+        let height = CompanionMenuBarLayout.expandedHeight
+        let clampedX = max(targetScreen.frame.minX, min(anchorX - width / 2, targetScreen.frame.maxX - width))
+        let y = targetScreen.frame.maxY - height
+
+        return CGRect(
+            x: clampedX,
+            y: y,
+            width: width,
+            height: height
+        )
+    }
+
+    /// 计算以现有 frame 为锚点的收起态面板位置
+    public static func collapsedFrame(anchoredTo anchorFrame: CGRect) -> CGRect {
+        let screen = self.screen(for: CGPoint(x: anchorFrame.midX, y: anchorFrame.midY)) ?? mainScreen
+        let width = CompanionMenuBarLayout.collapsedWidth
+        let x = anchorFrame.minX
+        let clampedX = max(screen.frame.minX, min(x, screen.frame.maxX - width))
+        let y = screen.frame.maxY - CompanionMenuBarLayout.collapsedHeight
+
+        return CGRect(
+            x: clampedX,
+            y: y,
+            width: width,
+            height: CompanionMenuBarLayout.collapsedHeight
+        )
+    }
+
+    /// 计算以顶部中心点为锚点的收起态面板位置
+    public static func collapsedFrame(centeredOnX anchorX: CGFloat, on screen: NSScreen? = nil) -> CGRect {
+        let targetScreen = screen ?? mainScreen
+        let width = CompanionMenuBarLayout.collapsedWidth
+        let clampedX = max(targetScreen.frame.minX, min(anchorX - width / 2, targetScreen.frame.maxX - width))
+        let y = targetScreen.frame.maxY - CompanionMenuBarLayout.collapsedHeight
+
+        return CGRect(
+            x: clampedX,
+            y: y,
+            width: width,
+            height: CompanionMenuBarLayout.collapsedHeight
+        )
+    }
+
+    /// 获取点所在屏幕
+    public static func screen(for point: CGPoint) -> NSScreen? {
+        NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main
+    }
+
+    /// 判断是否进入顶部吸附热区
+    public static func isPointInTopDockHotZone(_ point: CGPoint, screen: NSScreen, hotZoneHeight: CGFloat = CompanionMenuBarLayout.topDockHotZoneHeight) -> Bool {
+        point.y >= screen.frame.maxY - hotZoneHeight
+    }
+
+    /// 判断是否进入顶部吸附热区
+    public static func isPointInTopDockHotZone(_ point: CGPoint, screenFrame: CGRect, hotZoneHeight: CGFloat = CompanionMenuBarLayout.topDockHotZoneHeight) -> Bool {
+        point.y >= screenFrame.maxY - hotZoneHeight
+    }
+
+    /// 判断是否处于桌面区域
+    public static func isPointInDesktopZone(_ point: CGPoint, screen: NSScreen, hotZoneHeight: CGFloat = CompanionMenuBarLayout.topDockHotZoneHeight) -> Bool {
+        !isPointInTopDockHotZone(point, screen: screen, hotZoneHeight: hotZoneHeight)
+    }
+
+    /// 计算以给定点为中心的 frame
+    public static func centeredFrame(at point: CGPoint, size: CGSize, screen: NSScreen? = nil) -> CGRect {
+        let targetScreen = screen ?? self.screen(for: point) ?? mainScreen
+        let frame = targetScreen.frame
+        let origin = CGPoint(
+            x: max(frame.minX, min(point.x - size.width / 2, frame.maxX - size.width)),
+            y: max(frame.minY, min(point.y - size.height / 2, frame.maxY - size.height))
+        )
+        return CGRect(origin: origin, size: size)
+    }
+
+    /// 计算顶部停靠 frame
+    public static func collapsedFrame(on screen: NSScreen? = nil) -> CGRect {
+        let targetScreen = screen ?? mainScreen
+        let width = CompanionMenuBarLayout.collapsedWidth
+        let x = targetScreen.frame.midX - width / 2
+        let y = targetScreen.frame.maxY - CompanionMenuBarLayout.collapsedHeight
+
+        return CGRect(
+            x: x,
+            y: y,
+            width: width,
+            height: CompanionMenuBarLayout.collapsedHeight
+        )
+    }
+
     /// 更新窗口层级为菜单栏层级
     public static func configureWindowLevel(_ window: NSWindow) {
         window.level = .statusBar
