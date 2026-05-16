@@ -18,39 +18,24 @@ struct ClipboardWorkspaceView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ACPageHeader(
-                title: "剪贴板",
-                subtitle: "自动保存 · 智能分类 · 快速检索 · 详情预览 · 一键粘贴 / 复制 / 分享",
-                trailing: { headerControls }
-            )
-            .frame(height: 96)
-
-            statsBar
-                .frame(height: 96)
-
-            HStack(alignment: .top, spacing: ACLayout.gapL) {
-                sidebar
-                    .frame(width: 220)
-
-                centerList
-                    .frame(maxWidth: .infinity)
-
-                detailPanel
-                    .frame(width: 430)
-            }
-            .padding(.horizontal, ACLayout.pagePaddingX)
-            .padding(.bottom, ACLayout.pagePaddingBottom)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
-        .background(ACColors.pageBackground)
-    }
-
-    private var headerControls: some View {
-        HStack(spacing: 12) {
-            ACSearchField("搜索剪贴板", text: $searchText, width: 340, height: 38)
-            ACButton("新增", kind: .primary, minWidth: 78) {}
-        }
+        ACWorkspaceShell(
+            title: "剪贴板",
+            subtitle: "自动保存、智能分类、快速检索和内容复用。",
+            trailing: {
+                HStack(spacing: 12) {
+                    ACSearchField("搜索剪贴板", text: $searchText, width: 220, height: ACLayout.controlHeight)
+                    ACButton("新增", kind: .primary, minWidth: 78) {}
+                }
+            },
+            left: { sidebar },
+            center: {
+                VStack(alignment: .leading, spacing: ACLayout.cardGap) {
+                    statsBar
+                    centerList
+                }
+            },
+            right: { detailPanel }
+        )
     }
 
     private var statsBar: some View {
@@ -63,7 +48,6 @@ struct ClipboardWorkspaceView: View {
             ClipboardStatCard(title: "文件", value: "16", subtitle: "条", symbol: "doc")
             ClipboardStatCard(title: "代码", value: "6", subtitle: "条", symbol: "curlybraces")
         }
-        .padding(.horizontal, ACLayout.pagePaddingX)
     }
 
     private var sidebar: some View {
@@ -158,7 +142,7 @@ struct ClipboardWorkspaceView: View {
     }
 
     private var detailPanel: some View {
-        ACDetailPanel(width: 430, padding: 16) {
+        ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 if let selectedItem {
                     ClipboardDetailHeader(item: selectedItem)
@@ -249,11 +233,11 @@ private struct ClipboardCategoryRow: View {
                 Spacer(minLength: 0)
             }
             .padding(10)
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
             .background(selected ? ACColors.selectedFill : ACColors.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(selected ? ACColors.accentBlue.opacity(0.35) : ACColors.border, lineWidth: 1)
             )
         }
@@ -332,10 +316,10 @@ private struct ClipboardPreviewCard: View {
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
                         .fill(ACColors.softFill)
-                        .frame(width: 390, height: 250)
+                        .frame(height: 250)
 
                     previewContent
-                        .frame(width: 390, height: 250, alignment: .center)
+                        .frame(height: 250, alignment: .center)
                 }
                 .padding(16)
             }

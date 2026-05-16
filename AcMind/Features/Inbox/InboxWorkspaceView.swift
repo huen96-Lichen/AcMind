@@ -6,72 +6,90 @@ struct InboxWorkspaceView: View {
     @State private var selectedItemID: InboxItem.ID = inboxMockItems.first?.id ?? UUID()
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                inboxHeader
-
-                HStack(alignment: .top, spacing: ACLayout.gapL) {
-                    leftColumn
-                    rightColumn
-                }
-            }
-            .padding(.horizontal, ACLayout.pagePaddingX)
-            .padding(.top, ACLayout.pagePaddingY)
-            .padding(.bottom, ACLayout.pagePaddingBottom)
-            .frame(maxWidth: 1512, alignment: .center)
-        }
-        .background(ACColors.pageBackground.ignoresSafeArea())
-    }
-
-    private var inboxHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("收集箱")
-                        .font(ACTypography.pageTitle)
-                        .foregroundStyle(ACColors.primaryText)
-                    Text("把语音、任务、文档、Markdown 和图片收拢到这里，再整理归档或送往 Agent。")
-                        .font(ACTypography.caption)
-                        .foregroundStyle(ACColors.secondaryText)
-                }
-
-                Spacer(minLength: 0)
-
+        ACWorkspaceShell(
+            title: "收集箱",
+            subtitle: "收拢语音、任务、文档和图片，再整理归档或送往 Agent。",
+            trailing: {
                 HStack(spacing: 12) {
-                    ACSearchField("搜索收集内容", text: $searchText, width: 260, height: 36)
+                    ACSearchField("搜索收集内容", text: $searchText, width: 220, height: ACLayout.controlHeight)
                     ACButton("新建", kind: .secondary, minWidth: 72) {}
                 }
-            }
+            },
+            left: { leftSidebar },
+            center: { centerList },
+            right: { rightColumn }
+        )
+    }
 
-            HStack(alignment: .center) {
-                ACSegmentedControl(InboxCategory.allCases, selection: $selectedCategory) { category, isSelected in
-                    Text(category.title)
-                        .font(ACTypography.captionMedium)
-                        .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: 620, alignment: .leading)
+    private var leftSidebar: some View {
+        ACCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("分类")
+                    .font(ACTypography.panelTitle)
+                    .foregroundStyle(ACColors.primaryText)
 
-                Spacer(minLength: 0)
+                VStack(spacing: 8) {
+                    ForEach(InboxCategory.allCases) { category in
+                        Button {
+                            selectedCategory = category
+                        } label: {
+                            HStack(spacing: 10) {
+                                ACTypeIcon(
+                                    category.icon,
+                                    tint: selectedCategory == category ? ACColors.accentBlue : ACColors.secondaryText,
+                                    background: selectedCategory == category ? ACColors.selectedFill : ACColors.softFill,
+                                    size: 32
+                                )
 
-                HStack(spacing: 8) {
-                    ACButton("最新优先", kind: .secondary) {}
-                    ACButton("筛选", kind: .secondary, minWidth: 72) {}
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(category.title)
+                                        .font(ACTypography.itemTitle)
+                                        .foregroundStyle(ACColors.primaryText)
+                                        .lineLimit(1)
+                                    Text("\(category.count) 条")
+                                        .font(ACTypography.caption)
+                                        .foregroundStyle(ACColors.secondaryText)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer(minLength: 0)
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                            .background(selectedCategory == category ? ACColors.selectedFill : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(selectedCategory == category ? ACColors.accentBlue.opacity(0.3) : Color.clear, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
-        .frame(height: ACLayout.headerHeightMedium + 16)
     }
 
-    private var leftColumn: some View {
-        ACCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
+    private var centerList: some View {
+        ACCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text(todayFilteredItems.isEmpty ? "暂无内容" : "今日")
-                        .font(ACTypography.cardTitle)
-                        .foregroundStyle(ACColors.primaryText)
-                    Spacer()
-                    ACBadge("\(todayFilteredItems.count) 条", kind: .blue)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(todayFilteredItems.isEmpty ? "暂无内容" : "今日")
+                            .font(ACTypography.cardTitle)
+                            .foregroundStyle(ACColors.primaryText)
+                        Text("\(filteredItems.count) 条收集内容")
+                            .font(ACTypography.caption)
+                            .foregroundStyle(ACColors.secondaryText)
+                    }
+                    Spacer(minLength: 0)
+                    ACBadge("\(filteredItems.count) 条", kind: .blue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(ACColors.cardBackground)
+                .overlay(alignment: .bottom) {
+                    Divider().overlay(ACColors.divider)
                 }
 
                 if filteredItems.isEmpty {
@@ -83,7 +101,7 @@ struct InboxWorkspaceView: View {
                     .frame(maxWidth: .infinity, minHeight: 420)
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 8) {
+                        LazyVStack(spacing: 8) {
                             ForEach(groupedItems, id: \.id) { section in
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(section.title)
@@ -104,15 +122,16 @@ struct InboxWorkspaceView: View {
                                 }
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                    .frame(minHeight: 580)
                 }
             }
         }
     }
 
     private var rightColumn: some View {
-        ACDetailPanel(width: 486, padding: 16) {
+        ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 if let item = selectedItem {
                     InboxDetailHeader(item: item)
@@ -206,6 +225,30 @@ private enum InboxCategory: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
     var title: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .all: return "tray"
+        case .pending: return "clock"
+        case .voice: return "waveform"
+        case .task: return "checklist"
+        case .document: return "doc.text"
+        case .markdown: return "doc.richtext"
+        case .image: return "photo"
+        }
+    }
+
+    var count: Int {
+        switch self {
+        case .all: return inboxMockItems.count
+        case .pending: return inboxMockItems.filter { $0.status == .pending }.count
+        case .voice: return inboxMockItems.filter { $0.type == .voice }.count
+        case .task: return inboxMockItems.filter { $0.type == .task }.count
+        case .document: return inboxMockItems.filter { $0.type == .document }.count
+        case .markdown: return inboxMockItems.filter { $0.type == .markdown }.count
+        case .image: return inboxMockItems.filter { $0.type == .image }.count
+        }
+    }
 }
 
 private struct InboxSection: Identifiable {
@@ -258,13 +301,13 @@ private struct InboxListRow: View {
             }
         }
         .padding(12)
-        .frame(maxWidth: .infinity, minHeight: ACLayout.listRowMedium, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: ACLayout.listRowHeight, alignment: .topLeading)
         .background(isSelected ? ACColors.selectedFill : ACColors.cardBackground)
         .overlay(
-            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                .stroke(isSelected ? ACColors.accentBlue.opacity(0.35) : ACColors.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isSelected ? ACColors.accentBlue.opacity(0.3) : ACColors.border, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func badgeKind(for status: InboxItemStatus) -> ACBadge.Kind {

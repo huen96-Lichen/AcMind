@@ -19,6 +19,6 @@ struct ACCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous)
                     .stroke(ACColors.border, lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.05), radius: 24, x: 0, y: 8)
     }
 }

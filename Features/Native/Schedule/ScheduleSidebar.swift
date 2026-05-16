@@ -50,7 +50,7 @@ struct CalendarCategoryList: View {
             }
             .padding(8)
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(ACLayout.controlRadius)
         }
     }
 }
@@ -148,7 +148,7 @@ struct TodayOverview: View {
             }
             .padding(12)
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(ACLayout.controlRadius)
         }
     }
 }
@@ -237,7 +237,7 @@ struct TodayTodoList: View {
             }
             .padding(8)
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(ACLayout.controlRadius)
         }
     }
 }
@@ -412,7 +412,7 @@ struct MiniMonthCalendar: View {
             }
             .padding(6)
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(ACLayout.controlRadius)
         }
     }
 
@@ -536,7 +536,7 @@ struct WorkloadSummary: View {
             }
             .padding(12)
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(ACLayout.controlRadius)
         }
     }
 }

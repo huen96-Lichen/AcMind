@@ -16,7 +16,7 @@ struct ACPageHeader<Trailing: View>: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: ACLayout.gapXL) {
+        HStack(alignment: .center, spacing: ACLayout.sectionGap) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(ACTypography.pageTitle)
@@ -24,7 +24,7 @@ struct ACPageHeader<Trailing: View>: View {
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(ACTypography.caption)
+                        .font(ACTypography.pageSubtitle)
                         .foregroundStyle(ACColors.secondaryText)
                 }
             }
@@ -34,7 +34,8 @@ struct ACPageHeader<Trailing: View>: View {
             trailing
         }
         .padding(.horizontal, ACLayout.pagePaddingX)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(height: ACLayout.pageHeaderHeight)
         .background(ACColors.pageBackground)
     }
 }

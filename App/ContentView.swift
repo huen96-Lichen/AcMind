@@ -2,211 +2,527 @@ import SwiftUI
 import AcMindKit
 import struct AcMindKit.KeyboardShortcut
 
+struct VisualEffectView: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .hudWindow
+    var blendingMode: NSVisualEffectView.BlendingMode = .withinWindow
+    var state: NSVisualEffectView.State = .active
+    var backgroundAlpha: CGFloat = 1.0
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = state
+        view.alphaValue = backgroundAlpha
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+        nsView.state = state
+        nsView.alphaValue = backgroundAlpha
+    }
+}
+
 struct ContentView: View {
     @ObservedObject private var appState = AppState.shared
-    @State private var showVoicePanel = false
-    @State private var showCapturePanel = false
+    @ObservedObject private var voiceSession = CompanionVoiceSessionController.shared
     @State private var showQuickNote = false
 
     var body: some View {
         AppShell(selectedItem: $appState.sidebarSelection)
-            .background(ACColors.pageBackground.ignoresSafeArea())
-            .sheet(isPresented: $showVoicePanel) {
+            .sheet(isPresented: $voiceSession.isPresented) {
                 CompanionVoicePanel()
-            }
-            .sheet(isPresented: $showCapturePanel) {
-                CompanionCapturePanel()
+                    .transition(.scale.combined(with: .opacity))
             }
             .sheet(isPresented: $showQuickNote) {
                 QuickNotePanel()
+                    .transition(.scale.combined(with: .opacity))
             }
             .onReceive(NotificationCenter.default.publisher(for: .companionShowAgent)) { _ in
-                appState.selectSidebarItem(.agent)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    appState.selectSidebarItem(.agent)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .companionShowInbox)) { _ in
-                appState.selectSidebarItem(.inbox)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    appState.selectSidebarItem(.inbox)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .companionShowSchedule)) { _ in
-                appState.selectSidebarItem(.schedule)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    appState.selectSidebarItem(.schedule)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .companionShowVoicePanel)) { _ in
-                showVoicePanel = true
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    voiceSession.present(autoStart: false)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .companionShowCapturePanel)) { _ in
-                showCapturePanel = true
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    voiceSession.present(autoStart: false)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .companionShowQuickNote)) { _ in
-                showQuickNote = true
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showQuickNote = true
+                }
             }
     }
 }
+
+// MARK: - AppShell
 
 struct AppShell: View {
     @Binding var selectedItem: SidebarItem
-    @State private var hoveredItem: SidebarItem?
+    @ObservedObject private var appState = AppState.shared
+
+    private let compactRailWidth: CGFloat = 88
+    private let expandedRailWidth: CGFloat = 220
+
+    init(selectedItem: Binding<SidebarItem>) {
+        self._selectedItem = selectedItem
+    }
+
+    private var railWidth: CGFloat {
+        appState.primaryRailMode == .compact ? compactRailWidth : expandedRailWidth
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            AppSidebar(selectedItem: $selectedItem, hoveredItem: $hoveredItem)
-                .frame(width: ACLayout.sidebarWidth)
-
-            Divider()
-                .overlay(ACColors.border)
-
-            AppWorkspace(selectedItem: selectedItem)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(ACColors.pageBackground)
+        ZStack {
+            Color.clear
+            contentShell.padding(16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .frame(maxHeight: .infinity)
+        .onAppear {
+            appState.ensureWorkspaceModeNotHidden()
+        }
+        .onChange(of: appState.workspaceMode) {
+            handleWorkspaceModeChange(appState.workspaceMode)
+        }
+        .onChange(of: appState.primaryRailMode) {
+            if appState.workspaceMode == .collapsed {
+                notifyWindowResize()
+            }
+        }
+    }
+
+    private var contentShell: some View {
+        Group {
+            if appState.workspaceMode == .visible {
+                HStack(spacing: 16) {
+                    railFrame
+                    mainFrame
+                }
+                .transition(.opacity)
+            } else {
+                railFrame
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: appState.workspaceMode)
+    }
+
+    private var railFrame: some View {
+        PrimaryRail(
+            primaryRailMode: $appState.primaryRailMode,
+            workspaceMode: $appState.workspaceMode,
+            selectedItem: $selectedItem,
+            onCloseForeground: { appState.handleCloseForeground() },
+            onCollapseWorkspace: { appState.handleCollapseWorkspace() },
+            onExpandWorkspace: { appState.handleExpandWorkspace() }
+        )
+        .frame(width: railWidth)
+        .frame(maxHeight: .infinity)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.94),
+                            Color.white.opacity(0.84)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.62), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 16, x: 0, y: 6)
+    }
+
+    private var mainFrame: some View {
+        MainContent(selectedItem: selectedItem)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.90),
+                            Color.white.opacity(0.80)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.75),
+                            Color.black.opacity(0.06)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: .black.opacity(0.05), radius: 18, x: 0, y: 8)
+    }
+
+    private func handleWorkspaceModeChange(_ mode: WorkspaceMode) {
+        switch mode {
+        case .hidden:
+            Task { @MainActor in
+                if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+                    appDelegate.hideMainWindow()
+                }
+            }
+        case .collapsed:
+            notifyWindowCollapse()
+        case .visible:
+            notifyWindowExpand()
+        }
+    }
+
+    private func notifyWindowCollapse() {
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.workspaceCollapsed"),
+            object: nil,
+            userInfo: ["railWidth": railWidth]
+        )
+    }
+
+    private func notifyWindowExpand() {
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.workspaceExpanded"),
+            object: nil
+        )
+    }
+
+    private func notifyWindowResize() {
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.workspaceRailWidthChanged"),
+            object: nil,
+            userInfo: ["railWidth": railWidth]
+        )
     }
 }
 
-struct AppSidebar: View {
+// MARK: - Traffic Light Area
+
+struct TrafficLightArea: View {
+    let onCloseForeground: () -> Void
+    let onCollapseWorkspace: () -> Void
+    let onExpandWorkspace: () -> Void
+
+    @State private var hoveredDot: TrafficDot?
+
+    private enum TrafficDot {
+        case close, collapse, expand
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            dotButton(
+                color: Color(acHex: "#FF5F56"),
+                hoverIcon: "xmark",
+                dot: .close,
+                action: onCloseForeground
+            )
+            dotButton(
+                color: Color(acHex: "#FFBD2E"),
+                hoverIcon: "minus",
+                dot: .collapse,
+                action: onCollapseWorkspace
+            )
+            dotButton(
+                color: Color(acHex: "#28C840"),
+                hoverIcon: "arrow.up.left.and.arrow.down.right",
+                dot: .expand,
+                action: onExpandWorkspace
+            )
+        }
+        .frame(height: 44)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func dotButton(color: Color, hoverIcon: String, dot: TrafficDot, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(color)
+                    .frame(width: 12, height: 12)
+
+                if hoveredDot == dot {
+                    Image(systemName: hoverIcon)
+                        .font(.system(size: 7, weight: .heavy))
+                        .foregroundStyle(Color.black.opacity(0.45))
+                }
+            }
+            .frame(width: 20, height: 20)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) {
+                hoveredDot = hovering ? dot : nil
+            }
+        }
+    }
+}
+
+// MARK: - Primary Rail
+
+struct PrimaryRail: View {
+    @Binding var primaryRailMode: PrimaryRailMode
+    @Binding var workspaceMode: WorkspaceMode
     @Binding var selectedItem: SidebarItem
-    @Binding var hoveredItem: SidebarItem?
+
+    let onCloseForeground: () -> Void
+    let onCollapseWorkspace: () -> Void
+    let onExpandWorkspace: () -> Void
+
+    @State private var hoveredItem: SidebarItem?
+    @State private var hoveredArrow = false
+
+    private var isExpanded: Bool {
+        primaryRailMode == .expanded
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            sidebarChrome
-                .padding(.top, 16)
-                .padding(.leading, 18)
-                .padding(.bottom, 12)
+            TrafficLightArea(
+                onCloseForeground: onCloseForeground,
+                onCollapseWorkspace: onCollapseWorkspace,
+                onExpandWorkspace: onExpandWorkspace
+            )
+            .padding(.top, 4)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(SidebarItem.mainItems) { item in
-                        AppSidebarRow(
-                            item: item,
-                            isSelected: selectedItem == item,
-                            isHovered: hoveredItem == item
-                        ) {
-                            selectedItem = item
-                        }
-                        .onHover { isHovered in
-                            hoveredItem = isHovered ? item : nil
-                        }
+            appMark
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+            navItems
+
+            Spacer(minLength: 0)
+
+            bottomControls
+        }
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(acHex: "#F5F6F8"))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(ACColors.border.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    // MARK: - App Mark
+
+    private var appMark: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(ACColors.accentBlue)
+                .frame(width: 24, height: 24)
+
+            if isExpanded {
+                Text("AcMind")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ACColors.primaryText)
+                    .lineLimit(1)
+            }
+        }
+        .frame(height: 36)
+        .frame(maxWidth: .infinity, alignment: isExpanded ? .leading : .center)
+        .padding(.horizontal, isExpanded ? 16 : 0)
+    }
+
+    // MARK: - Nav Items
+
+    private var navItems: some View {
+        VStack(spacing: 4) {
+            ForEach(SidebarItem.primaryNavItems) { item in
+                PrimaryNavItem(
+                    item: item,
+                    isSelected: selectedItem == item,
+                    isExpanded: isExpanded,
+                    isHovered: hoveredItem == item
+                )
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        selectedItem = item
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-            }
-
-            Spacer(minLength: 0)
-
-            userProfileSection
-        }
-        .background(ACColors.sidebarBackground)
-    }
-
-    private var sidebarChrome: some View {
-        HStack(spacing: 8) {
-            Circle().fill(ACColors.accentRed).frame(width: 10, height: 10)
-            Circle().fill(ACColors.accentYellow).frame(width: 10, height: 10)
-            Circle().fill(ACColors.accentGreen).frame(width: 10, height: 10)
-            Spacer(minLength: 0)
-        }
-        .frame(width: ACLayout.sidebarNavWidth)
-    }
-
-    private var userProfileSection: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "person.circle.fill")
-                .font(.system(size: 28, weight: .regular))
-                .foregroundStyle(ACColors.accentPurple)
-                .frame(width: 28, height: 28)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("AcMind")
-                    .font(ACTypography.itemTitle)
-                    .foregroundStyle(ACColors.primaryText)
-
-                Text("Pro")
-                    .font(ACTypography.miniMedium)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, ACLayout.gapS - 2)
-                    .padding(.vertical, 2)
-                    .background(ACColors.accentPurple)
-                    .clipShape(RoundedRectangle(cornerRadius: ACLayout.tinyRadius, style: .continuous))
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.down")
-                .font(.system(size: ACLayout.iconM))
-                .foregroundStyle(ACColors.secondaryText)
-        }
-        .frame(width: ACLayout.sidebarUserWidth, height: ACLayout.sidebarUserHeight)
-        .padding(.horizontal, 12)
-        .background(ACColors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: ACLayout.cardRadius - 2, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: ACLayout.cardRadius - 2, style: .continuous)
-                .stroke(ACColors.border, lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
-        .padding(.bottom, 16)
-    }
-}
-
-struct AppSidebarRow: View {
-    let item: SidebarItem
-    let isSelected: Bool
-    let isHovered: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: item.icon)
-                    .font(.system(size: ACLayout.iconL, weight: .medium))
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(isSelected ? .white : ACColors.primaryText)
-
-                Text(item.title)
-                    .font(isSelected ? ACTypography.itemTitle : ACTypography.bodyMedium)
-                    .foregroundStyle(isSelected ? .white : ACColors.primaryText)
-
-                Spacer(minLength: 0)
-
-                if let shortcut = item.shortcut {
-                    Text(shortcutDisplay(shortcut))
-                        .font(ACTypography.monospacedMini)
-                        .foregroundStyle(isSelected ? .white.opacity(0.7) : ACColors.tertiaryText)
+                .onHover { hovering in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        hoveredItem = hovering ? item : nil
+                    }
                 }
             }
-            .frame(width: ACLayout.sidebarNavWidth, height: ACLayout.sidebarNavHeight, alignment: .leading)
-            .padding(.horizontal, ACLayout.gapM - 2)
-            .background(
-                RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                    .fill(isSelected ? ACColors.accentBlue : (isHovered ? ACColors.softFill : Color.clear))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                    .stroke(isSelected ? ACColors.accentBlue.opacity(0.15) : Color.clear, lineWidth: 1)
-            )
         }
-        .buttonStyle(.plain)
-        .contentShape(Rectangle())
+        .padding(.horizontal, 8)
     }
 
-    private func shortcutDisplay(_ shortcut: KeyboardShortcut) -> String {
-        var parts: [String] = []
-        if shortcut.modifiers.contains(.command) { parts.append("⌘") }
-        if shortcut.modifiers.contains(.option) { parts.append("⌥") }
-        if shortcut.modifiers.contains(.shift) { parts.append("⇧") }
-        parts.append(shortcut.key.uppercased())
-        return parts.joined()
+    // MARK: - Bottom Controls
+
+    private var bottomControls: some View {
+        VStack(spacing: 4) {
+            Divider()
+                .background(ACColors.divider)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+
+            if isExpanded {
+                workspaceStatusBadge
+            }
+
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    primaryRailMode = isExpanded ? .compact : .expanded
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: isExpanded ? "chevron.left" : "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ACColors.secondaryText)
+                        .frame(width: 24, height: 24)
+
+                    if isExpanded {
+                        Text(isExpanded ? "收起" : "展开")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(ACColors.tertiaryText)
+                            .lineLimit(1)
+
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(height: 40)
+                .frame(maxWidth: .infinity, alignment: isExpanded ? .leading : .center)
+                .padding(.horizontal, isExpanded ? 12 : 0)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(hoveredArrow ? ACColors.softFill : Color.clear)
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    hoveredArrow = hovering
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private var workspaceStatusBadge: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 6, height: 6)
+
+            Text(statusText)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(ACColors.tertiaryText)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+    }
+
+    private var statusColor: Color {
+        switch workspaceMode {
+        case .visible: return ACColors.accentGreen
+        case .collapsed: return ACColors.accentYellow
+        case .hidden: return ACColors.accentRed
+        }
+    }
+
+    private var statusText: String {
+        switch workspaceMode {
+        case .visible: return "工作区展开"
+        case .collapsed: return "最小工作台"
+        case .hidden: return "前台已隐藏"
+        }
     }
 }
 
-struct AppWorkspace: View {
-    let selectedItem: SidebarItem
+// MARK: - Primary Nav Item
+
+struct PrimaryNavItem: View {
+    let item: SidebarItem
+    let isSelected: Bool
+    let isExpanded: Bool
+    let isHovered: Bool
 
     var body: some View {
-        MainContent(selectedItem: selectedItem)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        HStack(spacing: 12) {
+            Image(systemName: item.icon)
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(isSelected ? .white : (isHovered ? ACColors.primaryText : ACColors.secondaryText))
+                .scaleEffect(isSelected ? 1.05 : (isHovered ? 1.02 : 1.0))
+
+            if isExpanded {
+                Text(item.title)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? .white : ACColors.primaryText)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(
+            width: isExpanded ? nil : 48,
+            height: 48,
+            alignment: isExpanded ? .leading : .center
+        )
+        .padding(.horizontal, isExpanded ? 12 : 0)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isSelected ? ACColors.accentBlue : (isHovered ? ACColors.softFill : Color.clear))
+        )
+        .scaleEffect(isHovered && !isSelected ? 1.02 : 1.0)
+        .shadow(
+            color: isSelected ? ACColors.accentBlue.opacity(0.3) : Color.clear,
+            radius: isSelected ? 4 : 0,
+            x: 0,
+            y: 2
+        )
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .contentShape(Rectangle())
     }
 }
+
+// MARK: - Main Content
 
 struct MainContent: View {
     let selectedItem: SidebarItem
@@ -235,5 +551,17 @@ struct MainContent: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.96)),
+            removal: .opacity.combined(with: .scale(scale: 0.98))
+        ))
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedItem)
+        .background(ACColors.pageBackground)
+        .clipShape(RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous)
+                .stroke(ACColors.border.opacity(0.5), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 16, x: 0, y: 6)
     }
 }

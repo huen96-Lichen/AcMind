@@ -25,9 +25,9 @@ struct ACBadge: View {
             .font(ACTypography.badge)
             .foregroundStyle(foregroundColor)
             .padding(.horizontal, 10)
-            .frame(height: 22)
+            .frame(height: 24)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: ACLayout.badgeRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: ACLayout.radiusPill, style: .continuous))
     }
 
     private var backgroundColor: Color {

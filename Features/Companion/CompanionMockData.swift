@@ -1,4 +1,5 @@
 import Foundation
+import AcMindKit
 
 // MARK: - Companion Layer Mock Data
 // 随身 Mock 数据
@@ -64,6 +65,12 @@ public enum CompanionMockData {
             capsuleExpandedByDefault: false,
             voiceEnabled: true,
             voiceShortcut: "⌥Space",
+            voiceTriggerMode: CompanionVoiceTriggerMode.both.rawValue,
+            voiceProvider: STTProvider.appleSpeech.rawValue,
+            voiceModel: "auto",
+            voiceHoldToTalkEnabled: true,
+            voiceHoldThreshold: 0.38,
+            voiceRouteMode: CompanionVoiceRouteMode.smart.rawValue,
             voiceOutputMode: "copyToClipboard",
             voiceSaveToInbox: true,
             shortcutsEnabled: true,

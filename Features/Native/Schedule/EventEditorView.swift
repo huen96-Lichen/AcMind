@@ -227,13 +227,13 @@ struct EventEditorView: View {
             startHour = viewModel.newEventStartHour
             startMinute = viewModel.newEventStartMinute
         }
-        .onChange(of: title) { _ in
+        .onChange(of: title) {
             validationError = nil
         }
-        .onChange(of: startHour) { _ in
+        .onChange(of: startHour) {
             validationError = nil
         }
-        .onChange(of: durationMinutes) { _ in
+        .onChange(of: durationMinutes) {
             validationError = nil
         }
     }

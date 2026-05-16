@@ -71,11 +71,11 @@ struct ACListRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, minHeight: ACLayout.listRowMedium, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: ACLayout.listRowHeight, alignment: .leading)
         .background(selected ? ACColors.selectedFill : ACColors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(selected ? ACColors.accentBlue.opacity(0.35) : ACColors.border, lineWidth: 1)
         )
     }

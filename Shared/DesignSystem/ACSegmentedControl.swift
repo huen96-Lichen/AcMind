@@ -36,9 +36,9 @@ struct ACSegmentedControl<Option: Hashable, Label: View>: View {
         }
         .padding(4)
         .background(ACColors.softFill)
-        .clipShape(RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(ACColors.border, lineWidth: 1)
         )
     }

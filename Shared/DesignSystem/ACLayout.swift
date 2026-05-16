@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum ACLayout {
+    // MARK: - Window Size
     static let windowMinWidth: CGFloat = 1440
     static let windowIdealWidth: CGFloat = 1512
     static let windowMaxReferenceWidth: CGFloat = 1728
@@ -8,7 +9,70 @@ enum ACLayout {
     static let windowIdealHeight: CGFloat = 982
     static let windowMaxReferenceHeight: CGFloat = 1117
 
+    // MARK: - Responsive Breakpoints
+    enum Breakpoint {
+        static let compact: CGFloat = 900
+        static let regular: CGFloat = 1200
+        static let wide: CGFloat = 1440
+    }
+
+    // MARK: - Minimum Width Calculation
+    static func minWindowWidth(for railStyle: RailStyle) -> CGFloat {
+        switch railStyle {
+        case .compact:
+            return primaryRailCompact + 32
+        case .expanded:
+            return primaryRailExpanded + mainContentMinWidth + 32
+        }
+    }
+
+    // MARK: - Workspace Layout Modes
+    enum WorkspaceLayoutMode {
+        case tripleColumn
+        case doubleColumn
+        case singleColumn
+    }
+
+    static func workspaceLayoutMode(for width: CGFloat) -> WorkspaceLayoutMode {
+        if width >= Breakpoint.wide {
+            return .tripleColumn
+        } else if width >= Breakpoint.regular {
+            return .doubleColumn
+        } else {
+            return .singleColumn
+        }
+    }
+
+    // MARK: - Settings Layout Modes
+    enum SettingsLayoutMode {
+        case withSidebar
+        case stacked
+    }
+
+    static func settingsLayoutMode(for width: CGFloat) -> SettingsLayoutMode {
+        if width >= Breakpoint.compact {
+            return .withSidebar
+        } else {
+            return .stacked
+        }
+    }
+
+    // MARK: - Rail Style
+    enum RailStyle {
+        case compact
+        case expanded
+    }
+
+    static func railStyle(for width: CGFloat) -> RailStyle {
+        if width >= Breakpoint.regular {
+            return .expanded
+        } else {
+            return .compact
+        }
+    }
+
     static let sidebarWidth: CGFloat = 244
+    static let secondarySidebarWidth: CGFloat = 248
     static let pagePaddingX: CGFloat = 28
     static let pagePaddingY: CGFloat = 24
     static let pagePaddingBottom: CGFloat = 28
@@ -63,7 +127,7 @@ enum ACLayout {
     static let maxReadableContentWidth: CGFloat = 1440
     static let maxCardContentWidth: CGFloat = 1280
 
-    static let cardRadius: CGFloat = 16
+    static let cardRadius: CGFloat = 18
     static let smallRadius: CGFloat = 12
     static let controlRadius: CGFloat = 10
     static let badgeRadius: CGFloat = 8
@@ -71,6 +135,27 @@ enum ACLayout {
     static let capsuleRadius: CGFloat = 999
 
     static let borderWidth: CGFloat = 1
+
+    static let secondaryPageMaxWidth: CGFloat = 1512
+    static let secondaryPageContentMaxWidth: CGFloat = 1060
+    static let workspaceContentMaxWidth: CGFloat = 1280
+    static let secondaryPageHeaderHeight: CGFloat = 76
+
+    static let shellGutter: CGFloat = 24
+    static let panelGap: CGFloat = 16
+    static let sectionGap: CGFloat = 20
+    static let cardGap: CGFloat = 12
+    static let radiusShell: CGFloat = 28
+    static let radiusPanel: CGFloat = 24
+    static let radiusPill: CGFloat = 999
+    static let pageHeaderHeight: CGFloat = 76
+    static let toolbarHeight: CGFloat = 44
+    static let controlHeight: CGFloat = 40
+    static let primaryRailCompact: CGFloat = 88
+    static let primaryRailExpanded: CGFloat = 220
+    static let inspectorWidth: CGFloat = 320
+    static let workspaceLeftPanel: CGFloat = 360
+    static let workspaceMainMin: CGFloat = 520
 }
 
 typealias ACDimension = ACLayout

@@ -216,12 +216,13 @@ function InboxPage() {
 
   return (
     <DropZone onFilesDropped={handleFilesDropped}>
-      <div className="page-content" style={{ display: 'flex', gap: 24, height: 'calc(100vh - 100px)' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div className="page-header">
-            <h1>收集箱</h1>
-            <p>拖拽文件到此处导入 · 支持截图和网页抓取</p>
-          </div>
+      <div className="page-content">
+        <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="page-header">
+              <h1>收集箱</h1>
+              <p>拖拽文件到此处导入 · 支持截图和网页抓取</p>
+            </div>
 
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -285,7 +286,7 @@ function InboxPage() {
               <p>拖拽文件或使用上方工具添加内容</p>
             </div>
           ) : (
-            <div className="list" style={{ flex: 1, overflowY: 'auto' }}>
+            <div className="list" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {items.map((item) => (
                 <div
                   key={item.id}
@@ -309,7 +310,7 @@ function InboxPage() {
         </div>
 
         {selectedItem && (
-          <div className="card" style={{ width: 400, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 0 }}>
+          <div className="card" style={{ width: 400, flexShrink: 0, overflowY: 'auto', maxHeight: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3>详情</h3>
               <button className="btn btn-secondary" onClick={() => setSelectedItem(null)} style={{ padding: '4px 8px' }}>×</button>
@@ -357,6 +358,7 @@ function InboxPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </DropZone>
   )

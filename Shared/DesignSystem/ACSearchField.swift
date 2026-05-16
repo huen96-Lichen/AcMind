@@ -12,7 +12,7 @@ struct ACSearchField: View {
         _ placeholder: String = "搜索",
         text: Binding<String>,
         width: CGFloat? = ACLayout.searchFieldWidth,
-        height: CGFloat = ACLayout.searchFieldHeight
+        height: CGFloat = ACLayout.controlHeight
     ) {
         self.placeholder = placeholder
         self._text = text
@@ -33,11 +33,13 @@ struct ACSearchField: View {
                 .focused($isFocused)
         }
         .padding(.horizontal, 12)
-        .frame(width: width, height: height)
+        .frame(height: height)
+        .frame(maxWidth: width == nil ? .infinity : nil)
+        .frame(width: width)
         .background(ACColors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(isFocused ? ACColors.accentBlue : ACColors.border, lineWidth: 1)
         )
     }

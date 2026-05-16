@@ -7,21 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0F0DC4E34B8AECCFFE686C51 /* ContinentConfigTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CADAD9A658A63FF7039F66 /* ContinentConfigTokens.swift */; };
-		208762F7A587979AA561C828 /* LinkRulesCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC7402D17FD26465D513EC14 /* LinkRulesCard.swift */; };
-		2A7ECCA185FE9E4F7FDEFD0F /* ContinentConfigCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0703AC3007B789A6B87C541F /* ContinentConfigCenterView.swift */; };
 		485D892ADFFB310E47228520 /* InboxDetailMainCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C704C29990B7B162109CE05B /* InboxDetailMainCard.swift */; };
-		5AB624F3B60D72FD20D49263 /* AdvancedDebugBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BE35D034B4B66F2CB65A21B /* AdvancedDebugBar.swift */; };
-		6C46D774EC66C6B7DA415F2E /* CapsuleShapePreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59EE5FFF526E6F45A6A05D8 /* CapsuleShapePreviewCard.swift */; };
 		7C01FE77C6135DE128034617 /* InboxRecognitionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AE824A30BFC4294B33D07A3 /* InboxRecognitionCard.swift */; };
-		931A10E3C005CB90EC7B6478 /* ContinentConfigHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D933D57D2A71A933B7EBBF04 /* ContinentConfigHeaderView.swift */; };
 		A10000000000000000000001 /* AcMindApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000000 /* AcMindApp.swift */; };
 		A10000000000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ContentView.swift */; };
 		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Assets.xcassets */; };
 		A10000000000000000000009 /* AcMindKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; };
 		A1000000000000000000000A /* AcMindKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A1000000000000000000000C /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* SidebarView.swift */; };
-		A10000000000000000000014 /* AcMindTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AcMindTheme.swift */; };
 		A10000000000000000000016 /* AcMindKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* AcMindKit.swift */; };
 		C20000000000000000000001 /* ACColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000001 /* ACColors.swift */; };
 		C20000000000000000000002 /* ACLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000002 /* ACLayout.swift */; };
@@ -38,6 +31,9 @@
 		C2000000000000000000000D /* ACInfoTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000D /* ACInfoTable.swift */; };
 		C2000000000000000000000E /* ACEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000E /* ACEmptyState.swift */; };
 		C2000000000000000000000F /* ACViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000F /* ACViewState.swift */; };
+		C20000000000000000000010 /* ACSecondaryPageShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000010 /* ACSecondaryPageShell.swift */; };
+		C20000000000000000000011 /* ACWorkspaceShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000011 /* ACWorkspaceShell.swift */; };
+		C20000000000000000000012 /* ACSettingsShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000012 /* ACSettingsShell.swift */; };
 		A10000000000000000000018 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Database.swift */; };
 		A1000000000000000000001A /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* StorageService.swift */; };
 		A1000000000000000000001E /* SourceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* SourceItem.swift */; };
@@ -86,8 +82,9 @@
 		A10000000000000000000141 /* CompanionMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000148 /* CompanionMockData.swift */; };
 		A10000000000000000000143 /* CompanionCapsule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014A /* CompanionCapsule.swift */; };
 		A10000000000000000000145 /* CompanionVoicePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014C /* CompanionVoicePanel.swift */; };
+		A10000000000000000000552 /* CompanionVoiceSessionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000314 /* CompanionVoiceSessionController.swift */; };
+		A10000000000000000000553 /* FnVoiceHoldMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000315 /* FnVoiceHoldMonitor.swift */; };
 		A10000000000000000000548 /* AppSurfaceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000311 /* AppSurfaceStyle.swift */; };
-		A10000000000000000000549 /* CompanionCapturePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014D /* CompanionCapturePanel.swift */; };
 		A1000000000000000000054A /* AgentWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0054D0000000000000000001 /* AgentWorkspaceView.swift */; };
 		A1000000000000000000054B /* ClipboardWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0054E0000000000000000001 /* ClipboardWorkspaceView.swift */; };
 		A1000000000000000000054C /* WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015A /* WorkbenchView.swift */; };
@@ -110,6 +107,7 @@
 		A1000000000000000000016F /* AXTextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000180 /* AXTextInjector.swift */; };
 		A10000000000000000000170 /* VisionOCR.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000181 /* VisionOCR.swift */; };
 		A10000000000000000000182 /* DesktopCapsuleConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000184 /* DesktopCapsuleConfig.swift */; };
+		A10000000000000000000611 /* AgentTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000610 /* AgentTask.swift */; };
 		A10000000000000000000183 /* ScheduledAgentTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000185 /* ScheduledAgentTask.swift */; };
 		A10000000000000000000186 /* DesktopCapsulePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000189 /* DesktopCapsulePanel.swift */; };
 		A10000000000000000000188 /* DesktopCapsuleSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000018B /* DesktopCapsuleSettingsSection.swift */; };
@@ -152,7 +150,6 @@
 		A10000000000000000000423 /* DynamicSurfaceCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000427 /* DynamicSurfaceCoordinatorTests.swift */; };
 		A10000000000000000000430 /* DynamicSurfaceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000431 /* DynamicSurfaceSettingsView.swift */; };
 		A10000000000000000000446 /* CompanionSettingsDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000447 /* CompanionSettingsDesign.swift */; };
-		A10000000000000000000522 /* CompanionControlCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000449 /* CompanionControlCenterView.swift */; };
 		A10000000000000000000520 /* MusicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000192 /* MusicService.swift */; };
 		A10000000000000000000521 /* NotchToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000019D /* NotchToast.swift */; };
 		A10000000000000000000510 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010D /* SettingsViewModel.swift */; };
@@ -166,26 +163,12 @@
 		A10000000000000000000518 /* NotchV2AgentPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030A /* NotchV2AgentPage.swift */; };
 		A10000000000000000000519 /* DynamicContinentPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* DynamicContinentPages.swift */; };
 		A1000000000000000000051C /* ContinentPanelAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000426 /* ContinentPanelAdapter.swift */; };
-		B000000000000000000002DA /* CompanionSettingsHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D1 /* CompanionSettingsHeader.swift */; };
-		B000000000000000000002DB /* CapsuleSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D3 /* CapsuleSettingsCard.swift */; };
-		B000000000000000000002DE /* CapsulePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D7 /* CapsulePreview.swift */; };
-		B000000000000000000002DC /* ShortcutSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D5 /* ShortcutSettingsCard.swift */; };
-		B000000000000000000002DD /* ShortcutKeycap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D9 /* ShortcutKeycap.swift */; };
 		A10000000000000000000500 /* CompanionCollapsedContentSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000501 /* CompanionCollapsedContentSettings.swift */; };
 		A10000000000000000000502 /* NotchV2CollapsedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000503 /* NotchV2CollapsedContent.swift */; };
 		A266723025C6B99903141794 /* InboxListPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8623BE5A41F03AD5419F73C /* InboxListPanel.swift */; };
-		A3A6108340F3B232C1686CA4 /* ConfigCardContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE24CCF4ECE79AA6A2ECAB2E /* ConfigCardContainer.swift */; };
 		A47001ECC371D2A5BB3C939B /* InboxCategoryTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 567B7C930FB439D8C855F082 /* InboxCategoryTabs.swift */; };
-		ACE9AC0A267FC43A11FEB1C8 /* BlockManagementCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381DFB56A1521C07A9EC36F4 /* BlockManagementCard.swift */; };
-		B000000000000000000002C2 /* CompanionCapabilityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D2 /* CompanionCapabilityCard.swift */; };
-		B000000000000000000002C4 /* VoiceSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D4 /* VoiceSettingsCard.swift */; };
-		B000000000000000000002C6 /* CaptureSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D6 /* CaptureSettingsCard.swift */; };
-		B000000000000000000002C8 /* WaveformPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D8 /* WaveformPreview.swift */; };
 		B7BAEA42C078FDBA6CFB62E3 /* InboxSuggestedActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EB384953414A5DDECD5A43 /* InboxSuggestedActionButton.swift */; };
 		C17BC9555C707F7236556A3A /* InboxTypeIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F65372CD70032EAB372F663 /* InboxTypeIcon.swift */; };
-		D004C1BC7E619A0C070C7A09 /* ComponentSelectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6092AC1CEFB1C2BCBDE6B41 /* ComponentSelectionCard.swift */; };
-		D3537ECBD55D5D2000618710 /* ContinentExpandedPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F92E9FDD223608976DC93EF /* ContinentExpandedPreviewCard.swift */; };
-		DCD75041F8134E250BC230CA /* FunctionModulesCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 337209370EDE831BE46028CD /* FunctionModulesCard.swift */; };
 		F420845E2831E82EA2E09BA0 /* InboxTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9346F9F9DC839F08F918FE2 /* InboxTokens.swift */; };
 /* End PBXBuildFile section */
 
@@ -214,32 +197,19 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0703AC3007B789A6B87C541F /* ContinentConfigCenterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentConfigCenterView.swift; sourceTree = "<group>"; };
-		0ECD5E5DD3F5717118C5C603 /* BlockManagementCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BlockManagementCard.swift; sourceTree = "<group>"; };
 		2AE824A30BFC4294B33D07A3 /* InboxRecognitionCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxRecognitionCard.swift; sourceTree = "<group>"; };
-		2B1DDCAC35CF6425440A80E9 /* ConfigCardContainer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigCardContainer.swift; sourceTree = "<group>"; };
-		2F92E9FDD223608976DC93EF /* ContinentExpandedPreviewCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentExpandedPreviewCard.swift; sourceTree = "<group>"; };
-		337209370EDE831BE46028CD /* FunctionModulesCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FunctionModulesCard.swift; sourceTree = "<group>"; };
-		381DFB56A1521C07A9EC36F4 /* BlockManagementCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BlockManagementCard.swift; sourceTree = "<group>"; };
-		3BE35D034B4B66F2CB65A21B /* AdvancedDebugBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdvancedDebugBar.swift; sourceTree = "<group>"; };
 		52AD2A33EE10FD5AC00EBBA4 /* InboxMockData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxMockData.swift; sourceTree = "<group>"; };
 		567B7C930FB439D8C855F082 /* InboxCategoryTabs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxCategoryTabs.swift; sourceTree = "<group>"; };
 		5896004346719E400E2546E1 /* InboxRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxRow.swift; sourceTree = "<group>"; };
-		5F5F7937B5A4D252B251AD8A /* CapsuleShapePreviewCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CapsuleShapePreviewCard.swift; sourceTree = "<group>"; };
 		5F65372CD70032EAB372F663 /* InboxTypeIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxTypeIcon.swift; sourceTree = "<group>"; };
-		605C25B34D8FFF6A3443124D /* ContinentExpandedPreviewCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentExpandedPreviewCard.swift; sourceTree = "<group>"; };
 		60EB384953414A5DDECD5A43 /* InboxSuggestedActionButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxSuggestedActionButton.swift; sourceTree = "<group>"; };
 		6E0E9A66B2D14B6D9F3D2F01 /* InboxWorkspaceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxWorkspaceView.swift; sourceTree = "<group>"; };
-		826349501E2ADEC5A7661946 /* LinkRulesCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LinkRulesCard.swift; sourceTree = "<group>"; };
-		8F2385A28D22FCB4F0AAC33B /* AdvancedDebugBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdvancedDebugBar.swift; sourceTree = "<group>"; };
 		93766B5470B7CDCCF4391AC2 /* InboxHeaderBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxHeaderBar.swift; sourceTree = "<group>"; };
-		97FBF4B44D81BD759B355814 /* FunctionModulesCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FunctionModulesCard.swift; sourceTree = "<group>"; };
 		A10000000000000000000000 /* AcMindApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000008 /* AcMindKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AcMindKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000000B /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sidebar/SidebarView.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000013 /* AcMindTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/AcMindTheme.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000015 /* AcMindKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit.swift; sourceTree = "<group>"; };
 		A10000000000000000000017 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
 		A10000000000000000000019 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
@@ -297,11 +267,10 @@
 		A10000000000000000000136 /* MarkdownBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/MarkdownBuilder.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000147 /* CompanionTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionTypes.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000148 /* CompanionMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionMockData.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000149 /* CompanionLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionLayer.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000014A /* CompanionCapsule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionCapsule.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000014B /* CompanionShortcutPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionShortcutPanel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000014C /* CompanionVoicePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionVoicePanel.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000014D /* CompanionCapturePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionCapturePanel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000314 /* CompanionVoiceSessionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionVoiceSessionController.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000315 /* FnVoiceHoldMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/FnVoiceHoldMonitor.swift; sourceTree = SOURCE_ROOT; };
 		0054E0000000000000000001 /* ClipboardWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMind/Features/Clipboard/ClipboardWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
 		005500000000000000000001 /* ClipboardMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMind/Features/Clipboard/ClipboardMockData.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000015A /* WorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Workbench/WorkbenchView.swift; sourceTree = SOURCE_ROOT; };
@@ -324,6 +293,7 @@
 		A10000000000000000000180 /* AXTextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/TextInjection/AXTextInjector.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000181 /* VisionOCR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/OCR/VisionOCR.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000184 /* DesktopCapsuleConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/DesktopCapsuleConfig.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000610 /* AgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AgentTask.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000185 /* ScheduledAgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ScheduledAgentTask.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000189 /* DesktopCapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsulePanel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000018A /* DesktopCapsuleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -380,6 +350,9 @@
 		C1000000000000000000000D /* ACInfoTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACInfoTable.swift; sourceTree = SOURCE_ROOT; };
 		C1000000000000000000000E /* ACEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACEmptyState.swift; sourceTree = SOURCE_ROOT; };
 		C1000000000000000000000F /* ACViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACViewState.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000010 /* ACSecondaryPageShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACSecondaryPageShell.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000011 /* ACWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACWorkspaceShell.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000012 /* ACSettingsShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACSettingsShell.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000411 /* DynamicContinentTemplateV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000412 /* DynamicContinentPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentPages.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000424 /* DynamicSurfaceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/DynamicSurfaceCoordinator.swift; sourceTree = SOURCE_ROOT; };
@@ -388,34 +361,14 @@
 		A10000000000000000000427 /* DynamicSurfaceCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/DynamicSurfaceCoordinatorTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000431 /* DynamicSurfaceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/DynamicSurfaceSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000447 /* CompanionSettingsDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/CompanionSettingsDesign.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000449 /* CompanionControlCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/CompanionControlCenterView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000501 /* CompanionCollapsedContentSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/CompanionCollapsedContentSettings.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000503 /* NotchV2CollapsedContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2CollapsedContent.swift; sourceTree = SOURCE_ROOT; };
 		A27766703EB4428809A85EB9 /* InboxMetadataTable.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxMetadataTable.swift; sourceTree = "<group>"; };
-		B000000000000000000002D1 /* CompanionSettingsHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CompanionSettingsHeader.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D2 /* CompanionCapabilityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CompanionCapabilityCard.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D3 /* CapsuleSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CapsuleSettingsCard.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D4 /* VoiceSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/VoiceSettingsCard.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D5 /* ShortcutSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/ShortcutSettingsCard.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D6 /* CaptureSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CaptureSettingsCard.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D7 /* CapsulePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CapsulePreview.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D8 /* WaveformPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/WaveformPreview.swift; sourceTree = SOURCE_ROOT; };
-		B000000000000000000002D9 /* ShortcutKeycap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/ShortcutKeycap.swift; sourceTree = SOURCE_ROOT; };
-		BC6FC5FBFA04762D4F86E2BC /* ContinentConfigTokens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentConfigTokens.swift; sourceTree = "<group>"; };
 		C704C29990B7B162109CE05B /* InboxDetailMainCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxDetailMainCard.swift; sourceTree = "<group>"; };
 		C9346F9F9DC839F08F918FE2 /* InboxTokens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxTokens.swift; sourceTree = "<group>"; };
-		D6092AC1CEFB1C2BCBDE6B41 /* ComponentSelectionCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ComponentSelectionCard.swift; sourceTree = "<group>"; };
-		D933D57D2A71A933B7EBBF04 /* ContinentConfigHeaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentConfigHeaderView.swift; sourceTree = "<group>"; };
-		DC7402D17FD26465D513EC14 /* LinkRulesCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LinkRulesCard.swift; sourceTree = "<group>"; };
-		E1CADAD9A658A63FF7039F66 /* ContinentConfigTokens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentConfigTokens.swift; sourceTree = "<group>"; };
-		E3CDB5D2CEE5DDA92379BE95 /* ContinentConfigHeaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentConfigHeaderView.swift; sourceTree = "<group>"; };
-		E59EE5FFF526E6F45A6A05D8 /* CapsuleShapePreviewCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CapsuleShapePreviewCard.swift; sourceTree = "<group>"; };
 		E8623BE5A41F03AD5419F73C /* InboxListPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxListPanel.swift; sourceTree = "<group>"; };
-		EE24CCF4ECE79AA6A2ECAB2E /* ConfigCardContainer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigCardContainer.swift; sourceTree = "<group>"; };
 		EF4E7C42CA92BFD8E6839026 /* InboxTagChip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxTagChip.swift; sourceTree = "<group>"; };
-		F72192110FD8BB6FF7607264 /* ComponentSelectionCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ComponentSelectionCard.swift; sourceTree = "<group>"; };
 		F88E6D9537282D93F6720811 /* InboxWaveformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxWaveformView.swift; sourceTree = "<group>"; };
-		FB61488898A1F7A981D4B8FA /* ContinentConfigCenterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContinentConfigCenterView.swift; sourceTree = "<group>"; };
 		FFD3F42CD642D7DFE3C63D8B /* InboxStatusBadge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InboxStatusBadge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -460,36 +413,6 @@
 			);
 			name = Components;
 			path = Components;
-			sourceTree = "<group>";
-		};
-		7E6A31E372BA8F11BB361453 /* ContinentConfig */ = {
-			isa = PBXGroup;
-			children = (
-				E1CADAD9A658A63FF7039F66 /* ContinentConfigTokens.swift */,
-				FB61488898A1F7A981D4B8FA /* ContinentConfigCenterView.swift */,
-				D933D57D2A71A933B7EBBF04 /* ContinentConfigHeaderView.swift */,
-				5F5F7937B5A4D252B251AD8A /* CapsuleShapePreviewCard.swift */,
-				2F92E9FDD223608976DC93EF /* ContinentExpandedPreviewCard.swift */,
-				826349501E2ADEC5A7661946 /* LinkRulesCard.swift */,
-				D6092AC1CEFB1C2BCBDE6B41 /* ComponentSelectionCard.swift */,
-				0ECD5E5DD3F5717118C5C603 /* BlockManagementCard.swift */,
-				337209370EDE831BE46028CD /* FunctionModulesCard.swift */,
-				8F2385A28D22FCB4F0AAC33B /* AdvancedDebugBar.swift */,
-				EE24CCF4ECE79AA6A2ECAB2E /* ConfigCardContainer.swift */,
-				BC6FC5FBFA04762D4F86E2BC /* ContinentConfigTokens.swift */,
-				0703AC3007B789A6B87C541F /* ContinentConfigCenterView.swift */,
-				E3CDB5D2CEE5DDA92379BE95 /* ContinentConfigHeaderView.swift */,
-				E59EE5FFF526E6F45A6A05D8 /* CapsuleShapePreviewCard.swift */,
-				605C25B34D8FFF6A3443124D /* ContinentExpandedPreviewCard.swift */,
-				DC7402D17FD26465D513EC14 /* LinkRulesCard.swift */,
-				F72192110FD8BB6FF7607264 /* ComponentSelectionCard.swift */,
-				381DFB56A1521C07A9EC36F4 /* BlockManagementCard.swift */,
-				97FBF4B44D81BD759B355814 /* FunctionModulesCard.swift */,
-				3BE35D034B4B66F2CB65A21B /* AdvancedDebugBar.swift */,
-				2B1DDCAC35CF6425440A80E9 /* ConfigCardContainer.swift */,
-			);
-			name = ContinentConfig;
-			path = ContinentConfig;
 			sourceTree = "<group>";
 		};
 		874F39816FE8FAC139414392 /* AcMind */ = {
@@ -566,6 +489,7 @@
 				A10000000000000000000071 /* KnowledgeCard.swift */,
 				A10000000000000000000072 /* VaultConfig.swift */,
 				A10000000000000000000184 /* DesktopCapsuleConfig.swift */,
+				A10000000000000000000610 /* AgentTask.swift */,
 				A10000000000000000000185 /* ScheduledAgentTask.swift */,
 				A10000000000000000000501 /* CompanionCollapsedContentSettings.swift */,
 			);
@@ -623,7 +547,6 @@
 		A10000000000000000000062 /* Design */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000013 /* AcMindTheme.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -798,7 +721,6 @@
 		A10000000000000000000110 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000449 /* CompanionControlCenterView.swift */,
 				A1000000000000000000030C /* SettingsSuiteView.swift */,
 				A10000000000000000000113 /* SettingsView.swift */,
 			);
@@ -837,11 +759,10 @@
 				B000000000000000000002E0 /* Views */,
 				A10000000000000000000147 /* CompanionTypes.swift */,
 				A10000000000000000000148 /* CompanionMockData.swift */,
-				A10000000000000000000149 /* CompanionLayer.swift */,
 				A1000000000000000000014A /* CompanionCapsule.swift */,
-				A1000000000000000000014B /* CompanionShortcutPanel.swift */,
 				A1000000000000000000014C /* CompanionVoicePanel.swift */,
-				A1000000000000000000014D /* CompanionCapturePanel.swift */,
+				A10000000000000000000314 /* CompanionVoiceSessionController.swift */,
+				A10000000000000000000315 /* FnVoiceHoldMonitor.swift */,
 				A10000000000000000000190 /* BatteryService.swift */,
 				A10000000000000000000192 /* MusicService.swift */,
 				A10000000000000000000194 /* ShelfService.swift */,
@@ -863,7 +784,6 @@
 				A10000000000000000000425 /* CapsulePanelAdapter.swift */,
 				A10000000000000000000426 /* ContinentPanelAdapter.swift */,
 				A1000000000000000000018E /* CompanionView.swift */,
-				7E6A31E372BA8F11BB361453 /* ContinentConfig */,
 			);
 			path = Companion;
 			sourceTree = "<group>";
@@ -954,15 +874,6 @@
 		B000000000000000000002E0 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				B000000000000000000002D1 /* CompanionSettingsHeader.swift */,
-				B000000000000000000002D2 /* CompanionCapabilityCard.swift */,
-				B000000000000000000002D3 /* CapsuleSettingsCard.swift */,
-				B000000000000000000002D4 /* VoiceSettingsCard.swift */,
-				B000000000000000000002D5 /* ShortcutSettingsCard.swift */,
-				B000000000000000000002D6 /* CaptureSettingsCard.swift */,
-				B000000000000000000002D7 /* CapsulePreview.swift */,
-				B000000000000000000002D8 /* WaveformPreview.swift */,
-				B000000000000000000002D9 /* ShortcutKeycap.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -1158,10 +1069,12 @@
 				C2000000000000000000000D /* ACInfoTable.swift in Sources */,
 				C2000000000000000000000E /* ACEmptyState.swift in Sources */,
 				C2000000000000000000000F /* ACViewState.swift in Sources */,
+				C20000000000000000000010 /* ACSecondaryPageShell.swift in Sources */,
+				C20000000000000000000011 /* ACWorkspaceShell.swift in Sources */,
+				C20000000000000000000012 /* ACSettingsShell.swift in Sources */,
 				A10000000000000000000051 /* AppState.swift in Sources */,
 				A10000000000000000000055 /* ServiceContainer.swift in Sources */,
 				A1000000000000000000000C /* SidebarView.swift in Sources */,
-				A10000000000000000000014 /* AcMindTheme.swift in Sources */,
 				A1000000000000000000006C /* InboxView.swift in Sources */,
 				A10000000000000000000540 /* AppDelegate.swift in Sources */,
 				A10000000000000000000541 /* SidebarItem.swift in Sources */,
@@ -1181,7 +1094,8 @@
 				A10000000000000000000141 /* CompanionMockData.swift in Sources */,
 				A10000000000000000000143 /* CompanionCapsule.swift in Sources */,
 				A10000000000000000000145 /* CompanionVoicePanel.swift in Sources */,
-				A10000000000000000000549 /* CompanionCapturePanel.swift in Sources */,
+				A10000000000000000000552 /* CompanionVoiceSessionController.swift in Sources */,
+				A10000000000000000000553 /* FnVoiceHoldMonitor.swift in Sources */,
 				A1000000000000000000018F /* BatteryService.swift in Sources */,
 				A10000000000000000000193 /* ShelfService.swift in Sources */,
 				A1000000000000000000019B /* NotchPanel.swift in Sources */,
@@ -1215,18 +1129,8 @@
 				A10000000000000000000421 /* CapsulePanelAdapter.swift in Sources */,
 				A1000000000000000000051C /* ContinentPanelAdapter.swift in Sources */,
 				A1000000000000000000018D /* CompanionView.swift in Sources */,
-				A10000000000000000000522 /* CompanionControlCenterView.swift in Sources */,
 				A10000000000000000000520 /* MusicService.swift in Sources */,
 				A10000000000000000000521 /* NotchToast.swift in Sources */,
-				B000000000000000000002DA /* CompanionSettingsHeader.swift in Sources */,
-				B000000000000000000002DB /* CapsuleSettingsCard.swift in Sources */,
-				B000000000000000000002DE /* CapsulePreview.swift in Sources */,
-				B000000000000000000002DC /* ShortcutSettingsCard.swift in Sources */,
-				B000000000000000000002DD /* ShortcutKeycap.swift in Sources */,
-				B000000000000000000002C2 /* CompanionCapabilityCard.swift in Sources */,
-				B000000000000000000002C4 /* VoiceSettingsCard.swift in Sources */,
-				B000000000000000000002C6 /* CaptureSettingsCard.swift in Sources */,
-				B000000000000000000002C8 /* WaveformPreview.swift in Sources */,
 				A10000000000000000000186 /* DesktopCapsulePanel.swift in Sources */,
 				A10000000000000000000188 /* DesktopCapsuleSettingsSection.swift in Sources */,
 				A10000000000000000000547 /* DesktopCapsuleViewModel.swift in Sources */,
@@ -1246,17 +1150,6 @@
 				7C01FE77C6135DE128034617 /* InboxRecognitionCard.swift in Sources */,
 				B7BAEA42C078FDBA6CFB62E3 /* InboxSuggestedActionButton.swift in Sources */,
 				C17BC9555C707F7236556A3A /* InboxTypeIcon.swift in Sources */,
-				0F0DC4E34B8AECCFFE686C51 /* ContinentConfigTokens.swift in Sources */,
-				931A10E3C005CB90EC7B6478 /* ContinentConfigHeaderView.swift in Sources */,
-				D3537ECBD55D5D2000618710 /* ContinentExpandedPreviewCard.swift in Sources */,
-				D004C1BC7E619A0C070C7A09 /* ComponentSelectionCard.swift in Sources */,
-				DCD75041F8134E250BC230CA /* FunctionModulesCard.swift in Sources */,
-				A3A6108340F3B232C1686CA4 /* ConfigCardContainer.swift in Sources */,
-				2A7ECCA185FE9E4F7FDEFD0F /* ContinentConfigCenterView.swift in Sources */,
-				6C46D774EC66C6B7DA415F2E /* CapsuleShapePreviewCard.swift in Sources */,
-				208762F7A587979AA561C828 /* LinkRulesCard.swift in Sources */,
-				ACE9AC0A267FC43A11FEB1C8 /* BlockManagementCard.swift in Sources */,
-				5AB624F3B60D72FD20D49263 /* AdvancedDebugBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1318,6 +1211,7 @@
 				A1000000000000000000016F /* AXTextInjector.swift in Sources */,
 				A10000000000000000000170 /* VisionOCR.swift in Sources */,
 				A10000000000000000000182 /* DesktopCapsuleConfig.swift in Sources */,
+				A10000000000000000000611 /* AgentTask.swift in Sources */,
 				A10000000000000000000183 /* ScheduledAgentTask.swift in Sources */,
 				A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */,
 				A1000000000000000000005B /* VoiceServiceProtocol.swift in Sources */,

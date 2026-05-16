@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgD" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A84FF"/>
+      <stop offset="60%" stop-color="#0070E0"/>
+      <stop offset="100%" stop-color="#00C7A8"/>
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#E0F0FF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="brainGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#B8E0FF" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="softShadowD">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dy="3"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="waveGlow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="brainClip">
+      <path d="M256 130 Q200 130 180 170 Q155 170 145 200 Q130 200 125 235 Q115 250 120 280 Q115 310 140 330 Q145 360 175 370 Q195 390 230 385 Q250 400 280 390 Q310 395 330 375 Q360 370 370 340 Q390 325 388 295 Q400 270 390 240 Q395 210 380 190 Q375 165 350 155 Q335 135 310 132 Q285 125 256 130 Z"/>
+    </clipPath>
+  </defs>
+  <!-- Background -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bgD)"/>
+  <!-- Brain silhouette filled with waves -->
+  <g clip-path="url(#brainClip)" filter="url(#softShadowD)">
+    <!-- Brain outline glow -->
+    <path d="M256 130 Q200 130 180 170 Q155 170 145 200 Q130 200 125 235 Q115 250 120 280 Q115 310 140 330 Q145 360 175 370 Q195 390 230 385 Q250 400 280 390 Q310 395 330 375 Q360 370 370 340 Q390 325 388 295 Q400 270 390 240 Q395 210 380 190 Q375 165 350 155 Q335 135 310 132 Q285 125 256 130 Z" fill="white" opacity="0.08"/>
+    <!-- Sound wave bars inside brain -->
+    <g filter="url(#waveGlow)">
+      <rect x="150" y="220" width="6" height="70" rx="3" fill="url(#waveGrad)" opacity="0.6"/>
+      <rect x="168" y="195" width="6" height="120" rx="3" fill="url(#waveGrad)" opacity="0.7"/>
+      <rect x="186" y="175" width="6" height="160" rx="3" fill="url(#waveGrad)" opacity="0.8"/>
+      <rect x="204" y="185" width="6" height="140" rx="3" fill="url(#waveGrad)" opacity="0.85"/>
+      <rect x="222" y="165" width="6" height="180" rx="3" fill="url(#waveGrad)" opacity="0.9"/>
+      <rect x="240" y="155" width="6" height="200" rx="3" fill="url(#waveGrad)" opacity="0.95"/>
+      <rect x="256" y="145" width="7" height="220" rx="3.5" fill="white"/>
+      <rect x="272" y="155" width="6" height="200" rx="3" fill="url(#waveGrad)" opacity="0.95"/>
+      <rect x="290" y="165" width="6" height="180" rx="3" fill="url(#waveGrad)" opacity="0.9"/>
+      <rect x="308" y="185" width="6" height="140" rx="3" fill="url(#waveGrad)" opacity="0.85"/>
+      <rect x="326" y="175" width="6" height="160" rx="3" fill="url(#waveGrad)" opacity="0.8"/>
+      <rect x="344" y="195" width="6" height="120" rx="3" fill="url(#waveGrad)" opacity="0.7"/>
+      <rect x="362" y="220" width="6" height="70" rx="3" fill="url(#waveGrad)" opacity="0.6"/>
+    </g>
+  </g>
+  <!-- Brain outline -->
+  <path d="M256 130 Q200 130 180 170 Q155 170 145 200 Q130 200 125 235 Q115 250 120 280 Q115 310 140 330 Q145 360 175 370 Q195 390 230 385 Q250 400 280 390 Q310 395 330 375 Q360 370 370 340 Q390 325 388 295 Q400 270 390 240 Q395 210 380 190 Q375 165 350 155 Q335 135 310 132 Q285 125 256 130 Z" fill="none" stroke="white" stroke-width="2.5" opacity="0.4"/>
+  <!-- Center division line -->
+  <line x1="256" y1="135" x2="256" y2="395" stroke="white" stroke-width="1" opacity="0.15"/>
+  <!-- Brain fold lines -->
+  <g stroke="white" stroke-width="1.2" fill="none" opacity="0.15">
+    <path d="M180 200 Q210 220 256 210"/>
+    <path d="M256 210 Q300 220 335 200"/>
+    <path d="M160 280 Q200 290 256 275"/>
+    <path d="M256 275 Q310 290 350 280"/>
+    <path d="M175 340 Q210 350 256 340"/>
+    <path d="M256 340 Q300 350 335 340"/>
+  </g>
+  <!-- Mic indicator at bottom -->
+  <g transform="translate(256,430)" opacity="0.5">
+    <rect x="-3" y="-12" width="6" height="14" rx="3" fill="white"/>
+    <path d="M-8 2 Q-8 12 0 14 Q8 12 8 2" stroke="white" stroke-width="1.5" fill="none"/>
+    <line x1="0" y1="14" x2="0" y2="18" stroke="white" stroke-width="1.5"/>
+  </g>
+</svg>

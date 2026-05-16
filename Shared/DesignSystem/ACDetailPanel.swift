@@ -19,11 +19,11 @@ struct ACDetailPanel<Content: View>: View {
         content
             .padding(padding)
             .frame(width: width, alignment: .topLeading)
-            .background(ACColors.cardBackground)
+            .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: ACLayout.cardRadius, style: .continuous)
-                    .stroke(ACColors.border, lineWidth: 1)
+                    .stroke(ACColors.border.opacity(0.5), lineWidth: 1)
             )
     }
 }

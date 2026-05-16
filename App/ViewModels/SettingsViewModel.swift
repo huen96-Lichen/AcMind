@@ -58,6 +58,13 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var companionCapsulePosition: CompanionCapsulePosition = .topCenter
     @Published public var companionCapsuleExpanded: Bool = false
     @Published public var companionVoiceEnabled: Bool = true
+    @Published public var companionVoiceShortcut: String = "⌥Space"
+    @Published public var companionVoiceTriggerMode: CompanionVoiceTriggerMode = .both
+    @Published public var companionVoiceProvider: STTProvider = .appleSpeech
+    @Published public var companionVoiceModel: String = "auto"
+    @Published public var companionVoiceHoldToTalkEnabled: Bool = true
+    @Published public var companionVoiceHoldThreshold: Double = 0.38
+    @Published public var companionVoiceRouteMode: CompanionVoiceRouteMode = .smart
     @Published public var companionVoiceOutputMode: VoiceOutputMode = .copyToClipboard
     @Published public var companionVoiceSaveToInbox: Bool = true
     @Published public var companionShortcutsEnabled: Bool = true
@@ -141,6 +148,13 @@ public final class SettingsViewModel: ObservableObject {
                 companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
                 companionCapsuleExpanded = config.capsuleExpandedByDefault
                 companionVoiceEnabled = config.voiceEnabled
+                companionVoiceShortcut = config.voiceShortcut
+                companionVoiceTriggerMode = CompanionVoiceTriggerMode(rawValue: config.voiceTriggerMode) ?? .both
+                companionVoiceProvider = STTProvider(rawValue: config.voiceProvider) ?? .appleSpeech
+                companionVoiceModel = config.voiceModel
+                companionVoiceHoldToTalkEnabled = config.voiceHoldToTalkEnabled
+                companionVoiceHoldThreshold = config.voiceHoldThreshold
+                companionVoiceRouteMode = CompanionVoiceRouteMode(rawValue: config.voiceRouteMode) ?? .smart
                 companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
                 companionVoiceSaveToInbox = config.voiceSaveToInbox
                 companionShortcutsEnabled = config.shortcutsEnabled
@@ -151,6 +165,13 @@ public final class SettingsViewModel: ObservableObject {
                 companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
                 companionCapsuleExpanded = config.capsuleExpandedByDefault
                 companionVoiceEnabled = config.voiceEnabled
+                companionVoiceShortcut = config.voiceShortcut
+                companionVoiceTriggerMode = CompanionVoiceTriggerMode(rawValue: config.voiceTriggerMode) ?? .both
+                companionVoiceProvider = STTProvider(rawValue: config.voiceProvider) ?? .appleSpeech
+                companionVoiceModel = config.voiceModel
+                companionVoiceHoldToTalkEnabled = config.voiceHoldToTalkEnabled
+                companionVoiceHoldThreshold = config.voiceHoldThreshold
+                companionVoiceRouteMode = CompanionVoiceRouteMode(rawValue: config.voiceRouteMode) ?? .smart
                 companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
                 companionVoiceSaveToInbox = config.voiceSaveToInbox
                 companionShortcutsEnabled = config.shortcutsEnabled
@@ -169,6 +190,13 @@ public final class SettingsViewModel: ObservableObject {
             companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
             companionCapsuleExpanded = config.capsuleExpandedByDefault
             companionVoiceEnabled = config.voiceEnabled
+            companionVoiceShortcut = config.voiceShortcut
+            companionVoiceTriggerMode = CompanionVoiceTriggerMode(rawValue: config.voiceTriggerMode) ?? .both
+            companionVoiceProvider = STTProvider(rawValue: config.voiceProvider) ?? .appleSpeech
+            companionVoiceModel = config.voiceModel
+            companionVoiceHoldToTalkEnabled = config.voiceHoldToTalkEnabled
+            companionVoiceHoldThreshold = config.voiceHoldThreshold
+            companionVoiceRouteMode = CompanionVoiceRouteMode(rawValue: config.voiceRouteMode) ?? .smart
             companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
             companionVoiceSaveToInbox = config.voiceSaveToInbox
             companionShortcutsEnabled = config.shortcutsEnabled
@@ -230,12 +258,18 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     public func saveCompanionSettings() async {
-            let config = CompanionConfiguration(
+        let config = CompanionConfiguration(
             capsuleEnabled: companionCapsuleEnabled,
             capsulePosition: companionCapsulePosition.rawValue,
             capsuleExpandedByDefault: companionCapsuleExpanded,
             voiceEnabled: companionVoiceEnabled,
-            voiceShortcut: "⌥Space",
+            voiceShortcut: companionVoiceShortcut,
+            voiceTriggerMode: companionVoiceTriggerMode.rawValue,
+            voiceProvider: companionVoiceProvider.rawValue,
+            voiceModel: companionVoiceModel,
+            voiceHoldToTalkEnabled: companionVoiceHoldToTalkEnabled,
+            voiceHoldThreshold: companionVoiceHoldThreshold,
+            voiceRouteMode: companionVoiceRouteMode.rawValue,
             voiceOutputMode: companionVoiceOutputMode.rawValue,
             voiceSaveToInbox: companionVoiceSaveToInbox,
             shortcutsEnabled: companionShortcutsEnabled,
@@ -249,6 +283,7 @@ public final class SettingsViewModel: ObservableObject {
             let collapsedData = try JSONEncoder().encode(companionCollapsedContentSettings)
             UserDefaults.standard.set(collapsedData, forKey: CompanionCollapsedContentStorage.key)
             NotificationCenter.default.post(name: .companionCollapsedContentSettingsChanged, object: nil)
+            NotificationCenter.default.post(name: .companionVoiceConfigurationDidChange, object: nil)
         } catch {
             showError(message: "保存随身配置失败: \(error.localizedDescription)")
         }

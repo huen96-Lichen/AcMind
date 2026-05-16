@@ -11,6 +11,8 @@ import SettingsPage from './pages/SettingsPage'
 
 function App() {
   return (
+    // FIXED SHELL: keep the app chrome stable.
+    // Feature work should live inside routed pages, not here.
     <div className="app-container">
       <Sidebar />
       <main className="main-content">

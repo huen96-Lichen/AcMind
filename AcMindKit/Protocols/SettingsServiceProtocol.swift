@@ -28,7 +28,7 @@ public protocol SettingsServiceProtocol: Sendable {
     func requestPermissionKind(_ kind: AppPermissionKind) async
 
     // Shortcuts
-    func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws
+    func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws
     func unregisterShortcut(_ shortcut: KeyboardShortcut) async throws
     func getRegisteredShortcuts() async -> [KeyboardShortcut]
     func unregisterAllShortcuts() async

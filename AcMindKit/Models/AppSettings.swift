@@ -180,6 +180,90 @@ public struct KeyboardShortcut: Codable, Sendable, Hashable, Equatable {
     }
 }
 
+public extension KeyboardShortcut {
+    init?(displayString: String) {
+        let trimmed = displayString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let normalized = trimmed
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "＋", with: "+")
+
+        let modifierPairs: [(String, ModifierKey)] = [
+            ("⌘", .command),
+            ("cmd", .command),
+            ("command", .command),
+            ("⌥", .option),
+            ("opt", .option),
+            ("option", .option),
+            ("⌃", .control),
+            ("ctrl", .control),
+            ("control", .control),
+            ("⇧", .shift),
+            ("shift", .shift)
+        ]
+
+        var modifiers: [ModifierKey] = []
+        var keyPart = normalized
+
+        if normalized.contains("+") {
+            let tokens = normalized.split(separator: "+").map(String.init).filter { !$0.isEmpty }
+            guard !tokens.isEmpty else { return nil }
+
+            for token in tokens.dropLast() {
+                guard let modifier = KeyboardShortcut.modifier(from: token, pairs: modifierPairs) else { continue }
+                if !modifiers.contains(modifier) {
+                    modifiers.append(modifier)
+                }
+            }
+
+            guard let rawKey = tokens.last else { return nil }
+            keyPart = rawKey
+        } else {
+            var remainder = normalized
+            var matched = true
+            while matched, !remainder.isEmpty {
+                matched = false
+                for (prefix, modifier) in modifierPairs where remainder.lowercased().hasPrefix(prefix) {
+                    if !modifiers.contains(modifier) {
+                        modifiers.append(modifier)
+                    }
+                    remainder.removeFirst(prefix.count)
+                    matched = true
+                    break
+                }
+            }
+            keyPart = remainder
+        }
+
+        let key = KeyboardShortcut.normalizedKey(from: keyPart)
+        guard !key.isEmpty else { return nil }
+
+        self.init(key: key, modifiers: modifiers)
+    }
+
+    private static func modifier(from token: String, pairs: [(String, ModifierKey)]) -> ModifierKey? {
+        let lowercased = token.lowercased()
+        return pairs.first(where: { lowercased == $0.0 })?.1
+    }
+
+    private static func normalizedKey(from rawKey: String) -> String {
+        let key = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if key.isEmpty { return "" }
+
+        switch key.lowercased() {
+        case "space", "空格":
+            return "space"
+        case "return", "enter":
+            return "return"
+        case "esc", "escape":
+            return "escape"
+        default:
+            return key.lowercased()
+        }
+    }
+}
+
 public enum ModifierKey: String, Codable, Sendable, Hashable, CaseIterable {
     case command
     case option

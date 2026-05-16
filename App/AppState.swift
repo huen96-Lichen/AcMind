@@ -11,6 +11,21 @@ public enum WindowState: Sendable, Equatable {
     case fullscreen
 }
 
+// MARK: - Primary Rail Mode
+
+public enum PrimaryRailMode: String, Codable, CaseIterable, Sendable {
+    case compact
+    case expanded
+}
+
+// MARK: - Workspace Mode
+
+public enum WorkspaceMode: String, Codable, CaseIterable, Sendable {
+    case visible
+    case collapsed
+    case hidden
+}
+
 // MARK: - App State
 
 /// 全局应用状态管理
@@ -30,6 +45,24 @@ public final class AppState: ObservableObject, Sendable {
 
     @Published public var sidebarSelection: SidebarItem = .agent
     @Published public var sidebarCollapsed = false
+
+    // MARK: - Primary Rail & Workspace State
+
+    @Published public var primaryRailMode: PrimaryRailMode = .compact {
+        didSet {
+            UserDefaults.standard.set(primaryRailMode.rawValue, forKey: "AppSettings.primaryRailMode")
+        }
+    }
+
+    @Published public var workspaceMode: WorkspaceMode = .visible {
+        didSet {
+            if workspaceMode != .hidden {
+                UserDefaults.standard.set(workspaceMode.rawValue, forKey: "AppSettings.workspaceMode")
+            }
+        }
+    }
+
+    private var lastNonHiddenWorkspaceMode: WorkspaceMode = .visible
 
     // MARK: - Window State
 
@@ -59,6 +92,7 @@ public final class AppState: ObservableObject, Sendable {
     private var shortcutHandlers: [KeyboardShortcut: () -> Void] = [:]
 
     public init() {
+        restorePersistedState()
         setupBindings()
         checkFirstLaunch()
     }
@@ -108,6 +142,50 @@ public final class AppState: ObservableObject, Sendable {
             isFirstLaunch = true
             showOnboarding = true
             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+        }
+    }
+
+    // MARK: - State Persistence
+
+    private func restorePersistedState() {
+        if let saved = UserDefaults.standard.string(forKey: "AppSettings.primaryRailMode"),
+           let mode = PrimaryRailMode(rawValue: saved) {
+            primaryRailMode = mode
+        }
+        if let saved = UserDefaults.standard.string(forKey: "AppSettings.workspaceMode"),
+           let mode = WorkspaceMode(rawValue: saved),
+           mode != .hidden {
+            workspaceMode = mode
+            lastNonHiddenWorkspaceMode = mode
+        }
+    }
+
+    // MARK: - Workspace Mode Actions
+
+    public func handleCloseForeground() {
+        lastNonHiddenWorkspaceMode = workspaceMode == .hidden ? lastNonHiddenWorkspaceMode : workspaceMode
+        workspaceMode = .hidden
+    }
+
+    public func handleCollapseWorkspace() {
+        if workspaceMode != .hidden {
+            lastNonHiddenWorkspaceMode = workspaceMode
+        }
+        workspaceMode = .collapsed
+    }
+
+    public func handleExpandWorkspace() {
+        workspaceMode = lastNonHiddenWorkspaceMode == .collapsed ? .visible : lastNonHiddenWorkspaceMode
+        lastNonHiddenWorkspaceMode = workspaceMode
+    }
+
+    public func restoreWorkspaceFromHidden() {
+        workspaceMode = lastNonHiddenWorkspaceMode
+    }
+
+    public func ensureWorkspaceModeNotHidden() {
+        if workspaceMode == .hidden {
+            workspaceMode = lastNonHiddenWorkspaceMode
         }
     }
 

@@ -55,12 +55,28 @@ struct SettingsSuiteView: View {
     @State private var searchText = ""
 
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
-            Divider().overlay(ACColors.border)
-            content
-        }
-        .background(ACColors.pageBackground.ignoresSafeArea())
+        ACSettingsShell(
+            header: {
+                ACPageHeader(
+                    title: "设置中心",
+                    subtitle: "统一管理基础偏好、Agent、信息处理、知识库、工具和模型。"
+                ) {
+                    HStack(spacing: 10) {
+                        ACBadge(selectedSection.title, kind: .neutral)
+                        ACButton("保存设置", kind: .primary) {
+                            Task { await viewModel.saveSettings() }
+                        }
+                    }
+                }
+            },
+            sidebar: { sidebar },
+            content: {
+                VStack(alignment: .leading, spacing: 16) {
+                    sectionOverview
+                    sectionContent
+                }
+            }
+        )
         .alert("设置错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
         } message: {
@@ -70,7 +86,7 @@ struct SettingsSuiteView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("设置")
                     .font(ACTypography.sectionTitle)
                     .foregroundStyle(ACColors.primaryText)
@@ -80,26 +96,27 @@ struct SettingsSuiteView: View {
                     .lineSpacing(3)
             }
 
-            ACSearchField("搜索设置", text: $searchText, width: 220, height: 36)
+            ACSearchField("搜索设置", text: $searchText, width: nil, height: 36)
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     ForEach(filteredSections) { section in
+                        let isSelected = selectedSection == section
                         Button {
                             selectedSection = section
                         } label: {
                             HStack(spacing: 12) {
                                 ACTypeIcon(
                                     section.icon,
-                                    tint: selectedSection == section ? ACColors.accentBlue : ACColors.secondaryText,
-                                    background: selectedSection == section ? ACColors.selectedFill : ACColors.softFill,
+                                    tint: isSelected ? ACColors.accentBlue : ACColors.secondaryText,
+                                    background: isSelected ? ACColors.selectedFill : ACColors.softFill,
                                     size: 32
                                 )
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(section.title)
                                         .font(ACTypography.itemTitle)
-                                        .foregroundStyle(selectedSection == section ? ACColors.primaryText : ACColors.secondaryText)
+                                        .foregroundStyle(isSelected ? ACColors.primaryText : ACColors.secondaryText)
                                         .lineLimit(1)
                                     Text(section.subtitle)
                                         .font(ACTypography.mini)
@@ -109,15 +126,15 @@ struct SettingsSuiteView: View {
 
                                 Spacer(minLength: 0)
                             }
-                            .frame(width: ACLayout.sidebarNavWidth, height: ACLayout.sidebarNavHeight, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: ACLayout.sidebarNavHeight, alignment: .leading)
                             .padding(.horizontal, 14)
                             .background(
                                 RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                                    .fill(selectedSection == section ? ACColors.cardBackground : Color.clear)
+                                    .fill(isSelected ? ACColors.selectedFill : ACColors.softFill)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                                    .stroke(selectedSection == section ? ACColors.border : Color.clear, lineWidth: 1)
+                                    .stroke(isSelected ? ACColors.accentBlue.opacity(0.22) : ACColors.border.opacity(0.3), lineWidth: 1)
                             )
                         }
                         .buttonStyle(.plain)
@@ -125,72 +142,8 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            Spacer(minLength: 0)
-
-            ACCard(padding: 14) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 10) {
-                        ACTypeIcon("person.crop.circle.fill", tint: ACColors.accentBlue, background: ACColors.selectedFill, size: 34)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("状态")
-                                .font(ACTypography.itemTitle)
-                                .foregroundStyle(ACColors.primaryText)
-                            Text("当前配置摘要")
-                                .font(ACTypography.mini)
-                                .foregroundStyle(ACColors.secondaryText)
-                        }
-                    }
-
-                    HStack(spacing: 6) {
-                        ACBadge(viewModel.theme.displayName, kind: .blue)
-                        ACBadge(viewModel.language == "zh-CN" ? "中文" : "English", kind: .neutral)
-                    }
-
-                    ACInfoTable([
-                        .init("默认模型", value: viewModel.defaultModelId.isEmpty ? "未设置" : viewModel.defaultModelId),
-                        .init("Vault", value: viewModel.vaultDefaultFolder),
-                        .init("权限", value: permissionSummary)
-                    ])
-                }
-            }
-            .frame(width: 232, height: 126)
         }
         .padding(20)
-        .frame(width: 280, alignment: .leading)
-        .background(ACColors.sidebarBackground)
-    }
-
-    private var content: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                ACPageHeader(
-                    title: selectedSection.title,
-                    subtitle: selectedSection.subtitle,
-                    trailing: {
-                        HStack(spacing: 12) {
-                            if selectedSection == .advanced {
-                                ACButton("保存设置", kind: .primary) {
-                                    Task { await viewModel.saveSettings() }
-                                }
-                            } else {
-                                ACBadge("预览", kind: .neutral)
-                            }
-                        }
-                    }
-                )
-                .frame(height: ACLayout.headerHeightCompact)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    sectionContent
-                }
-                .frame(maxWidth: 960, alignment: .leading)
-            }
-            .padding(.horizontal, ACLayout.pagePaddingX)
-            .padding(.vertical, ACLayout.pagePaddingY)
-            .padding(.bottom, ACLayout.pagePaddingBottom)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .background(ACColors.pageBackground)
     }
 
     @ViewBuilder
@@ -224,20 +177,46 @@ struct SettingsSuiteView: View {
         }
     }
 
-    private var permissionSummary: String {
-        let values = [
-            viewModel.microphoneStatus.displayName,
-            viewModel.screenRecordingStatus.displayName,
-            viewModel.accessibilityStatus.displayName
-        ]
-        return values.joined(separator: " / ")
+    private var sectionOverview: some View {
+        ACCard(padding: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                ACTypeIcon(selectedSection.icon, tint: ACColors.accentBlue, background: ACColors.selectedFill, size: 44)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(selectedSection.title)
+                            .font(ACTypography.cardTitle)
+                            .foregroundStyle(ACColors.primaryText)
+                        ACBadge("设置分区", kind: .blue)
+                    }
+
+                    Text(selectedSection.subtitle)
+                        .font(ACTypography.caption)
+                        .foregroundStyle(ACColors.secondaryText)
+                        .lineLimit(2)
+
+                    Text("保留 mock 与占位项，便于后续接入。")
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.tertiaryText)
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .trailing, spacing: 8) {
+                    ACBadge(filteredSections.contains(selectedSection) ? "当前可见" : "搜索结果外", kind: .neutral)
+                    Text("修改后点右上角保存。")
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.tertiaryText)
+                }
+            }
+        }
     }
 
     private var generalSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "外观与启动", subtitle: "统一黑色视觉与启动行为") {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("主题")
                             .font(ACTypography.captionMedium)
                             .foregroundStyle(ACColors.secondaryText)
@@ -248,7 +227,7 @@ struct SettingsSuiteView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("语言")
                             .font(ACTypography.captionMedium)
                             .foregroundStyle(ACColors.secondaryText)
@@ -260,7 +239,7 @@ struct SettingsSuiteView: View {
                     }
 
                     Toggle("启动时显示灵动胶囊", isOn: $viewModel.companionCapsuleEnabled)
-                    Toggle("恢复上次窗口位置", isOn: $viewModel.autoFrontmatter)
+                    Toggle("布局记忆（占位）", isOn: $viewModel.autoFrontmatter)
                 }
             }
 
@@ -275,9 +254,9 @@ struct SettingsSuiteView: View {
     }
 
     private var agentSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "随身能力", subtitle: "控制胶囊、语音与快捷键") {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     Toggle("启用语音入口", isOn: $viewModel.companionVoiceEnabled)
                     Toggle("启用快捷指令", isOn: $viewModel.companionShortcutsEnabled)
                     Toggle("启用截图入口", isOn: $viewModel.companionCaptureEnabled)
@@ -313,13 +292,13 @@ struct SettingsSuiteView: View {
     }
 
     private var processingSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "信息处理", subtitle: "把碎片内容变成可沉淀资产") {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     Toggle("自动剪贴板采集", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("自动前置 Frontmatter", isOn: $viewModel.autoFrontmatter)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("导出目标")
                             .font(ACTypography.captionMedium)
                             .foregroundStyle(ACColors.secondaryText)
@@ -343,15 +322,15 @@ struct SettingsSuiteView: View {
     }
 
     private var knowledgeSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "Vault", subtitle: "Obsidian / Markdown 归档") {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     TextField("Vault 路径", text: $viewModel.vaultPath)
                         .textFieldStyle(.roundedBorder)
                     TextField("默认文件夹", text: $viewModel.vaultDefaultFolder)
                         .textFieldStyle(.roundedBorder)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("路径规则")
                             .font(ACTypography.captionMedium)
                             .foregroundStyle(ACColors.secondaryText)
@@ -375,9 +354,9 @@ struct SettingsSuiteView: View {
     }
 
     private var toolsSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "工具集", subtitle: "截图、OCR、监听与语音") {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     Toggle("自动监听剪贴板", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("自动打码人脸", isOn: $viewModel.autoRedactFaces)
                     Toggle("检测敏感信息", isOn: $viewModel.autoDetectPII)
@@ -385,14 +364,14 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
                 settingsCard(title: "截图快捷键", subtitle: "快速调用") {
                     TextField("例如 ⌘⇧3", text: $viewModel.captureScreenshotHotkey)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 settingsCard(title: "滚动截图", subtitle: "参数与稳定性") {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Slider(value: $viewModel.scrollCaptureSpeed, in: 1...6, step: 0.5)
                         Text("速度 \(viewModel.scrollCaptureSpeed, specifier: "%.1f")")
                             .font(ACTypography.caption)
@@ -405,9 +384,9 @@ struct SettingsSuiteView: View {
     }
 
     private var modelsSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "默认模型", subtitle: "AcMind 需要优先使用的模型") {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     TextField("Default Provider ID", text: $viewModel.defaultProviderId)
                         .textFieldStyle(.roundedBorder)
                     TextField("Default Model ID", text: $viewModel.defaultModelId)
@@ -437,7 +416,7 @@ struct SettingsSuiteView: View {
     }
 
     private var advancedSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             settingsCard(title: "权限状态", subtitle: "系统级能力") {
                 VStack(alignment: .leading, spacing: 8) {
                     settingsStatusRow(label: "麦克风", status: viewModel.microphoneStatus.displayName, color: permissionColor(for: viewModel.microphoneStatus))
@@ -449,19 +428,12 @@ struct SettingsSuiteView: View {
             }
 
             settingsCard(title: "诊断与导出", subtitle: "用于排查和收尾") {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     ACInfoTable([
                         .init("当前主题", value: viewModel.theme.displayName),
                         .init("语言", value: viewModel.language),
                         .init("默认导出", value: viewModel.defaultExportTarget.displayName)
                     ])
-
-                    HStack {
-                        Spacer(minLength: 0)
-                        ACButton("保存设置", kind: .primary) {
-                            Task { await viewModel.saveSettings() }
-                        }
-                    }
                 }
             }
         }
@@ -472,9 +444,9 @@ struct SettingsSuiteView: View {
         subtitle: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        ACCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
+        ACCard(padding: 15) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(ACTypography.cardTitle)
                         .foregroundStyle(ACColors.primaryText)

@@ -1,0 +1,190 @@
+# UI 边界约定
+
+日期：2026-05-16
+
+这份文档用于约束主界面与二级界面的改动边界，方便后续开发者快速判断：
+
+- 哪些区域是 `FIXED`，尽量不要改结构
+- 哪些区域是 `EDITABLE`，可以继续扩展功能
+- 新功能应该优先挂在哪里
+
+## 1. 总原则
+
+### 1.1 固定层
+
+固定层指的是全局壳、页面路由和基础布局规则。
+
+这些地方只允许做：
+
+- 路由接入
+- 容器尺寸调整
+- 全局导航调整
+- 基础视觉 token 调整
+
+不建议做：
+
+- 页面业务逻辑
+- 对话、任务、列表等具体交互
+- 只属于单页的状态管理
+
+### 1.2 可编辑层
+
+可编辑层指的是具体页面内部的业务区域。
+
+这些地方可以做：
+
+- 新增按钮、面板、表单、状态
+- 增加交互流程
+- 增加数据展示区
+- 增加更多子组件拆分
+
+## 2. 当前代码分层
+
+### 2.1 固定壳
+
+这些文件尽量保持稳定：
+
+- [`src/renderer/App.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/App.tsx)
+- [`src/renderer/components/layout/Sidebar.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/layout/Sidebar.tsx)
+- [`src/renderer/styles.css`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/styles.css)
+
+它们负责：
+
+- 全局布局
+- 左侧导航
+- 主内容区承载
+- 全局样式变量和页面骨架
+
+### 2.2 可编辑工作区
+
+Agent 页是当前主要的二级工作区：
+
+- [`src/renderer/pages/AgentPage.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/pages/AgentPage.tsx)
+
+它下面的组件可以继续扩展：
+
+- [`src/renderer/components/agent/AgentPageHeader.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentPageHeader.tsx)
+- [`src/renderer/components/agent/AgentTabBar.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentTabBar.tsx)
+- [`src/renderer/components/agent/AgentChatPanel.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentChatPanel.tsx)
+- [`src/renderer/components/agent/AgentDistillPanel.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentDistillPanel.tsx)
+
+## 3. 分区规则
+
+### 3.1 页面标题区
+
+状态：`FIXED HEADER`
+
+允许做：
+
+- 修改标题文案
+- 修改说明文案
+- 增加在线状态、模型状态、任务状态徽标
+
+不建议做：
+
+- 放复杂表单
+- 放长列表
+- 放会影响页面主逻辑的操作
+
+### 3.2 模式切换区
+
+状态：`EDITABLE CONTROL`
+
+允许做：
+
+- 增加新 Tab
+- 增加快捷模式
+- 增加筛选开关
+
+推荐用途：
+
+- `对话`
+- `蒸馏`
+- `计划`
+- `结果`
+
+### 3.3 主工作区
+
+状态：`EDITABLE WORKSPACE`
+
+允许做：
+
+- 消息流
+- 执行步骤
+- 任务队列
+- 结果预览
+- 交互按钮
+- 详情面板
+
+原则：
+
+- 这里是最适合长功能的地方
+- 新能力优先放这里，而不是塞进壳层
+
+## 4. 维护约定
+
+### 4.1 改动优先级
+
+新增功能时优先顺序如下：
+
+1. 先判断是否属于现有工作区
+2. 再判断是否能挂到现有子组件
+3. 如果子组件已经拥挤，再拆新组件
+4. 最后才考虑改全局壳
+
+### 4.2 不要轻易改的内容
+
+以下内容默认视为稳定边界：
+
+- 路由结构
+- 左侧导航的职责
+- 页面壳层的宽高和滚动容器
+- 全局颜色 token
+- 卡片边距和基础圆角
+
+### 4.3 可以放心扩展的内容
+
+以下内容默认允许增长：
+
+- Agent 的消息流
+- 蒸馏列表和批处理
+- 模型配置区
+- 任务状态区
+- 结果预览区
+
+## 5. 代码里的标记规则
+
+当前代码中已经加入了以下注释语义：
+
+- `FIXED SHELL`
+- `FIXED HEADER`
+- `EDITABLE SURFACE`
+- `EDITABLE CONTROL ZONE`
+- `EDITABLE CONTROL BLOCK`
+- `EDITABLE WORKSPACE`
+
+含义很简单：
+
+- `FIXED`：尽量不要动结构
+- `EDITABLE`：可以继续加功能和拆组件
+
+## 6. 推荐改法
+
+以后改界面时，优先遵循这个顺序：
+
+1. 先在对应 `EDITABLE` 区域内加组件
+2. 再补对应的数据和事件
+3. 只有当区域明显放不下，才往外层扩
+4. 不要为了省事把业务逻辑塞回 `App.tsx` 或 `Sidebar.tsx`
+
+## 7. 适用范围
+
+这份约定主要适用于当前 React 侧界面。
+
+如果后面要继续扩展到别的页面，建议沿用同样的标记方式，把每个页面都分成：
+
+- 固定壳
+- 可编辑控制区
+- 可编辑工作区
+- 只读展示区
+

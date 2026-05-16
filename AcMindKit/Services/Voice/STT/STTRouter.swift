@@ -23,6 +23,7 @@ public final class STTRouter: @unchecked Sendable {
     // Configuration
     private var whisperKitModelName: String = "large-v3-turbo"
     private var sherpaOnnxModelFolder: String?
+    private var qwen3ASRModelIdentifier: String = "Qwen/Qwen3-ASR-0.6B"
     
     // MARK: - Initialization
     
@@ -43,6 +44,16 @@ public final class STTRouter: @unchecked Sendable {
     
     public func setProvider(_ provider: STTProvider) {
         self.currentProvider = provider
+    }
+
+    public func setWhisperKitModelName(_ modelName: String) {
+        whisperKitModelName = modelName.isEmpty ? "large-v3-turbo" : modelName
+        whisperKitTranscriber = nil
+    }
+
+    public func setQwen3ASRModelIdentifier(_ modelIdentifier: String) {
+        qwen3ASRModelIdentifier = modelIdentifier.isEmpty ? "Qwen/Qwen3-ASR-0.6B" : modelIdentifier
+        qwen3ASRTranscriber = nil
     }
     
     public func getProvider() -> STTProvider {
@@ -224,7 +235,7 @@ public final class STTRouter: @unchecked Sendable {
         // 检查运行时和模型
         let decoder = SherpaOnnxCommandLineDecoder(
             model: .qwen3ASR,
-            modelIdentifier: "Qwen/Qwen3-ASR-0.6B",
+            modelIdentifier: qwen3ASRModelIdentifier,
             modelFolder: modelFolder
         )
 
@@ -250,7 +261,7 @@ public final class STTRouter: @unchecked Sendable {
         }
 
         return Qwen3ASRTranscriber(
-            modelIdentifier: "Qwen/Qwen3-ASR-0.6B",
+            modelIdentifier: qwen3ASRModelIdentifier,
             modelFolder: modelFolder
         )
     }

@@ -28,6 +28,13 @@ enum ACColors {
 
     static let blackCapsule = Color(acHex: "#050505")
     static let darkCard = Color(acHex: "#1D1D1F")
+
+    static let bgWindow = Color(acHex: "#F5F6F8")
+    static let bgShell = Color.white.opacity(0.72)
+    static let bgPanelSoft = Color(acHex: "#F7F8FA")
+    static let bgHover = Color(acHex: "#F2F3F5")
+    static let borderStrong = Color(acHex: "#D1D5DB")
+    static let shadowCard = Color.black.opacity(0.05)
 }
 
 typealias ACColor = ACColors

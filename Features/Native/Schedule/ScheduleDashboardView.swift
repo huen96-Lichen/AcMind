@@ -14,43 +14,26 @@ struct ScheduleDashboardView: View {
     @State private var selectedDayIndex: Int = 2
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                ACPageHeader(
-                    title: "日程",
-                    subtitle: "个人效率与时间管理页面，周视图和日视图优先。"
-                ) {
-                    HStack(spacing: 12) {
-                        ACSegmentedControl(ScheduleDashboardMode.allCases, selection: $mode) { option, isSelected in
-                            Text(option.rawValue)
-                                .font(ACTypography.captionMedium)
-                                .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
-                        }
-                        .frame(width: 232)
-
-                        ACButton("今天", kind: .secondary) {}
-                        ACButton("新建", kind: .primary) {}
+        ACWorkspaceShell(
+            title: "日程",
+            subtitle: "个人时间轴与日程管理，优先展示今日和本周。",
+            trailing: {
+                HStack(spacing: 12) {
+                    ACSegmentedControl(ScheduleDashboardMode.allCases, selection: $mode) { option, isSelected in
+                        Text(option.rawValue)
+                            .font(ACTypography.captionMedium)
+                            .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
                     }
+                    .frame(width: 232)
+
+                    ACButton("今天", kind: .secondary) {}
+                    ACButton("新建", kind: .primary) {}
                 }
-                .frame(height: ACLayout.headerHeightMedium)
-
-                HStack(alignment: .top, spacing: ACLayout.gapL) {
-                    leftSidebar
-                        .frame(width: 300)
-
-                    centerSurface
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-
-                    rightInspector
-                        .frame(width: 280)
-                }
-            }
-            .padding(.horizontal, ACLayout.pagePaddingX)
-            .padding(.top, ACLayout.pagePaddingY)
-            .padding(.bottom, ACLayout.pagePaddingBottom)
-            .frame(maxWidth: 1512, alignment: .center)
-        }
-        .background(ACColors.pageBackground.ignoresSafeArea())
+            },
+            left: { leftSidebar },
+            center: { centerSurface },
+            right: { rightInspector }
+        )
     }
 
     private var leftSidebar: some View {
@@ -65,7 +48,7 @@ struct ScheduleDashboardView: View {
                     ScheduleStatCard(title: "饱和度", value: "72%", subtitle: "偏满")
                 }
             }
-            .frame(width: 244, height: 146, alignment: .topLeading)
+            .frame(height: 146, alignment: .topLeading)
 
             ACCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -91,7 +74,7 @@ struct ScheduleDashboardView: View {
                     }
                 }
             }
-            .frame(width: 244, height: 204, alignment: .topLeading)
+            .frame(height: 204, alignment: .topLeading)
 
             ACCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -114,7 +97,7 @@ struct ScheduleDashboardView: View {
                     }
                 }
             }
-            .frame(width: 244, height: 120, alignment: .topLeading)
+            .frame(height: 120, alignment: .topLeading)
 
             Spacer(minLength: 0)
         }
@@ -154,7 +137,7 @@ struct ScheduleDashboardView: View {
 
     private var rightInspector: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ACDetailPanel(width: 280, padding: 16) {
+            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("下一事件")
                         .font(ACTypography.panelTitle)
@@ -174,7 +157,7 @@ struct ScheduleDashboardView: View {
                 }
             }
 
-            ACDetailPanel(width: 280, padding: 16) {
+            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("日视图")
                         .font(ACTypography.panelTitle)
@@ -199,7 +182,7 @@ struct ScheduleDashboardView: View {
                 }
             }
 
-            ACDetailPanel(width: 280, padding: 16) {
+            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("热力信息")
                         .font(ACTypography.panelTitle)
@@ -329,11 +312,11 @@ struct ScheduleDashboardView: View {
                             .frame(height: 22)
                     }
                     .padding(8)
-                    .background(ACColors.cardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                            .stroke(ACColors.border, lineWidth: 1)
-                    )
+        .background(Color.white.opacity(0.0))
+        .overlay(
+            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                .stroke(ACColors.border, lineWidth: 1)
+        )
                 }
             }
         }
@@ -352,12 +335,12 @@ struct ScheduleDashboardView: View {
                             .foregroundStyle(ACColors.primaryText)
                     }
                     .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(ACColors.cardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                            .stroke(ACColors.border, lineWidth: 1)
-                    )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.0))
+        .overlay(
+            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                .stroke(ACColors.border, lineWidth: 1)
+        )
                 }
             }
 
@@ -446,7 +429,7 @@ private struct ScheduleStatCard: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(ACColors.cardBackground)
+        .background(Color.white.opacity(0.0))
         .overlay(
             RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
                 .stroke(ACColors.border, lineWidth: 1)

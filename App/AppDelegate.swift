@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import AcMindKit
+import struct AcMindKit.KeyboardShortcut
 
 // MARK: - App Delegate
 
@@ -17,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var launchWindowController: LaunchWindowController?
     var mainWindowController: MainWindowController?
+    private var savedWindowFrame: NSRect?
 
     // MARK: - Notch Panel
 
@@ -47,7 +49,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let appState = AppState.shared
     private let musicService = MusicService.shared
+    private let fnVoiceMonitor = FnVoiceHoldMonitor.shared
     private var isTerminating = false
+    private var registeredCompanionVoiceShortcut: KeyboardShortcut?
 
     // MARK: - Lifecycle
 
@@ -71,6 +75,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     DispatchQueue.main.async {
                         self.restoreDynamicSurface()
                     }
+                    Task {
+                        await self.refreshCompanionVoiceShortcutRegistration()
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -84,6 +91,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isTerminating = true
 
         // 清理资源
+        fnVoiceMonitor.stop()
         Task {
             await ServiceContainer.shared.shutdown()
         }
@@ -105,6 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindowController == nil {
             mainWindowController = MainWindowController()
         }
+        appState.ensureWorkspaceModeNotHidden()
         NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
         mainWindowController?.window?.setFrame(AppWindowGeometry.mainFrame, display: true)
@@ -123,6 +132,56 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             hideMainWindow()
         } else {
             showMainWindow()
+        }
+    }
+
+    // MARK: - Workspace Mode Window Management
+
+    func collapseWindowToPrimaryRail(railWidth: CGFloat) {
+        guard let window = mainWindowController?.window else { return }
+
+        savedWindowFrame = window.frame
+
+        let padding: CGFloat = 32
+        let newWidth = railWidth + padding
+
+        var newFrame = window.frame
+        newFrame.size.width = newWidth
+        newFrame.origin.x = window.frame.maxX - newWidth
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.35
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(newFrame, display: true)
+        }
+    }
+
+    func expandWindowToFullWorkspace() {
+        guard let window = mainWindowController?.window else { return }
+
+        if let savedFrame = savedWindowFrame {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.35
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                window.animator().setFrame(savedFrame, display: true)
+            }
+        }
+    }
+
+    func updateWindowForRailWidth(_ railWidth: CGFloat) {
+        guard let window = mainWindowController?.window, appState.workspaceMode == .collapsed else { return }
+
+        let padding: CGFloat = 32
+        let newWidth = railWidth + padding
+
+        var newFrame = window.frame
+        newFrame.size.width = newWidth
+        newFrame.origin.x = window.frame.maxX - newWidth
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.3
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(newFrame, display: true)
         }
     }
 
@@ -307,6 +366,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: Notification.Name("AcMind.captureCompleted"),
             object: nil
         )
+
+        // 监听工作区模式变化通知
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWorkspaceCollapsed(_:)),
+            name: Notification.Name("AcMind.workspaceCollapsed"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWorkspaceExpanded(_:)),
+            name: Notification.Name("AcMind.workspaceExpanded"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWorkspaceRailWidthChanged(_:)),
+            name: Notification.Name("AcMind.workspaceRailWidthChanged"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCompanionVoiceConfigurationChanged(_:)),
+            name: .companionVoiceConfigurationDidChange,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCompanionVoiceAgentDraft(_:)),
+            name: .companionVoiceAgentDraft,
+            object: nil
+        )
     }
 
     @objc private func handleAppDidBecomeActive(_ notification: Notification) {
@@ -328,6 +423,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         default:
             break
         }
+        appState.restoreWorkspaceFromHidden()
+        showMainWindow()
+    }
+
+    @objc private func handleWorkspaceCollapsed(_ notification: Notification) {
+        let railWidth = notification.userInfo?["railWidth"] as? CGFloat ?? 88
+        collapseWindowToPrimaryRail(railWidth: railWidth)
+    }
+
+    @objc private func handleWorkspaceExpanded(_ notification: Notification) {
+        expandWindowToFullWorkspace()
+    }
+
+    @objc private func handleWorkspaceRailWidthChanged(_ notification: Notification) {
+        let railWidth = notification.userInfo?["railWidth"] as? CGFloat ?? 88
+        updateWindowForRailWidth(railWidth)
+    }
+
+    @objc private func handleCompanionVoiceConfigurationChanged(_ notification: Notification) {
+        Task {
+            await refreshCompanionVoiceShortcutRegistration()
+        }
+    }
+
+    @objc private func handleCompanionVoiceAgentDraft(_ notification: Notification) {
+        appState.selectSidebarItem(.agent)
         showMainWindow()
     }
 
@@ -372,12 +493,67 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func refreshCompanionVoiceShortcutRegistration() async {
+        guard !isTerminating else { return }
+        guard ServiceContainer.isInitialized() else { return }
+
+        let storage = ServiceContainer.shared.storageService
+        let rawConfig = try? await storage.getSetting(key: "companion_config")
+        let configData = rawConfig?.data(using: .utf8)
+        let config = configData.flatMap { try? JSONDecoder().decode(CompanionConfiguration.self, from: $0) }
+            ?? CompanionConfiguration.default
+
+        let triggerMode = CompanionVoiceTriggerMode(rawValue: config.voiceTriggerMode) ?? .both
+        let shouldRegisterShortcut = config.voiceEnabled && (triggerMode == .globalShortcut || triggerMode == .both)
+
+        if !shouldRegisterShortcut {
+            await unregisterCompanionVoiceShortcut()
+            return
+        }
+
+        guard let shortcut = KeyboardShortcut(displayString: config.voiceShortcut) else {
+            await unregisterCompanionVoiceShortcut()
+            return
+        }
+
+        if registeredCompanionVoiceShortcut == shortcut {
+            return
+        }
+
+        await unregisterCompanionVoiceShortcut()
+
+        do {
+            try await ServiceContainer.shared.settingsService.registerShortcut(shortcut) { [weak self] in
+                Task { @MainActor in
+                    self?.showVoicePanelFromShortcut()
+                }
+            }
+            registeredCompanionVoiceShortcut = shortcut
+        } catch {
+            appState.showError(.unknown(error))
+        }
+    }
+
+    private func unregisterCompanionVoiceShortcut() async {
+        guard let shortcut = registeredCompanionVoiceShortcut else { return }
+
+        do {
+            try await ServiceContainer.shared.settingsService.unregisterShortcut(shortcut)
+        } catch {
+            // 重新配置时忽略注销失败
+        }
+
+        registeredCompanionVoiceShortcut = nil
+    }
+
+    private func showVoicePanelFromShortcut() {
+        NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+    }
+
     // MARK: - Global Shortcuts
 
     private func setupGlobalShortcuts() {
-        // 注册全局快捷键
-        // 注意：实际实现需要使用 CGEvent.tapCreate 或 MASShortcut 等库
-        // 这里仅作占位，后续实现
+        fnVoiceMonitor.start()
     }
 
     // MARK: - Actions
@@ -586,28 +762,69 @@ struct ScreenshotPreviewView: View {
     }
 }
 
+// MARK: - Custom Window
+
+class CustomWindow: NSWindow {
+    override var canBecomeKey: Bool {
+        return true
+    }
+
+    override var canBecomeMain: Bool {
+        return true
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let initialLocation = self.mouseLocationOutsideOfEventStream
+        var origin = self.frame.origin
+
+        while let nextEvent = self.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            if nextEvent.type == .leftMouseUp {
+                break
+            }
+
+            let currentLocation = self.mouseLocationOutsideOfEventStream
+            let deltaX = currentLocation.x - initialLocation.x
+            let deltaY = currentLocation.y - initialLocation.y
+
+            origin.x += deltaX
+            origin.y += deltaY
+
+            self.setFrameOrigin(origin)
+        }
+    }
+}
+
 // MARK: - Main Window Controller
 
 class MainWindowController: NSWindowController {
     convenience init() {
-        let window = NSWindow(
+        let window = CustomWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.borderless, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
         window.title = "AcMind"
-        window.minSize = NSSize(width: 800, height: 600)
+        // 最小窗口尺寸：compact rail（88px）+ padding（32px）+ 额外空间（80px）= 200px
+        // 保证一级菜单有足够显示空间，同时允许内容区被压缩
+        window.minSize = NSSize(width: 200, height: 300)
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.setFrameAutosaveName("MainWindow")
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = false
 
         // 设置内容视图
         let contentView = ContentView()
             .environmentObject(AppState.shared)
             .environmentObject(ServiceContainer.shared)
 
-        window.contentView = NSHostingView(rootView: contentView)
+        let hostingView = NSHostingView(rootView: contentView)
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 24
+        hostingView.layer?.masksToBounds = true
+        window.contentView = hostingView
 
         self.init(window: window)
 

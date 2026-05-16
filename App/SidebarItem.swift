@@ -18,6 +18,10 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
     }
 
+    public static var primaryNavItems: [SidebarItem] {
+        [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
+    }
+
     public var displayName: String {
         switch self {
         case .dynamicSurface: return "灵动胶囊/大陆"
@@ -27,7 +31,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .schedule: return "日程"
         case .workbench: return "工作台"
         case .tools: return "工具"
-        case .companion: return "随身"
+        case .companion: return "说入法"
         case .settings: return "设置"
         }
     }
@@ -43,7 +47,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .schedule: return "calendar"
         case .workbench: return "square.grid.2x2"
         case .tools: return "wrench.fill"
-        case .companion: return "capsule.portrait.fill"
+        case .companion: return "mic.fill"
         case .settings: return "gearshape.fill"
         }
     }

@@ -386,7 +386,7 @@ private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked 
     func openSystemPreferences(for permission: SystemPermission) async {}
     func checkPermissionKind(_ kind: AppPermissionKind) async -> AppPermissionStatus { .notDetermined }
     func requestPermissionKind(_ kind: AppPermissionKind) async {}
-    func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {}
+    func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws {}
     func unregisterShortcut(_ shortcut: KeyboardShortcut) async throws {}
     func getRegisteredShortcuts() async -> [KeyboardShortcut] { [] }
     func unregisterAllShortcuts() async {}

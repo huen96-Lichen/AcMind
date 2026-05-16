@@ -14,11 +14,13 @@ const navItems: NavItem[] = [
   { path: '/schedule', label: '日程', icon: '📅', shortcut: '⌘4' },
   { path: '/workbench', label: '工作台', icon: '🛠️', shortcut: '⌘5' },
   { path: '/tools', label: '工具', icon: '🔧', shortcut: '⌘6' },
-  { path: '/companion', label: '随身', icon: '✨', shortcut: '⌘7' },
+  { path: '/companion', label: '说入法', icon: '🎙️', shortcut: '⌘7' },
 ]
 
 function Sidebar() {
   return (
+    // FIXED SHELL: global navigation only.
+    // Do not place page-level interactions in this layout.
     <aside className="sidebar">
       <div className="sidebar-logo">AcMind</div>
       <nav className="sidebar-nav">

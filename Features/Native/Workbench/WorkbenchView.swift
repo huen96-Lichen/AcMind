@@ -29,35 +29,19 @@ struct WorkbenchView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ACPageHeader(
-                title: "工作台",
-                subtitle: "知识沉淀 · Markdown · 双链 · Obsidian",
-                trailing: {
-                    HStack(spacing: 12) {
-                        ACSearchField("搜索笔记", text: $searchText, width: 260, height: 36)
-                        ACButton("新建笔记", kind: .primary, minWidth: 92) {}
-                    }
+        ACWorkspaceShell(
+            title: "工作台",
+            subtitle: "知识沉淀、Markdown、双链与 Obsidian 工作流。",
+            trailing: {
+                HStack(spacing: 12) {
+                    ACSearchField("搜索笔记", text: $searchText, width: 220, height: ACLayout.controlHeight)
+                    ACButton("新建笔记", kind: .primary, minWidth: 92) {}
                 }
-            )
-            .frame(height: 72)
-
-            HStack(alignment: .top, spacing: ACLayout.gapL) {
-                sidebar
-                    .frame(width: 240)
-
-                centerPanel
-                    .frame(maxWidth: .infinity)
-
-                detailPanel
-                    .frame(width: 430)
-            }
-            .padding(.horizontal, ACLayout.pagePaddingX)
-            .padding(.vertical, ACLayout.pagePaddingY)
-            .padding(.bottom, ACLayout.pagePaddingBottom)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
-        .background(ACColors.pageBackground)
+            },
+            left: { sidebar },
+            center: { centerPanel },
+            right: { detailPanel }
+        )
     }
 
     private var sidebar: some View {
@@ -148,7 +132,7 @@ struct WorkbenchView: View {
     }
 
     private var detailPanel: some View {
-        ACDetailPanel(width: 430, padding: 16) {
+        ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 if let selectedNote {
                     WorkbenchDetailHeader(note: selectedNote)
@@ -190,13 +174,13 @@ private struct WorkbenchSidebarRow: View {
                 Spacer(minLength: 0)
             }
             .padding(10)
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-            .background(selected ? ACColors.selectedFill : ACColors.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                    .stroke(selected ? ACColors.accentBlue.opacity(0.35) : ACColors.border, lineWidth: 1)
-            )
+        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+        .background(selected ? ACColors.selectedFill : Color.white.opacity(0.0))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(selected ? ACColors.accentBlue.opacity(0.3) : ACColors.border, lineWidth: 1)
+        )
         }
         .buttonStyle(.plain)
     }

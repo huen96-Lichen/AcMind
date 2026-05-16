@@ -475,7 +475,23 @@ public actor VoiceService: VoiceServiceProtocol {
         sttProvider = provider
         sttRouter?.setProvider(provider)
     }
-    
+
+    public func configureSpeechInput(provider: STTProvider, modelIdentifier: String? = nil) {
+        sttProvider = provider
+        sttRouter?.setProvider(provider)
+
+        guard let modelIdentifier else { return }
+
+        switch provider {
+        case .whisperKit:
+            sttRouter?.setWhisperKitModelName(modelIdentifier)
+        case .qwen3ASR:
+            sttRouter?.setQwen3ASRModelIdentifier(modelIdentifier)
+        default:
+            break
+        }
+    }
+
     /// 获取 STT Provider
     public func getSTTProvider() -> STTProvider {
         sttProvider

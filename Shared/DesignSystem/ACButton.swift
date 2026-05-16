@@ -63,16 +63,16 @@ struct ACButton<Label: View>: View {
         case .ghost:
             return 10
         default:
-            return 14
+            return 16
         }
     }
 
     private var cornerRadius: CGFloat {
         switch kind {
         case .icon:
-            return ACLayout.controlRadius
+            return 12
         default:
-            return ACLayout.controlRadius
+            return 12
         }
     }
 

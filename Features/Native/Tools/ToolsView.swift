@@ -2,41 +2,38 @@ import SwiftUI
 
 struct ToolsView: View {
     var body: some View {
-        VStack(spacing: 0) {
-            ACPageHeader(
-                title: "工具",
-                subtitle: "低频工具集合 · 文本处理 · 图片与截图 · 文件转换 · 批量整理",
-                trailing: {
-                    ACButton("打开工具台", kind: .primary, minWidth: 104) {}
-                }
-            )
-            .frame(height: 76)
-
-            ScrollView {
+        ACSecondaryPageShell(
+            header: {
+                ACPageHeader(
+                    title: "工具中心",
+                    subtitle: "面向低频但高价值的文本、图片、文件和批量处理。",
+                    trailing: {
+                        ACButton("打开工具台", kind: .primary, minWidth: 104) {}
+                    }
+                )
+            },
+            content: {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(spacing: 16) {
                         ToolsHeroCard(
                             title: "工具中心",
                             subtitle: "面向低频但高价值的日常处理",
                             symbol: "wrench.and.screwdriver",
-                            tint: ACColors.accentBlue,
-                            size: CGSize(width: 360, height: 168)
+                            tint: ACColors.accentBlue
                         )
 
                         ToolsHeroCard(
                             title: "批量整理",
                             subtitle: "拖放文件后快速处理与归档",
                             symbol: "square.grid.3x2",
-                            tint: ACColors.accentPurple,
-                            size: CGSize(width: 360, height: 168)
+                            tint: ACColors.accentPurple
                         )
 
                         ToolsHeroCard(
                             title: "状态",
                             subtitle: "当前工具均可用，后续接真实处理链路",
                             symbol: "checkmark.seal",
-                            tint: ACColors.accentGreen,
-                            size: CGSize(width: 360, height: 168)
+                            tint: ACColors.accentGreen
                         )
                     }
 
@@ -56,12 +53,8 @@ struct ToolsView: View {
                         }
                     }
                 }
-                .padding(.horizontal, ACLayout.pagePaddingX)
-                .padding(.vertical, ACLayout.pagePaddingY)
-                .padding(.bottom, ACLayout.pagePaddingBottom)
             }
-        }
-        .background(ACColors.pageBackground)
+        )
     }
 }
 
@@ -70,7 +63,6 @@ private struct ToolsHeroCard: View {
     let subtitle: String
     let symbol: String
     let tint: Color
-    let size: CGSize
 
     var body: some View {
         ACCard(padding: 16) {
@@ -89,7 +81,8 @@ private struct ToolsHeroCard: View {
                 Spacer(minLength: 0)
             }
         }
-        .frame(width: size.width, height: size.height)
+        .frame(maxWidth: .infinity)
+        .frame(height: 168)
     }
 }
 

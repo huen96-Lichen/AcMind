@@ -258,8 +258,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
     }
 
     private func executeQuickText() async {
-        // 显示快速文本输入
-        NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+        NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
     }
 
     private func executeFileCapture() async {

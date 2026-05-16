@@ -15,58 +15,34 @@ struct DynamicSurfaceCommercialView: View {
     @State private var debugExpanded = false
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-
+        ACSecondaryPageShell(
+            header: {
+                ACPageHeader(
+                    title: "灵动设置",
+                    subtitle: "统一配置桌面入口、大陆、联动和调试。"
+                ) {
+                    ACSegmentedControl(SurfaceMode.allCases, selection: $selectedMode) { mode, isSelected in
+                        Text(mode.title)
+                            .font(ACTypography.captionMedium)
+                            .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
+                    }
+                    .frame(width: 200)
+                }
+            },
+            content: {
                 firstRow
-
                 secondRow
-
                 featureRow
-
                 debugBar
             }
-            .frame(maxWidth: 1240, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
-            .padding(.bottom, 28)
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .background(ACColors.pageBackground.ignoresSafeArea())
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: ACLayout.gapXL) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("灵动胶囊 / 大陆")
-                    .font(ACTypography.pageTitle)
-                    .foregroundStyle(ACColors.primaryText)
-                Text("配置桌面入口与顶部大陆，统一入口、联动、板块和调试。")
-                    .font(Font.system(size: 14, weight: .regular))
-                    .foregroundStyle(ACColors.secondaryText)
-            }
-
-            Spacer(minLength: 0)
-
-            ACSegmentedControl(SurfaceMode.allCases, selection: $selectedMode) { mode, isSelected in
-                Text(mode.title)
-                    .font(ACTypography.captionMedium)
-                    .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
-                    .lineLimit(1)
-            }
-            .frame(width: 332)
-        }
-        .frame(height: ACLayout.headerHeightMedium)
+        )
     }
 
     private var firstRow: some View {
         HStack(alignment: .top, spacing: ACLayout.gapL) {
             SurfaceSectionCard(
                 title: "入口形态预览",
-                subtitle: "胶囊两态 / 大陆收缩态",
-                width: 560,
-                height: 286
+                subtitle: "胶囊两态 / 大陆收缩态"
             ) {
                 VStack(alignment: .leading, spacing: 10) {
                     previewRow(
@@ -89,9 +65,7 @@ struct DynamicSurfaceCommercialView: View {
 
             SurfaceSectionCard(
                 title: "大陆展开预览",
-                subtitle: "当前板块与布局切换预览",
-                minWidth: 660,
-                height: 286
+                subtitle: "当前板块与布局切换预览"
             ) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
@@ -139,16 +113,13 @@ struct DynamicSurfaceCommercialView: View {
             }
             .layoutPriority(1)
         }
-        .frame(height: 286)
     }
 
     private var secondRow: some View {
         HStack(alignment: .top, spacing: ACLayout.gapL) {
             SurfaceSectionCard(
                 title: "联动规则",
-                subtitle: "桌面与顶部的四个核心开关",
-                width: 288,
-                height: 350
+                subtitle: "桌面与顶部的四个核心开关"
             ) {
                 LazyVGrid(
                     columns: [
@@ -187,8 +158,7 @@ struct DynamicSurfaceCommercialView: View {
 
             SurfaceSectionCard(
                 title: "组件选择",
-                subtitle: "胶囊组件 / 大陆组件小胶囊选择",
-                height: 350
+                subtitle: "胶囊组件 / 大陆组件小胶囊选择"
             ) {
                 VStack(alignment: .leading, spacing: 16) {
                     widgetGroup(
@@ -207,9 +177,7 @@ struct DynamicSurfaceCommercialView: View {
 
             SurfaceSectionCard(
                 title: "板块管理",
-                subtitle: "大陆展开态的板块与内容",
-                width: 220,
-                height: 350
+                subtitle: "大陆展开态的板块与内容"
             ) {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(continentTabs) { tab in
@@ -242,14 +210,12 @@ struct DynamicSurfaceCommercialView: View {
                 }
             }
         }
-        .frame(height: 350)
     }
 
     private var featureRow: some View {
         SurfaceSectionCard(
             title: "功能模块",
-            subtitle: "AcMind 自有能力模块",
-            height: 156
+            subtitle: "AcMind 自有能力模块"
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -276,7 +242,6 @@ struct DynamicSurfaceCommercialView: View {
                 }
             }
         }
-        .frame(height: 156)
     }
 
     private var debugBar: some View {
@@ -390,7 +355,7 @@ private struct SurfaceSectionCard<Content: View>: View {
     let subtitle: String
     let width: CGFloat?
     let minWidth: CGFloat?
-    let height: CGFloat
+    let minHeight: CGFloat?
     @ViewBuilder let content: Content
 
     init(
@@ -398,14 +363,14 @@ private struct SurfaceSectionCard<Content: View>: View {
         subtitle: String,
         width: CGFloat? = nil,
         minWidth: CGFloat? = nil,
-        height: CGFloat,
+        height: CGFloat? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
         self.width = width
         self.minWidth = minWidth
-        self.height = height
+        self.minHeight = height
         self.content = content()
     }
 
@@ -426,11 +391,11 @@ private struct SurfaceSectionCard<Content: View>: View {
                 Spacer(minLength: 0)
             }
             .padding(18)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(width: width, alignment: .topLeading)
         .frame(minWidth: minWidth, alignment: .topLeading)
-        .frame(height: height, alignment: .topLeading)
+        .frame(minHeight: minHeight, alignment: .topLeading)
     }
 }
 
@@ -444,7 +409,7 @@ private struct SurfaceCapsuleTag: View {
             .foregroundStyle(isSelected ? .white : ACColors.primaryText)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isSelected ? ACColors.blackCapsule : ACColors.cardBackground, in: Capsule())
+            .background(isSelected ? ACColors.blackCapsule : Color.white.opacity(0.0), in: Capsule())
             .overlay(
                 Capsule().stroke(isSelected ? ACColors.blackCapsule : ACColors.border, lineWidth: 1)
             )
@@ -485,7 +450,7 @@ private struct SurfaceRuleCard: View {
         }
         .padding(12)
         .frame(minHeight: 118, alignment: .topLeading)
-        .background(ACColors.cardBackground, in: RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .background(Color.white.opacity(0.0), in: RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
                 .stroke(ACColors.border, lineWidth: 1)
@@ -543,7 +508,7 @@ private struct SurfaceBlockRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-        .background(isSelected ? ACColors.selectedFill : ACColors.cardBackground)
+        .background(isSelected ? ACColors.selectedFill.opacity(0.6) : Color.white.opacity(0.0))
         .overlay(
             RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
                 .stroke(isSelected ? ACColors.accentBlue.opacity(0.35) : ACColors.border, lineWidth: 1)
@@ -584,7 +549,7 @@ private struct SurfaceFeatureTile: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
-            .background(isEnabled ? ACColors.selectedFill : ACColors.cardBackground)
+            .background(isEnabled ? ACColors.selectedFill.opacity(0.6) : Color.white.opacity(0.0))
             .overlay(
                 RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
                     .stroke(isEnabled ? ACColors.accentBlue.opacity(0.35) : ACColors.border, lineWidth: 1)
@@ -630,7 +595,7 @@ private struct SurfaceCapsuleExpandedPreview: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(width: 180, height: 40)
-        .background(ACColors.cardBackground, in: Capsule())
+        .background(Color.white.opacity(0.0), in: Capsule())
         .overlay(Capsule().stroke(ACColors.border, lineWidth: 1))
     }
 }

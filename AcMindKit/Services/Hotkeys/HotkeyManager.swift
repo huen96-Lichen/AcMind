@@ -24,7 +24,7 @@ public actor HotkeyManager {
     
     // MARK: - Register/Unregister
     
-    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {
+    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws {
         // 检查冲突
         if registeredHotkeys[shortcut] != nil {
             throw HotkeyError.alreadyRegistered(shortcut)
@@ -238,7 +238,7 @@ private struct HotkeyRegistration {
     let shortcut: KeyboardShortcut
     let hotKeyRef: EventHotKeyRef
     let hotKeyID: EventHotKeyID
-    let action: () -> Void
+    let action: @Sendable () -> Void
 }
 
 // MARK: - Errors

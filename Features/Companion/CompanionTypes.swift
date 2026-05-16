@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AcMindKit
 
 // MARK: - Companion Layer Types
 // 随身核心类型定义
@@ -77,6 +78,40 @@ public enum VoiceOutputMode: String, CaseIterable, Sendable, Identifiable {
     }
 }
 
+/// 说入法触发方式
+public enum CompanionVoiceTriggerMode: String, CaseIterable, Sendable, Identifiable {
+    case fnHold = "fnHold"
+    case globalShortcut = "globalShortcut"
+    case both = "both"
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .fnHold: return "Fn 长按"
+        case .globalShortcut: return "全局快捷键"
+        case .both: return "两者都可"
+        }
+    }
+}
+
+/// 说入法输出目标
+public enum CompanionVoiceRouteMode: String, CaseIterable, Sendable, Identifiable {
+    case smart = "smart"
+    case inputField = "inputField"
+    case agent = "agent"
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .smart: return "智能判断"
+        case .inputField: return "输入框"
+        case .agent: return "Agent"
+        }
+    }
+}
+
 /// 随身配置
 public struct CompanionConfiguration: Codable, Sendable {
     public var capsuleEnabled: Bool
@@ -85,6 +120,12 @@ public struct CompanionConfiguration: Codable, Sendable {
 
     public var voiceEnabled: Bool
     public var voiceShortcut: String
+    public var voiceTriggerMode: String
+    public var voiceProvider: String
+    public var voiceModel: String
+    public var voiceHoldToTalkEnabled: Bool
+    public var voiceHoldThreshold: Double
+    public var voiceRouteMode: String
     public var voiceOutputMode: String
     public var voiceSaveToInbox: Bool
 
@@ -98,6 +139,12 @@ public struct CompanionConfiguration: Codable, Sendable {
         capsuleExpandedByDefault: Bool = false,
         voiceEnabled: Bool = true,
         voiceShortcut: String = "⌥Space",
+        voiceTriggerMode: String = CompanionVoiceTriggerMode.both.rawValue,
+        voiceProvider: String = STTProvider.appleSpeech.rawValue,
+        voiceModel: String = "auto",
+        voiceHoldToTalkEnabled: Bool = true,
+        voiceHoldThreshold: Double = 0.38,
+        voiceRouteMode: String = CompanionVoiceRouteMode.smart.rawValue,
         voiceOutputMode: String = "copyToClipboard",
         voiceSaveToInbox: Bool = true,
         shortcutsEnabled: Bool = true,
@@ -108,6 +155,12 @@ public struct CompanionConfiguration: Codable, Sendable {
         self.capsuleExpandedByDefault = capsuleExpandedByDefault
         self.voiceEnabled = voiceEnabled
         self.voiceShortcut = voiceShortcut
+        self.voiceTriggerMode = voiceTriggerMode
+        self.voiceProvider = voiceProvider
+        self.voiceModel = voiceModel
+        self.voiceHoldToTalkEnabled = voiceHoldToTalkEnabled
+        self.voiceHoldThreshold = voiceHoldThreshold
+        self.voiceRouteMode = voiceRouteMode
         self.voiceOutputMode = voiceOutputMode
         self.voiceSaveToInbox = voiceSaveToInbox
         self.shortcutsEnabled = shortcutsEnabled
@@ -115,6 +168,66 @@ public struct CompanionConfiguration: Codable, Sendable {
     }
 
     public static let `default` = CompanionConfiguration()
+}
+
+public extension CompanionConfiguration {
+    private enum CodingKeys: String, CodingKey {
+        case capsuleEnabled
+        case capsulePosition
+        case capsuleExpandedByDefault
+        case voiceEnabled
+        case voiceShortcut
+        case voiceTriggerMode
+        case voiceProvider
+        case voiceModel
+        case voiceHoldToTalkEnabled
+        case voiceHoldThreshold
+        case voiceRouteMode
+        case voiceOutputMode
+        case voiceSaveToInbox
+        case shortcutsEnabled
+        case captureEnabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            capsuleEnabled: (try? container.decodeIfPresent(Bool.self, forKey: .capsuleEnabled)) ?? true,
+            capsulePosition: (try? container.decodeIfPresent(String.self, forKey: .capsulePosition)) ?? "topCenter",
+            capsuleExpandedByDefault: (try? container.decodeIfPresent(Bool.self, forKey: .capsuleExpandedByDefault)) ?? false,
+            voiceEnabled: (try? container.decodeIfPresent(Bool.self, forKey: .voiceEnabled)) ?? true,
+            voiceShortcut: (try? container.decodeIfPresent(String.self, forKey: .voiceShortcut)) ?? "⌥Space",
+            voiceTriggerMode: (try? container.decodeIfPresent(String.self, forKey: .voiceTriggerMode)) ?? CompanionVoiceTriggerMode.both.rawValue,
+            voiceProvider: (try? container.decodeIfPresent(String.self, forKey: .voiceProvider)) ?? STTProvider.appleSpeech.rawValue,
+            voiceModel: (try? container.decodeIfPresent(String.self, forKey: .voiceModel)) ?? "auto",
+            voiceHoldToTalkEnabled: (try? container.decodeIfPresent(Bool.self, forKey: .voiceHoldToTalkEnabled)) ?? true,
+            voiceHoldThreshold: (try? container.decodeIfPresent(Double.self, forKey: .voiceHoldThreshold)) ?? 0.38,
+            voiceRouteMode: (try? container.decodeIfPresent(String.self, forKey: .voiceRouteMode)) ?? CompanionVoiceRouteMode.smart.rawValue,
+            voiceOutputMode: (try? container.decodeIfPresent(String.self, forKey: .voiceOutputMode)) ?? VoiceOutputMode.copyToClipboard.rawValue,
+            voiceSaveToInbox: (try? container.decodeIfPresent(Bool.self, forKey: .voiceSaveToInbox)) ?? true,
+            shortcutsEnabled: (try? container.decodeIfPresent(Bool.self, forKey: .shortcutsEnabled)) ?? true,
+            captureEnabled: (try? container.decodeIfPresent(Bool.self, forKey: .captureEnabled)) ?? true
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(capsuleEnabled, forKey: .capsuleEnabled)
+        try container.encode(capsulePosition, forKey: .capsulePosition)
+        try container.encode(capsuleExpandedByDefault, forKey: .capsuleExpandedByDefault)
+        try container.encode(voiceEnabled, forKey: .voiceEnabled)
+        try container.encode(voiceShortcut, forKey: .voiceShortcut)
+        try container.encode(voiceTriggerMode, forKey: .voiceTriggerMode)
+        try container.encode(voiceProvider, forKey: .voiceProvider)
+        try container.encode(voiceModel, forKey: .voiceModel)
+        try container.encode(voiceHoldToTalkEnabled, forKey: .voiceHoldToTalkEnabled)
+        try container.encode(voiceHoldThreshold, forKey: .voiceHoldThreshold)
+        try container.encode(voiceRouteMode, forKey: .voiceRouteMode)
+        try container.encode(voiceOutputMode, forKey: .voiceOutputMode)
+        try container.encode(voiceSaveToInbox, forKey: .voiceSaveToInbox)
+        try container.encode(shortcutsEnabled, forKey: .shortcutsEnabled)
+        try container.encode(captureEnabled, forKey: .captureEnabled)
+    }
 }
 
 /// 随身快捷键定义
@@ -184,6 +297,11 @@ public enum CompanionPermissionStatus: String, CaseIterable, Sendable, Identifia
         case .denied, .restricted: return .red
         }
     }
+}
+
+extension Notification.Name {
+    static let companionVoiceConfigurationDidChange = Notification.Name("companion.voiceConfigurationDidChange")
+    static let companionVoiceAgentDraft = Notification.Name("companion.voiceAgentDraft")
 }
 
 /// 随身语音转写结果

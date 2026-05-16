@@ -399,7 +399,7 @@ public actor SettingsService: SettingsServiceProtocol {
 
     // MARK: - Shortcuts (delegated to HotkeyManager)
 
-    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {
+    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws {
         try await hotkeyManager.registerShortcut(shortcut, action: action)
     }
 
