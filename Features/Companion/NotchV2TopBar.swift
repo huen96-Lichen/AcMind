@@ -1,4 +1,5 @@
 import SwiftUI
+import AcMindKit
 
 private let showTopBarDebugOverlay = false
 
@@ -6,7 +7,6 @@ struct NotchV2TopBar: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        let topBarYOffset: CGFloat = 20
         let pageNavYOffset: CGFloat = -5
 
         ZStack(alignment: .topLeading) {
@@ -18,9 +18,10 @@ struct NotchV2TopBar: View {
                 .position(x: 172, y: 18)
                 .offset(y: pageNavYOffset)
 
-            notchMask
-                .position(x: 440, y: 15)
-                .offset(y: topBarYOffset)
+            if CompanionScreenPositioning.hasHardwareNotch() {
+                notchMask
+                    .position(x: 440, y: 18)
+            }
 
             rightStatusView
                 .frame(width: 232, height: 36)
@@ -39,25 +40,25 @@ struct NotchV2TopBar: View {
 
     private var pageNavView: some View {
         ZStack(alignment: .topLeading) {
-            topNavButton("今日", selected: viewModel.selectedPage == .overview) {
+            topNavButton(pageTitle(at: 0, fallback: "今日"), selected: viewModel.selectedPage == .overview) {
                 viewModel.select(.overview)
             }
             .frame(width: 32, height: 24, alignment: .center)
             .position(x: 28, y: 18)
 
-            topNavButton("音乐", selected: viewModel.selectedPage == .music) {
+            topNavButton(pageTitle(at: 1, fallback: "音乐"), selected: viewModel.selectedPage == .music) {
                 viewModel.select(.music)
             }
             .frame(width: 32, height: 24, alignment: .center)
             .position(x: 88, y: 18)
 
-            topNavButton("AI", selected: viewModel.selectedPage == .agent) {
+            topNavButton(pageTitle(at: 2, fallback: "AI"), selected: viewModel.selectedPage == .agent) {
                 viewModel.select(.agent)
             }
             .frame(width: 28, height: 24, alignment: .center)
             .position(x: 146, y: 18)
 
-            topNavButton("日程", selected: viewModel.selectedPage == .schedule) {
+            topNavButton(pageTitle(at: 3, fallback: "日程"), selected: viewModel.selectedPage == .schedule) {
                 viewModel.select(.schedule)
             }
             .frame(width: 32, height: 24, alignment: .center)
@@ -152,6 +153,11 @@ struct NotchV2TopBar: View {
                 }
         }
         .buttonStyle(.plain)
+    }
+
+    private func pageTitle(at index: Int, fallback: String) -> String {
+        guard viewModel.topBarPageTitles.indices.contains(index) else { return fallback }
+        return viewModel.topBarPageTitles[index]
     }
 }
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ACWorkspaceShell<Left: View, Center: View, Right: View>: View {
     let title: String
-    let subtitle: String
+    let subtitle: String?
     let trailing: () -> AnyView
     let left: () -> Left
     let center: () -> Center
@@ -10,7 +10,7 @@ struct ACWorkspaceShell<Left: View, Center: View, Right: View>: View {
 
     init(
         title: String,
-        subtitle: String,
+        subtitle: String? = nil,
         @ViewBuilder trailing: @escaping () -> some View = { EmptyView() },
         @ViewBuilder left: @escaping () -> Left,
         @ViewBuilder center: @escaping () -> Center,

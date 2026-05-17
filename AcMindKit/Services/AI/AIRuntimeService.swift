@@ -15,6 +15,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     private var providers: [String: any AIProvider] = [:]
     private var configs: [ProviderConfig] = []
     private var defaultProviderId: String?
+    private var didBootstrapProviders = false
     private let taskQueue: TaskQueue
     private let storage: StorageServiceProtocol
     
@@ -28,58 +29,32 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Provider Management
     
     public func listProviders() async -> [ProviderConfig] {
-        configs
+        do {
+            try await refreshProvidersFromStorage()
+        } catch {
+            // 保留当前缓存即可，避免 provider 读取失败影响 UI
+        }
+        return configs
     }
     
     public func addProvider(_ config: ProviderConfig) async throws {
-        // 检查是否已存在
-        if configs.contains(where: { $0.id == config.id }) {
-            throw AIError.providerNotFound("Provider 已存在: \(config.id)")
-        }
-        
-        // 初始化 Provider
-        try await initProvider(config)
-        
-        configs.append(config)
-        
-        // 设置为默认（如果是第一个）
-        if configs.count == 1 {
-            defaultProviderId = config.id
-        }
+        try await storage.insertProvider(config)
+        try await refreshProvidersFromStorage()
     }
     
     public func updateProvider(_ config: ProviderConfig) async throws {
-        guard let index = configs.firstIndex(where: { $0.id == config.id }) else {
-            throw AIError.providerNotFound(config.id)
-        }
-        
-        // 移除旧的 Provider 实例
-        providers.removeValue(forKey: config.id)
-        
-        // 重新初始化
-        try await initProvider(config)
-        
-        configs[index] = config
+        try await storage.updateProvider(config)
+        try await refreshProvidersFromStorage()
     }
     
     public func removeProvider(id: String) async throws {
-        guard let index = configs.firstIndex(where: { $0.id == id }) else {
-            throw AIError.providerNotFound(id)
-        }
-        
-        configs.remove(at: index)
-        providers.removeValue(forKey: id)
-        
-        // 更新默认 Provider
-        if defaultProviderId == id {
-            defaultProviderId = configs.first?.id
-        }
-        
-        // 删除存储的 API Key
+        try await storage.deleteProvider(id: id)
         try? await SecretStore.shared.deleteAPIKey(for: id)
+        try await refreshProvidersFromStorage()
     }
     
     public func healthCheck(providerId: String) async throws -> Bool {
+        try await refreshProvidersFromStorage()
         guard let provider = providers[providerId] else {
             throw AIError.providerNotFound(providerId)
         }
@@ -87,6 +62,11 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     }
     
     public func healthCheckAll() async -> [String: Bool] {
+        do {
+            try await refreshProvidersFromStorage()
+        } catch {
+            // 维持现有缓存
+        }
         var results: [String: Bool] = [:]
         for (id, provider) in providers {
             results[id] = (try? await provider.healthCheck()) ?? false
@@ -108,6 +88,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Chat
     
     public func chat(messages: [ChatMessage]) async throws -> ChatResponse {
+        try await refreshProvidersFromStorage()
         guard let providerId = defaultProviderId,
               let provider = providers[providerId] else {
             throw AIError.noProvider
@@ -125,6 +106,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         providerId: String,
         model: String? = nil
     ) async throws -> ChatResponse {
+        try await refreshProvidersFromStorage()
         guard let provider = providers[providerId] else {
             throw AIError.providerNotFound(providerId)
         }
@@ -140,6 +122,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         AsyncThrowingStream { continuation in
             Task {
                 do {
+                    try await self.refreshProvidersFromStorage()
                     guard let providerId = defaultProviderId,
                           let provider = providers[providerId] else {
                         continuation.finish(throwing: AIError.noProvider)
@@ -166,6 +149,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Distillation
     
     public func runDistillation(sourceItem: SourceItem) async throws -> DistilledNote {
+        try await refreshProvidersFromStorage()
         guard let providerId = defaultProviderId,
               let provider = providers[providerId] else {
             throw AIError.noProvider
@@ -308,7 +292,8 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Task Queue
     
     public func listJobs() async throws -> [ProcessJob] {
-        await taskQueue.list()
+        try await refreshProvidersFromStorage()
+        return await taskQueue.list()
     }
     
     public func getJob(id: String) async -> ProcessJob? {
@@ -326,6 +311,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Models
     
     public func listModels(providerId: String) async throws -> [String] {
+        try await refreshProvidersFromStorage()
         guard let provider = providers[providerId] else {
             throw AIError.providerNotFound(providerId)
         }
@@ -333,7 +319,37 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     }
     
     // MARK: - Private
-    
+
+    private func refreshProvidersFromStorage() async throws {
+        var stored = try await storage.listProviders()
+
+        if stored.isEmpty && !didBootstrapProviders {
+            didBootstrapProviders = true
+            for preset in ProviderPreset.startupSeeds {
+                try await storage.insertProvider(preset.makeProviderConfig(id: preset.id, enabled: true))
+            }
+            stored = try await storage.listProviders()
+        }
+
+        configs = stored
+        providers.removeAll(keepingCapacity: true)
+
+        for config in stored where config.enabled {
+            do {
+                try await initProvider(config)
+            } catch {
+                // 单个 provider 无法初始化时跳过，UI 仍然保留该配置用于快速切换和诊断
+            }
+        }
+
+        if let defaultProviderId,
+           !stored.contains(where: { $0.id == defaultProviderId }) {
+            self.defaultProviderId = stored.first?.id
+        } else if self.defaultProviderId == nil {
+            self.defaultProviderId = stored.first?.id
+        }
+    }
+
     private func initProvider(_ config: ProviderConfig) async throws {
         let resolvedBaseURL = config.baseURL.isEmpty ? config.providerType.defaultBaseURL : config.baseURL
         switch config.providerType {
@@ -343,8 +359,26 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             )
             providers[config.id] = provider
             
-        case .openAI, .openAICompatible, .anthropic, .google:
-            guard let key = await SecretStore.shared.getAPIKey(for: config.id) else {
+        case .openAI:
+            guard let key = await SecretStore.shared.getAPIKey(for: config.apiKeyRef ?? config.id) else {
+                throw AIError.noKey
+            }
+            let provider = OpenAICompatibleProvider(
+                baseURL: resolvedBaseURL.isEmpty ? "https://api.openai.com" : resolvedBaseURL,
+                apiKey: key
+            )
+            providers[config.id] = provider
+
+        case .openAICompatible:
+            let key = await SecretStore.shared.getAPIKey(for: config.apiKeyRef ?? config.id) ?? ""
+            let provider = OpenAICompatibleProvider(
+                baseURL: resolvedBaseURL.isEmpty ? "https://api.openai.com" : resolvedBaseURL,
+                apiKey: key
+            )
+            providers[config.id] = provider
+
+        case .anthropic, .google:
+            guard let key = await SecretStore.shared.getAPIKey(for: config.apiKeyRef ?? config.id) else {
                 throw AIError.noKey
             }
             let provider = OpenAICompatibleProvider(

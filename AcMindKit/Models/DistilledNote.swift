@@ -253,6 +253,143 @@ public struct ProviderConfig: Codable, Sendable, Identifiable, Hashable, Equatab
     }
 }
 
+public struct ProviderPreset: Codable, Sendable, Identifiable, Hashable, Equatable {
+    public let id: String
+    public var name: String
+    public var providerType: ProviderType
+    public var tier: ProviderTier
+    public var baseURL: String
+    public var modelId: String
+    public var capabilities: [String]
+    public var requiresAPIKey: Bool
+
+    public init(
+        id: String,
+        name: String,
+        providerType: ProviderType,
+        tier: ProviderTier,
+        baseURL: String,
+        modelId: String,
+        capabilities: [String] = [],
+        requiresAPIKey: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.providerType = providerType
+        self.tier = tier
+        self.baseURL = baseURL
+        self.modelId = modelId
+        self.capabilities = capabilities
+        self.requiresAPIKey = requiresAPIKey
+    }
+
+    public func makeProviderConfig(
+        id: String = UUID().uuidString,
+        enabled: Bool = true,
+        apiKeyRef: String? = nil
+    ) -> ProviderConfig {
+        ProviderConfig(
+            id: id,
+            name: name,
+            providerType: providerType,
+            tier: tier,
+            baseURL: baseURL,
+            apiKeyRef: apiKeyRef,
+            modelId: modelId,
+            enabled: enabled,
+            capabilities: capabilities
+        )
+    }
+}
+
+public extension ProviderPreset {
+    static let ollamaLocal = ProviderPreset(
+        id: "preset.ollama.local",
+        name: "Ollama 本地",
+        providerType: .ollama,
+        tier: .localLight,
+        baseURL: "http://localhost:11434",
+        modelId: "llama3.2:3b",
+        capabilities: ["chat", "stream", "local"]
+    )
+
+    static let localCompatible = ProviderPreset(
+        id: "preset.local.compatible",
+        name: "本地兼容模型",
+        providerType: .openAICompatible,
+        tier: .localLight,
+        baseURL: "http://localhost:1234/v1",
+        modelId: "qwen2.5-7b-instruct",
+        capabilities: ["chat", "stream", "local", "compatible"]
+    )
+
+    static let deepSeek = ProviderPreset(
+        id: "preset.deepseek.cloud",
+        name: "DeepSeek",
+        providerType: .openAICompatible,
+        tier: .cloudLight,
+        baseURL: "https://api.deepseek.com",
+        modelId: "deepseek-chat",
+        capabilities: ["chat", "stream", "cloud"],
+        requiresAPIKey: true
+    )
+
+    static let openAI = ProviderPreset(
+        id: "preset.openai.cloud",
+        name: "OpenAI",
+        providerType: .openAI,
+        tier: .cloudHeavy,
+        baseURL: "https://api.openai.com",
+        modelId: "gpt-4o-mini",
+        capabilities: ["chat", "stream", "cloud"],
+        requiresAPIKey: true
+    )
+
+    static let cloudCompatible = ProviderPreset(
+        id: "preset.cloud.compatible",
+        name: "云端兼容 API",
+        providerType: .openAICompatible,
+        tier: .cloudLight,
+        baseURL: "https://api.example.com",
+        modelId: "gpt-4o-mini",
+        capabilities: ["chat", "stream", "cloud"],
+        requiresAPIKey: true
+    )
+
+    static let startupSeeds: [ProviderPreset] = [
+        .ollamaLocal,
+        .localCompatible
+    ]
+
+    static let quickAddPresets: [ProviderPreset] = [
+        .ollamaLocal,
+        .localCompatible,
+        .deepSeek,
+        .openAI
+    ]
+}
+
+public extension ProviderConfig {
+    init(
+        preset: ProviderPreset,
+        id: String = UUID().uuidString,
+        enabled: Bool = true,
+        apiKeyRef: String? = nil
+    ) {
+        self.init(
+            id: id,
+            name: preset.name,
+            providerType: preset.providerType,
+            tier: preset.tier,
+            baseURL: preset.baseURL,
+            apiKeyRef: apiKeyRef,
+            modelId: preset.modelId,
+            enabled: enabled,
+            capabilities: preset.capabilities
+        )
+    }
+}
+
 public enum ProviderType: String, Codable, Sendable, Hashable, CaseIterable {
     case ollama
     case openAI
@@ -286,6 +423,30 @@ public enum ProviderType: String, Codable, Sendable, Hashable, CaseIterable {
         case .local: return ""
         }
     }
+
+    public var storageValue: String {
+        switch self {
+        case .ollama: return "ollama"
+        case .openAI: return "openAI"
+        case .openAICompatible: return "openAICompatible"
+        case .anthropic: return "anthropic"
+        case .google: return "google"
+        case .local: return "local"
+        }
+    }
+
+    public static func fromStorageValue(_ value: String?) -> ProviderType {
+        switch value?.lowercased() {
+        case "ollama": return .ollama
+        case "openai", "open_ai": return .openAI
+        case "openaicompatible", "open_ai_compatible", "openai-compatible", "openai_compatible":
+            return .openAICompatible
+        case "anthropic": return .anthropic
+        case "google": return .google
+        case "local": return .local
+        default: return .ollama
+        }
+    }
 }
 
 public enum ProviderTier: String, Codable, Sendable, Hashable, CaseIterable {
@@ -304,6 +465,25 @@ public enum ProviderTier: String, Codable, Sendable, Hashable, CaseIterable {
         case .localHeavy: return "本地重量"
         case .cloudLight: return "云端轻量"
         case .cloudHeavy: return "云端重量"
+        }
+    }
+
+    public var storageValue: String {
+        switch self {
+        case .localLight: return "local_light"
+        case .localHeavy: return "local_heavy"
+        case .cloudLight: return "cloud_light"
+        case .cloudHeavy: return "cloud_heavy"
+        }
+    }
+
+    public static func fromStorageValue(_ value: String?) -> ProviderTier {
+        switch value?.lowercased() {
+        case "local_light", "locallight": return .localLight
+        case "local_heavy", "localheavy": return .localHeavy
+        case "cloud_light", "cloudlight": return .cloudLight
+        case "cloud_heavy", "cloudheavy": return .cloudHeavy
+        default: return .localLight
         }
     }
 }

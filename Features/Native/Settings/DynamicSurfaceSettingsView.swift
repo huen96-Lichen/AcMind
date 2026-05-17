@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import AcMindKit
 
 struct DynamicSurfaceSettingsView: View {
     var body: some View {
@@ -7,12 +9,14 @@ struct DynamicSurfaceSettingsView: View {
 }
 
 struct DynamicSurfaceCommercialView: View {
+    @ObservedObject private var coordinator = DynamicSurfaceCoordinator.shared
     @State private var selectedMode: SurfaceMode = .continent
-    @State private var selectedContinentTabID: UUID = SurfaceContinentTab.mockTabs[0].id
-    @State private var continentTabs: [SurfaceContinentTab] = SurfaceContinentTab.mockTabs
-    @State private var selectedWidgetIDs: Set<String> = Set(SurfaceWidgetCatalog.capsuleWidgets.map(\.id) + SurfaceWidgetCatalog.continentWidgets.map(\.id))
-    @State private var selectedFeatureIDs: Set<String> = Set(SurfaceFeatureCatalog.cards.filter(\.isEnabledByDefault).map(\.id))
+    @State private var selectedContinentTabID: UUID = DynamicSurfaceSettingsStorage.loadSelectedContinentTabID(default: SurfaceContinentTab.mockTabs[0].id)
+    @State private var continentTabs: [SurfaceContinentTab] = DynamicSurfaceSettingsStorage.loadContinentTabs(default: SurfaceContinentTab.mockTabs)
+    @State private var selectedWidgetIDs: Set<String> = DynamicSurfaceSettingsStorage.loadSelectedWidgetIDs(default: Set(SurfaceWidgetCatalog.capsuleWidgets.map(\.id) + SurfaceWidgetCatalog.continentWidgets.map(\.id)))
+    @State private var selectedFeatureIDs: Set<String> = DynamicSurfaceSettingsStorage.loadSelectedFeatureIDs(default: Set(SurfaceFeatureCatalog.cards.filter(\.isEnabledByDefault).map(\.id)))
     @State private var debugExpanded = false
+    @State private var didBootstrapSelection = false
 
     var body: some View {
         ACSecondaryPageShell(
@@ -31,11 +35,37 @@ struct DynamicSurfaceCommercialView: View {
             },
             content: {
                 firstRow
+                monitorRow
                 secondRow
                 featureRow
                 debugBar
             }
         )
+        .onAppear {
+            guard !didBootstrapSelection else { return }
+            didBootstrapSelection = true
+
+            if !continentTabs.contains(where: { $0.id == selectedContinentTabID }),
+               let first = continentTabs.first {
+                selectedContinentTabID = first.id
+            }
+        }
+        .onChange(of: continentTabs) {
+            DynamicSurfaceSettingsStorage.saveContinentTabs(continentTabs)
+            if !continentTabs.contains(where: { $0.id == selectedContinentTabID }),
+               let first = continentTabs.first {
+                selectedContinentTabID = first.id
+            }
+        }
+        .onChange(of: selectedContinentTabID) {
+            DynamicSurfaceSettingsStorage.saveSelectedContinentTabID(selectedContinentTabID)
+        }
+        .onChange(of: selectedWidgetIDs) {
+            DynamicSurfaceSettingsStorage.saveSelectedWidgetIDs(selectedWidgetIDs)
+        }
+        .onChange(of: selectedFeatureIDs) {
+            DynamicSurfaceSettingsStorage.saveSelectedFeatureIDs(selectedFeatureIDs)
+        }
     }
 
     private var firstRow: some View {
@@ -112,6 +142,46 @@ struct DynamicSurfaceCommercialView: View {
                 }
             }
             .layoutPriority(1)
+        }
+    }
+
+    private var monitorRow: some View {
+        HStack(alignment: .top, spacing: ACLayout.gapL) {
+            SurfaceSectionCard(
+                title: "胶囊显示器",
+                subtitle: "指定桌面胶囊默认出现的显示器"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SurfaceMonitorHintRow(
+                        title: "当前设置",
+                        value: preferredScreenLabel(for: coordinator.preferredCapsuleScreenID)
+                    )
+
+                    monitorButtons(
+                        selectedScreenID: coordinator.preferredCapsuleScreenID,
+                        onFollowCurrent: { coordinator.setPreferredCapsuleScreenID(nil) },
+                        onSelect: { coordinator.setPreferredCapsuleScreenID($0) }
+                    )
+                }
+            }
+
+            SurfaceSectionCard(
+                title: "大陆显示器",
+                subtitle: "指定顶部大陆默认出现的显示器"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SurfaceMonitorHintRow(
+                        title: "当前设置",
+                        value: preferredScreenLabel(for: coordinator.preferredContinentScreenID)
+                    )
+
+                    monitorButtons(
+                        selectedScreenID: coordinator.preferredContinentScreenID,
+                        onFollowCurrent: { coordinator.setPreferredContinentScreenID(nil) },
+                        onSelect: { coordinator.setPreferredContinentScreenID($0) }
+                    )
+                }
+            }
         }
     }
 
@@ -289,6 +359,43 @@ struct DynamicSurfaceCommercialView: View {
         .frame(height: 56)
     }
 
+    private func monitorButtons(
+        selectedScreenID: String?,
+        onFollowCurrent: @escaping () -> Void,
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                onFollowCurrent()
+            } label: {
+                SurfaceMonitorButtonRow(
+                    title: "跟随当前屏幕",
+                    subtitle: "由当前显示器或位置决定",
+                    isSelected: selectedScreenID == nil
+                )
+            }
+            .buttonStyle(.plain)
+
+            ForEach(NSScreen.screens, id: \.displayID) { screen in
+                Button {
+                    onSelect(screen.displayID)
+                } label: {
+                    SurfaceMonitorButtonRow(
+                        title: screen.displayName,
+                        subtitle: screen.detailLabel,
+                        isSelected: selectedScreenID == screen.displayID
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func preferredScreenLabel(for screenID: String?) -> String {
+        guard let screenID else { return "跟随当前屏幕" }
+        return NSScreen.screens.first(where: { $0.displayID == screenID })?.displayName ?? "已保存但当前未连接"
+    }
+
     private var selectedContinentTab: SurfaceContinentTab {
         continentTabs.first(where: { $0.id == selectedContinentTabID }) ?? continentTabs[0]
     }
@@ -396,6 +503,57 @@ private struct SurfaceSectionCard<Content: View>: View {
         .frame(width: width, alignment: .topLeading)
         .frame(minWidth: minWidth, alignment: .topLeading)
         .frame(minHeight: minHeight, alignment: .topLeading)
+    }
+}
+
+private struct SurfaceMonitorHintRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(ACTypography.caption)
+                .foregroundStyle(ACColors.secondaryText)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(ACTypography.captionMedium)
+                .foregroundStyle(ACColors.primaryText)
+        }
+        .padding(.horizontal, 2)
+    }
+}
+
+private struct SurfaceMonitorButtonRow: View {
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(ACTypography.captionMedium)
+                    .foregroundStyle(ACColors.primaryText)
+                Text(subtitle)
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.secondaryText)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.tertiaryText)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .background(isSelected ? ACColors.selectedFill : ACColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isSelected ? ACColors.accentBlue.opacity(0.28) : ACColors.border, lineWidth: 1)
+        )
     }
 }
 
@@ -773,12 +931,17 @@ private struct SurfaceFeatureCatalog {
     ]
 }
 
-private struct SurfaceContinentModule: Identifiable {
-    let id = UUID()
+private struct SurfaceContinentModule: Identifiable, Codable, Hashable {
+    var id: UUID
     let title: String
+
+    init(id: UUID = UUID(), title: String) {
+        self.id = id
+        self.title = title
+    }
 }
 
-private struct SurfaceContinentTab: Identifiable {
+private struct SurfaceContinentTab: Identifiable, Codable, Hashable {
     let id: UUID
     var name: String
     var icon: String
@@ -837,4 +1000,89 @@ private struct SurfaceContinentTab: Identifiable {
             isDefault: true
         )
     ]
+}
+
+private enum DynamicSurfaceSettingsStorage {
+    private static let continentTabsKey = "DynamicSurfaceSettings.continentTabs"
+    private static let selectedContinentTabIDKey = "DynamicSurfaceSettings.selectedContinentTabID"
+    private static let selectedWidgetIDsKey = "DynamicSurfaceSettings.selectedWidgetIDs"
+    private static let selectedFeatureIDsKey = "DynamicSurfaceSettings.selectedFeatureIDs"
+
+    static func loadContinentTabs(default defaultValue: [SurfaceContinentTab]) -> [SurfaceContinentTab] {
+        guard let data = UserDefaults.standard.data(forKey: continentTabsKey),
+              let decoded = try? JSONDecoder().decode([SurfaceContinentTab].self, from: data),
+              !decoded.isEmpty else {
+            return defaultValue
+        }
+        return decoded
+    }
+
+    static func saveContinentTabs(_ tabs: [SurfaceContinentTab]) {
+        guard let data = try? JSONEncoder().encode(tabs) else { return }
+        UserDefaults.standard.set(data, forKey: continentTabsKey)
+        NotificationCenter.default.post(name: DynamicSurfacePreferencesStore.preferencesDidChange, object: nil)
+    }
+
+    static func loadSelectedContinentTabID(default defaultValue: UUID) -> UUID {
+        guard let raw = UserDefaults.standard.string(forKey: selectedContinentTabIDKey),
+              let id = UUID(uuidString: raw) else {
+            return defaultValue
+        }
+        return id
+    }
+
+    static func saveSelectedContinentTabID(_ id: UUID) {
+        UserDefaults.standard.set(id.uuidString, forKey: selectedContinentTabIDKey)
+        NotificationCenter.default.post(name: DynamicSurfacePreferencesStore.preferencesDidChange, object: nil)
+    }
+
+    static func loadSelectedWidgetIDs(default defaultValue: Set<String>) -> Set<String> {
+        guard let data = UserDefaults.standard.data(forKey: selectedWidgetIDsKey),
+              let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) else {
+            return defaultValue
+        }
+        return decoded
+    }
+
+    static func saveSelectedWidgetIDs(_ ids: Set<String>) {
+        guard let data = try? JSONEncoder().encode(ids) else { return }
+        UserDefaults.standard.set(data, forKey: selectedWidgetIDsKey)
+        NotificationCenter.default.post(name: DynamicSurfacePreferencesStore.preferencesDidChange, object: nil)
+    }
+
+    static func loadSelectedFeatureIDs(default defaultValue: Set<String>) -> Set<String> {
+        guard let data = UserDefaults.standard.data(forKey: selectedFeatureIDsKey),
+              let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) else {
+            return defaultValue
+        }
+        return decoded
+    }
+
+    static func saveSelectedFeatureIDs(_ ids: Set<String>) {
+        guard let data = try? JSONEncoder().encode(ids) else { return }
+        UserDefaults.standard.set(data, forKey: selectedFeatureIDsKey)
+        NotificationCenter.default.post(name: DynamicSurfacePreferencesStore.preferencesDidChange, object: nil)
+    }
+}
+
+private extension NSScreen {
+    var displayID: String {
+        if let raw = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
+            return raw.stringValue
+        }
+        return localizedName
+    }
+
+    var displayName: String {
+        let width = Int(frame.width.rounded())
+        let height = Int(frame.height.rounded())
+        return "\(localizedName) · \(width)×\(height)"
+    }
+
+    var detailLabel: String {
+        if let raw = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
+            return "ID \(raw.stringValue)"
+        }
+        return "当前显示器"
+    }
 }

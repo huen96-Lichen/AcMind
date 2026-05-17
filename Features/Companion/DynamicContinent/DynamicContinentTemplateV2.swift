@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AcMindKit
 
 typealias DynamicCard<Content: View> = NotchV2Card<Content>
 
@@ -17,8 +18,8 @@ enum DynamicContinentLayoutMetrics {
     static let topBarHorizontalPadding: CGFloat = 56
     static let centerAvoidWidth: CGFloat = 264
     static let centerAvoidHeight: CGFloat = 36
-    static let pageHorizontalPadding: CGFloat = 36
-    static let pageBottomPadding: CGFloat = 32
+    static let pageHorizontalPadding: CGFloat = 32
+    static let pageBottomPadding: CGFloat = 12
     static let columnGap: CGFloat = 16
     static let rowGap: CGFloat = 16
     static let leftColumnWidth: CGFloat = 160
@@ -93,11 +94,11 @@ struct DynamicContinentTemplateV2: View {
                 .stroke(DynamicContinentDesignTokens.cardStroke, lineWidth: 1)
         )
         .overlay(alignment: .topLeading) {
-            if viewModel.isExpanded {
+            if viewModel.isExpanded && (NSScreen.main?.safeAreaInsets.top ?? 0) > 28 {
                 PhysicalNotchOverlay()
                     .position(
-                        x: NotchV2DesignTokens.notchSafeZoneX + NotchV2DesignTokens.notchSafeZoneWidth / 2,
-                        y: NotchV2DesignTokens.notchSafeZoneHeight / 2
+                        x: DynamicContinentLayoutMetrics.expandedWidth / 2,
+                        y: DynamicContinentLayoutMetrics.topBarHeight / 2
                     )
                     .allowsHitTesting(false)
             }
@@ -110,10 +111,6 @@ private struct PhysicalNotchOverlay: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Color.black)
-            .frame(width: NotchV2DesignTokens.notchSafeZoneWidth, height: NotchV2DesignTokens.notchSafeZoneHeight)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
-            )
+            .frame(width: 160, height: DynamicContinentLayoutMetrics.topBarHeight)
     }
 }

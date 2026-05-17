@@ -20,6 +20,7 @@
 		C20000000000000000000002 /* ACLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000002 /* ACLayout.swift */; };
 		C20000000000000000000003 /* ACTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* ACTypography.swift */; };
 		C20000000000000000000004 /* ACCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000004 /* ACCard.swift */; };
+		C20000000000000000000013 /* ACGlassSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000013 /* ACGlassSurface.swift */; };
 		C20000000000000000000005 /* ACPageHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* ACPageHeader.swift */; };
 		C20000000000000000000006 /* ACSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000006 /* ACSearchField.swift */; };
 		C20000000000000000000007 /* ACButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000007 /* ACButton.swift */; };
@@ -45,6 +46,7 @@
 		A1000000000000000000006C /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006A /* InboxView.swift */; };
 		A10000000000000000000540 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* AppDelegate.swift */; };
 		A10000000000000000000541 /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000052 /* SidebarItem.swift */; };
+		A1000000000000000000054D /* AgentInputComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000054C /* AgentInputComposer.swift */; };
 		A10000000000000000000073 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000083 /* AppSettings.swift */; };
 		A10000000000000000000074 /* DistilledNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000084 /* DistilledNote.swift */; };
 		A10000000000000000000075 /* ExportRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000085 /* ExportRecord.swift */; };
@@ -52,6 +54,10 @@
 		A10000000000000000000077 /* VaultConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000087 /* VaultConfig.swift */; };
 		A10000000000000000000078 /* AIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000088 /* AIError.swift */; };
 		A10000000000000000000079 /* AIRuntimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000089 /* AIRuntimeService.swift */; };
+		A10000000000000000000630 /* AIModelManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000640 /* AIModelManagement.swift */; };
+		A10000000000000000000631 /* AIModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000641 /* AIModelProvider.swift */; };
+		A10000000000000000000632 /* AppleSystemAIProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000642 /* AppleSystemAIProviders.swift */; };
+		A10000000000000000000633 /* NativeAIPipelineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000643 /* NativeAIPipelineService.swift */; };
 		A1000000000000000000007A /* SecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008A /* SecretStore.swift */; };
 		A1000000000000000000007B /* TaskQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008B /* TaskQueue.swift */; };
 		A1000000000000000000007C /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008C /* OllamaProvider.swift */; };
@@ -86,8 +92,13 @@
 		A10000000000000000000553 /* FnVoiceHoldMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000315 /* FnVoiceHoldMonitor.swift */; };
 		A10000000000000000000548 /* AppSurfaceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000311 /* AppSurfaceStyle.swift */; };
 		A1000000000000000000054A /* AgentWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0054D0000000000000000001 /* AgentWorkspaceView.swift */; };
+		A1000000000000000000054F /* ProviderManagementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000312 /* ProviderManagementSheet.swift */; };
 		A1000000000000000000054B /* ClipboardWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0054E0000000000000000001 /* ClipboardWorkspaceView.swift */; };
-		A1000000000000000000054C /* WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015A /* WorkbenchView.swift */; };
+		A10000000000000000000522 /* InboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000115 /* InboxViewModel.swift */; };
+		A10000000000000000000523 /* ClipboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000620 /* ClipboardViewModel.swift */; };
+		A10000000000000000000524 /* WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000621 /* WorkbenchView.swift */; };
+		A10000000000000000000525 /* WebDigestPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B0 /* WebDigestPanel.swift */; };
+		A10000000000000000000526 /* ToolAdvancedPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B4 /* ToolAdvancedPanels.swift */; };
 		A10000000000000000000157 /* ToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015B /* ToolsView.swift */; };
 		A10000000000000000000160 /* VoicePolishMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000171 /* VoicePolishMode.swift */; };
 		A10000000000000000000161 /* PolishPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000172 /* PolishPrompts.swift */; };
@@ -122,6 +133,7 @@
 		A100000000000000000001A7 /* CompanionLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001A8 /* CompanionLayout.swift */; };
 		A100000000000000000001AA /* LocalASRManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001AB /* LocalASRManager.swift */; };
 		A100000000000000000001AD /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000001AC /* StorageTests.swift */; };
+		A10000000000000000000645 /* NativeAIPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000644 /* NativeAIPipelineTests.swift */; };
 		A100000000000000000002B3 /* ToolPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B2 /* ToolPanels.swift */; };
 		A100000000000000000002B6 /* TimelineLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002B7 /* TimelineLayout.swift */; };
 		A100000000000000000002F2 /* InboxHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000002E2 /* InboxHeader.swift */; };
@@ -161,6 +173,7 @@
 		A10000000000000000000516 /* NotchV2ExpandedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* NotchV2ExpandedView.swift */; };
 		A10000000000000000000517 /* NotchV2OverviewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000308 /* NotchV2OverviewPage.swift */; };
 		A10000000000000000000518 /* NotchV2AgentPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030A /* NotchV2AgentPage.swift */; };
+		A1000000000000000000054E /* NotchV2StatusLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0054E0000000000000000002 /* NotchV2StatusLine.swift */; };
 		A10000000000000000000519 /* DynamicContinentPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* DynamicContinentPages.swift */; };
 		A1000000000000000000051C /* ContinentPanelAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000426 /* ContinentPanelAdapter.swift */; };
 		A10000000000000000000500 /* CompanionCollapsedContentSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000501 /* CompanionCollapsedContentSettings.swift */; };
@@ -233,8 +246,12 @@
 		A10000000000000000000085 /* ExportRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ExportRecord.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000086 /* KnowledgeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/KnowledgeCard.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000087 /* VaultConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/VaultConfig.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000640 /* AIModelManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AIModelManagement.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000088 /* AIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIError.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000089 /* AIRuntimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIRuntimeService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000641 /* AIModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/AIModelProvider.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000642 /* AppleSystemAIProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/AppleSystemAIProviders.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000643 /* NativeAIPipelineService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/NativeAIPipelineService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008A /* SecretStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/SecretStore.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008B /* TaskQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Support/TaskQueue.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008C /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OllamaProvider.swift; sourceTree = SOURCE_ROOT; };
@@ -250,9 +267,11 @@
 		A1000000000000000000010D /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/SettingsViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000112 /* AgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentView.swift; sourceTree = SOURCE_ROOT; };
 		0054D0000000000000000001 /* AgentWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000054C /* AgentInputComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentInputComposer.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000113 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000114 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/AgentViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000115 /* InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/InboxViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000620 /* ClipboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/ClipboardViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000011A /* ScheduleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleModels.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000011B /* ScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000011C /* ScheduleSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleSidebar.swift; sourceTree = SOURCE_ROOT; };
@@ -273,8 +292,8 @@
 		A10000000000000000000315 /* FnVoiceHoldMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/FnVoiceHoldMonitor.swift; sourceTree = SOURCE_ROOT; };
 		0054E0000000000000000001 /* ClipboardWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMind/Features/Clipboard/ClipboardWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
 		005500000000000000000001 /* ClipboardMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMind/Features/Clipboard/ClipboardMockData.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000015A /* WorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Workbench/WorkbenchView.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000015B /* ToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolsView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000621 /* WorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Workbench/WorkbenchView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000171 /* VoicePolishMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/VoicePolishMode.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000172 /* PolishPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/PolishPrompts.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000173 /* PolishService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Polish/PolishService.swift; sourceTree = SOURCE_ROOT; };
@@ -295,6 +314,7 @@
 		A10000000000000000000184 /* DesktopCapsuleConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/DesktopCapsuleConfig.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000610 /* AgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AgentTask.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000185 /* ScheduledAgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ScheduledAgentTask.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000644 /* NativeAIPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/NativeAIPipelineTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000189 /* DesktopCapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsulePanel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000018A /* DesktopCapsuleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000018B /* DesktopCapsuleSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift; sourceTree = SOURCE_ROOT; };
@@ -329,10 +349,12 @@
 		A10000000000000000000306 /* NotchV2CollapsedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2CollapsedView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000307 /* NotchV2ExpandedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2ExpandedView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000308 /* NotchV2OverviewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2OverviewPage.swift; sourceTree = SOURCE_ROOT; };
+		0054E0000000000000000002 /* NotchV2StatusLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2StatusLine.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000309 /* NotchV2MusicPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2MusicPage.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030A /* NotchV2AgentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2AgentPage.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030B /* AgentDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030C /* SettingsSuiteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsSuiteView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000312 /* ProviderManagementSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/ProviderManagementSheet.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030D /* ScheduleDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000311 /* AppSurfaceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/AppSurfaceStyle.swift; sourceTree = SOURCE_ROOT; };
 		C10000000000000000000001 /* ACColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACColors.swift; sourceTree = SOURCE_ROOT; };
@@ -353,6 +375,7 @@
 		C10000000000000000000010 /* ACSecondaryPageShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACSecondaryPageShell.swift; sourceTree = SOURCE_ROOT; };
 		C10000000000000000000011 /* ACWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACWorkspaceShell.swift; sourceTree = SOURCE_ROOT; };
 		C10000000000000000000012 /* ACSettingsShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACSettingsShell.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000013 /* ACGlassSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem/ACGlassSurface.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000411 /* DynamicContinentTemplateV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000412 /* DynamicContinentPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentPages.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000424 /* DynamicSurfaceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/DynamicSurfaceCoordinator.swift; sourceTree = SOURCE_ROOT; };
@@ -488,6 +511,7 @@
 				A1000000000000000000005C /* RecordingStatus.swift */,
 				A10000000000000000000071 /* KnowledgeCard.swift */,
 				A10000000000000000000072 /* VaultConfig.swift */,
+				A10000000000000000000640 /* AIModelManagement.swift */,
 				A10000000000000000000184 /* DesktopCapsuleConfig.swift */,
 				A10000000000000000000610 /* AgentTask.swift */,
 				A10000000000000000000185 /* ScheduledAgentTask.swift */,
@@ -570,7 +594,7 @@
 				A10000000000000000000110 /* Settings */,
 				A10000000000000000000313 /* Shared */,
 				A1000000000000000000015C /* Clipboard */,
-				A1000000000000000000015D /* Workbench */,
+				A1000000000000000000015F /* Workbench */,
 				A1000000000000000000015E /* Tools */,
 			);
 			path = Native;
@@ -660,6 +684,8 @@
 			children = (
 				A10000000000000000000088 /* AIError.swift */,
 				A10000000000000000000089 /* AIRuntimeService.swift */,
+				A10000000000000000000641 /* AIModelProvider.swift */,
+				A10000000000000000000643 /* NativeAIPipelineService.swift */,
 				A10000000000000000000106 /* Support */,
 				A10000000000000000000105 /* Providers */,
 			);
@@ -671,6 +697,7 @@
 			children = (
 				A1000000000000000000008C /* OllamaProvider.swift */,
 				A1000000000000000000008D /* OpenAICompatibleProvider.swift */,
+				A10000000000000000000642 /* AppleSystemAIProviders.swift */,
 			);
 			path = Providers;
 			sourceTree = "<group>";
@@ -712,6 +739,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000000000000030B /* AgentDashboardView.swift */,
+				A1000000000000000000054C /* AgentInputComposer.swift */,
 				0054D0000000000000000001 /* AgentWorkspaceView.swift */,
 				A10000000000000000000112 /* AgentView.swift */,
 			);
@@ -721,6 +749,7 @@
 		A10000000000000000000110 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000312 /* ProviderManagementSheet.swift */,
 				A1000000000000000000030C /* SettingsSuiteView.swift */,
 				A10000000000000000000113 /* SettingsView.swift */,
 			);
@@ -732,6 +761,7 @@
 			children = (
 				A10000000000000000000114 /* AgentViewModel.swift */,
 				A10000000000000000000115 /* InboxViewModel.swift */,
+				A10000000000000000000620 /* ClipboardViewModel.swift */,
 				A1000000000000000000010D /* SettingsViewModel.swift */,
 			);
 			path = ViewModels;
@@ -779,6 +809,7 @@
 				A10000000000000000000307 /* NotchV2ExpandedView.swift */,
 				A10000000000000000000503 /* NotchV2CollapsedContent.swift */,
 				A10000000000000000000308 /* NotchV2OverviewPage.swift */,
+				0054E0000000000000000002 /* NotchV2StatusLine.swift */,
 				A10000000000000000000309 /* NotchV2MusicPage.swift */,
 				A1000000000000000000030A /* NotchV2AgentPage.swift */,
 				A10000000000000000000425 /* CapsulePanelAdapter.swift */,
@@ -795,10 +826,10 @@
 			path = Clipboard;
 			sourceTree = "<group>";
 		};
-		A1000000000000000000015D /* Workbench */ = {
+		A1000000000000000000015F /* Workbench */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000015A /* WorkbenchView.swift */,
+				A10000000000000000000621 /* WorkbenchView.swift */,
 			);
 			path = Workbench;
 			sourceTree = "<group>";
@@ -839,6 +870,7 @@
 			children = (
 				A10000000000000000000427 /* DynamicSurfaceCoordinatorTests.swift */,
 				A100000000000000000001AC /* StorageTests.swift */,
+				A10000000000000000000644 /* NativeAIPipelineTests.swift */,
 			);
 			path = AcMindKitTests;
 			sourceTree = "<group>";
@@ -1058,6 +1090,7 @@
 				C20000000000000000000002 /* ACLayout.swift in Sources */,
 				C20000000000000000000003 /* ACTypography.swift in Sources */,
 				C20000000000000000000004 /* ACCard.swift in Sources */,
+				C20000000000000000000013 /* ACGlassSurface.swift in Sources */,
 				C20000000000000000000005 /* ACPageHeader.swift in Sources */,
 				C20000000000000000000006 /* ACSearchField.swift in Sources */,
 				C20000000000000000000007 /* ACButton.swift in Sources */,
@@ -1123,6 +1156,7 @@
 				A10000000000000000000515 /* NotchV2RootView.swift in Sources */,
 				A10000000000000000000516 /* NotchV2ExpandedView.swift in Sources */,
 				A10000000000000000000517 /* NotchV2OverviewPage.swift in Sources */,
+				A1000000000000000000054E /* NotchV2StatusLine.swift in Sources */,
 				A10000000000000000000518 /* NotchV2AgentPage.swift in Sources */,
 				A10000000000000000000519 /* DynamicContinentPages.swift in Sources */,
 				A10000000000000000000413 /* DynamicContinentTemplateV2.swift in Sources */,
@@ -1135,13 +1169,19 @@
 				A10000000000000000000188 /* DesktopCapsuleSettingsSection.swift in Sources */,
 				A10000000000000000000547 /* DesktopCapsuleViewModel.swift in Sources */,
 				A1000000000000000000030E /* AgentDashboardView.swift in Sources */,
+				A1000000000000000000054D /* AgentInputComposer.swift in Sources */,
 				A1000000000000000000054A /* AgentWorkspaceView.swift in Sources */,
 				A10000000000000000000430 /* DynamicSurfaceSettingsView.swift in Sources */,
 				A1000000000000000000030F /* SettingsSuiteView.swift in Sources */,
+				A1000000000000000000054F /* ProviderManagementSheet.swift in Sources */,
 				A1000000000000000000010C /* AgentViewModel.swift in Sources */,
 				A1000000000000000000054B /* ClipboardWorkspaceView.swift in Sources */,
+				A10000000000000000000522 /* InboxViewModel.swift in Sources */,
+				A10000000000000000000523 /* ClipboardViewModel.swift in Sources */,
+				A10000000000000000000524 /* WorkbenchView.swift in Sources */,
+				A10000000000000000000525 /* WebDigestPanel.swift in Sources */,
+				A10000000000000000000526 /* ToolAdvancedPanels.swift in Sources */,
 				A10000000000000000000157 /* ToolsView.swift in Sources */,
-				A1000000000000000000054C /* WorkbenchView.swift in Sources */,
 				A100000000000000000002B3 /* ToolPanels.swift in Sources */,
 				F420845E2831E82EA2E09BA0 /* InboxTokens.swift in Sources */,
 				A266723025C6B99903141794 /* InboxListPanel.swift in Sources */,
@@ -1169,6 +1209,10 @@
 				A10000000000000000000500 /* CompanionCollapsedContentSettings.swift in Sources */,
 				A10000000000000000000078 /* AIError.swift in Sources */,
 				A10000000000000000000079 /* AIRuntimeService.swift in Sources */,
+				A10000000000000000000630 /* AIModelManagement.swift in Sources */,
+				A10000000000000000000631 /* AIModelProvider.swift in Sources */,
+				A10000000000000000000632 /* AppleSystemAIProviders.swift in Sources */,
+				A10000000000000000000633 /* NativeAIPipelineService.swift in Sources */,
 				A1000000000000000000007A /* SecretStore.swift in Sources */,
 				A1000000000000000000007B /* TaskQueue.swift in Sources */,
 				A1000000000000000000007C /* OllamaProvider.swift in Sources */,
@@ -1225,6 +1269,7 @@
 			files = (
 				A10000000000000000000423 /* DynamicSurfaceCoordinatorTests.swift in Sources */,
 				A100000000000000000001AD /* StorageTests.swift in Sources */,
+				A10000000000000000000645 /* NativeAIPipelineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1390,7 +1435,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_CONST_VALUE_PROTOCOLS = "";
@@ -1425,7 +1470,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_CONST_VALUE_PROTOCOLS = "";
@@ -1457,7 +1502,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.0.1;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -1492,7 +1537,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.0.1;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";

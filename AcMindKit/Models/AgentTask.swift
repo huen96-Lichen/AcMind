@@ -50,7 +50,7 @@ public struct AgentTask: Codable, Sendable, Identifiable, Equatable {
     public var retryCount: Int
     public var maxRetries: Int
     public var sourceMessageId: String?
-    public let createdAt: Date
+    public var createdAt: Date
     public var updatedAt: Date
     public var startedAt: Date?
     public var completedAt: Date?

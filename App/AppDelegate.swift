@@ -41,6 +41,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true // 默认启用
     }
 
+    private var desktopCapsuleAutoShowOnLaunch: Bool {
+        if let data = UserDefaults.standard.data(forKey: "AppSettings.desktopCapsule"),
+           let settings = try? JSONDecoder().decode(DesktopCapsuleSettings.self, from: data) {
+            return settings.showOnLaunch
+        }
+        return true
+    }
+
     // MARK: - Status Bar
 
     private var statusItem: NSStatusItem?
@@ -148,23 +156,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var newFrame = window.frame
         newFrame.size.width = newWidth
         newFrame.origin.x = window.frame.maxX - newWidth
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.35
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            window.animator().setFrame(newFrame, display: true)
-        }
+        window.setFrame(newFrame, display: true)
     }
 
     func expandWindowToFullWorkspace() {
         guard let window = mainWindowController?.window else { return }
 
         if let savedFrame = savedWindowFrame {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.35
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                window.animator().setFrame(savedFrame, display: true)
-            }
+            window.setFrame(savedFrame, display: true)
         }
     }
 
@@ -177,12 +176,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var newFrame = window.frame
         newFrame.size.width = newWidth
         newFrame.origin.x = window.frame.maxX - newWidth
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.3
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            window.animator().setFrame(newFrame, display: true)
-        }
+        window.setFrame(newFrame, display: true)
     }
 
     func showLaunchWindow() {
@@ -204,6 +198,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Notch Panel
 
     func showNotchPanel() {
+        guard notchPanelEnabled else { return }
         NSApp.activate(ignoringOtherApps: true)
         DynamicSurfaceCoordinator.shared.transition(to: .continentCompact, reason: .manualCommand)
     }
@@ -221,6 +216,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Desktop Capsule
 
     func showDesktopCapsule() {
+        guard desktopCapsuleEnabled else { return }
         NSApp.activate(ignoringOtherApps: true)
         DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .manualCommand)
     }
@@ -232,6 +228,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func toggleDesktopCapsule() {
+        guard desktopCapsuleEnabled else { return }
         DynamicSurfaceCoordinator.shared.transition(to: .capsuleCompact, reason: .manualCommand)
     }
 
@@ -240,23 +237,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let coordinator = DynamicSurfaceCoordinator.shared
         let lastState = coordinator.visibilityState
         let preferredState: DynamicSurfaceVisibilityState
+        let canAutoShowCapsule = desktopCapsuleEnabled && desktopCapsuleAutoShowOnLaunch
 
         switch lastState {
         case .continentCompact, .continentExpanded:
             if notchPanelEnabled {
                 preferredState = lastState
-            } else if desktopCapsuleEnabled {
+            } else if canAutoShowCapsule {
                 preferredState = .capsuleCompact
             } else {
-                preferredState = .capsuleCompact
+                return
             }
         case .capsuleCompact:
-            if desktopCapsuleEnabled {
+            if canAutoShowCapsule {
                 preferredState = .capsuleCompact
-            } else if notchPanelEnabled {
+            } else if !desktopCapsuleEnabled && notchPanelEnabled {
                 preferredState = .continentCompact
             } else {
-                preferredState = .capsuleCompact
+                return
             }
         }
 
@@ -762,69 +760,53 @@ struct ScreenshotPreviewView: View {
     }
 }
 
-// MARK: - Custom Window
-
-class CustomWindow: NSWindow {
-    override var canBecomeKey: Bool {
-        return true
-    }
-
-    override var canBecomeMain: Bool {
-        return true
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        let initialLocation = self.mouseLocationOutsideOfEventStream
-        var origin = self.frame.origin
-
-        while let nextEvent = self.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
-            if nextEvent.type == .leftMouseUp {
-                break
-            }
-
-            let currentLocation = self.mouseLocationOutsideOfEventStream
-            let deltaX = currentLocation.x - initialLocation.x
-            let deltaY = currentLocation.y - initialLocation.y
-
-            origin.x += deltaX
-            origin.y += deltaY
-
-            self.setFrameOrigin(origin)
-        }
-    }
-}
-
 // MARK: - Main Window Controller
 
 class MainWindowController: NSWindowController {
     convenience init() {
-        let window = CustomWindow(
+        let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
-            styleMask: [.borderless, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
         window.title = "AcMind"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        window.hideStandardWindowControls()
         // 最小窗口尺寸：compact rail（88px）+ padding（32px）+ 额外空间（80px）= 200px
         // 保证一级菜单有足够显示空间，同时允许内容区被压缩
         window.minSize = NSSize(width: 200, height: 300)
         window.collectionBehavior = [.managed, .moveToActiveSpace]
-        window.setFrameAutosaveName("MainWindow")
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = false
 
-        // 设置内容视图
         let contentView = ContentView()
             .environmentObject(AppState.shared)
             .environmentObject(ServiceContainer.shared)
 
         let hostingView = NSHostingView(rootView: contentView)
+        if #available(macOS 13.0, *) {
+            hostingView.sizingOptions = []
+        }
         hostingView.wantsLayer = true
         hostingView.layer?.cornerRadius = 24
-        hostingView.layer?.masksToBounds = true
-        window.contentView = hostingView
+
+        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 1200, height: 800))
+        containerView.wantsLayer = true
+        containerView.layer?.backgroundColor = NSColor.clear.cgColor
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+        ])
+        window.contentView = containerView
 
         self.init(window: window)
 
@@ -865,6 +847,7 @@ class LaunchWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.level = .statusBar
+        window.hideStandardWindowControls()
         window.center()
         window.orderFrontRegardless()
 
@@ -882,4 +865,12 @@ class LaunchWindowController: NSWindowController {
 enum AppWindowGeometry {
     static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 800)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
+}
+
+private extension NSWindow {
+    func hideStandardWindowControls() {
+        [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].forEach { buttonType in
+            standardWindowButton(buttonType)?.isHidden = true
+        }
+    }
 }

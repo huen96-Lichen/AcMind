@@ -23,6 +23,7 @@ public actor SettingsService: SettingsServiceProtocol {
     private var vaultConfigCache: VaultConfig?
     private var voiceSettingsCache: VoiceSettings?
     private var providersCache: [ProviderConfig]?
+    private var aiModelPreferencesCache: [AIModelCategoryPreference]?
 
     // MARK: - Initialization
 
@@ -46,6 +47,7 @@ public actor SettingsService: SettingsServiceProtocol {
         _ = try await loadVaultConfig()
         _ = try await loadVoiceSettings()
         _ = try await listProviders()
+        _ = await getAIModelCategoryPreferences()
 
         // 初始化快捷键管理器
         try await hotkeyManager.setup()
@@ -240,106 +242,100 @@ public actor SettingsService: SettingsServiceProtocol {
     // MARK: - Provider Config (with Keychain API Key storage)
 
     public func listProviders() async throws -> [ProviderConfig] {
-        if let cached = providersCache {
-            return cached
+        var providers = try await storage.listProviders()
+        if providers.isEmpty {
+            for preset in ProviderPreset.startupSeeds {
+                let config = ProviderConfig(preset: preset, id: preset.id, enabled: true)
+                try await storage.insertProvider(config)
+            }
+            providers = try await storage.listProviders()
         }
 
-        // 从 SQLite 加载 Provider 列表（不含 API Key）
-        // 实际实现需要查询 provider_configs 表
-        // 这里简化处理，返回缓存或空数组
-        providersCache = []
-        return []
+        providersCache = providers
+        if let cachedPreferences = aiModelPreferencesCache {
+            aiModelPreferencesCache = AIModelCatalog.normalize(cachedPreferences, providers: providers)
+        }
+        return providers
     }
 
     public func addProvider(_ config: ProviderConfig) async throws {
-        // 保存到 SQLite
-        // 如果有 API Key，保存到 Keychain
-        if let apiKey = config.apiKey {
-            try await saveAPIKey(apiKey, for: config.id)
+        try await storage.insertProvider(config)
+        providersCache = (try? await storage.listProviders()) ?? [config]
+        if let cachedPreferences = aiModelPreferencesCache {
+            aiModelPreferencesCache = AIModelCatalog.normalize(cachedPreferences, providers: providersCache ?? [])
         }
-
-        // 更新缓存
-        var providers = (try? await listProviders()) ?? []
-        providers.append(config)
-        providersCache = providers
     }
 
     public func updateProvider(_ config: ProviderConfig) async throws {
-        // 更新 SQLite
-        // 更新 Keychain 中的 API Key
-        if let apiKey = config.apiKey {
-            try await saveAPIKey(apiKey, for: config.id)
-        }
-
-        // 更新缓存
-        var providers = (try? await listProviders()) ?? []
-        if let index = providers.firstIndex(where: { $0.id == config.id }) {
-            providers[index] = config
-            providersCache = providers
+        try await storage.updateProvider(config)
+        providersCache = (try? await storage.listProviders()) ?? [config]
+        if let cachedPreferences = aiModelPreferencesCache {
+            aiModelPreferencesCache = AIModelCatalog.normalize(cachedPreferences, providers: providersCache ?? [])
         }
     }
 
     public func removeProvider(id: String) async throws {
-        // 从 SQLite 删除
-        // 从 Keychain 删除 API Key
-        try await deleteAPIKey(for: id)
+        try await storage.deleteProvider(id: id)
+        try? await SecretStore.shared.deleteAPIKey(for: id)
+        providersCache = (try? await storage.listProviders()) ?? []
+        if let cachedPreferences = aiModelPreferencesCache {
+            aiModelPreferencesCache = AIModelCatalog.normalize(cachedPreferences, providers: providersCache ?? [])
+        }
+    }
 
-        // 更新缓存
-        var providers = (try? await listProviders()) ?? []
-        providers.removeAll { $0.id == id }
-        providersCache = providers
+    public func saveProviderAPIKey(_ apiKey: String, for providerId: String) async throws {
+        try await SecretStore.shared.saveAPIKey(apiKey, for: providerId)
+    }
+
+    public func deleteProviderAPIKey(for providerId: String) async throws {
+        try await SecretStore.shared.deleteAPIKey(for: providerId)
     }
 
     public func getAPIKey(for providerId: String) async -> String? {
-        await loadAPIKey(for: providerId)
+        await SecretStore.shared.getAPIKey(for: providerId)
     }
 
-    // MARK: - API Key Keychain Storage
+    // MARK: - AI Model Preferences
 
-    private func saveAPIKey(_ apiKey: String, for providerId: String) async throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: "acmind.provider.\(providerId)",
-            kSecValueData as String: apiKey.data(using: .utf8)!,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-
-        // 先删除旧的
-        SecItemDelete(query as CFDictionary)
-
-        // 添加新的
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw SettingsError.keychainError(status)
+    public func getAIModelCategoryPreferences() async -> [AIModelCategoryPreference] {
+        if let cache = aiModelPreferencesCache {
+            return cache
         }
+
+        let preferences = (try? await loadAIModelCategoryPreferences()) ?? AIModelCatalog.defaultPreferences()
+        aiModelPreferencesCache = preferences
+        return preferences
     }
 
-    private func loadAPIKey(for providerId: String) async -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: "acmind.provider.\(providerId)",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+    public func updateAIModelCategoryPreferences(_ preferences: [AIModelCategoryPreference]) async throws {
+        let providers = try await currentProviders()
+        let normalized = AIModelCatalog.normalize(preferences, providers: providers)
+        aiModelPreferencesCache = normalized
+        try await saveAIModelCategoryPreferencesToStorage(normalized)
+    }
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let apiKey = String(data: data, encoding: .utf8) else {
-            return nil
+    private func loadAIModelCategoryPreferences() async throws -> [AIModelCategoryPreference] {
+        guard let raw = try await storage.getSetting(key: "ai.modelCategoryPreferences"),
+              let data = raw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([AIModelCategoryPreference].self, from: data) else {
+            return AIModelCatalog.defaultPreferences()
         }
-        return apiKey
+
+        let providers = try await currentProviders()
+        return AIModelCatalog.normalize(decoded, providers: providers)
     }
 
-    private func deleteAPIKey(for providerId: String) async throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: "acmind.provider.\(providerId)"
-        ]
+    private func saveAIModelCategoryPreferencesToStorage(_ preferences: [AIModelCategoryPreference]) async throws {
+        let data = try JSONEncoder().encode(preferences)
+        let json = String(data: data, encoding: .utf8) ?? "[]"
+        try await storage.setSetting(key: "ai.modelCategoryPreferences", value: json)
+    }
 
-        SecItemDelete(query as CFDictionary)
+    private func currentProviders() async throws -> [ProviderConfig] {
+        if let providersCache {
+            return providersCache
+        }
+        return try await storage.listProviders()
     }
 
     // MARK: - Permissions (delegated to PermissionManager)
@@ -435,15 +431,5 @@ public enum SettingsError: Error, LocalizedError {
         case .shortcutRegistrationFailed:
             return "快捷键注册失败"
         }
-    }
-}
-
-// MARK: - ProviderConfig Extension
-
-extension ProviderConfig {
-    /// API Key（内存中临时存储，不持久化到 SQLite）
-    public var apiKey: String? {
-        get { nil } // 实际使用时从 Keychain 加载
-        set { } // 实际使用时保存到 Keychain
     }
 }

@@ -14,6 +14,10 @@ final class NotchV2ViewModel: ObservableObject {
     @Published var status: CompanionStatus = .ready
     @Published var lastTranscription: CompanionVoiceTranscription?
     @Published var isHoverEmphasized = false
+    @Published var continentTabs: [DynamicSurfaceContinentTabSnapshot] = []
+    @Published var selectedContinentTabID: UUID = UUID()
+    @Published var selectedWidgetIDs: Set<String> = []
+    @Published var selectedFeatureIDs: Set<String> = []
 
     private var hoverOpenTask: Task<Void, Never>?
     private var hoverCollapseTask: Task<Void, Never>?
@@ -37,22 +41,19 @@ final class NotchV2ViewModel: ObservableObject {
         playbackState = Self.snapshot()
         lastTranscription = CompanionMockData.recentTranscriptions.first
         loadCollapsedContentSettings()
+        loadDynamicSurfacePreferences()
         setupObservers()
     }
 
     func toggleExpansion() {
         cancelHoverTasks()
-        withAnimation(.spring(response: CompanionMenuBarLayout.surfaceMorphResponse, dampingFraction: CompanionMenuBarLayout.surfaceMorphDamping)) {
-            isExpanded.toggle()
-        }
+        isExpanded.toggle()
     }
 
     func collapse() {
         guard isExpanded else { return }
         cancelHoverTasks()
-        withAnimation(.spring(response: CompanionMenuBarLayout.surfaceMorphResponse, dampingFraction: CompanionMenuBarLayout.surfaceMorphDamping)) {
-            isExpanded = false
-        }
+        isExpanded = false
     }
 
     func setPanelHovered(_ hovering: Bool) {
@@ -72,9 +73,7 @@ final class NotchV2ViewModel: ObservableObject {
     func select(_ page: NotchV2Page) {
         selectedPage = page
         if isExpanded == false {
-            withAnimation(.spring(response: CompanionMenuBarLayout.surfaceMorphResponse, dampingFraction: CompanionMenuBarLayout.surfaceMorphDamping)) {
-                isExpanded = true
-            }
+            isExpanded = true
         }
     }
 
@@ -118,6 +117,27 @@ final class NotchV2ViewModel: ObservableObject {
         }
     }
 
+    var activeContinentTab: DynamicSurfaceContinentTabSnapshot {
+        continentTabs.first(where: { $0.id == selectedContinentTabID }) ?? continentTabs.first ?? Self.defaultContinentTabs[0]
+    }
+
+    var topBarPageTitles: [String] {
+        let titles = continentTabs.prefix(4).map(\.name)
+        return titles.count == 4 ? Array(titles) : NotchV2Page.allCases.map(\.title)
+    }
+
+    func isWidgetEnabled(_ widgetID: String) -> Bool {
+        selectedWidgetIDs.contains(widgetID)
+    }
+
+    func isFeatureEnabled(_ featureID: String) -> Bool {
+        selectedFeatureIDs.contains(featureID)
+    }
+
+    func refreshDynamicSurfacePreferences() {
+        loadDynamicSurfacePreferences()
+    }
+
     private func setupObservers() {
         NotificationCenter.default.addObserver(
             self,
@@ -149,6 +169,12 @@ final class NotchV2ViewModel: ObservableObject {
             name: .companionCollapsedContentSettingsChanged,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDynamicSurfacePreferencesChanged(_:)),
+            name: DynamicSurfacePreferencesStore.preferencesDidChange,
+            object: nil
+        )
     }
 
     private func cancelHoverTasks() {
@@ -165,9 +191,7 @@ final class NotchV2ViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self, !self.isExpanded else { return }
-                withAnimation(.spring(response: CompanionMenuBarLayout.surfaceMorphResponse, dampingFraction: CompanionMenuBarLayout.surfaceMorphDamping)) {
-                    self.isExpanded = true
-                }
+                self.isExpanded = true
             }
         }
     }
@@ -215,6 +239,10 @@ final class NotchV2ViewModel: ObservableObject {
         loadCollapsedContentSettings()
     }
 
+    @objc private func handleDynamicSurfacePreferencesChanged(_ notification: Notification) {
+        loadDynamicSurfacePreferences()
+    }
+
     private func loadCollapsedContentSettings() {
         guard
             let data = UserDefaults.standard.data(forKey: CompanionCollapsedContentStorage.key),
@@ -225,6 +253,19 @@ final class NotchV2ViewModel: ObservableObject {
         }
 
         collapsedContentSettings = decoded
+    }
+
+    private func loadDynamicSurfacePreferences() {
+        let tabs = DynamicSurfacePreferencesStore.loadContinentTabs(default: Self.defaultContinentTabs)
+        continentTabs = tabs
+        selectedContinentTabID = DynamicSurfacePreferencesStore.loadSelectedContinentTabID(default: tabs.first?.id ?? Self.defaultContinentTabs[0].id)
+        selectedWidgetIDs = DynamicSurfacePreferencesStore.loadSelectedWidgetIDs(default: Self.defaultWidgetIDs)
+        selectedFeatureIDs = DynamicSurfacePreferencesStore.loadSelectedFeatureIDs(default: Self.defaultFeatureIDs)
+
+        if !continentTabs.contains(where: { $0.id == selectedContinentTabID }),
+           let first = continentTabs.first {
+            selectedContinentTabID = first.id
+        }
     }
 
     private func captureScreenshot() {
@@ -353,4 +394,28 @@ final class NotchV2ViewModel: ObservableObject {
             lastUpdated: Date()
         )
     }
+
+    private static let defaultContinentTabs: [DynamicSurfaceContinentTabSnapshot] = [
+        .init(name: "今日", icon: "sun.max", enabledModuleTitles: ["日程", "天气", "任务", "消息"], isDefault: true),
+        .init(name: "音乐", icon: "music.note", enabledModuleTitles: ["播放", "歌单", "歌词"], isDefault: true),
+        .init(name: "AI", icon: "sparkles", enabledModuleTitles: ["状态", "任务", "快捷入口", "参考"], isDefault: true),
+        .init(name: "日程", icon: "calendar", enabledModuleTitles: ["日历", "时间线", "提醒"], isDefault: true)
+    ]
+
+    private static let defaultWidgetIDs: Set<String> = Set([
+        "continent-timeline",
+        "continent-agent",
+        "continent-task",
+        "continent-weather",
+        "continent-notes",
+        "continent-media"
+    ])
+
+    private static let defaultFeatureIDs: Set<String> = Set([
+        "feature-agent",
+        "feature-voice",
+        "feature-capture",
+        "feature-schedule",
+        "feature-notes"
+    ])
 }

@@ -37,6 +37,7 @@ struct InboxTagsSection: View {
                         .fontWeight(.medium)
                         .foregroundColor(InboxColors.primaryText)
                 }
+                .disabled(true)
             }
             
             HStack(spacing: 8) {

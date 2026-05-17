@@ -257,3 +257,99 @@ public extension DynamicSurfaceDragPhase {
         }
     }
 }
+
+public struct DynamicSurfaceContinentTabSnapshot: Codable, Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var icon: String
+    public var enabledModuleTitles: [String]
+    public var isDefault: Bool
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        icon: String,
+        enabledModuleTitles: [String],
+        isDefault: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.enabledModuleTitles = enabledModuleTitles
+        self.isDefault = isDefault
+    }
+
+    public var summary: String {
+        let joined = enabledModuleTitles.prefix(3).joined(separator: " / ")
+        return joined.isEmpty ? name : "今日 · \(joined)"
+    }
+}
+
+public enum DynamicSurfacePreferencesStore {
+    public static let preferencesDidChange = Notification.Name("dynamicSurface.preferencesDidChange")
+
+    public static let continentTabsKey = "DynamicSurfaceSettings.continentTabs"
+    public static let selectedContinentTabIDKey = "DynamicSurfaceSettings.selectedContinentTabID"
+    public static let selectedWidgetIDsKey = "DynamicSurfaceSettings.selectedWidgetIDs"
+    public static let selectedFeatureIDsKey = "DynamicSurfaceSettings.selectedFeatureIDs"
+
+    public static func loadContinentTabs(default defaultValue: [DynamicSurfaceContinentTabSnapshot]) -> [DynamicSurfaceContinentTabSnapshot] {
+        guard let data = UserDefaults.standard.data(forKey: continentTabsKey),
+              let decoded = try? JSONDecoder().decode([DynamicSurfaceContinentTabSnapshot].self, from: data),
+              !decoded.isEmpty else {
+            return defaultValue
+        }
+        return decoded
+    }
+
+    public static func saveContinentTabs(_ tabs: [DynamicSurfaceContinentTabSnapshot]) {
+        guard let data = try? JSONEncoder().encode(tabs) else { return }
+        UserDefaults.standard.set(data, forKey: continentTabsKey)
+        postChange()
+    }
+
+    public static func loadSelectedContinentTabID(default defaultValue: UUID) -> UUID {
+        guard let raw = UserDefaults.standard.string(forKey: selectedContinentTabIDKey),
+              let id = UUID(uuidString: raw) else {
+            return defaultValue
+        }
+        return id
+    }
+
+    public static func saveSelectedContinentTabID(_ id: UUID) {
+        UserDefaults.standard.set(id.uuidString, forKey: selectedContinentTabIDKey)
+        postChange()
+    }
+
+    public static func loadSelectedWidgetIDs(default defaultValue: Set<String>) -> Set<String> {
+        guard let data = UserDefaults.standard.data(forKey: selectedWidgetIDsKey),
+              let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) else {
+            return defaultValue
+        }
+        return decoded
+    }
+
+    public static func saveSelectedWidgetIDs(_ ids: Set<String>) {
+        guard let data = try? JSONEncoder().encode(ids) else { return }
+        UserDefaults.standard.set(data, forKey: selectedWidgetIDsKey)
+        postChange()
+    }
+
+    public static func loadSelectedFeatureIDs(default defaultValue: Set<String>) -> Set<String> {
+        guard let data = UserDefaults.standard.data(forKey: selectedFeatureIDsKey),
+              let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) else {
+            return defaultValue
+        }
+        return decoded
+    }
+
+    public static func saveSelectedFeatureIDs(_ ids: Set<String>) {
+        guard let data = try? JSONEncoder().encode(ids) else { return }
+        UserDefaults.standard.set(data, forKey: selectedFeatureIDsKey)
+        postChange()
+    }
+
+    private static func postChange() {
+        NotificationCenter.default.post(name: preferencesDidChange, object: nil)
+    }
+}

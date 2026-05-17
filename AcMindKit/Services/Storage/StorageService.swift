@@ -145,6 +145,50 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.deleteClipboardItem(id: id)
     }
 
+    // MARK: - Provider Config Operations
+
+    public func insertProvider(_ config: ProviderConfig) async throws {
+        let record = ProviderConfigRecord(from: config)
+        try await db.insertProvider(record)
+    }
+
+    public func getProvider(id: String) async throws -> ProviderConfig? {
+        let record = try await db.getProvider(id: id)
+        return record?.toProviderConfig()
+    }
+
+    public func listProviders() async throws -> [ProviderConfig] {
+        let records = try await db.listProviders()
+        return records.map { $0.toProviderConfig() }
+    }
+
+    public func updateProvider(_ config: ProviderConfig) async throws {
+        let record = ProviderConfigRecord(from: config)
+        try await db.updateProvider(record)
+    }
+
+    public func deleteProvider(id: String) async throws {
+        try await db.deleteProvider(id: id)
+    }
+
+    // MARK: - Scheduled Agent Task Operations
+
+    public func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {
+        try await db.insertScheduledAgentTask(task)
+    }
+
+    public func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? {
+        try await db.getScheduledAgentTask(id: id)
+    }
+
+    public func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] {
+        try await db.listScheduledAgentTasks()
+    }
+
+    public func deleteScheduledAgentTask(id: String) async throws {
+        try await db.deleteScheduledAgentTask(id: id)
+    }
+
     // MARK: - Settings Operations
     
     public func getSetting(key: String) async throws -> String? {

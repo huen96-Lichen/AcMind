@@ -39,6 +39,7 @@ final class TimelineLayoutTests: XCTestCase {
         XCTAssertEqual(CompanionMenuBarLayout.expandedHeight, 440, accuracy: 0.1)
     }
 
+    @MainActor
     func testCompanionMenuBarLayoutKeepsLeadingEdgeStableWhenExpandingAndCollapsing() throws {
         guard let screen = NSScreen.main else {
             throw XCTSkip("No main screen available")
@@ -52,6 +53,7 @@ final class TimelineLayoutTests: XCTestCase {
         XCTAssertEqual(collapsedAgain.minX, collapsed.minX, accuracy: 0.5)
     }
 
+    @MainActor
     func testCompanionMenuBarLayoutKeepsTopCenterStableWhenExpandingAndCollapsing() throws {
         guard let screen = NSScreen.main else {
             throw XCTSkip("No main screen available")

@@ -28,7 +28,8 @@ enum NotchV2DesignTokens {
     static let collapsedHeight: CGFloat = 30
     static let expandedOverviewHeight: CGFloat = 440
     static let expandedMusicHeight: CGFloat = 390
-    static let expandedAgentHeight: CGFloat = 430
+    static let agentPanelHeight: CGFloat = 248
+    static let expandedAgentHeight: CGFloat = 340
     static let expandedScheduleHeight: CGFloat = 440
     static let notchSafeZoneX: CGFloat = 360
     static let notchSafeZoneY: CGFloat = 0

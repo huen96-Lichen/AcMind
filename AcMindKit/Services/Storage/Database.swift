@@ -1029,6 +1029,32 @@ public actor Database {
         try db().execute("DELETE FROM clipboard_items WHERE id = ?", arguments: [id])
     }
 
+    // MARK: - Provider Configs
+
+    public func insertProvider(_ config: ProviderConfigRecord) async throws {
+        try db().execute(config.upsertSQL, arguments: config.bindings)
+    }
+
+    public func getProvider(id: String) async throws -> ProviderConfigRecord? {
+        try db().queryOne("SELECT * FROM provider_configs WHERE id = ? LIMIT 1", arguments: [id]) { row in
+            ProviderConfigRecord(row: row)
+        }
+    }
+
+    public func listProviders() async throws -> [ProviderConfigRecord] {
+        try db().query("SELECT * FROM provider_configs ORDER BY updated_at DESC") { row in
+            ProviderConfigRecord(row: row)
+        }
+    }
+
+    public func updateProvider(_ config: ProviderConfigRecord) async throws {
+        try await insertProvider(config)
+    }
+
+    public func deleteProvider(id: String) async throws {
+        try db().execute("DELETE FROM provider_configs WHERE id = ?", arguments: [id])
+    }
+
     // MARK: - Settings
 
     public func getSetting(key: String) async throws -> String? {
@@ -1638,6 +1664,118 @@ public struct ChatMessageRecord: Sendable, Codable, Equatable {
         self.error = row.string("error")
         self.actionProposals = row.string("action_proposals") ?? "[]"
         self.createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+    }
+}
+
+public struct ProviderConfigRecord: Sendable, Codable, Equatable {
+    public var id: String
+    public var name: String
+    public var providerType: String
+    public var tier: String
+    public var baseURL: String
+    public var apiKeyRef: String?
+    public var modelId: String
+    public var enabled: Int
+    public var capabilities: String
+    public var createdAt: Int
+    public var updatedAt: Int
+
+    var bindings: [Any?] {
+        [
+            id, name, providerType, tier, baseURL, apiKeyRef, modelId,
+            enabled, capabilities, createdAt, updatedAt
+        ]
+    }
+
+    var upsertSQL: String {
+        """
+        INSERT INTO provider_configs (
+            id, name, provider_type, tier, base_url, api_key_ref, model_id,
+            enabled, capabilities, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            provider_type = excluded.provider_type,
+            tier = excluded.tier,
+            base_url = excluded.base_url,
+            api_key_ref = excluded.api_key_ref,
+            model_id = excluded.model_id,
+            enabled = excluded.enabled,
+            capabilities = excluded.capabilities,
+            updated_at = excluded.updated_at
+        """
+    }
+
+    public init(
+        id: String = UUID().uuidString,
+        name: String,
+        providerType: String,
+        tier: String,
+        baseURL: String,
+        apiKeyRef: String? = nil,
+        modelId: String,
+        enabled: Bool = true,
+        capabilities: [String] = [],
+        createdAt: Int = Int(Date().timeIntervalSince1970),
+        updatedAt: Int = Int(Date().timeIntervalSince1970)
+    ) {
+        self.id = id
+        self.name = name
+        self.providerType = providerType
+        self.tier = tier
+        self.baseURL = baseURL
+        self.apiKeyRef = apiKeyRef
+        self.modelId = modelId
+        self.enabled = enabled ? 1 : 0
+        self.capabilities = String(data: (try? JSONEncoder().encode(capabilities)) ?? Data(), encoding: .utf8) ?? "[]"
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    public init(from config: ProviderConfig, createdAt: Int = Int(Date().timeIntervalSince1970), updatedAt: Int = Int(Date().timeIntervalSince1970)) {
+        self.init(
+            id: config.id,
+            name: config.name,
+            providerType: config.providerType.storageValue,
+            tier: config.tier.storageValue,
+            baseURL: config.baseURL,
+            apiKeyRef: config.apiKeyRef,
+            modelId: config.modelId,
+            enabled: config.enabled,
+            capabilities: config.capabilities,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    public init(row: SQLiteRow) {
+        self.id = row.string("id") ?? UUID().uuidString
+        self.name = row.string("name") ?? ""
+        self.providerType = row.string("provider_type") ?? "ollama"
+        self.tier = row.string("tier") ?? "local_light"
+        self.baseURL = row.string("base_url") ?? ""
+        self.apiKeyRef = row.string("api_key_ref")
+        self.modelId = row.string("model_id") ?? ""
+        self.enabled = row.int("enabled") ?? 1
+        self.capabilities = row.string("capabilities") ?? "[]"
+        self.createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+        self.updatedAt = row.int("updated_at") ?? createdAt
+    }
+
+    public func toProviderConfig() -> ProviderConfig {
+        let data = capabilities.data(using: .utf8) ?? Data()
+        let decoded = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        return ProviderConfig(
+            id: id,
+            name: name,
+            providerType: ProviderType.fromStorageValue(providerType),
+            tier: ProviderTier.fromStorageValue(tier),
+            baseURL: baseURL,
+            apiKeyRef: apiKeyRef,
+            modelId: modelId,
+            enabled: enabled == 1,
+            capabilities: decoded
+        )
     }
 }
 

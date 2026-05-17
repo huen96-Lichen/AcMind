@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Schedule Models
 
 /// 日程事件
-struct ScheduleEvent: Identifiable, Equatable, Hashable {
+struct ScheduleEvent: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let title: String
     var description: String?
@@ -16,7 +16,7 @@ struct ScheduleEvent: Identifiable, Equatable, Hashable {
     var priority: EventPriority
     var tag: String? // 可选标签，如「专注」「会议」「整理」
 
-    enum EventStatus: String, CaseIterable {
+    enum EventStatus: String, CaseIterable, Codable {
         case todo
         case done
         case cancelled
@@ -30,7 +30,7 @@ struct ScheduleEvent: Identifiable, Equatable, Hashable {
         }
     }
 
-    enum EventPriority: String, CaseIterable {
+    enum EventPriority: String, CaseIterable, Codable {
         case low
         case medium
         case high
@@ -171,24 +171,21 @@ enum WorkloadLevel: String, CaseIterable {
 
 // MARK: - Calendar View Mode
 
-enum ScheduleViewMode: String, CaseIterable {
+enum ScheduleViewMode: String, CaseIterable, Codable {
+    case day
     case week
-    case month
-    case year
 
     var displayName: String {
         switch self {
+        case .day: return "天"
         case .week: return "周"
-        case .month: return "月"
-        case .year: return "年"
         }
     }
 
     var icon: String {
         switch self {
+        case .day: return "calendar"
         case .week: return "calendar.badge.clock"
-        case .month: return "calendar"
-        case .year: return "calendar.circle"
         }
     }
 }
@@ -196,11 +193,11 @@ enum ScheduleViewMode: String, CaseIterable {
 // MARK: - Layout Constants
 
 enum ScheduleLayout {
-    static let sidebarWidth: CGFloat = 280
-    static let mainMinWidth: CGFloat = 820
-    static let pagePadding: CGFloat = 24
-    static let pageRadius: CGFloat = 20
-    static let toolbarHeight: CGFloat = 64
+    static let sidebarWidth: CGFloat = ACLayout.secondarySidebarWidth
+    static let mainMinWidth: CGFloat = ACLayout.mainContentMinWidth
+    static let pagePadding: CGFloat = ACLayout.pagePaddingX
+    static let pageRadius: CGFloat = ACLayout.cardRadius
+    static let toolbarHeight: CGFloat = ACLayout.pageHeaderHeight
     static let weekTimeColumnWidth: CGFloat = 56
     static let weekHourHeight: CGFloat = 56
     static let weekHalfHourHeight: CGFloat = 28

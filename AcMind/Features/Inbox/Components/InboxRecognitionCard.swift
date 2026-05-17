@@ -20,6 +20,7 @@ struct InboxRecognitionCard: View {
                         .background(InboxColors.softFill)
                         .cornerRadius(8)
                 }
+                .disabled(true)
             }
             
             if let text = text {

@@ -50,14 +50,16 @@ public final class AppState: ObservableObject, Sendable {
 
     @Published public var primaryRailMode: PrimaryRailMode = .compact {
         didSet {
-            UserDefaults.standard.set(primaryRailMode.rawValue, forKey: "AppSettings.primaryRailMode")
+            guard shouldPersistWorkspaceLayout else { return }
+            UserDefaults.standard.set(primaryRailMode.rawValue, forKey: Self.primaryRailModeKey)
         }
     }
 
     @Published public var workspaceMode: WorkspaceMode = .visible {
         didSet {
+            guard shouldPersistWorkspaceLayout else { return }
             if workspaceMode != .hidden {
-                UserDefaults.standard.set(workspaceMode.rawValue, forKey: "AppSettings.workspaceMode")
+                UserDefaults.standard.set(workspaceMode.rawValue, forKey: Self.workspaceModeKey)
             }
         }
     }
@@ -148,15 +150,20 @@ public final class AppState: ObservableObject, Sendable {
     // MARK: - State Persistence
 
     private func restorePersistedState() {
-        if let saved = UserDefaults.standard.string(forKey: "AppSettings.primaryRailMode"),
-           let mode = PrimaryRailMode(rawValue: saved) {
-            primaryRailMode = mode
-        }
-        if let saved = UserDefaults.standard.string(forKey: "AppSettings.workspaceMode"),
-           let mode = WorkspaceMode(rawValue: saved),
-           mode != .hidden {
-            workspaceMode = mode
-            lastNonHiddenWorkspaceMode = mode
+        if shouldPersistWorkspaceLayout {
+            if let saved = UserDefaults.standard.string(forKey: Self.primaryRailModeKey),
+               let mode = PrimaryRailMode(rawValue: saved) {
+                primaryRailMode = mode
+            }
+            if let saved = UserDefaults.standard.string(forKey: Self.workspaceModeKey),
+               let mode = WorkspaceMode(rawValue: saved),
+               mode != .hidden {
+                workspaceMode = mode
+                lastNonHiddenWorkspaceMode = mode
+            }
+        } else {
+            primaryRailMode = .compact
+            workspaceMode = .visible
         }
     }
 
@@ -262,6 +269,14 @@ public final class AppState: ObservableObject, Sendable {
             showError(AppError.initializationFailed(error))
         }
     }
+
+    private var shouldPersistWorkspaceLayout: Bool {
+        UserDefaults.standard.object(forKey: Self.rememberWorkspaceLayoutKey) as? Bool ?? true
+    }
+
+    private static let primaryRailModeKey = "AppSettings.primaryRailMode"
+    private static let workspaceModeKey = "AppSettings.workspaceMode"
+    private static let rememberWorkspaceLayoutKey = "AppSettings.rememberWorkspaceLayout"
 }
 
 // MARK: - App Error

@@ -45,6 +45,19 @@ public protocol StorageServiceProtocol: Sendable {
     func updateClipboardItem(_ item: ClipboardItem) async throws
     func deleteClipboardItem(id: String) async throws
 
+    // Provider configs
+    func insertProvider(_ config: ProviderConfig) async throws
+    func getProvider(id: String) async throws -> ProviderConfig?
+    func listProviders() async throws -> [ProviderConfig]
+    func updateProvider(_ config: ProviderConfig) async throws
+    func deleteProvider(id: String) async throws
+
+    // Scheduled automation tasks
+    func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws
+    func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask?
+    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask]
+    func deleteScheduledAgentTask(id: String) async throws
+
     // Settings
     func getSetting(key: String) async throws -> String?
     func setSetting(key: String, value: String) async throws

@@ -1,5 +1,8 @@
 # Agent 工作台规格文档
 
+> 说明：本文件描述的是早期 React / Electron 工作台原型，仅保留历史上下文。
+> 当前主线以 Swift 原生 `Features/Native/Agent` 为准。
+
 ## 1. 目标布局
 
 三栏 ChatGPT 风格工作台：
@@ -34,14 +37,14 @@
 
 ## 3. 固定骨架和可编辑区域
 
-### 固定骨架（不可改）
-- `App.tsx`: 全局路由和主壳
-- `Sidebar.tsx`: 全局导航栏
-- `styles.css`: `.app-container`、`.main-content`、`.sidebar` 等全局壳层样式
+### 固定骨架（历史）
+- `App.tsx`: 当时的全局路由和主壳
+- `Sidebar.tsx`: 当时的全局导航栏
+- `styles.css`: 当时的全局壳层样式
 - 路由结构：`/agent` → `AgentPage`
 
-### 可编辑区域
-- `AgentPage.tsx`: Agent 页面入口，三栏接线层
+### 可编辑区域（历史）
+- `AgentPage.tsx`: 当时的 Agent 页面入口，三栏接线层
 - `components/agent/workspace/*`: 所有工作台子组件
 - `components/agent/types.ts`: 类型定义
 - `.page-content` 的 inline style 覆盖（padding: 0, maxWidth: none）

@@ -1,374 +1,257 @@
 import SwiftUI
 import AppKit
-import AcMindKit
 
-// MARK: - Week Calendar View
+// MARK: - Shared Journal Surface
 
-struct WeekCalendarView: View {
+struct ScheduleDayLogView: View {
     @ObservedObject var viewModel: ScheduleViewModel
 
-    private let calendar = Calendar.current
-    private let hours = Array(6...23) // 06:00 - 23:00
-    private let weekdaySymbols = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-
     var body: some View {
-        VStack(spacing: 0) {
-            // 周头部
-            WeekHeader(viewModel: viewModel)
-
-            Divider()
-
-            // 全天事件区域
-            AllDayEventRow(viewModel: viewModel)
-
-            Divider()
-
-            // 时间网格
-            TimeGrid(viewModel: viewModel)
+        VStack(alignment: .leading, spacing: ACLayout.panelGap) {
+            DayOverviewHeader(viewModel: viewModel)
+            DailyRecordList(
+                title: "今天的记录",
+                subtitle: "按时间排序，适合快速回顾当天做了什么。",
+                events: viewModel.selectedDayEvents,
+                viewModel: viewModel
+            )
         }
     }
 }
 
-// MARK: - Week Header
-
-private struct WeekHeader: View {
+struct ScheduleWeekLogView: View {
     @ObservedObject var viewModel: ScheduleViewModel
 
-    private let calendar = Calendar.current
-    private let weekdaySymbols = ["一", "二", "三", "四", "五", "六", "日"]
-
     var body: some View {
-        HStack(spacing: 0) {
-            // 时间列占位
-            Text("")
-                .frame(width: ScheduleLayout.weekTimeColumnWidth)
+        VStack(alignment: .leading, spacing: ACLayout.panelGap) {
+            WeekOverviewHeader(viewModel: viewModel)
 
-            ForEach(weekDates(for: viewModel.selectedDate), id: \.self) { date in
-                let isToday = calendar.isDateInToday(date)
-                let weekdayIndex = (calendar.component(.weekday, from: date) + 5) % 7
-
-                VStack(spacing: 2) {
-                    Text(weekdaySymbols[weekdayIndex])
-                        .font(.system(size: 10))
-                        .foregroundStyle(isToday ? .primary : .secondary)
-
-                    Text("\(calendar.component(.day, from: date))")
-                        .font(.system(size: isToday ? 16 : 14, weight: isToday ? .bold : .medium))
-                        .foregroundStyle(isToday ? .white : .primary)
-                        .frame(width: isToday ? 28 : 24, height: isToday ? 28 : 24)
-                        .background(
-                            isToday ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.clear)
-                        )
-                        .cornerRadius(isToday ? 14 : 0)
-                }
-                .frame(maxWidth: .infinity)
-                .onTapGesture {
-                    viewModel.selectDate(date)
-                }
-            }
-        }
-        .padding(.vertical, 8)
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-}
-
-// MARK: - All Day Event Row
-
-private struct AllDayEventRow: View {
-    @ObservedObject var viewModel: ScheduleViewModel
-
-    private let calendar = Calendar.current
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Text("全天")
-                .font(.system(size: 10))
-                .foregroundStyle(Color.secondary)
-                .frame(width: ScheduleLayout.weekTimeColumnWidth, alignment: .trailing)
-                .padding(.trailing, 8)
-
-            ForEach(weekDates(for: viewModel.selectedDate), id: \.self) { date in
-                let dayAllDayEvents = viewModel.events(for: date).filter { $0.isAllDay }
-
-                VStack(spacing: 2) {
-                    ForEach(dayAllDayEvents) { event in
-                        Text(event.title)
-                            .font(.system(size: 10))
-                            .foregroundStyle(Color.primary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(viewModel.categoryColor(for: event.categoryId).opacity(0.15))
-                            .cornerRadius(4)
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: 24)
-            }
-        }
-        .padding(.vertical, 4)
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-}
-
-// MARK: - Time Grid
-
-private struct TimeGrid: View {
-    @ObservedObject var viewModel: ScheduleViewModel
-
-    private let calendar = Calendar.current
-    private let hours = Array(6...23)
-
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: true) {
-                let week = weekDates(for: viewModel.selectedDate)
-                let placementsByDay = Dictionary(uniqueKeysWithValues: week.map { day in
-                    (day, timelinePlacements(for: viewModel.events(for: day)))
-                })
-
-                VStack(spacing: 0) {
-                    ForEach(hours, id: \.self) { hour in
-                        HourRow(hour: hour, weekDates: week, placementsByDay: placementsByDay, viewModel: viewModel)
-                    }
-                }
-            }
-            .onAppear {
-                // 滚动到当前时间附近
-                let currentHour = calendar.component(.hour, from: Date())
-                let targetHour = max(6, currentHour - 1)
-                proxy.scrollTo(targetHour, anchor: .top)
+            ForEach(viewModel.weekDates(containing: viewModel.selectedDate), id: \.self) { date in
+                DailyRecordList(
+                    title: dayTitle(for: date),
+                    subtitle: viewModel.events(on: date).isEmpty ? "这一天还没有记录。" : nil,
+                    events: viewModel.events(on: date),
+                    viewModel: viewModel,
+                    isHighlighted: Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
+                )
             }
         }
     }
-}
 
-private struct HourRow: View {
-    let hour: Int
-    let weekDates: [Date]
-    let placementsByDay: [Date: [TimelineEventPlacement]]
-    @ObservedObject var viewModel: ScheduleViewModel
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Text(String(format: "%02d:00", hour))
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.tertiary)
-                .frame(width: ScheduleLayout.weekTimeColumnWidth, alignment: .trailing)
-                .padding(.trailing, 8)
-
-            ForEach(weekDates, id: \.self) { date in
-                ZStack(alignment: .top) {
-                    TimeSlotBackground(date: date, hour: hour, viewModel: viewModel)
-
-                    GeometryReader { geometry in
-                        let hourPlacements = (placementsByDay[date] ?? []).filter { $0.startHour == hour }
-
-                        ZStack(alignment: .topLeading) {
-                            ForEach(hourPlacements, id: \.id) { placement in
-                                if let event = viewModel.events(for: date).first(where: { $0.id == placement.id }) {
-                                    EventCard(
-                                        event: event,
-                                        placement: placement,
-                                        viewModel: viewModel,
-                                        containerWidth: geometry.size.width
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: ScheduleLayoutMetrics.hourHeight)
-            }
-        }
-        .id(hour)
-    }
-}
-
-private struct TimeSlotBackground: View {
-    let date: Date
-    let hour: Int
-    @ObservedObject var viewModel: ScheduleViewModel
-
-    private let calendar = Calendar.current
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // 上半部分（0分）
-            Rectangle()
-                .fill(Color.clear)
-                .frame(height: ScheduleLayoutMetrics.hourHeight / 2)
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    createEvent(at: date, hour: hour, minute: 0)
-                }
-                .onHover { isHovered in
-                    if isHovered {
-                        NSCursor.pointingHand.set()
-                    } else {
-                        NSCursor.arrow.set()
-                    }
-                }
-
-            Rectangle()
-                .fill(Color(NSColor.separatorColor).opacity(0.3))
-                .frame(height: 0.5)
-
-            // 下半部分（30分）
-            Rectangle()
-                .fill(Color.clear)
-                .frame(height: ScheduleLayoutMetrics.hourHeight / 2 - 0.5)
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    createEvent(at: date, hour: hour, minute: 30)
-                }
-                .onHover { isHovered in
-                    if isHovered {
-                        NSCursor.pointingHand.set()
-                    } else {
-                        NSCursor.arrow.set()
-                    }
-                }
-        }
-    }
-
-    private func createEvent(at date: Date, hour: Int, minute: Int) {
-        let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
-        guard let eventDate = calendar.date(from: DateComponents(
-            year: dateComponents.year,
-            month: dateComponents.month,
-            day: dateComponents.day,
-            hour: hour,
-            minute: minute
-        )) else { return }
-
-        let snappedDate = ScheduleTimeGridLayout.snapToNearestQuarterHour(eventDate, calendar: calendar)
-        let snappedComponents = calendar.dateComponents([.hour, .minute], from: snappedDate)
-
-        viewModel.openCreateEvent(
-            on: date,
-            hour: snappedComponents.hour ?? hour,
-            minute: snappedComponents.minute ?? minute
-        )
-    }
-}
-
-// MARK: - Event Card
-
-private struct EventCard: View {
-    let event: ScheduleEvent
-    let placement: TimelineEventPlacement
-    @ObservedObject var viewModel: ScheduleViewModel
-    let containerWidth: CGFloat
-
-    private let calendar = Calendar.current
-
-    private var timeRange: String {
+    private func dayTitle(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return "\(formatter.string(from: event.startAt)) - \(formatter.string(from: event.endAt))"
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M月d日 EEEE"
+        return formatter.string(from: date)
     }
+}
 
-    private var durationText: String {
-        let dur = event.durationMinutes
-        if dur < 60 {
-            return "\(dur)m"
-        } else {
-            let h = dur / 60
-            let m = dur % 60
-            return m > 0 ? "\(h)h\(m)m" : "\(h)h"
+// MARK: - Headers
+
+private struct DayOverviewHeader: View {
+    @ObservedObject var viewModel: ScheduleViewModel
+
+    var body: some View {
+        AppSurfaceCard(
+            title: "今天概览",
+            subtitle: "\(viewModel.selectedDayCount) 条记录 · \(formatMinutes(viewModel.selectedDayFocusMinutes))",
+            padding: 16
+        ) {
+            HStack(spacing: 10) {
+                StatPill(value: "\(viewModel.selectedDayCount)", label: "条记录")
+                StatPill(value: formatMinutes(viewModel.selectedDayFocusMinutes), label: "已记录")
+                StatPill(value: formatMinutes(viewModel.selectedDayFreeMinutes), label: "空闲")
+                StatPill(value: "\(viewModel.selectedDayWorkloadPercent)%", label: "饱和度")
+            }
         }
     }
+}
 
-    private var laneFrame: (left: CGFloat, width: CGFloat) {
-        let laneGap: CGFloat = placement.laneCount > 1 ? 6 : 0
-        let padding: CGFloat = placement.laneCount > 1 ? 4 : 18
-        let usableWidth = max(0, containerWidth - padding * 2 - CGFloat(max(0, placement.laneCount - 1)) * laneGap)
-        let laneWidth = placement.laneCount > 0 ? usableWidth / CGFloat(placement.laneCount) : usableWidth
-        let left = padding + CGFloat(placement.lane) * (laneWidth + laneGap)
-        return (left: left, width: laneWidth)
+private struct WeekOverviewHeader: View {
+    @ObservedObject var viewModel: ScheduleViewModel
+
+    var body: some View {
+        AppSurfaceCard(
+            title: "本周概览",
+            subtitle: "\(viewModel.selectedWeekEvents.count) 条记录 · \(formatMinutes(viewModel.selectedWeekFocusMinutes))",
+            padding: 16
+        ) {
+            HStack(spacing: 10) {
+                StatPill(value: "\(viewModel.selectedWeekEvents.count)", label: "条记录")
+                StatPill(value: formatMinutes(viewModel.selectedWeekFocusMinutes), label: "记录时长")
+                StatPill(value: "\(viewModel.weekWorkloadDays.filter { $0.eventCount > 0 }.count)", label: "有记录的天")
+            }
+        }
     }
+}
+
+private struct StatPill: View {
+    let value: String
+    let label: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(event.title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(event.status == .done ? .tertiary : .primary)
-                .lineLimit(1)
+            Text(value)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ACColors.softFill)
+        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                .stroke(ACColors.border, lineWidth: 1)
+        )
+    }
+}
 
-            if placement.height > 24 {
-                HStack(alignment: .center, spacing: 4) {
-                    Text(timeRange)
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
-                    if placement.height > 40 {
-                        Text("·")
-                            .font(.system(size: 9))
-                            .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                        Text(durationText)
-                            .font(.system(size: 9))
-                            .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                            .lineLimit(1)
+// MARK: - Record List
+
+private struct DailyRecordList: View {
+    let title: String
+    let subtitle: String?
+    let events: [ScheduleEvent]
+    @ObservedObject var viewModel: ScheduleViewModel
+    var isHighlighted: Bool = false
+
+    var body: some View {
+        AppSurfaceCard(
+            title: title,
+            subtitle: subtitle,
+            padding: 16
+        ) {
+            VStack(spacing: 8) {
+                if events.isEmpty {
+                    EmptyRecordState()
+                } else {
+                    ForEach(events) { event in
+                        ScheduleRecordRow(event: event, viewModel: viewModel)
                     }
                 }
             }
+        }
+    }
+}
 
-            if placement.height > 40 {
-                Text(viewModel.categoryName(for: event.categoryId))
-                    .font(.system(size: 9))
-                    .foregroundStyle(viewModel.categoryColor(for: event.categoryId))
-                    .lineLimit(1)
+private struct EmptyRecordState: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "note.text")
+                .font(.system(size: 18))
+                .foregroundStyle(.secondary)
+            Text("还没有记录")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            Text("可以点右上角「+」快速记录今天做了什么。")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+    }
+}
+
+private struct ScheduleRecordRow: View {
+    let event: ScheduleEvent
+    @ObservedObject var viewModel: ScheduleViewModel
+
+    private var timeText: String {
+        if event.isAllDay { return "全天" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: event.startAt)
+    }
+
+    private var durationText: String {
+        let minutes = event.durationMinutes
+        if event.isAllDay {
+            return "全天"
+        }
+        if minutes < 60 {
+            return "\(minutes) 分钟"
+        }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        return remainder > 0 ? "\(hours) 小时 \(remainder) 分钟" : "\(hours) 小时"
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button {
+                viewModel.toggleEventStatus(event.id)
+            } label: {
+                Image(systemName: event.status == .done ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 15))
+                    .foregroundStyle(event.status == .done ? .green : .secondary)
             }
+            .buttonStyle(.plain)
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(viewModel.categoryColor(for: event.categoryId))
+                .frame(width: 4, height: 28)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(event.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(event.status == .done ? .secondary : .primary)
+                        .strikethrough(event.status == .done)
+                        .lineLimit(1)
+
+                    if let tag = event.tag {
+                        Text(tag)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.08))
+                            .cornerRadius(4)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Text(timeText)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+
+                    Text(durationText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+
+                    Text(viewModel.categoryName(for: event.categoryId))
+                        .font(.system(size: 11))
+                        .foregroundStyle(viewModel.categoryColor(for: event.categoryId))
+                }
+            }
+
+            Spacer()
+
+            Button {
+                viewModel.deleteEvent(event.id)
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .help("删除记录")
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: ScheduleLayout.eventCornerRadius)
-                .fill(viewModel.categoryColor(for: event.categoryId).opacity(0.12))
+            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                .fill(event.status == .done ? ACColors.softFill.opacity(0.55) : Color.clear)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: ScheduleLayout.eventCornerRadius)
-                .stroke(viewModel.categoryColor(for: event.categoryId).opacity(0.2), lineWidth: 0.5)
-        )
-        .opacity(event.status == .done ? 0.5 : 1.0)
-        .frame(width: laneFrame.width, height: placement.height, alignment: .topLeading)
-        .offset(x: laneFrame.left, y: placement.topOffset)
     }
 }
 
-// MARK: - Helper: Week Dates
-
-private func weekDates(for date: Date) -> [Date] {
-    let cal = Calendar.current
-    guard let weekInterval = cal.dateInterval(of: .weekOfYear, for: date) else { return [] }
-    var dates: [Date] = []
-    var current = weekInterval.start
-    while current < weekInterval.end {
-        dates.append(current)
-        guard let next = cal.date(byAdding: .day, value: 1, to: current) else { break }
-        current = next
-    }
-    return dates
-}
-
-private func timelinePlacements(for events: [ScheduleEvent]) -> [TimelineEventPlacement] {
-    let calendar = Calendar.current
-    let slices = events
-        .filter { !$0.isAllDay && $0.status != .cancelled }
-        .map { event in
-            TimelineEventSlice(
-                id: event.id,
-                startMinute: calendar.component(.hour, from: event.startAt) * 60 + calendar.component(.minute, from: event.startAt),
-                endMinute: calendar.component(.hour, from: event.endAt) * 60 + calendar.component(.minute, from: event.endAt)
-            )
-        }
-
-    return layoutTimelineEvents(
-        slices,
-        visibleStartHour: 6,
-        hourHeight: ScheduleLayoutMetrics.hourHeight,
-        minimumHeight: ScheduleLayoutMetrics.minEventHeight,
-        overlapPadding: 4
-    )
+private func formatMinutes(_ minutes: Int) -> String {
+    if minutes == 0 { return "0 分钟" }
+    let hours = Double(minutes) / 60.0
+    return String(format: "%.1f 小时", hours)
 }

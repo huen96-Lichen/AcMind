@@ -53,9 +53,11 @@ struct InboxSuggestedActionButton: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(InboxColors.cardBackground)
-            .border(InboxColors.border, width: 1)
-            .cornerRadius(10)
+                .border(InboxColors.border, width: 1)
+                .cornerRadius(10)
         }
+        .disabled(true)
+        .opacity(0.72)
     }
 }
 

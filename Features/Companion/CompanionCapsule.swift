@@ -787,6 +787,7 @@ extension Notification.Name {
     public static let companionPlaybackStateChanged = Notification.Name("companion.playbackStateChanged")
     public static let companionVoiceRecordingStarted = Notification.Name("companion.voiceRecordingStarted")
     public static let companionVoiceRecordingStopped = Notification.Name("companion.voiceRecordingStopped")
+    public static let companionVoiceTranscriptionCompleted = Notification.Name("companion.voiceTranscriptionCompleted")
     public static let companionCaptureSuccess = Notification.Name("companion.captureSuccess")
     public static let companionShowQuickNote = Notification.Name("companion.showQuickNote")
     public static let companionQuickNoteSaved = Notification.Name("companion.quickNoteSaved")

@@ -256,7 +256,16 @@ public actor VoiceService: VoiceServiceProtocol {
                 updatedItem.polishedTranscript = polished
                 try await storage.updateSourceItem(updatedItem)
             }
-            
+
+            NotificationCenter.default.post(
+                name: Notification.Name("companion.voiceTranscriptionCompleted"),
+                object: nil,
+                userInfo: [
+                    "sourceItemId": sourceItem.id,
+                    "transcript": transcript
+                ]
+            )
+
             updateStatus(.idle)
             
         } catch {

@@ -394,5 +394,9 @@ private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked 
     func addProvider(_ config: ProviderConfig) async throws {}
     func updateProvider(_ config: ProviderConfig) async throws {}
     func removeProvider(id: String) async throws {}
+    func saveProviderAPIKey(_ apiKey: String, for providerId: String) async throws {}
+    func deleteProviderAPIKey(for providerId: String) async throws {}
     func getAPIKey(for providerId: String) async -> String? { nil }
+    func getAIModelCategoryPreferences() async -> [AIModelCategoryPreference] { AIModelCatalog.defaultPreferences() }
+    func updateAIModelCategoryPreferences(_ preferences: [AIModelCategoryPreference]) async throws {}
 }

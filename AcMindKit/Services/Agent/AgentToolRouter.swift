@@ -116,7 +116,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
             let text = request.parameters["text"] ?? ""
             let item = SourceItem(
                 type: .text,
-                source: .agent,
+                source: .capsule,
                 status: .captured,
                 title: String(text.prefix(50)),
                 previewText: text
@@ -160,7 +160,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         switch request.action {
         case "read":
             let items = try await storage.listClipboardItems(limit: 5)
-            let output = items.map { "\($0.content.prefix(100))" }.joined(separator: "\n---\n")
+            let output = items.map { String(($0.content ?? "").prefix(100)) }.joined(separator: "\n---\n")
             return AgentToolResult(
                 toolType: .clipboard,
                 action: "read",

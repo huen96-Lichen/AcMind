@@ -26,10 +26,11 @@ class InboxViewModel: ObservableObject {
     @Published var showError: Bool = false
     
     // MARK: - Dependencies
-    
+
     private let storage: StorageServiceProtocol
     private let exportService: ExportServiceProtocol
-    
+    private let captureService: CaptureServiceProtocol
+
     // MARK: - Init
     
     init(
@@ -39,6 +40,10 @@ class InboxViewModel: ObservableObject {
         let container = ServiceContainer.isInitialized() ? ServiceContainer.shared : nil
         self.storage = storage ?? container?.storageService ?? StorageService()
         self.exportService = exportService ?? container?.exportService ?? ExportService()
+        self.captureService = container?.captureService ?? CaptureService(
+            storage: self.storage,
+            assetStore: container?.assetStore
+        )
     }
     
     // MARK: - Load
@@ -107,9 +112,71 @@ class InboxViewModel: ObservableObject {
                 markdownPreview = nil
             }
             await loadItems()
+            ToastManager.shared.show(.success, "已删除收集内容")
         } catch {
             errorMessage = "删除失败: \(error.localizedDescription)"
             showError = true
+            ToastManager.shared.show(.error, error.localizedDescription)
+        }
+    }
+
+    // MARK: - Create / Update
+
+    func createTextItem(_ text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            showError = true
+            errorMessage = "输入不能为空"
+            return
+        }
+
+        do {
+            _ = try await captureService.captureFromManualText(trimmed)
+            await loadItems()
+            ToastManager.shared.show(.success, "已创建文本收集")
+        } catch {
+            errorMessage = "创建失败: \(error.localizedDescription)"
+            showError = true
+            ToastManager.shared.show(.error, error.localizedDescription)
+        }
+    }
+
+    func importFile(url: URL) async {
+        do {
+            _ = try await captureService.captureFromFile(url: url)
+            await loadItems()
+            ToastManager.shared.show(.success, "文件已导入收集箱")
+        } catch {
+            errorMessage = "导入失败: \(error.localizedDescription)"
+            showError = true
+            ToastManager.shared.show(.error, error.localizedDescription)
+        }
+    }
+
+    func captureWebpage(url: URL) async {
+        do {
+            _ = try await captureService.captureFromWebpage(url: url)
+            await loadItems()
+            ToastManager.shared.show(.success, "网页已抓取到收集箱")
+        } catch {
+            errorMessage = "抓取失败: \(error.localizedDescription)"
+            showError = true
+            ToastManager.shared.show(.error, error.localizedDescription)
+        }
+    }
+
+    func updateStatus(_ item: SourceItem, status: SourceItemStatus) async {
+        var updated = item
+        updated.status = status
+        updated.updatedAt = Date()
+        do {
+            try await storage.updateSourceItem(updated)
+            await loadItems()
+            ToastManager.shared.show(.success, "状态已更新")
+        } catch {
+            errorMessage = "更新状态失败: \(error.localizedDescription)"
+            showError = true
+            ToastManager.shared.show(.error, error.localizedDescription)
         }
     }
     
@@ -130,9 +197,11 @@ class InboxViewModel: ObservableObject {
             markdownPreview = builder.build(note: note, sourceItem: item)
             
             await loadItems()
+            ToastManager.shared.show(.success, "已完成蒸馏")
         } catch {
             errorMessage = "蒸馏失败: \(error.localizedDescription)"
             showError = true
+            ToastManager.shared.show(.error, error.localizedDescription)
         }
     }
     
@@ -181,6 +250,7 @@ class InboxViewModel: ObservableObject {
                 let fullPath = (record.vaultPath as NSString).appendingPathComponent(record.relativeFilePath)
                 if FileManager.default.fileExists(atPath: fullPath) {
                     NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
+                    ToastManager.shared.show(.success, "已打开 Vault 文件")
                     return
                 }
             }
@@ -188,6 +258,7 @@ class InboxViewModel: ObservableObject {
         
         errorMessage = "未找到关联的 Vault 文件"
         showError = true
+        ToastManager.shared.show(.warning, "未找到关联的 Vault 文件")
     }
     
     // MARK: - Private

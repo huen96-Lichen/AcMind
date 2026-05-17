@@ -4,15 +4,15 @@ import PackageDescription
 
 // MARK: - AcMind Package Configuration
 //
-// ⚠️ 本 Package 可独立构建和发布，不依赖 Electron 运行时。
-// Electron 代码已归档到 src.legacy/ 作为参考实现。
+// ⚠️ 本 Package 为当前主线实现，独立构建和发布，不依赖 Electron 运行时。
+// Electron 侧原型已从活跃仓库中移除。
 //
 // 构建方式：
 //   swift build                          # Debug 构建
 //   swift build -c Release               # Release 构建
 //   scripts/build.sh                     # 完整构建 + 签名 + 打包
 //
-// 详见 docs/electron-decommission-guide.md
+// 详见仓库中的 Swift 原生文档与构建脚本
 
 let package = Package(
     name: "AcMind",

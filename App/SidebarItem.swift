@@ -15,11 +15,11 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public static var mainItems: [SidebarItem] {
-        [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
+        [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .companion, .settings]
     }
 
     public static var primaryNavItems: [SidebarItem] {
-        [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .tools, .companion, .settings]
+        [.dynamicSurface, .agent, .inbox, .clipboard, .schedule, .workbench, .companion, .settings]
     }
 
     public var displayName: String {
@@ -60,7 +60,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .clipboard: return KeyboardShortcut(key: "3", modifiers: [.command])
         case .schedule: return KeyboardShortcut(key: "4", modifiers: [.command])
         case .workbench: return KeyboardShortcut(key: "5", modifiers: [.command])
-        case .tools: return KeyboardShortcut(key: "6", modifiers: [.command])
+        case .tools: return nil
         case .companion: return KeyboardShortcut(key: "7", modifiers: [.command])
         case .settings: return KeyboardShortcut(key: ",", modifiers: [.command])
         }

@@ -7,14 +7,17 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
     private let capsulePositionKey = "DesktopCapsule.position"
     private let continentScreenKey = "DynamicSurface.continentTopDockScreenID"
     private let visibilityStateKey = "DynamicSurface.visibilityState"
+    private var userDefaultsSuiteName: String!
 
     override func setUp() {
         super.setUp()
+        userDefaultsSuiteName = "AcMindKitTests.DynamicSurfaceCoordinatorTests.\(UUID().uuidString)"
         clearPersistedState()
     }
 
     override func tearDown() {
         clearPersistedState()
+        userDefaultsSuiteName = nil
         super.tearDown()
     }
 
@@ -35,7 +38,7 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
             throw XCTSkip("No main screen available")
         }
 
-        let coordinator = DynamicSurfaceCoordinator()
+        let coordinator = makeCoordinator()
         let capsule = MockSurfaceAdapter()
         let continent = MockSurfaceAdapter()
         coordinator.registerCapsuleAdapter(capsule)
@@ -63,7 +66,7 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
             throw XCTSkip("No main screen available")
         }
 
-        let coordinator = DynamicSurfaceCoordinator()
+        let coordinator = makeCoordinator()
         let capsule = MockSurfaceAdapter()
         let continent = MockSurfaceAdapter()
         coordinator.registerCapsuleAdapter(capsule)
@@ -85,7 +88,7 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
             throw XCTSkip("No main screen available")
         }
 
-        let coordinator = DynamicSurfaceCoordinator()
+        let coordinator = makeCoordinator()
         let capsule = MockSurfaceAdapter()
         let continent = MockSurfaceAdapter()
         coordinator.registerCapsuleAdapter(capsule)
@@ -115,7 +118,7 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
             throw XCTSkip("No main screen available")
         }
 
-        let coordinator = DynamicSurfaceCoordinator()
+        let coordinator = makeCoordinator()
         let capsule = MockSurfaceAdapter()
         let continent = MockSurfaceAdapter()
         coordinator.registerCapsuleAdapter(capsule)
@@ -135,14 +138,14 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
     }
 
     func testOnlyOneSurfaceVisibleAfterRestore() throws {
-        let persistedCoordinator = DynamicSurfaceCoordinator()
+        let persistedCoordinator = makeCoordinator()
         let persistedCapsule = MockSurfaceAdapter()
         let persistedContinent = MockSurfaceAdapter()
         persistedCoordinator.registerCapsuleAdapter(persistedCapsule)
         persistedCoordinator.registerContinentAdapter(persistedContinent)
         persistedCoordinator.transition(to: .continentCompact, reason: .manualCommand)
 
-        let restoredCoordinator = DynamicSurfaceCoordinator()
+        let restoredCoordinator = makeCoordinator()
         let restoredCapsule = MockSurfaceAdapter()
         let restoredContinent = MockSurfaceAdapter()
         restoredCoordinator.registerCapsuleAdapter(restoredCapsule)
@@ -160,7 +163,7 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
             throw XCTSkip("No main screen available")
         }
 
-        let coordinator = DynamicSurfaceCoordinator()
+        let coordinator = makeCoordinator()
         let capsule = MockSurfaceAdapter()
         let continent = MockSurfaceAdapter()
         coordinator.registerCapsuleAdapter(capsule)
@@ -185,7 +188,7 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
     }
 
     func testDirectShowCannotLeaveBothPanelsVisible() throws {
-        let coordinator = DynamicSurfaceCoordinator()
+        let coordinator = makeCoordinator()
         let capsule = MockSurfaceAdapter()
         let continent = MockSurfaceAdapter()
         coordinator.registerCapsuleAdapter(capsule)
@@ -200,9 +203,16 @@ final class DynamicSurfaceCoordinatorTests: XCTestCase {
     }
 
     private func clearPersistedState() {
-        UserDefaults.standard.removeObject(forKey: capsulePositionKey)
-        UserDefaults.standard.removeObject(forKey: continentScreenKey)
-        UserDefaults.standard.removeObject(forKey: visibilityStateKey)
+        guard let suite = userDefaultsSuiteName.flatMap(UserDefaults.init(suiteName:)) else { return }
+        suite.removePersistentDomain(forName: userDefaultsSuiteName)
+        suite.synchronize()
+    }
+
+    private func makeCoordinator() -> DynamicSurfaceCoordinator {
+        guard let suite = userDefaultsSuiteName.flatMap(UserDefaults.init(suiteName:)) else {
+            return DynamicSurfaceCoordinator()
+        }
+        return DynamicSurfaceCoordinator(userDefaults: suite)
     }
 }
 

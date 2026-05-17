@@ -17,7 +17,7 @@ public final class OpenAICompatibleProvider: AIProvider {
     
     public init(
         baseURL: String,
-        apiKey: String,
+        apiKey: String = "",
         timeout: TimeInterval = 120.0,
         defaultHeaders: [String: String] = [:]
     ) {
@@ -38,7 +38,9 @@ public final class OpenAICompatibleProvider: AIProvider {
         var request = URLRequest(url: baseURL.appendingPathComponent("/v1/chat/completions"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        if !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         request.timeoutInterval = timeout
         
         // 添加自定义 headers
@@ -109,7 +111,9 @@ public final class OpenAICompatibleProvider: AIProvider {
                     var request = URLRequest(url: baseURL.appendingPathComponent("/v1/chat/completions"))
                     request.httpMethod = "POST"
                     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                    if !apiKey.isEmpty {
+                        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                    }
                     
                     for (key, value) in defaultHeaders {
                         request.setValue(value, forHTTPHeaderField: key)
@@ -163,7 +167,9 @@ public final class OpenAICompatibleProvider: AIProvider {
     
     public func listModels() async throws -> [String] {
         var request = URLRequest(url: baseURL.appendingPathComponent("/v1/models"))
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        if !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         
         for (key, value) in defaultHeaders {
             request.setValue(value, forHTTPHeaderField: key)
@@ -188,7 +194,9 @@ public final class OpenAICompatibleProvider: AIProvider {
     
     public func healthCheck() async throws -> Bool {
         var request = URLRequest(url: baseURL.appendingPathComponent("/v1/models"))
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        if !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         
         for (key, value) in defaultHeaders {
             request.setValue(value, forHTTPHeaderField: key)

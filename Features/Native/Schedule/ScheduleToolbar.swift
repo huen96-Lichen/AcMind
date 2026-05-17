@@ -7,94 +7,93 @@ struct ScheduleToolbar: View {
     @ObservedObject var viewModel: ScheduleViewModel
 
     var body: some View {
-        HStack(spacing: 12) {
-            // 左侧：标题
-            VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.viewTitle)
-                    .font(.system(size: 17, weight: .semibold))
-                Text(viewModel.viewSubtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // 右侧：操作按钮
-            HStack(spacing: 8) {
-                // 今天按钮
+        ACPageHeader(title: viewModel.viewTitle, subtitle: viewModel.viewSubtitle) {
+            HStack(spacing: ACLayout.gapM) {
                 Button {
                     viewModel.goToToday()
                 } label: {
                     Text("今天")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(ACTypography.button)
+                        .foregroundStyle(ACColors.primaryText)
+                        .frame(height: ACLayout.buttonHeightL)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .cornerRadius(6)
+                        .background(ACColors.softFill)
+                        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                                .stroke(ACColors.border, lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
 
-                // 前进后退
                 HStack(spacing: 0) {
-                    Button { viewModel.goToPrevious() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11, weight: .semibold))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
+                    navigationButton(systemName: "chevron.left") {
+                        viewModel.goToPrevious()
                     }
-                    .buttonStyle(.plain)
 
-                    Button { viewModel.goToNext() } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
+                    Divider()
+                        .frame(height: 20)
+
+                    navigationButton(systemName: "chevron.right") {
+                        viewModel.goToNext()
                     }
-                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 2)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
+                .frame(height: ACLayout.buttonHeightL)
+                .background(ACColors.softFill)
+                .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                        .stroke(ACColors.border, lineWidth: 1)
                 )
 
-                // 分段控件：周 / 月 / 年
                 ScheduleSegmentedControl(selection: $viewModel.viewMode)
 
-                // 搜索按钮
                 Button {} label: {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 13))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(ACColors.primaryText)
+                        .frame(width: ACLayout.buttonHeightL, height: ACLayout.buttonHeightL)
+                        .background(ACColors.softFill)
+                        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                                .stroke(ACColors.border, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
-                .help("搜索日程")
+                .disabled(true)
+                .opacity(0.35)
+                .help("搜索暂未实现")
 
-                // 添加日程按钮
                 Button {
                     viewModel.openCreateEvent()
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
+                        .foregroundStyle(ACColors.primaryText)
+                        .frame(width: ACLayout.buttonHeightL, height: ACLayout.buttonHeightL)
+                        .background(ACColors.softFill)
+                        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                                .stroke(ACColors.border, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
-                .help("添加日程")
+                .help("添加记录")
             }
         }
-        .padding(.horizontal, 20)
-        .frame(height: ScheduleLayout.toolbarHeight)
-        .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private func navigationButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(ACColors.primaryText)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -110,22 +109,26 @@ struct ScheduleSegmentedControl: View {
                     selection = mode
                 } label: {
                     Text(mode.displayName)
-                        .font(.system(size: 12, weight: selection == mode ? .medium : .regular))
-                        .foregroundStyle(selection == mode ? .primary : .secondary)
+                        .font(ACTypography.miniMedium)
+                        .foregroundStyle(selection == mode ? ACColors.primaryText : ACColors.secondaryText)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
                         .background(
                             selection == mode
-                                ? Color(NSColor.controlBackgroundColor)
+                                ? ACColors.cardBackground
                                 : Color.clear
                         )
-                        .cornerRadius(5)
+                        .clipShape(RoundedRectangle(cornerRadius: ACLayout.tinyRadius, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(2)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(7)
+        .background(ACColors.softFill)
+        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
+                .stroke(ACColors.border, lineWidth: 1)
+        )
     }
 }

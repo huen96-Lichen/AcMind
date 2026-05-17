@@ -1,26 +1,62 @@
 import Foundation
+import AppKit
 import SwiftUI
 import AcMindKit
 
 struct AgentWorkspaceView: View {
     @StateObject private var viewModel = AgentWorkspaceViewModel()
+    @StateObject private var providerManagementViewModel = SettingsViewModel()
+    @AppStorage(AgentWorkspacePreferences.managementRailWidthKey) private var managementRailWidth: Double = AgentWorkspacePreferences.defaultManagementRailWidth
+    @AppStorage(AgentWorkspacePreferences.managementRailCollapsedKey) private var managementRailCollapsed: Bool = true
+    @AppStorage(AgentWorkspacePreferences.managementRailVisibleKey) private var managementRailVisible: Bool = true
+    @State private var showsQuickAsk = false
+    @State private var showsProviderManager = false
+    @State private var quickAskText = ""
+    @State private var railDragBaseWidth: Double?
+    @State private var folderRenameTarget: AgentProjectFolder?
+    @State private var showsAuxiliaryDrawer = false
 
     var body: some View {
-        ACWorkspaceShell(
-            title: "Agent",
-            subtitle: "新建对话、项目文件夹和历史对话都收进同一个原生工作台。",
-            trailing: {
-                HStack(spacing: 10) {
-                    ACBadge(viewModel.connectionStatusLabel, kind: viewModel.connectionStatusKind)
-                    ACBadge(viewModel.routeSummary, kind: .purple)
+        GeometryReader { geometry in
+            VStack(alignment: .leading, spacing: 0) {
+                conversationHeader
+                    .frame(height: ACLayout.pageHeaderHeight)
+                    .padding(.horizontal, ACLayout.pagePaddingX)
+
+                ZStack(alignment: .trailing) {
+                    mainConversationPanel
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, ACLayout.pagePaddingX)
+                        .padding(.vertical, ACLayout.pagePaddingY)
+                        .padding(.bottom, ACLayout.pagePaddingBottom)
+
+                    if showsAuxiliaryDrawer {
+                        auxiliaryDrawer
+                            .frame(width: min(max(320, geometry.size.width * 0.24), 388))
+                            .padding(.trailing, 12)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
-            },
-            left: { leftPanel },
-            center: { centerPanel },
-            right: { rightPanel }
-        )
+                .animation(.spring(response: 0.32, dampingFraction: 0.88), value: showsAuxiliaryDrawer)
+            }
+            .sheet(item: $folderRenameTarget) { folder in
+                FolderRenameSheet(
+                    folderName: folder.name,
+                    isSystemFolder: folder.isSystem,
+                    onConfirm: { newName in
+                        Task { await viewModel.renameFolder(folderID: folder.id, to: newName) }
+                    }
+                )
+            }
+            .sheet(isPresented: $showsProviderManager) {
+                ProviderManagementSheet(viewModel: providerManagementViewModel)
+            }
+        }
         .task {
             await viewModel.loadIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .acmindProvidersDidChange)) { _ in
+            Task { await viewModel.refreshProviders() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionVoiceAgentDraft)) { notification in
             if let draft = notification.object as? String {
@@ -34,116 +70,432 @@ struct AgentWorkspaceView: View {
         }
     }
 
-    private var leftPanel: some View {
-        ACCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 14) {
-                sidebarHeader
+    private var conversationHeader: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(viewModel.activeSessionTitle)
+                    .font(ACTypography.cardTitle)
+                    .foregroundStyle(ACColors.primaryText)
+                    .lineLimit(1)
 
-                HStack(spacing: 8) {
-                    ACButton("新建对话", kind: .primary, minWidth: 0) {
-                        Task { await viewModel.createNewChat() }
-                    }
+                Text(viewModel.activeSessionSubtitle)
+                    .font(ACTypography.caption)
+                    .foregroundStyle(ACColors.secondaryText)
+                    .lineLimit(1)
+            }
 
-                    ACButton("新建项目", kind: .secondary, minWidth: 0) {
-                        Task { await viewModel.createProjectFolder() }
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                ACBadge(viewModel.connectionStatusLabel, kind: viewModel.connectionStatusKind)
+                ACBadge(viewModel.activeActionMode.displayName, kind: .blue)
+                ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
+
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                        showsQuickAsk.toggle()
                     }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkle.magnifyingglass")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Quick Ask")
+                            .font(ACTypography.mini)
+                    }
+                    .foregroundStyle(ACColors.primaryText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(showsQuickAsk ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(showsQuickAsk ? ACColors.accentPurple.opacity(0.35) : ACColors.border, lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
 
-                ACSearchField("搜索对话 / 文件夹", text: $viewModel.searchText, width: nil, height: ACLayout.controlHeight)
+                Button {
+                    showsProviderManager = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "server.rack")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Provider 管理")
+                            .font(ACTypography.mini)
+                    }
+                    .foregroundStyle(ACColors.primaryText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(ACColors.softFill)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(ACColors.border, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    sectionTitle("项目文件夹")
+                Button {
+                    showsAuxiliaryDrawer.toggle()
+                } label: {
+                    Image(systemName: showsAuxiliaryDrawer ? "sidebar.right" : "sidebar.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(ACColors.primaryText)
+                        .frame(width: 32, height: 32)
+                        .background(ACColors.softFill)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(ACColors.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
 
-                    VStack(spacing: 8) {
-                        ForEach(viewModel.sidebarFolders) { folder in
-                            sidebarFolderRow(folder)
+    private var mainConversationPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if showsQuickAsk {
+                AgentQuickAskStrip(
+                    draft: $quickAskText,
+                    title: "Quick Ask",
+                    subtitle: "轻量提问，直接走现有 Agent 路由",
+                    primaryActionTitle: "发送并新建会话",
+                    secondaryActionTitle: "收起",
+                    suggestions: Array(AgentActionMode.quickActions.prefix(3)),
+                    onSend: {
+                        Task { await sendQuickAsk() }
+                    },
+                    onDismiss: {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                            showsQuickAsk = false
                         }
                     }
+                )
+            }
+
+            threadView
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .layoutPriority(1)
+
+            AgentInputComposer(
+                inputText: $viewModel.inputText,
+                selectedActionMode: $viewModel.selectedActionMode,
+                selectedProviderID: $viewModel.selectedProviderID,
+                providers: viewModel.enabledProviders,
+                onProviderSelect: { providerID in
+                    Task { await viewModel.selectProvider(providerID) }
+                },
+                onSend: {
+                    Task { await viewModel.sendCurrentInput() }
+                },
+                onVoiceInput: {
+                    NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+                },
+                onAttachFile: {
+                    attachFilesToComposer()
+                },
+                onTools: {
+                    showsAuxiliaryDrawer = true
+                },
+                onNewConversation: {
+                    Task { await viewModel.createNewChat() }
                 }
+            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        sectionTitle("历史对话")
-                        Spacer(minLength: 0)
-                        Text("\(viewModel.historySessions.count)")
-                            .font(ACTypography.mini)
-                            .foregroundStyle(ACColors.tertiaryText)
-                    }
+    private var auxiliaryDrawer: some View {
+        managementRail(width: 320, collapsed: false)
+            .frame(maxHeight: .infinity, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.white.opacity(0.92))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(ACColors.border.opacity(0.8), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 8)
+    }
 
-                    VStack(spacing: 10) {
-                        if viewModel.recentSessionSections.isEmpty {
-                            Text("没有找到符合条件的历史对话。")
-                                .font(ACTypography.caption)
-                                .foregroundStyle(ACColors.secondaryText)
-                                .padding(.vertical, 8)
-                        } else {
-                            ForEach(viewModel.recentSessionSections) { section in
-                                VStack(alignment: .leading, spacing: 10) {
-                                    historySectionHeader(section)
-                                    VStack(spacing: 8) {
-                                        ForEach(section.sessions) { session in
-                                            Button {
-                                                Task { await viewModel.selectSession(session.id) }
-                                            } label: {
-                                                historySessionRow(session)
-                                            }
-                                            .buttonStyle(.plain)
+    private func attachFilesToComposer() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = []
+        panel.title = "选择要引用的文件"
+
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls
+        guard !urls.isEmpty else { return }
+
+        let snippets = urls.map { "附件：\($0.lastPathComponent)" }.joined(separator: "\n")
+        if viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            viewModel.inputText = "请结合这些附件一起处理：\n\(snippets)"
+        } else {
+            viewModel.inputText += "\n\n\(snippets)"
+        }
+
+        ToastManager.shared.show(.success, "已附加 \(urls.count) 个文件")
+    }
+
+    private func sendQuickAsk() async {
+        let content = quickAskText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !content.isEmpty else { return }
+
+        let previousSessionID = viewModel.selectedSessionID
+        quickAskText = ""
+        showsQuickAsk = false
+
+        await viewModel.createNewChat()
+        viewModel.selectedActionMode = .auto
+        viewModel.inputText = content
+        await viewModel.sendCurrentInput()
+
+        if let previousSessionID {
+            await viewModel.selectSession(previousSessionID)
+        }
+    }
+
+    private func managementRail(width: CGFloat, collapsed: Bool) -> some View {
+        return ZStack(alignment: .leading) {
+            if collapsed {
+                collapsedManagementRail
+            } else {
+                expandedManagementRail
+            }
+
+            railResizeHandle
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            Group {
+                if collapsed {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.white.opacity(0.55))
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white.opacity(0.88))
+                }
+            }
+        )
+        .overlay(
+            Group {
+                if collapsed {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(ACColors.border.opacity(0.42), lineWidth: 1)
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(ACColors.border.opacity(0.72), lineWidth: 1)
+                }
+            }
+        )
+        .shadow(color: .black.opacity(collapsed ? 0.01 : 0.025), radius: collapsed ? 2 : 5, x: 0, y: collapsed ? 1 : 2)
+        .animation(.spring(response: 0.32, dampingFraction: 0.88), value: managementRailCollapsed)
+    }
+
+    private var expandedManagementRail: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 9) {
+                managementRailHeader
+                managementQuickActions
+                ACSearchField("搜索对话 / 文件夹", text: $viewModel.searchText, width: nil, height: ACLayout.controlHeight)
+
+                managementHistorySection
+                managementFolderSection
+                managementStatusSection
+            }
+            .padding(12)
+        }
+    }
+
+    private var collapsedManagementRail: some View {
+        VStack(spacing: 5) {
+            VStack(spacing: 5) {
+                railIconButton(title: "新建", icon: "square.and.pencil", showsLabel: false, action: {
+                    Task { await viewModel.createNewChat() }
+                })
+                railIconButton(title: "项目", icon: "folder.badge.plus", showsLabel: false, action: {
+                    Task { await viewModel.createProjectFolder() }
+                })
+                railIconButton(title: "历史", icon: "clock.arrow.circlepath", badge: "\(viewModel.historySessions.count)", showsLabel: false, action: {
+                    managementRailCollapsed = false
+                })
+                railIconButton(title: "文件夹", icon: "folder", badge: "\(viewModel.sidebarFolders.count)", showsLabel: false, action: {
+                    managementRailCollapsed = false
+                })
+            }
+        }
+        .padding(.vertical, 5)
+        .padding(.horizontal, 4)
+    }
+
+    private var managementRailHeader: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("管理栏")
+                    .font(ACTypography.captionMedium)
+                    .foregroundStyle(ACColors.primaryText)
+                Text("新建、历史、归类与文件夹管理。")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.secondaryText)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .trailing, spacing: 6) {
+                HStack(spacing: 6) {
+                    ACBadge("\(viewModel.historySessions.count)", kind: .neutral)
+                    ACBadge("\(viewModel.sidebarFolders.count)", kind: .neutral)
+                }
+                Text("\(Int(managementRailWidth.rounded())) px")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.tertiaryText)
+            }
+        }
+    }
+
+    private var managementQuickActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            railLineButton(title: "新建对话", icon: "square.and.pencil") {
+                Task { await viewModel.createNewChat() }
+            }
+
+            railLineButton(title: "新建项目", icon: "folder.badge.plus") {
+                Task { await viewModel.createProjectFolder() }
+            }
+
+            railLineButton(title: "新建文件夹", icon: "folder.badge.plus") {
+                Task { await viewModel.createProjectFolder() }
+            }
+
+            railLineButton(title: "当前会话", icon: "bubble.left.and.bubble.right") {
+                managementRailCollapsed = false
+                if let session = viewModel.selectedSessionSummary {
+                    Task { await viewModel.selectSession(session.id) }
+                }
+            }
+
+            Text("右键或菜单可进行重命名与归类。")
+                .font(ACTypography.mini)
+                .foregroundStyle(ACColors.tertiaryText)
+        }
+    }
+
+    private var managementHistorySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                sectionTitle("历史对话")
+                Spacer(minLength: 0)
+                Text("\(viewModel.historySessions.count)")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.tertiaryText)
+            }
+
+            VStack(spacing: 8) {
+                if viewModel.recentSessionSections.isEmpty {
+                    Text("没有找到符合条件的历史对话。")
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.secondaryText)
+                        .padding(.vertical, 6)
+                } else {
+                    ForEach(viewModel.recentSessionSections) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            historySectionHeader(section)
+
+                            VStack(spacing: 6) {
+                                ForEach(section.sessions) { session in
+                                    Button {
+                                        Task { await viewModel.selectSession(session.id) }
+                                    } label: {
+                                        historySessionRow(session)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .contextMenu {
+                                        Button("删除对话", role: .destructive) {
+                                            Task { await viewModel.deleteSession(session.id) }
                                         }
                                     }
                                 }
-                                .padding(12)
-                                .background(section.kind.tint.opacity(0.04))
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(section.kind.tint.opacity(0.18), lineWidth: 1)
-                                )
                             }
                         }
+                        .padding(9)
+                        .background(section.kind.tint.opacity(0.035))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(section.kind.tint.opacity(0.10), lineWidth: 1)
+                        )
                     }
                 }
-
-                Spacer(minLength: 0)
             }
         }
     }
 
-    private var sidebarHeader: some View {
+    private var managementFolderSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("项目与会话")
-                        .font(ACTypography.cardTitle)
-                        .foregroundStyle(ACColors.primaryText)
-                    Text("用文件夹组织任务、研究和日常对话。")
-                        .font(ACTypography.caption)
-                        .foregroundStyle(ACColors.secondaryText)
-                        .lineLimit(2)
-                }
-
+            HStack {
+                sectionTitle("项目文件夹")
                 Spacer(minLength: 0)
-
-                ACBadge("\(viewModel.sessions.count)", kind: .neutral)
+                Text("\(viewModel.sidebarFolders.count)")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.tertiaryText)
             }
 
-            HStack(spacing: 8) {
-                ACBadge(viewModel.selectedFolderName, kind: .blue)
-                ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
+            VStack(spacing: 7) {
+                ForEach(viewModel.sidebarFolders) { folder in
+                    sidebarFolderRow(folder)
+                }
             }
         }
     }
 
-    private var centerPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ACCard(padding: 18) {
-                VStack(alignment: .leading, spacing: 14) {
-                    headerBar
-                    threadView
+    private var managementStatusSection: some View {
+        ACCard(padding: 11) {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Text("当前状态")
+                        .font(ACTypography.captionMedium)
+                        .foregroundStyle(ACColors.primaryText)
+                    Spacer(minLength: 0)
+                    ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
+
+                    Button {
+                        showsAuxiliaryDrawer = false
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(ACColors.secondaryText)
+                            .frame(width: 22, height: 22)
+                            .background(ACColors.softFill)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(ACColors.border, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ACInfoTable([
+                    .init("当前文件夹", value: viewModel.selectedFolderName),
+                    .init("当前模型", value: viewModel.currentModelLabel),
+                    .init("输出模式", value: viewModel.selectedActionMode.displayName),
+                    .init("会话", value: viewModel.activeSessionTitle)
+                ])
+
+                if !viewModel.executionEntries.isEmpty {
+                    Divider().overlay(ACColors.divider)
+                    executionSummaryCard
                 }
             }
-
-            composerCard
         }
+    }
+
+    private var quickNavigatorCard: some View {
+        EmptyView()
     }
 
     private var headerBar: some View {
@@ -151,31 +503,39 @@ struct AgentWorkspaceView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(viewModel.activeSessionTitle)
-                        .font(ACTypography.cardTitle)
-                        .foregroundStyle(ACColors.primaryText)
+                        .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ACColors.primaryText)
                     Text(viewModel.activeSessionSubtitle)
-                        .font(ACTypography.caption)
+                        .font(ACTypography.mini)
                         .foregroundStyle(ACColors.secondaryText)
                         .lineLimit(2)
                 }
 
                 Spacer(minLength: 0)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ACBadge(viewModel.selectedFolderName, kind: .neutral)
                     ACBadge(viewModel.activeActionMode.displayName, kind: .blue)
                     ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
                 }
             }
 
-            HStack(spacing: 10) {
-                Picker("模型", selection: $viewModel.selectedProviderID) {
+            HStack(spacing: 8) {
+                Picker(
+                    "模型",
+                    selection: Binding(
+                        get: { viewModel.selectedProviderID },
+                        set: { providerID in
+                            Task { await viewModel.selectProvider(providerID) }
+                        }
+                    )
+                ) {
                     ForEach(viewModel.enabledProviders) { provider in
                         Text(provider.name).tag(provider.id)
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 260, alignment: .leading)
+                .frame(maxWidth: 240, alignment: .leading)
 
                 Picker("模式", selection: $viewModel.selectedActionMode) {
                     ForEach(AgentActionMode.allCases) { mode in
@@ -183,13 +543,15 @@ struct AgentWorkspaceView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 180, alignment: .leading)
+                .frame(maxWidth: 168, alignment: .leading)
 
                 Spacer(minLength: 0)
 
                 ACButton("继续当前会话", kind: .ghost, minWidth: 0) {
                     Task { await viewModel.reloadCurrentSession() }
                 }
+
+                railVisibilityToggleButton
             }
         }
     }
@@ -197,7 +559,7 @@ struct AgentWorkspaceView: View {
     private var threadView: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: 12) {
+                LazyVStack(alignment: .leading, spacing: 5) {
                     if viewModel.messages.isEmpty {
                         welcomeCard
                     } else {
@@ -206,14 +568,11 @@ struct AgentWorkspaceView: View {
                                 .id(message.id)
                         }
                     }
-
-                    if !viewModel.executionEntries.isEmpty {
-                        executionSummaryCard
-                    }
                 }
                 .padding(.top, 2)
+                .padding(.bottom, 108)
             }
-            .frame(minHeight: 520)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .onChange(of: viewModel.messages.count) {
                 guard let lastID = viewModel.messages.last?.id else { return }
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -224,8 +583,8 @@ struct AgentWorkspaceView: View {
     }
 
     private var welcomeCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
                 Circle()
                     .fill(
                         LinearGradient(
@@ -234,54 +593,48 @@ struct AgentWorkspaceView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 44, height: 44)
+                    .frame(width: 24, height: 24)
                     .overlay(
                         Image(systemName: "sparkles")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.white)
                     )
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     Text("输入一句话，Agent 会直接执行。")
-                        .font(ACTypography.cardTitle)
-                        .foregroundStyle(ACColors.primaryText)
-                    Text("可以让它记笔记、建任务、排日程，或者先帮你搜索信息再整理成结论。")
                         .font(ACTypography.caption)
+                        .foregroundStyle(ACColors.primaryText)
+                    Text("记笔记、建任务、排日程，或先搜索再整理结论。")
+                        .font(ACTypography.mini)
                         .foregroundStyle(ACColors.secondaryText)
                 }
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: 4) {
                 ForEach(AgentActionMode.quickActions) { mode in
                     Button {
                         viewModel.selectedActionMode = mode
                         viewModel.inputText = mode.suggestedPrompt
                     } label: {
                         Text(mode.displayName)
-                            .font(ACTypography.captionMedium)
+                            .font(ACTypography.mini)
                     }
                     .buttonStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(ACColors.softFill)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(ACColors.softFill.opacity(0.68))
                     .clipShape(Capsule())
                 }
             }
         }
-        .padding(18)
-        .background(ACColors.softFill)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(ACColors.border, lineWidth: 1)
-        )
+        .padding(.vertical, 0)
     }
 
     private var executionSummaryCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("最近执行")
-                    .font(ACTypography.captionMedium)
+                    .font(ACTypography.mini)
                     .foregroundStyle(ACColors.primaryText)
                 Spacer(minLength: 0)
                 Text(viewModel.lastExecutionTitle)
@@ -289,17 +642,17 @@ struct AgentWorkspaceView: View {
                     .foregroundStyle(ACColors.secondaryText)
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 ForEach(viewModel.executionEntries.prefix(4)) { entry in
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(alignment: .top, spacing: 6) {
                         Circle()
                             .fill(entry.accent)
-                            .frame(width: 8, height: 8)
-                            .padding(.top, 5)
-                        VStack(alignment: .leading, spacing: 4) {
+                            .frame(width: 4, height: 4)
+                            .padding(.top, 4)
+                        VStack(alignment: .leading, spacing: 2) {
                             HStack {
                                 Text(entry.title)
-                                    .font(ACTypography.captionMedium)
+                                    .font(ACTypography.mini)
                                     .foregroundStyle(ACColors.primaryText)
                                 Spacer(minLength: 0)
                                 Text(entry.timestamp.formattedAgentTime)
@@ -307,198 +660,198 @@ struct AgentWorkspaceView: View {
                                     .foregroundStyle(ACColors.tertiaryText)
                             }
                             Text(entry.detail)
-                                .font(ACTypography.caption)
+                                .font(ACTypography.mini)
                                 .foregroundStyle(ACColors.secondaryText)
                                 .lineLimit(2)
                         }
                     }
+                    if entry.id != viewModel.executionEntries.prefix(4).last?.id {
+                        Divider().overlay(ACColors.border.opacity(0.55))
+                    }
                 }
             }
         }
-        .padding(14)
-        .background(ACColors.softFill)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(ACColors.border, lineWidth: 1)
+        .padding(6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(ACColors.softFill.opacity(0.18))
         )
     }
 
     private var composerCard: some View {
-        ACCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center) {
-                    Text("输入区")
-                        .font(ACTypography.captionMedium)
-                        .foregroundStyle(ACColors.primaryText)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center) {
+                Text("输入")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.primaryText)
 
-                    Spacer(minLength: 0)
+                Spacer(minLength: 0)
 
-                    Text(viewModel.hintText)
-                        .font(ACTypography.caption)
-                        .foregroundStyle(ACColors.secondaryText)
+                Text(viewModel.hintText)
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.secondaryText)
+            }
+
+            ZStack(alignment: .topLeading) {
+                if viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("对 Agent 说：帮我了解这件事、创建待办、安排本周日程，或者把这段话整理成笔记。")
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.tertiaryText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
                 }
 
-                ZStack(alignment: .topLeading) {
-                    if viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("对 Agent 说：帮我了解这件事、创建待办、安排本周日程，或者把这段话整理成笔记。")
-                            .font(ACTypography.body)
-                            .foregroundStyle(ACColors.tertiaryText)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
+                TextEditor(text: $viewModel.inputText)
+                    .font(ACTypography.caption)
+                    .foregroundStyle(ACColors.primaryText)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 78)
+                    .padding(3)
+                    .background(Color.clear)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(ACColors.softFill.opacity(0.16))
+            )
+
+            HStack(spacing: 4) {
+                ForEach(AgentActionMode.quickActions) { mode in
+                    Button {
+                        viewModel.selectedActionMode = mode
+                        if viewModel.inputText.isEmpty {
+                            viewModel.inputText = mode.suggestedPrompt
+                        }
+                    } label: {
+                        Text(mode.displayName)
+                            .font(ACTypography.mini)
                     }
-
-                    TextEditor(text: $viewModel.inputText)
-                        .font(ACTypography.body)
-                        .foregroundStyle(ACColors.primaryText)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 120)
-                        .padding(8)
-                        .background(Color.clear)
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(viewModel.selectedActionMode == mode ? ACColors.selectedFill.opacity(0.72) : ACColors.softFill.opacity(0.55))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().stroke(viewModel.selectedActionMode == mode ? ACColors.accentBlue.opacity(0.75) : ACColors.border.opacity(0.6), lineWidth: 1)
+                    )
                 }
-                .background(ACColors.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                Spacer(minLength: 0)
+
+                ACButton("发送", kind: .primary, minWidth: 72) {
+                    Task { await viewModel.sendCurrentInput() }
+                }
+
+                ACButton("新建对话", kind: .secondary, minWidth: 82) {
+                    Task { await viewModel.createNewChat() }
+                }
+            }
+        }
+        .padding(6)
+    }
+
+    private var railResizeHandle: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(ACColors.border.opacity(0.35))
+                .frame(width: 1)
+                .frame(maxHeight: .infinity)
+
+            Capsule()
+                .fill(ACColors.softFill)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(ACColors.border, lineWidth: 1)
+                    Capsule().stroke(ACColors.border, lineWidth: 1)
                 )
-
-                HStack(spacing: 8) {
-                    ForEach(AgentActionMode.quickActions) { mode in
-                        Button {
-                            viewModel.selectedActionMode = mode
-                            if viewModel.inputText.isEmpty {
-                                viewModel.inputText = mode.suggestedPrompt
-                            }
-                        } label: {
-                            Text(mode.displayName)
-                                .font(ACTypography.captionMedium)
+                .frame(width: 24, height: 32)
+                .overlay(
+                    VStack(spacing: 3) {
+                        Capsule().fill(ACColors.tertiaryText.opacity(0.55)).frame(width: 8, height: 1.5)
+                        Capsule().fill(ACColors.tertiaryText.opacity(0.55)).frame(width: 8, height: 1.5)
+                        Capsule().fill(ACColors.tertiaryText.opacity(0.55)).frame(width: 8, height: 1.5)
+                    }
+                )
+                .offset(x: -12, y: 24)
+        }
+        .frame(width: 12)
+        .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard !managementRailCollapsed else { return }
+                        if railDragBaseWidth == nil {
+                            railDragBaseWidth = managementRailWidth
                         }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(viewModel.selectedActionMode == mode ? ACColors.selectedFill : ACColors.softFill)
-                        .clipShape(Capsule())
+
+                        let baseWidth = railDragBaseWidth ?? managementRailWidth
+                        let proposedWidth = baseWidth - value.translation.width
+                        managementRailWidth = Double(clampManagementRailWidth(CGFloat(proposedWidth)))
+                    }
+                    .onEnded { _ in
+                        defer { railDragBaseWidth = nil }
+                        let currentWidth = clampManagementRailWidth(CGFloat(managementRailWidth))
+                        managementRailWidth = Double(currentWidth)
+
+                        if currentWidth <= AgentWorkspaceLayout.managementRailCollapsedTrigger {
+                            managementRailCollapsed = true
+                            managementRailWidth = Double(AgentWorkspaceLayout.defaultManagementRailWidth)
+                        }
+                    }
+            )
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeLeftRight.set()
+                } else {
+                    NSCursor.arrow.set()
+                }
+            }
+    }
+
+    private func railIconButton(title: String, icon: String, badge: String? = nil, showsLabel: Bool = true, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: showsLabel ? 4 : 0) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(ACColors.primaryText)
+                        .frame(width: showsLabel ? 34 : 30, height: showsLabel ? 34 : 30)
+                        .background(ACColors.softFill.opacity(showsLabel ? 1.0 : 0.75))
+                        .clipShape(RoundedRectangle(cornerRadius: showsLabel ? 12 : 9, style: .continuous))
                         .overlay(
-                            Capsule().stroke(viewModel.selectedActionMode == mode ? ACColors.accentBlue : ACColors.border, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: showsLabel ? 12 : 9, style: .continuous)
+                                .stroke(ACColors.border.opacity(showsLabel ? 1 : 0.6), lineWidth: 1)
                         )
-                    }
 
-                    Spacer(minLength: 0)
-
-                    ACButton("发送", kind: .primary, minWidth: 86) {
-                        Task { await viewModel.sendCurrentInput() }
-                    }
-
-                    ACButton("新建对话", kind: .secondary, minWidth: 96) {
-                        Task { await viewModel.createNewChat() }
+                    if let badge {
+                        Text(badge)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(ACColors.accentBlue)
+                            .clipShape(Capsule())
+                            .offset(x: 6, y: -6)
                     }
                 }
+
+                if showsLabel {
+                    Text(title)
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.secondaryText)
+                        .lineLimit(1)
+                }
             }
+            .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.plain)
     }
 
-    private var rightPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Text("执行概览")
-                            .font(ACTypography.panelTitle)
-                            .foregroundStyle(ACColors.primaryText)
-                        Spacer(minLength: 0)
-                        ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
-                    }
-
-                    ACInfoTable([
-                        .init("当前文件夹", value: viewModel.selectedFolderName),
-                        .init("当前模型", value: viewModel.currentModelLabel),
-                        .init("输出模式", value: viewModel.selectedActionMode.displayName),
-                        .init("会话", value: viewModel.activeSessionTitle)
-                    ])
-                }
-            }
-
-            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("工具链")
-                            .font(ACTypography.panelTitle)
-                            .foregroundStyle(ACColors.primaryText)
-                        Spacer(minLength: 0)
-                        Text(viewModel.toolChainSummary)
-                            .font(ACTypography.mini)
-                            .foregroundStyle(ACColors.secondaryText)
-                    }
-
-                    VStack(spacing: 8) {
-                        ForEach(viewModel.toolChain) { step in
-                            ToolChainRow(step: step)
-                        }
-                    }
-                }
-            }
-
-            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("结果摘要")
-                            .font(ACTypography.panelTitle)
-                            .foregroundStyle(ACColors.primaryText)
-                        Spacer(minLength: 0)
-                        Text(viewModel.lastActionTitle)
-                            .font(ACTypography.mini)
-                            .foregroundStyle(ACColors.secondaryText)
-                    }
-
-                    if viewModel.summaryItems.isEmpty {
-                        Text("发送一条语音或文本后，这里会显示任务、搜索和日程的真实结果。")
-                            .font(ACTypography.caption)
-                            .foregroundStyle(ACColors.secondaryText)
-                            .lineSpacing(3)
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(viewModel.summaryItems) { item in
-                                ResultSummaryRow(item: item)
-                            }
-                        }
-                    }
-                }
-            }
-
-            ACDetailPanel(width: ACLayout.inspectorWidth, padding: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("快捷入口")
-                            .font(ACTypography.panelTitle)
-                            .foregroundStyle(ACColors.primaryText)
-                        Spacer(minLength: 0)
-                    }
-
-                    VStack(spacing: 8) {
-                        quickActionButton(title: "记为待办", icon: "checklist", mode: .task)
-                        quickActionButton(title: "搜索信息", icon: "magnifyingglass", mode: .search)
-                        quickActionButton(title: "安排日程", icon: "calendar", mode: .schedule)
-                        quickActionButton(title: "保存笔记", icon: "note.text", mode: .note)
-                    }
-                }
-            }
-        }
-    }
-
-    private func quickActionButton(title: String, icon: String, mode: AgentActionMode) -> some View {
-        Button {
-            viewModel.selectedActionMode = mode
-            viewModel.inputText = mode.suggestedPrompt
-        } label: {
-            HStack(spacing: 10) {
+    private func railChipButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                 Text(title)
                     .font(ACTypography.captionMedium)
                 Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 11, weight: .semibold))
             }
             .foregroundStyle(ACColors.primaryText)
             .padding(.horizontal, 12)
@@ -514,12 +867,75 @@ struct AgentWorkspaceView: View {
         .buttonStyle(.plain)
     }
 
+    private func railLineButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(ACColors.primaryText)
+                    .frame(width: 28, height: 28)
+                    .background(ACColors.softFill)
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(ACColors.border, lineWidth: 1)
+                    )
+
+                Text(title)
+                    .font(ACTypography.captionMedium)
+                    .foregroundStyle(ACColors.primaryText)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .background(ACColors.softFill.opacity(0.58))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(ACColors.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func managementRailPresentation(for totalWidth: CGFloat) -> AgentRailPresentation {
+        guard managementRailVisible else {
+            return AgentRailPresentation(width: 0, collapsed: false, visible: false)
+        }
+
+        let baseWidth = clampManagementRailWidth(CGFloat(managementRailWidth))
+        let maxAllowedWidth = max(
+            totalWidth - ACLayout.pagePaddingX * 2 - ACLayout.panelGap - AgentWorkspaceLayout.centerMinWidth,
+            AgentWorkspaceLayout.managementRailCollapsedWidth
+        )
+
+        let forcedCollapsed = totalWidth < AgentWorkspaceLayout.autoCollapseThreshold
+        let collapsed = managementRailCollapsed || forcedCollapsed
+        let width = collapsed
+            ? AgentWorkspaceLayout.managementRailCollapsedWidth
+            : min(baseWidth, maxAllowedWidth)
+
+        return AgentRailPresentation(width: width, collapsed: collapsed, visible: true)
+    }
+
+    private func clampManagementRailWidth(_ width: CGFloat) -> CGFloat {
+        min(
+            max(width, AgentWorkspaceLayout.managementRailMinWidth),
+            AgentWorkspaceLayout.managementRailMaxWidth
+        )
+    }
+
+    private func openFolderRenameSheet(_ folder: AgentProjectFolder) {
+        folderRenameTarget = folder
+    }
+
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(ACTypography.captionMedium)
+            .font(ACTypography.mini)
             .foregroundStyle(ACColors.secondaryText)
             .textCase(.uppercase)
-            .tracking(0.6)
+            .tracking(0.3)
     }
 
     private func sidebarFolderRow(_ folder: AgentProjectFolder) -> some View {
@@ -527,8 +943,8 @@ struct AgentWorkspaceView: View {
         let expanded = viewModel.isFolderExpanded(folder.id)
         let nestedSessions = viewModel.sessions(in: folder.id)
 
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
                 Button {
                     viewModel.toggleFolderExpansion(folder.id)
                 } label: {
@@ -545,11 +961,11 @@ struct AgentWorkspaceView: View {
                 } label: {
                     HStack(spacing: 10) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
                                 .fill(selected ? folder.tint.opacity(0.18) : ACColors.softFill)
-                                .frame(width: 34, height: 34)
+                                .frame(width: 32, height: 32)
                             Image(systemName: folder.icon)
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(selected ? folder.tint : ACColors.secondaryText)
                         }
 
@@ -576,22 +992,24 @@ struct AgentWorkspaceView: View {
                                     .foregroundStyle(ACColors.tertiaryText)
                             }
                         }
+
+                        folderActionsMenu(folder)
                     }
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
             .frame(maxWidth: .infinity)
             .background(selected ? folder.tint.opacity(0.08) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(selected ? folder.tint.opacity(0.26) : ACColors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(selected ? folder.tint.opacity(0.24) : ACColors.border, lineWidth: 1)
             )
 
-            if folder.id != "all" && expanded {
-                VStack(alignment: .leading, spacing: 8) {
+                if folder.id != "all" && expanded {
+                VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 6) {
                         Rectangle()
                             .fill(folder.tint.opacity(0.45))
@@ -624,13 +1042,61 @@ struct AgentWorkspaceView: View {
                         }
                     }
                 }
-                .padding(.leading, 18)
+                .padding(.leading, 16)
             }
         }
     }
 
+    private var railVisibilityToggleButton: some View {
+        Button {
+            managementRailVisible.toggle()
+        } label: {
+            Image(systemName: managementRailVisible ? "sidebar.right" : "sidebar.left")
+                .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(ACColors.primaryText)
+            .frame(width: 32, height: 32)
+            .background(ACColors.softFill)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(ACColors.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func folderActionsMenu(_ folder: AgentProjectFolder) -> some View {
+        Menu {
+            Button("切换到此文件夹") {
+                viewModel.selectFolder(folder.id)
+            }
+
+            Button("将当前会话归入此文件夹") {
+                if let session = viewModel.selectedSessionSummary {
+                    Task { await viewModel.moveSession(session.id, to: folder.id) }
+                }
+            }
+
+            if !folder.isSystem {
+                Button("重命名") {
+                    openFolderRenameSheet(folder)
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(ACColors.tertiaryText)
+                .frame(width: 22, height: 22)
+                .background(ACColors.softFill)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(ACColors.border, lineWidth: 1))
+        }
+        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+    }
+
     private func nestedSessionRow(_ session: AgentSessionSummary, selected: Bool) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 9) {
             Rectangle()
                 .fill(selected ? session.tint : ACColors.border)
                 .frame(width: 2, height: 34)
@@ -639,7 +1105,7 @@ struct AgentWorkspaceView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(session.title)
-                        .font(ACTypography.captionMedium)
+                        .font(ACTypography.mini)
                         .foregroundStyle(ACColors.primaryText)
                         .lineLimit(1)
                     Spacer(minLength: 0)
@@ -654,16 +1120,16 @@ struct AgentWorkspaceView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .frame(maxWidth: .infinity)
         .background(selected ? session.tint.opacity(0.08) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 
     private func historySessionRow(_ session: AgentSessionSummary) -> some View {
         let selected = session.id == viewModel.selectedSessionID
 
-        return HStack(alignment: .top, spacing: 10) {
+        return HStack(alignment: .top, spacing: 9) {
             ACTypeIcon(
                 session.icon,
                 tint: selected ? session.tint : ACColors.secondaryText,
@@ -684,7 +1150,7 @@ struct AgentWorkspaceView: View {
                 }
 
                 Text(session.preview)
-                    .font(ACTypography.caption)
+                    .font(ACTypography.mini)
                     .foregroundStyle(ACColors.secondaryText)
                     .lineLimit(2)
             }
@@ -693,12 +1159,12 @@ struct AgentWorkspaceView: View {
         }
         .padding(.leading, 12)
         .padding(.trailing, 12)
-        .padding(.vertical, 10)
+        .padding(.vertical, 9)
         .frame(maxWidth: .infinity)
         .background(selected ? ACColors.selectedFill : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
                 .stroke(selected ? ACColors.accentBlue.opacity(0.28) : ACColors.border, lineWidth: 1)
         )
     }
@@ -891,6 +1357,10 @@ final class AgentWorkspaceViewModel: ObservableObject {
         await reloadWorkspace(selectNewestIfNeeded: true)
     }
 
+    func refreshProviders() async {
+        await reloadWorkspace(selectNewestIfNeeded: false)
+    }
+
     func clearError() {
         errorMessage = nil
         showError = false
@@ -937,6 +1407,55 @@ final class AgentWorkspaceViewModel: ObservableObject {
         await createNewChat()
     }
 
+    func moveSession(_ sessionID: String, to folderID: String) async {
+        guard let folder = folder(for: folderID) else { return }
+
+        do {
+            guard var session = try await storage.getChatSession(id: sessionID) else { return }
+            session.metadata["folderId"] = folder.id
+            session.metadata["folderName"] = folder.name
+            session.metadata["folderIcon"] = folder.icon
+            session.updatedAt = Date()
+            try await storage.updateChatSession(session)
+
+            selectedFolderID = folder.id
+            selectedSessionID = sessionID
+            statusLabel = "已归入文件夹"
+            statusKind = .green
+
+            await reloadWorkspace(selectNewestIfNeeded: false)
+            await selectSession(sessionID)
+        } catch {
+            presentError(error.localizedDescription)
+        }
+    }
+
+    func renameFolder(folderID: String, to newName: String) async {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        guard let folder = folder(for: folderID), !folder.isSystem else { return }
+
+        do {
+            let folderSessionIDs = sessions
+                .filter { $0.folderID == folderID }
+                .map(\.id)
+
+            for sessionID in folderSessionIDs {
+                guard var session = try await storage.getChatSession(id: sessionID) else { continue }
+                session.metadata["folderName"] = trimmedName
+                session.updatedAt = Date()
+                try await storage.updateChatSession(session)
+            }
+
+            selectedFolderID = folderID
+            statusLabel = "文件夹已重命名"
+            statusKind = .green
+            await reloadWorkspace(selectNewestIfNeeded: false)
+        } catch {
+            presentError(error.localizedDescription)
+        }
+    }
+
     func createNewChat() async {
         let folder = folder(for: selectedFolderID) ?? AgentProjectFolder.systemFolders[0]
         let session = ChatSession(
@@ -947,7 +1466,8 @@ final class AgentWorkspaceViewModel: ObservableObject {
             metadata: [
                 "folderId": folder.id,
                 "folderName": folder.name,
-                "folderIcon": folder.icon
+                "folderIcon": folder.icon,
+                "actionMode": selectedActionMode.rawValue
             ]
         )
 
@@ -975,7 +1495,27 @@ final class AgentWorkspaceViewModel: ObservableObject {
                 expandedFolderIDs.insert(session.folderID)
             }
         }
+
+        if let storedSession = try? await storage.getChatSession(id: sessionID) {
+            if let providerId = storedSession.providerId,
+               enabledProviders.contains(where: { $0.id == providerId }) {
+                selectedProviderID = providerId
+            } else if selectedProviderID.isEmpty {
+                selectedProviderID = enabledProviders.first?.id ?? ""
+            }
+
+            if let rawMode = storedSession.metadata["actionMode"] {
+                selectedActionMode = AgentActionMode(rawValue: rawMode) ?? selectedActionMode
+            }
+        }
+
         await reloadMessages(for: sessionID)
+    }
+
+    func selectProvider(_ providerID: String) async {
+        guard enabledProviders.contains(where: { $0.id == providerID }) else { return }
+        selectedProviderID = providerID
+        await lockCurrentSessionProvider()
     }
 
     func reloadCurrentSession() async {
@@ -985,7 +1525,10 @@ final class AgentWorkspaceViewModel: ObservableObject {
 
     func sendCurrentInput() async {
         let content = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !content.isEmpty else { return }
+        guard !content.isEmpty else {
+            presentError("输入不能为空")
+            return
+        }
 
         if selectedSessionID == nil {
             await createNewChat()
@@ -1002,6 +1545,7 @@ final class AgentWorkspaceViewModel: ObservableObject {
 
         do {
             try await storage.insertChatMessage(userMessage)
+            await updateSessionTitleIfNeeded(sessionID: sessionID, content: content)
         } catch {
             presentError(error.localizedDescription)
             return
@@ -1013,6 +1557,13 @@ final class AgentWorkspaceViewModel: ObservableObject {
         statusLabel = "正在处理"
         statusKind = .blue
         toolChain = [AgentToolChainStep(title: "解析指令", detail: "判断输入是聊天、待办、搜索还是日程", state: .running, accent: ACColors.accentBlue)]
+
+        let mode = selectedActionMode == .auto ? detectedActionMode(for: content) : selectedActionMode
+        if selectedActionMode == .auto {
+            selectedActionMode = mode
+        }
+        await updateSessionActionMode(sessionID: sessionID, mode: mode)
+        await updateSessionProvider(sessionID: sessionID)
 
         do {
             let result = try await execute(content: content, sessionID: sessionID)
@@ -1057,6 +1608,24 @@ final class AgentWorkspaceViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    func deleteSession(_ sessionID: String) async {
+        do {
+            try await storage.deleteChatSession(id: sessionID)
+            if selectedSessionID == sessionID {
+                selectedSessionID = nil
+                messages = []
+                executionEntries = []
+                summaryItems = []
+                toolChain = []
+            }
+            statusLabel = "会话已删除"
+            statusKind = .neutral
+            await reloadWorkspace(selectNewestIfNeeded: true)
+        } catch {
+            presentError(error.localizedDescription)
+        }
     }
 
     private func reloadWorkspace(selectNewestIfNeeded: Bool) async {
@@ -1105,6 +1674,54 @@ final class AgentWorkspaceViewModel: ObservableObject {
         }
     }
 
+    private func updateSessionTitleIfNeeded(sessionID: String, content: String) async {
+        do {
+            guard var session = try await storage.getChatSession(id: sessionID) else { return }
+            let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmedTitle.isEmpty || trimmedTitle == "新对话" else { return }
+
+            session.title = conciseTitle(from: content, fallback: "新对话")
+            session.updatedAt = Date()
+            try await storage.updateChatSession(session)
+        } catch {
+            presentError(error.localizedDescription)
+        }
+    }
+
+    private func updateSessionActionMode(sessionID: String, mode: AgentActionMode) async {
+        do {
+            guard var session = try await storage.getChatSession(id: sessionID) else { return }
+            session.metadata["actionMode"] = mode.rawValue
+            session.updatedAt = Date()
+            try await storage.updateChatSession(session)
+        } catch {
+            // 不中断主流程；这里仅用于记住会话偏好
+        }
+    }
+
+    private func updateSessionProvider(sessionID: String) async {
+        do {
+            guard var session = try await storage.getChatSession(id: sessionID) else { return }
+            guard let provider = selectedProvider else { return }
+            session.providerId = provider.id
+            session.modelId = provider.modelId
+            session.metadata["providerId"] = provider.id
+            session.metadata["providerName"] = provider.name
+            session.metadata["providerType"] = provider.providerType.storageValue
+            session.metadata["providerTier"] = provider.tier.storageValue
+            session.metadata["modelId"] = provider.modelId
+            session.updatedAt = Date()
+            try await storage.updateChatSession(session)
+        } catch {
+            // 继续执行，不阻断主流程
+        }
+    }
+
+    private func lockCurrentSessionProvider() async {
+        guard let sessionID = selectedSessionID else { return }
+        await updateSessionProvider(sessionID: sessionID)
+    }
+
     private func rebuildExecutionState(from messages: [ChatMessage]) async {
         guard let latestUser = messages.last(where: { $0.role == .user }) else {
             toolChain = []
@@ -1139,7 +1756,7 @@ final class AgentWorkspaceViewModel: ObservableObject {
     private func executeChat(content: String, sessionID: String) async throws -> AgentExecutionResult {
         let history = try await storage.listChatMessages(sessionId: sessionID)
         let systemPrompt = """
-        你是 AcMind 的原生 Agent 工作台。
+        你是 AcMind 的原生聊天式 Agent。
         你需要简洁、可执行地回应用户，并优先给出下一步动作。
         当用户提到待办、日程、资料搜索、记笔记时，请输出清晰结果，不要写空话。
         """
@@ -1191,7 +1808,9 @@ final class AgentWorkspaceViewModel: ObservableObject {
         let title = conciseTitle(from: content, fallback: "新待办")
         let steps = [
             TaskStep(title: "整理需求", description: content, status: .completed, order: 1),
-            TaskStep(title: "等待执行", description: "已转入任务看板", status: .pending, order: 2)
+            TaskStep(title: "拆解步骤", description: "已形成 3-5 个可执行动作", status: .completed, order: 2),
+            TaskStep(title: "写入任务看板", description: "已转入任务管理", status: .completed, order: 3),
+            TaskStep(title: "等待执行", description: "后续可继续追问或接着执行", status: .pending, order: 4)
         ]
         let task = AgentTask(
             title: title,
@@ -1209,10 +1828,7 @@ final class AgentWorkspaceViewModel: ObservableObject {
             title: "已创建任务",
             detail: "任务《\(createdTask.title)》已写入任务看板",
             reply: "我已经把这条内容整理成待办《\(createdTask.title)》，并放入任务看板。你可以继续让我拆解步骤、补充优先级，或者直接开始执行。",
-            toolChain: [
-                AgentToolChainStep(title: "解析任务", detail: "识别为待办 / 任务指令", state: .done, accent: ACColors.accentBlue),
-                AgentToolChainStep(title: "创建任务", detail: "已写入任务看板", state: .done, accent: ACColors.accentGreen)
-            ],
+            toolChain: buildToolChain(for: .task, content: content),
             summaryItems: [
                 AgentResultSummaryItem(title: "任务标题", value: createdTask.title, tint: ACColors.accentGreen),
                 AgentResultSummaryItem(title: "状态", value: createdTask.status.displayName, tint: ACColors.accentBlue),
@@ -1470,28 +2086,34 @@ final class AgentWorkspaceViewModel: ObservableObject {
         case .chat:
             return [
                 .init(title: "解析上下文", detail: "识别对话目标", state: .done, accent: ACColors.accentBlue),
-                .init(title: "生成回复", detail: "使用当前模型输出", state: .done, accent: ACColors.accentGreen)
+                .init(title: "生成回复", detail: "使用当前模型输出", state: .done, accent: ACColors.accentGreen),
+                .init(title: "保存会话", detail: "写入本地历史", state: .done, accent: ACColors.accentPurple)
             ]
         case .task:
             return [
                 .init(title: "解析任务", detail: "转成待办", state: .done, accent: ACColors.accentBlue),
-                .init(title: "写入任务看板", detail: "创建 AgentTask", state: .done, accent: ACColors.accentGreen)
+                .init(title: "拆解步骤", detail: "整理为 3-5 个动作", state: .done, accent: ACColors.accentPurple),
+                .init(title: "写入任务看板", detail: "创建 AgentTask", state: .done, accent: ACColors.accentGreen),
+                .init(title: "生成回顾", detail: "输出下一步建议", state: .done, accent: ACColors.accentOrange)
             ]
         case .search:
             return [
                 .init(title: "搜索知识库", detail: "searchCards", state: .done, accent: ACColors.accentBlue),
                 .init(title: "搜索 Vault", detail: "searchVault", state: .done, accent: ACColors.accentPurple),
-                .init(title: "联网检索", detail: "DuckDuckGo HTML", state: .done, accent: ACColors.accentGreen)
+                .init(title: "联网检索", detail: "DuckDuckGo HTML", state: .done, accent: ACColors.accentGreen),
+                .init(title: "汇总结论", detail: "生成可追问答案", state: .done, accent: ACColors.accentOrange)
             ]
         case .schedule:
             return [
                 .init(title: "解析日期", detail: "自然语言时间解析", state: .done, accent: ACColors.accentBlue),
-                .init(title: "创建日程", detail: "写入系统日历", state: .done, accent: ACColors.accentGreen)
+                .init(title: "创建日程", detail: "写入系统日历", state: .done, accent: ACColors.accentGreen),
+                .init(title: "回写摘要", detail: "告诉你已安排的时间", state: .done, accent: ACColors.accentPurple)
             ]
         case .note:
             return [
                 .init(title: "整理笔记", detail: "记录到收集箱", state: .done, accent: ACColors.accentBlue),
-                .init(title: "生成摘要", detail: "准备后续蒸馏", state: .done, accent: ACColors.accentGreen)
+                .init(title: "生成摘要", detail: "准备后续蒸馏", state: .done, accent: ACColors.accentGreen),
+                .init(title: "保存到收集箱", detail: "形成可追踪记录", state: .done, accent: ACColors.accentPurple)
             ]
         case .auto:
             return buildToolChain(for: detectedActionMode(for: content), content: content)
@@ -1778,6 +2400,79 @@ struct AgentRecentSessionSection: Identifiable {
     var id: String { kind.rawValue }
 }
 
+struct AgentRailPresentation {
+    let width: CGFloat
+    let collapsed: Bool
+    let visible: Bool
+}
+
+private enum AgentWorkspacePreferences {
+    static let managementRailWidthKey = "AgentWorkspace.managementRailWidth"
+    static let managementRailCollapsedKey = "AgentWorkspace.managementRailCollapsed"
+    static let managementRailVisibleKey = "AgentWorkspace.managementRailVisible"
+    static let defaultManagementRailWidth: Double = 232
+}
+
+private enum AgentWorkspaceLayout {
+    static let centerMinWidth: CGFloat = 540
+    static let managementRailMinWidth: CGFloat = 204
+    static let managementRailMaxWidth: CGFloat = 260
+    static let managementRailCollapsedWidth: CGFloat = 50
+    static let managementRailCollapsedTrigger: CGFloat = 84
+    static let defaultManagementRailWidth: CGFloat = 232
+    static let autoCollapseThreshold: CGFloat = 1100
+}
+
+private struct FolderRenameSheet: View {
+    let folderName: String
+    let isSystemFolder: Bool
+    let onConfirm: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draftName: String
+
+    init(folderName: String, isSystemFolder: Bool, onConfirm: @escaping (String) -> Void) {
+        self.folderName = folderName
+        self.isSystemFolder = isSystemFolder
+        self.onConfirm = onConfirm
+        self._draftName = State(initialValue: folderName)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("重命名文件夹")
+                .font(ACTypography.cardTitle)
+                .foregroundStyle(ACColors.primaryText)
+
+            Text(isSystemFolder ? "系统文件夹不可重命名。" : "输入新名称后保存，会同步到该文件夹下的所有会话。")
+                .font(ACTypography.caption)
+                .foregroundStyle(ACColors.secondaryText)
+                .lineSpacing(2)
+
+            TextField("文件夹名称", text: $draftName)
+                .textFieldStyle(.roundedBorder)
+                .disabled(isSystemFolder)
+
+            HStack {
+                Button("取消") {
+                    dismiss()
+                }
+
+                Spacer(minLength: 0)
+
+                Button("保存") {
+                    onConfirm(draftName)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isSystemFolder || draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 380)
+    }
+}
+
 struct AgentToolChainStep: Identifiable {
     enum State: String, Hashable {
         case done
@@ -1834,6 +2529,109 @@ struct WebSearchResult: Identifiable {
     let url: String
 }
 
+struct AgentQuickAskStrip: View {
+    @Binding var draft: String
+    let title: String
+    let subtitle: String
+    let primaryActionTitle: String
+    let secondaryActionTitle: String
+    let suggestions: [AgentActionMode]
+    let onSend: () -> Void
+    let onDismiss: () -> Void
+
+    private var trimmedDraft: String {
+        draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(ACTypography.captionMedium)
+                        .foregroundStyle(ACColors.primaryText)
+                    Text(subtitle)
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.secondaryText)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(secondaryActionTitle, action: onDismiss)
+                    .buttonStyle(.plain)
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.secondaryText)
+            }
+
+            HStack(spacing: 5) {
+                ForEach(suggestions) { mode in
+                    Button {
+                        draft = mode.suggestedPrompt
+                    } label: {
+                        Text(mode.displayName)
+                            .font(ACTypography.mini)
+                            .foregroundStyle(ACColors.primaryText)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(ACColors.softFill.opacity(0.68))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().stroke(ACColors.border.opacity(0.6), lineWidth: 1)
+                    )
+                }
+            }
+
+            HStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ACColors.secondaryText)
+
+                    TextField("输入一句话，直接进入现有 Agent 路由", text: $draft)
+                        .font(ACTypography.caption)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(ACColors.primaryText)
+                }
+                .padding(.horizontal, 11)
+                .padding(.vertical, 9)
+                .background(ACColors.softFill.opacity(0.22))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(ACColors.border.opacity(0.75), lineWidth: 1)
+                )
+
+                Button(action: onSend) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(primaryActionTitle)
+                            .font(ACTypography.mini)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(ACColors.accentPurple)
+                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                }
+                .buttonStyle(SendButtonHoverStyle())
+                .disabled(trimmedDraft.isEmpty)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(ACColors.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(ACColors.border, lineWidth: 1)
+        )
+    }
+}
+
 struct AgentMessageRow: View {
     let message: ChatMessage
 
@@ -1844,13 +2642,13 @@ struct AgentMessageRow: View {
         HStack {
             if isUser { Spacer(minLength: 0) }
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
                     Circle()
                         .fill(isUser ? ACColors.accentPurple : (isSystem ? ACColors.secondaryText : ACColors.accentBlue))
-                        .frame(width: 8, height: 8)
+                        .frame(width: 4, height: 4)
                     Text(roleLabel)
-                        .font(ACTypography.captionMedium)
+                        .font(ACTypography.mini)
                         .foregroundStyle(ACColors.primaryText)
                     Spacer(minLength: 0)
                     Text(message.createdAt.formattedAgentTime)
@@ -1859,18 +2657,21 @@ struct AgentMessageRow: View {
                 }
 
                 Text(message.content)
-                    .font(ACTypography.body)
+                    .font(ACTypography.caption)
                     .foregroundStyle(ACColors.primaryText)
-                    .lineSpacing(4)
+                    .lineSpacing(0.5)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .frame(maxWidth: 560, alignment: .leading)
-            .background(isUser ? ACColors.selectedFill : ACColors.softFill)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .frame(maxWidth: 500, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isUser ? ACColors.selectedFill.opacity(0.32) : ACColors.softFill.opacity(0.16))
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isUser ? ACColors.accentPurple.opacity(0.18) : ACColors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isUser ? ACColors.accentPurple.opacity(0.08) : ACColors.border.opacity(0.32), lineWidth: 1)
             )
 
             if !isUser { Spacer(minLength: 0) }
@@ -1894,13 +2695,13 @@ struct ToolChainRow: View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
                 .fill(step.accent)
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+                .frame(width: 7, height: 7)
+                .padding(.top, 4)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(step.title)
-                        .font(ACTypography.captionMedium)
+                        .font(ACTypography.caption)
                         .foregroundStyle(ACColors.primaryText)
                     Spacer(minLength: 0)
                     Text(statusText)
@@ -1908,16 +2709,16 @@ struct ToolChainRow: View {
                         .foregroundStyle(ACColors.secondaryText)
                 }
                 Text(step.detail)
-                    .font(ACTypography.caption)
+                    .font(ACTypography.mini)
                     .foregroundStyle(ACColors.secondaryText)
                     .lineLimit(2)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(ACColors.softFill)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 
     private var statusText: String {
@@ -1940,13 +2741,13 @@ struct ResultSummaryRow: View {
                 .foregroundStyle(ACColors.secondaryText)
             Spacer(minLength: 0)
             Text(item.value)
-                .font(ACTypography.captionMedium)
+                .font(ACTypography.caption)
                 .foregroundStyle(item.tint)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(ACColors.softFill)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }
 

@@ -460,27 +460,59 @@ final class CompanionVoiceSessionController: ObservableObject {
 
     private func waitForTranscript(sourceItemId: String) async throws -> String {
         let storage = ServiceContainer.shared.storageService
-        var attempts = 0
 
-        while attempts < 60 {
-            if let item = try await storage.getSourceItem(id: sourceItemId) {
-                if let transcript = item.transcript?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   transcript.isEmpty == false {
-                    return transcript
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask {
+                for await notification in NotificationCenter.default.notifications(named: .companionVoiceTranscriptionCompleted) {
+                    guard
+                        let userInfo = notification.userInfo,
+                        let completedSourceItemId = userInfo["sourceItemId"] as? String,
+                        completedSourceItemId == sourceItemId,
+                        let transcript = userInfo["transcript"] as? String
+                    else {
+                        continue
+                    }
+
+                    let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if text.isEmpty == false {
+                        return text
+                    }
                 }
 
-                if let preview = item.previewText?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   preview.isEmpty == false,
-                   item.status == .parsed {
-                    return preview
-                }
+                throw VoiceError.transcriptionFailed("转写通知中断")
             }
 
-            try await Task.sleep(for: .milliseconds(500))
-            attempts += 1
-        }
+            group.addTask {
+                var attempts = 0
 
-        throw VoiceError.transcriptionFailed("等待转写超时")
+                while attempts < 90 {
+                    if let item = try await storage.getSourceItem(id: sourceItemId) {
+                        if let transcript = item.transcript?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           transcript.isEmpty == false {
+                            return transcript
+                        }
+
+                        if let preview = item.previewText?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           preview.isEmpty == false,
+                           item.status == .parsed {
+                            return preview
+                        }
+                    }
+
+                    try await Task.sleep(for: .milliseconds(400))
+                    attempts += 1
+                }
+
+                throw VoiceError.transcriptionFailed("等待转写超时")
+            }
+
+            guard let result = try await group.next() else {
+                throw VoiceError.transcriptionFailed("等待转写失败")
+            }
+
+            group.cancelAll()
+            return result
+        }
     }
 
     private func loadCompanionConfiguration() async -> CompanionConfiguration {
@@ -549,7 +581,7 @@ final class VoiceRecordingHUDPanel: NSPanel {
 
     init() {
         super.init(
-            contentRect: .init(x: 0, y: 0, width: 360, height: 72),
+            contentRect: .init(x: 0, y: 0, width: 332, height: 64),
             styleMask: [.nonactivatingPanel, .hudWindow, .borderless],
             backing: .buffered,
             defer: false
@@ -601,7 +633,7 @@ final class VoiceRecordingHUDPanel: NSPanel {
         hosting.translatesAutoresizingMaskIntoConstraints = false
         hostingView = hosting
         contentView = hosting
-        syncWindowSize(to: CGSize(width: 360, height: 72))
+        syncWindowSize(to: CGSize(width: 332, height: 64))
     }
 
     private func reposition() {
@@ -611,8 +643,8 @@ final class VoiceRecordingHUDPanel: NSPanel {
         guard let screen else { return }
 
         let frame = screen.visibleFrame
-        let width: CGFloat = 360
-        let height: CGFloat = 72
+        let width: CGFloat = 332
+        let height: CGFloat = 64
         let x = frame.midX - width / 2
         let y = frame.minY + 14
         setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
@@ -633,28 +665,29 @@ struct VoiceRecordingHUDView: View {
     let transcript: String
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 Capsule()
                     .fill(backgroundGradient)
-                    .frame(width: 68, height: 42)
+                    .frame(width: 60, height: 36)
 
                 AnimatedAudioWaveform(phase: phase)
-                    .frame(width: 44, height: 20)
+                    .frame(width: 38, height: 16)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("说入法")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(ACColors.primaryText)
 
                 Text(status)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(ACColors.secondaryText)
+                    .lineLimit(1)
 
                 if phase == .recording || phase == .processing {
-                    Text(transcript.isEmpty ? "正在说话..." : transcript)
-                        .font(.system(size: 11, weight: .regular))
+                    Text(transcript.isEmpty ? "正在说话" : transcript)
+                        .font(.system(size: 10, weight: .regular))
                         .foregroundStyle(ACColors.tertiaryText)
                         .lineLimit(1)
                 }
@@ -662,28 +695,34 @@ struct VoiceRecordingHUDView: View {
 
             Spacer(minLength: 0)
 
-            if phase == .recording {
-                Text("转写中")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(ACColors.accentBlue)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(ACColors.accentBlue.opacity(0.12))
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(phaseLabel)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(phaseColor)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(phaseColor.opacity(0.10))
                     .clipShape(Capsule())
+
+                if phase == .recording {
+                    Text("保持按住")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(ACColors.secondaryText)
+                }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(width: 360, height: 72)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(width: 332, height: 64)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.56), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.50), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 8)
     }
 
     private var backgroundGradient: LinearGradient {
@@ -694,6 +733,40 @@ struct VoiceRecordingHUDView: View {
             return LinearGradient(colors: [ACColors.accentBlue.opacity(0.25), ACColors.accentPurple.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
         default:
             return LinearGradient(colors: [ACColors.softFill, ACColors.softFill], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+    }
+
+    private var phaseLabel: String {
+        switch phase {
+        case .idle:
+            return "待命"
+        case .arming:
+            return "准备"
+        case .recording:
+            return "录音中"
+        case .processing:
+            return "转写中"
+        case .completed:
+            return "完成"
+        case .error:
+            return "出错"
+        }
+    }
+
+    private var phaseColor: Color {
+        switch phase {
+        case .idle:
+            return ACColors.secondaryText
+        case .arming:
+            return ACColors.accentBlue
+        case .recording:
+            return ACColors.accentRed
+        case .processing:
+            return ACColors.accentOrange
+        case .completed:
+            return ACColors.accentGreen
+        case .error:
+            return ACColors.accentRed
         }
     }
 }
@@ -709,10 +782,10 @@ struct AnimatedAudioWaveform: View {
                 ForEach(0..<10, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 999, style: .continuous)
                         .fill(waveColor)
-                        .frame(width: 3, height: barHeight(index: index, time: time))
+                        .frame(width: 2.5, height: barHeight(index: index, time: time))
                 }
             }
-            .frame(height: 20)
+            .frame(height: 16)
             .onAppear {
                 phaseSeed = Double.random(in: 0...2)
             }

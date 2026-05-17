@@ -398,9 +398,7 @@ struct PrimaryRail: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 4)
 
-            if isExpanded {
-                workspaceStatusBadge
-            }
+            workspaceFooter
 
             Button(action: {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
@@ -441,20 +439,44 @@ struct PrimaryRail: View {
         .padding(.horizontal, 4)
     }
 
-    private var workspaceStatusBadge: some View {
+    private var workspaceFooter: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 6, height: 6)
+            if isExpanded {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 6, height: 6)
 
-            Text(statusText)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(ACColors.tertiaryText)
+                Text(statusText)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ACColors.tertiaryText)
+                    .lineLimit(1)
+            } else {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 6, height: 6)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(isExpanded ? appVersionDisplay : appVersionShortDisplay)
+                .font(.system(size: isExpanded ? 10.5 : 10, weight: .semibold))
+                .foregroundStyle(ACColors.secondaryText)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
+    }
+
+    private var appVersionShortDisplay: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.1"
+        return "v\(version)"
+    }
+
+    private var appVersionDisplay: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.1"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        return "v\(version) · build \(build)"
     }
 
     private var statusColor: Color {

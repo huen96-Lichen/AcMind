@@ -31,7 +31,7 @@ enum SettingsSuiteSection: String, CaseIterable, Identifiable {
         case .processing: return "收集、识别、转写与整理"
         case .knowledge: return "Vault、目录与冲突规则"
         case .tools: return "截图、OCR、监听与快捷输入"
-        case .models: return "Provider、默认模型与偏好"
+        case .models: return "能力分区、默认模型与 Provider"
         case .advanced: return "权限、诊断、导出与系统"
         }
     }
@@ -63,6 +63,9 @@ struct SettingsSuiteView: View {
                 ) {
                     HStack(spacing: 10) {
                         ACBadge(selectedSection.title, kind: .neutral)
+                        if let message = viewModel.saveStatusMessage {
+                            ACBadge(message, kind: .green)
+                        }
                         ACButton("保存设置", kind: .primary) {
                             Task { await viewModel.saveSettings() }
                         }
@@ -77,6 +80,9 @@ struct SettingsSuiteView: View {
                 }
             }
         )
+        .onReceive(NotificationCenter.default.publisher(for: .acmindProvidersDidChange)) { _ in
+            Task { await viewModel.loadProviders() }
+        }
         .alert("设置错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
         } message: {
@@ -195,7 +201,7 @@ struct SettingsSuiteView: View {
                         .foregroundStyle(ACColors.secondaryText)
                         .lineLimit(2)
 
-                    Text("保留 mock 与占位项，便于后续接入。")
+                    Text("所有可见选项都会写入本地持久化，并尽量影响实际行为。")
                         .font(ACTypography.mini)
                         .foregroundStyle(ACColors.tertiaryText)
                 }
@@ -239,7 +245,7 @@ struct SettingsSuiteView: View {
                     }
 
                     Toggle("启动时显示灵动胶囊", isOn: $viewModel.companionCapsuleEnabled)
-                    Toggle("布局记忆（占位）", isOn: $viewModel.autoFrontmatter)
+                    Toggle("记住窗口布局", isOn: $viewModel.rememberWorkspaceLayout)
                 }
             }
 
@@ -385,34 +391,294 @@ struct SettingsSuiteView: View {
 
     private var modelsSection: some View {
         VStack(spacing: 14) {
-            settingsCard(title: "默认模型", subtitle: "AcMind 需要优先使用的模型") {
-                VStack(alignment: .leading, spacing: 10) {
-                    TextField("Default Provider ID", text: $viewModel.defaultProviderId)
-                        .textFieldStyle(.roundedBorder)
-                    TextField("Default Model ID", text: $viewModel.defaultModelId)
-                        .textFieldStyle(.roundedBorder)
+            settingsCard(title: "能力分区", subtitle: "直接选择当前模型与保底模型，所有设置都在这一页完成。") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 8) {
+                        ForEach(AIModelCategory.allCases) { category in
+                            capabilityPartitionTile(for: category)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+
+                    Divider().overlay(ACColors.divider)
+
+                    selectedCapabilityEditor
+                }
+            }
+        }
+    }
+
+    private var selectedCapabilityEditor: some View {
+        let category = viewModel.selectedAIModelCategory
+        let preference = viewModel.aiModelPreference(for: category)
+        let options = viewModel.availableAIModelOptions(for: category)
+        let selectedOption = viewModel.selectedAIModelOption(for: category)
+        let fallbackOption = viewModel.fallbackAIModelOption(for: category)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+                ACTypeIcon(categoryIcon(for: category), tint: ACColors.accentBlue, background: ACColors.selectedFill, size: 36)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(category.displayName)
+                        .font(ACTypography.itemTitle)
+                        .foregroundStyle(ACColors.primaryText)
+                    Text("在这里直接切换当前模型和保底模型。")
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.tertiaryText)
+                }
+                Spacer(minLength: 0)
+                ACBadge(preference.isEnabled ? "已启用" : "默认关闭", kind: preference.isEnabled ? .green : .disabled)
+            }
+
+            if options.isEmpty {
+                ACEmptyState(
+                    icon: "circle.dashed",
+                    title: "暂无可选模型",
+                    subtitle: "先添加 Provider，或者继续使用系统内置保底方案。"
+                )
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 12) {
+                        modelDropdownMenu(
+                            title: "当前模型",
+                            value: selectedOption?.displayName ?? "未配置",
+                            subtitle: selectedOption?.description ?? "当前能力尚未绑定可用模型",
+                            options: options,
+                            category: category,
+                            selectionKind: .current
+                        )
+
+                        modelDropdownMenu(
+                            title: "保底模型",
+                            value: fallbackOption?.displayName ?? "手动模式",
+                            subtitle: fallbackOption?.description ?? "不可用时自动回退",
+                            options: options,
+                            category: category,
+                            selectionKind: .fallback
+                        )
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        modelDropdownMenu(
+                            title: "当前模型",
+                            value: selectedOption?.displayName ?? "未配置",
+                            subtitle: selectedOption?.description ?? "当前能力尚未绑定可用模型",
+                            options: options,
+                            category: category,
+                            selectionKind: .current
+                        )
+
+                        modelDropdownMenu(
+                            title: "保底模型",
+                            value: fallbackOption?.displayName ?? "手动模式",
+                            subtitle: fallbackOption?.description ?? "不可用时自动回退",
+                            options: options,
+                            category: category,
+                            selectionKind: .fallback
+                        )
+                    }
                 }
             }
 
-            settingsCard(title: "Provider 摘要", subtitle: "当前可用服务") {
-                VStack(alignment: .leading, spacing: 10) {
-                    if viewModel.providers.isEmpty {
-                        ACEmptyState(
-                            icon: "server.rack",
-                            title: "暂无 Provider",
-                            subtitle: "可以先保留默认模型配置，后续再接真实服务。"
-                        )
-                    } else {
-                        ForEach(viewModel.providers.prefix(4), id: \.id) { provider in
-                            settingsKeyValueRow(
-                                key: provider.name.isEmpty ? provider.id : provider.name,
-                                value: provider.providerType.displayName
-                            )
+            HStack(spacing: 8) {
+                ACBadge(selectedOption?.privacyLevel ?? "本地", kind: badgeKind(for: selectedOption?.privacyLevel))
+                ACBadge(selectedOption?.costLevel ?? "免费", kind: badgeKind(for: selectedOption?.costLevel))
+                ACBadge(selectedOption?.loadLevel ?? "轻量", kind: badgeKind(for: selectedOption?.loadLevel))
+                if selectedOption?.isAvailable == false {
+                    ACBadge("不可用", kind: .red)
+                }
+
+                Spacer(minLength: 0)
+
+                Toggle(isOn: Binding(
+                    get: { preference.isEnabled },
+                    set: { viewModel.setAIModelCategoryEnabled($0, for: category) }
+                ))
+                {
+                    Text("启用此能力")
+                        .font(ACTypography.captionMedium)
+                        .foregroundStyle(ACColors.secondaryText)
+                }
+
+                Button {
+                    Task { await viewModel.testAIModelSelection(for: category) }
+                } label: {
+                    Label("测试", systemImage: "checkmark.seal")
+                        .font(ACTypography.captionMedium)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+    }
+
+    private func capabilityPartitionTile(for category: AIModelCategory) -> some View {
+        let selectedOption = viewModel.selectedAIModelOption(for: category)
+        let isSelected = viewModel.selectedAIModelCategory == category
+
+        return Button {
+            viewModel.selectAIModelCategory(category)
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 8) {
+                    ACTypeIcon(categoryIcon(for: category), tint: isSelected ? ACColors.accentBlue : ACColors.secondaryText, background: isSelected ? ACColors.selectedFill : ACColors.softFill, size: 24)
+                        .frame(width: 24, height: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(category.displayName)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(ACColors.primaryText)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("当前：\(selectedOption?.displayName ?? "未配置")")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ACColors.secondaryText)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    ACBadge(capabilityStateLabel(for: category, selected: selectedOption), kind: capabilityStateKind(for: selectedOption))
+                        .scaleEffect(0.92, anchor: .topTrailing)
+                }
+            }
+            .padding(8)
+            .frame(minHeight: 80, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? ACColors.selectedFill : ACColors.softFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? ACColors.accentBlue.opacity(0.45) : ACColors.border.opacity(0.55), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func capabilityStateLabel(for category: AIModelCategory, selected: AIModelOption?) -> String {
+        if let selected {
+            return selected.isAvailable ? "当前可用" : "不可用"
+        }
+        if category == .complexTask {
+            return "默认关闭"
+        }
+        return "未配置"
+    }
+
+    private func capabilityStateKind(for selected: AIModelOption?) -> ACBadge.Kind {
+        guard let selected else { return .disabled }
+        return selected.isAvailable ? .green : .red
+    }
+
+    private func badgeKind(for text: String?) -> ACBadge.Kind {
+        guard let text else { return .neutral }
+        return badgeKind(for: text)
+    }
+
+    private func badgeKind(for text: String) -> ACBadge.Kind {
+        let value = text.lowercased()
+        if value.contains("云端") || value.contains("付费") {
+            return .orange
+        }
+        if value.contains("本地") || value.contains("免费") || value.contains("系统内置") {
+            return .blue
+        }
+        if value.contains("高负载") {
+            return .purple
+        }
+        if value.contains("轻量") {
+            return .green
+        }
+        return .neutral
+    }
+
+    private func modelDropdownMenu(
+        title: String,
+        value: String,
+        subtitle: String,
+        options: [AIModelOption],
+        category: AIModelCategory,
+        selectionKind: ModelSelectionKind
+    ) -> some View {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    switch selectionKind {
+                    case .current:
+                        viewModel.selectAIModelOption(option, for: category)
+                    case .fallback:
+                        viewModel.selectAIModelFallbackOption(option, for: category)
+                    }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(option.displayName)
+                            Text(option.description)
+                                .font(ACTypography.mini)
+                                .foregroundStyle(ACColors.secondaryText)
+                        }
+                        Spacer(minLength: 0)
+                        if option.isSystemDefault {
+                            Text("系统内置")
+                        } else {
+                            Text(option.isAvailable ? "可用" : "不可用")
                         }
                     }
                 }
             }
+        } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title)
+                    .font(ACTypography.captionMedium)
+                    .foregroundStyle(ACColors.secondaryText)
+
+                HStack(alignment: .center, spacing: 8) {
+                    Text(value)
+                        .font(ACTypography.itemTitle)
+                        .foregroundStyle(ACColors.primaryText)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ACColors.tertiaryText)
+                }
+
+                Text(subtitle)
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.tertiaryText)
+                    .lineLimit(2)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(ACColors.softFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(ACColors.border.opacity(0.55), lineWidth: 1)
+            )
         }
+        .buttonStyle(.plain)
+    }
+
+    private func categoryIcon(for category: AIModelCategory) -> String {
+        switch category {
+        case .speechToText: return "waveform"
+        case .imageOCR: return "camera.viewfinder"
+        case .textCleanup: return "text.alignleft"
+        case .summarization: return "chart.bar.doc.horizontal"
+        case .knowledgeRetrieval: return "magnifyingglass.circle"
+        case .complexTask: return "cpu"
+        }
+    }
+
+    private enum ModelSelectionKind {
+        case current
+        case fallback
     }
 
     private var advancedSection: some View {

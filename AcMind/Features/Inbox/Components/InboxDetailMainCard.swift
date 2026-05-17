@@ -48,6 +48,7 @@ struct InboxDetailMainCard: View {
                             .frame(width: 15, height: 15)
                     }
                     .frame(width: 28, height: 28)
+                    .disabled(true)
                     
                     Button(action: {}) {
                         Image(systemName: "pin")
@@ -57,6 +58,7 @@ struct InboxDetailMainCard: View {
                             .frame(width: 15, height: 15)
                     }
                     .frame(width: 28, height: 28)
+                    .disabled(true)
                     
                     Button(action: {}) {
                         Image(systemName: "ellipsis")
@@ -66,6 +68,7 @@ struct InboxDetailMainCard: View {
                             .frame(width: 15, height: 15)
                     }
                     .frame(width: 28, height: 28)
+                    .disabled(true)
                 }
             }
             
@@ -81,6 +84,7 @@ struct InboxDetailMainCard: View {
                     .frame(width: 32, height: 32)
                     .background(InboxColors.voiceBackground)
                     .cornerRadius(16)
+                    .disabled(true)
                     
                     InboxWaveformView(data: waveformData, width: 260, height: 22)
                     

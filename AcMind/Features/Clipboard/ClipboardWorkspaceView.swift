@@ -1,102 +1,113 @@
+import AppKit
 import SwiftUI
+import AcMindKit
 
 struct ClipboardWorkspaceView: View {
-    @State private var selectedCategory: ClipboardCategory = .all
-    @State private var searchText: String = ""
-    @State private var selectedItemID: UUID = clipboardMockItems.first?.id ?? UUID()
-
-    private var visibleItems: [ClipboardItem] {
-        clipboardMockItems.filter { item in
-            let categoryMatch = selectedCategory == .all || item.type.rawValue == selectedCategory.rawValue
-            let searchMatch = searchText.isEmpty || item.title.localizedCaseInsensitiveContains(searchText) || item.content.localizedCaseInsensitiveContains(searchText)
-            return categoryMatch && searchMatch
-        }
-    }
-
-    private var selectedItem: ClipboardItem? {
-        visibleItems.first { $0.id == selectedItemID } ?? visibleItems.first
-    }
+    @StateObject private var viewModel = ClipboardViewModel()
+    @State private var selectedFilter: ClipboardFilterCategory = .all
+    @State private var selectedItemID: String?
+    @State private var searchText = ""
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         ACWorkspaceShell(
             title: "剪贴板",
-            subtitle: "自动保存、智能分类、快速检索和内容复用。",
+            subtitle: "真实保存当前剪贴板、收藏、删除、搜索和回填复制。",
             trailing: {
                 HStack(spacing: 12) {
                     ACSearchField("搜索剪贴板", text: $searchText, width: 220, height: ACLayout.controlHeight)
-                    ACButton("新增", kind: .primary, minWidth: 78) {}
+                    ACButton("保存当前剪贴板", kind: .primary, minWidth: 120) {
+                        Task {
+                            await viewModel.saveCurrentClipboard()
+                            selectedItemID = viewModel.items.first?.id
+                        }
+                    }
                 }
             },
             left: { sidebar },
-            center: {
-                VStack(alignment: .leading, spacing: ACLayout.cardGap) {
-                    statsBar
-                    centerList
-                }
-            },
+            center: { centerColumn },
             right: { detailPanel }
         )
-    }
-
-    private var statsBar: some View {
-        HStack(spacing: 12) {
-            ClipboardStatCard(title: "全部", value: "126", subtitle: "条内容", symbol: "doc.on.doc")
-            ClipboardStatCard(title: "最近 24 小时", value: "32", subtitle: "条内容", symbol: "clock")
-            ClipboardStatCard(title: "文本", value: "68", subtitle: "条", symbol: "textformat")
-            ClipboardStatCard(title: "图片", value: "24", subtitle: "条", symbol: "photo")
-            ClipboardStatCard(title: "链接", value: "12", subtitle: "条", symbol: "link")
-            ClipboardStatCard(title: "文件", value: "16", subtitle: "条", symbol: "doc")
-            ClipboardStatCard(title: "代码", value: "6", subtitle: "条", symbol: "curlybraces")
+        .task {
+            await reload()
+        }
+        .onChange(of: selectedFilter) { _, newValue in
+            if newValue == .pinned {
+                selectedItemID = filteredItems.first?.id
+            } else {
+                selectedItemID = filteredItems.first?.id
+            }
+        }
+        .onChange(of: searchText) { _, _ in
+            selectedItemID = filteredItems.first?.id
+        }
+        .confirmationDialog("清空全部剪贴板记录？", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("清空", role: .destructive) {
+                Task {
+                    await viewModel.clearAll()
+                    selectedItemID = viewModel.items.first?.id
+                }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("这会删除本地保存的剪贴板历史。")
         }
     }
 
     private var sidebar: some View {
         ACCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text("智能分类")
                     .font(ACTypography.panelTitle)
                     .foregroundStyle(ACColors.primaryText)
 
                 VStack(spacing: 8) {
-                    ForEach(ClipboardCategory.allCases) { category in
-                        ClipboardCategoryRow(
+                    ForEach(ClipboardFilterCategory.allCases) { category in
+                        ClipboardFilterRow(
                             category: category,
-                            selected: selectedCategory == category
+                            selected: selectedFilter == category,
+                            count: category.count(from: viewModel.items)
                         ) {
-                            selectedCategory = category
+                            selectedFilter = category
                         }
                     }
                 }
 
-                Divider()
-                    .overlay(ACColors.divider)
+                Divider().overlay(ACColors.divider)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("收藏与清理")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("批量操作")
                         .font(ACTypography.panelTitle)
                         .foregroundStyle(ACColors.primaryText)
 
-                    ForEach(ClipboardManagementGroup.allCases) { group in
-                        ClipboardUtilityRow(group: group)
+                    ACButton("刷新记录", kind: .secondary) {
+                        Task { await reload() }
+                    }
+
+                    ACButton("清空历史", kind: .ghost) {
+                        showDeleteConfirm = true
                     }
                 }
             }
         }
     }
 
-    private var centerList: some View {
+    private var centerColumn: some View {
         ACCard(padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("今日")
+                        Text("剪贴板记录")
                             .font(ACTypography.cardTitle)
                             .foregroundStyle(ACColors.primaryText)
-                        Text("\(visibleItems.filter { $0.group == "今天" }.count) 条剪贴板内容")
+                        Text("\(filteredItems.count) 条结果")
                             .font(ACTypography.caption)
                             .foregroundStyle(ACColors.secondaryText)
                     }
+
                     Spacer(minLength: 0)
+
+                    ACBadge(selectedFilter.title, kind: .blue)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -105,37 +116,39 @@ struct ClipboardWorkspaceView: View {
                     Divider().overlay(ACColors.divider)
                 }
 
-                ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ForEach(groupedVisibleItems, id: \.group) { group in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(group.group)
-                                    .font(ACTypography.captionMedium)
-                                    .foregroundStyle(ACColors.secondaryText)
-                                    .padding(.horizontal, 16)
+                if filteredItems.isEmpty {
+                    ACEmptyState(
+                        icon: "clipboard",
+                        title: "没有可显示的剪贴板内容",
+                        subtitle: "先点击右上角「保存当前剪贴板」，或者切换筛选条件。"
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 420)
+                } else {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        LazyVStack(spacing: 10) {
+                            ForEach(groupedItems) { section in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(section.title)
+                                        .font(ACTypography.captionMedium)
+                                        .foregroundStyle(ACColors.secondaryText)
+                                        .padding(.top, section.title == "今天" ? 0 : 6)
 
-                                VStack(spacing: 8) {
-                                    ForEach(group.items) { item in
-                                        ACListRow(
-                                            title: item.title,
-                                            subtitle: item.subtitle,
-                                            symbol: item.type.icon,
-                                            selected: selectedItemID == item.id,
-                                            tint: item.type.tint,
-                                            meta: item.source,
-                                            trailing: item.time
-                                        )
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedItemID = item.id
+                                    VStack(spacing: 8) {
+                                        ForEach(section.items) { item in
+                                            Button {
+                                                selectedItemID = item.id
+                                            } label: {
+                                                ClipboardRow(item: item, isSelected: selectedItemID == item.id)
+                                            }
+                                            .buttonStyle(.plain)
                                         }
                                     }
                                 }
-                                .padding(.horizontal, 16)
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                    .padding(.vertical, 12)
                 }
             }
         }
@@ -147,73 +160,190 @@ struct ClipboardWorkspaceView: View {
                 if let selectedItem {
                     ClipboardDetailHeader(item: selectedItem)
                     ClipboardPreviewCard(item: selectedItem)
-                    ClipboardActionGroup(item: selectedItem)
+                    ClipboardActionGroup(
+                        item: selectedItem,
+                        copyAction: {
+                            Task { await viewModel.copyItem(selectedItem) }
+                        },
+                        pinAction: {
+                            Task { await viewModel.togglePinned(selectedItem) }
+                        },
+                        deleteAction: {
+                            Task {
+                                await viewModel.delete(selectedItem)
+                                selectedItemID = filteredItems.first?.id
+                            }
+                        }
+                    )
                     ClipboardMetadataTable(item: selectedItem)
                 } else {
                     ACEmptyState(
                         icon: "clipboard",
-                        title: "选择一项查看详情",
-                        subtitle: "右侧会展示内容预览、操作和元数据。"
+                        title: "选择一条记录查看详情",
+                        subtitle: "右侧会显示内容预览、复制、收藏和删除操作。"
                     )
                 }
             }
         }
     }
 
-    private var groupedVisibleItems: [ClipboardGroupSection] {
-        let todayItems = visibleItems.filter { $0.group == "今天" }
-        let yesterdayItems = visibleItems.filter { $0.group == "昨天" }
-        var sections: [ClipboardGroupSection] = []
+    private var filteredItems: [ClipboardItem] {
+        let items = viewModel.items.filter { item in
+            let matchesCategory: Bool
+            switch selectedFilter {
+            case .all:
+                matchesCategory = true
+            case .pinned:
+                matchesCategory = item.isPinned
+            default:
+                matchesCategory = item.type == selectedFilter.contentType
+            }
 
-        if !todayItems.isEmpty {
-            sections.append(.init(group: "今天", items: todayItems))
+            let matchesSearch: Bool
+            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                matchesSearch = true
+            } else {
+                let haystack = [item.content, item.textContent, item.sourceApp]
+                    .compactMap { $0 }
+                    .joined(separator: " ")
+                matchesSearch = haystack.localizedCaseInsensitiveContains(searchText)
+            }
+            return matchesCategory && matchesSearch
         }
 
-        if !yesterdayItems.isEmpty {
-            sections.append(.init(group: "昨天", items: yesterdayItems))
-        }
+        return items.sorted { $0.createdAt > $1.createdAt }
+    }
 
-        if sections.isEmpty, let first = visibleItems.first {
-            sections.append(.init(group: "筛选结果", items: [first]))
-        }
+    private var groupedItems: [ClipboardSection] {
+        let cal = Calendar.current
+        let today = filteredItems.filter { cal.isDateInToday($0.createdAt) }
+        let yesterday = filteredItems.filter { cal.isDateInYesterday($0.createdAt) }
+        let earlier = filteredItems.filter { !cal.isDateInToday($0.createdAt) && !cal.isDateInYesterday($0.createdAt) }
 
+        var sections: [ClipboardSection] = []
+        if !today.isEmpty { sections.append(.init(title: "今天", items: today)) }
+        if !yesterday.isEmpty { sections.append(.init(title: "昨天", items: yesterday)) }
+        if !earlier.isEmpty { sections.append(.init(title: "更早", items: earlier)) }
         return sections
     }
-}
 
-private struct ClipboardStatCard: View {
-    let title: String
-    let value: String
-    let subtitle: String
-    let symbol: String
-
-    var body: some View {
-        ACCard(padding: 14) {
-            HStack(spacing: 12) {
-                ACTypeIcon(symbol, tint: ACColors.accentBlue, background: ACColors.selectedFill, size: 48)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(ACTypography.miniMedium)
-                        .foregroundStyle(ACColors.secondaryText)
-                    Text(value)
-                        .font(ACTypography.cardTitle)
-                        .foregroundStyle(ACColors.primaryText)
-                    Text(subtitle)
-                        .font(ACTypography.caption)
-                        .foregroundStyle(ACColors.tertiaryText)
-                }
-
-                Spacer(minLength: 0)
-            }
+    private var selectedItem: ClipboardItem? {
+        if let selectedItemID, let item = filteredItems.first(where: { $0.id == selectedItemID }) {
+            return item
         }
-        .frame(height: 74)
+        return filteredItems.first
+    }
+
+    private func reload() async {
+        await viewModel.load()
+        if selectedItemID == nil {
+            selectedItemID = filteredItems.first?.id
+        } else if let currentSelectedItemID = selectedItemID, filteredItems.contains(where: { $0.id == currentSelectedItemID }) == false {
+            selectedItemID = filteredItems.first?.id
+        }
     }
 }
 
-private struct ClipboardCategoryRow: View {
-    let category: ClipboardCategory
+private extension ClipboardItem {
+    var title: String {
+        if let textContent, !textContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return String(textContent.prefix(48))
+        }
+        if let content, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return String(content.prefix(48))
+        }
+        return "未命名剪贴板"
+    }
+
+    var subtitle: String {
+        if let textContent, !textContent.isEmpty {
+            return textContent
+        }
+        if let content, !content.isEmpty {
+            return content
+        }
+        return sourceApp ?? "系统剪贴板"
+    }
+}
+
+private extension ClipboardContentType {
+    var iconName: String {
+        switch self {
+        case .text: return "textformat"
+        case .image: return "photo"
+        case .file: return "doc"
+        case .url: return "link"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .text: return ACColors.accentBlue
+        case .image: return ACColors.accentPurple
+        case .file: return ACColors.accentOrange
+        case .url: return ACColors.accentGreen
+        }
+    }
+
+    var fill: Color {
+        tint.opacity(0.12)
+    }
+}
+
+private enum ClipboardFilterCategory: String, CaseIterable, Identifiable {
+    case all = "全部"
+    case text = "文本"
+    case url = "链接"
+    case file = "文件"
+    case image = "图片"
+    case pinned = "收藏"
+
+    var id: String { rawValue }
+    var title: String { rawValue }
+
+    var contentType: ClipboardContentType? {
+        switch self {
+        case .text: return .text
+        case .url: return .url
+        case .file: return .file
+        case .image: return .image
+        case .all, .pinned: return nil
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .all: return "doc.on.doc"
+        case .text: return "textformat"
+        case .url: return "link"
+        case .file: return "doc"
+        case .image: return "photo"
+        case .pinned: return "star"
+        }
+    }
+
+    func count(from items: [ClipboardItem]) -> Int {
+        switch self {
+        case .all:
+            return items.count
+        case .pinned:
+            return items.filter(\.isPinned).count
+        case .text, .url, .file, .image:
+            return items.filter { $0.type == contentType }.count
+        }
+    }
+}
+
+private struct ClipboardSection: Identifiable {
+    let id = UUID()
+    let title: String
+    let items: [ClipboardItem]
+}
+
+private struct ClipboardFilterRow: View {
+    let category: ClipboardFilterCategory
     let selected: Bool
+    let count: Int
     let action: () -> Void
 
     var body: some View {
@@ -222,10 +352,10 @@ private struct ClipboardCategoryRow: View {
                 ACTypeIcon(category.icon, tint: selected ? ACColors.accentBlue : ACColors.secondaryText, background: selected ? ACColors.selectedFill : ACColors.softFill, size: 36)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(category.rawValue)
+                    Text(category.title)
                         .font(ACTypography.itemTitle)
                         .foregroundStyle(ACColors.primaryText)
-                    Text("\(category.count) 条")
+                    Text("\(count) 条")
                         .font(ACTypography.caption)
                         .foregroundStyle(ACColors.secondaryText)
                 }
@@ -245,35 +375,67 @@ private struct ClipboardCategoryRow: View {
     }
 }
 
-private struct ClipboardUtilityRow: View {
-    let group: ClipboardManagementGroup
+private struct ClipboardRow: View {
+    let item: ClipboardItem
+    let isSelected: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            ACTypeIcon(group.icon, tint: group.tint, background: group.tint.opacity(0.12), size: 32)
+        HStack(alignment: .top, spacing: 12) {
+            ACTypeIcon(item.type.iconName, tint: item.type.tint, background: item.type.fill, size: 42)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(group.title)
-                    .font(ACTypography.captionMedium)
-                    .foregroundStyle(ACColors.primaryText)
-                Text(group.subtitle)
-                    .font(ACTypography.mini)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(item.title)
+                        .font(ACTypography.itemTitle)
+                        .foregroundStyle(ACColors.primaryText)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Text(Self.timeFormatter.string(from: item.createdAt))
+                        .font(ACTypography.mini)
+                        .foregroundStyle(ACColors.tertiaryText)
+                }
+
+                Text(item.subtitle)
+                    .font(ACTypography.caption)
                     .foregroundStyle(ACColors.secondaryText)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 0)
-            Text("\(group.count)")
-                .font(ACTypography.captionMedium)
-                .foregroundStyle(ACColors.tertiaryText)
+
+            VStack(alignment: .trailing, spacing: 8) {
+                ACBadge(item.type.displayName, kind: badgeKind(for: item.type))
+                if item.isPinned {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ACColors.accentBlue)
+                }
+            }
         }
-        .padding(10)
-        .background(ACColors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous))
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: ACLayout.listRowHeight, alignment: .topLeading)
+        .background(isSelected ? ACColors.selectedFill : ACColors.cardBackground)
         .overlay(
-            RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                .stroke(ACColors.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isSelected ? ACColors.accentBlue.opacity(0.3) : ACColors.border, lineWidth: 1)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
+
+    private func badgeKind(for type: ClipboardContentType) -> ACBadge.Kind {
+        switch type {
+        case .text: return .blue
+        case .url: return .green
+        case .file: return .orange
+        case .image: return .purple
+        }
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 }
 
 private struct ClipboardDetailHeader: View {
@@ -281,22 +443,23 @@ private struct ClipboardDetailHeader: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ACTypeIcon(item.type.icon, tint: item.type.tint, background: item.type.fill, size: 48)
+            ACTypeIcon(item.type.iconName, tint: item.type.tint, background: item.type.fill, size: 48)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(ACTypography.itemTitle)
                     .foregroundStyle(ACColors.primaryText)
                     .lineLimit(2)
-                    .truncationMode(.tail)
-                Text("\(item.source) · \(item.time)")
+                Text(item.sourceApp ?? "系统剪贴板")
                     .font(ACTypography.caption)
                     .foregroundStyle(ACColors.secondaryText)
             }
 
             Spacer(minLength: 0)
 
-            ACButton("收藏", kind: .ghost, action: {})
+            ACButton(item.isPinned ? "已收藏" : "收藏", kind: .ghost) {
+                ToastManager.shared.show(.info, item.isPinned ? "收藏状态已开启" : "收藏状态可在列表中切换")
+            }
         }
     }
 }
@@ -313,64 +476,16 @@ private struct ClipboardPreviewCard: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
 
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: ACLayout.smallRadius, style: .continuous)
-                        .fill(ACColors.softFill)
-                        .frame(height: 250)
-
-                    previewContent
-                        .frame(height: 250, alignment: .center)
+                ScrollView {
+                    Text(item.textContent ?? item.content ?? "暂无内容")
+                        .font(ACTypography.body)
+                        .foregroundStyle(ACColors.primaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineSpacing(5)
+                        .padding(16)
+                        .textSelection(.enabled)
                 }
-                .padding(16)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var previewContent: some View {
-        switch item.type {
-        case .text, .code:
-            ScrollView {
-                Text(item.content.isEmpty ? item.title : item.content)
-                    .font(ACTypography.body)
-                    .foregroundStyle(ACColors.primaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineSpacing(5)
-                    .padding(16)
-            }
-        case .image:
-            VStack(spacing: 10) {
-                ACTypeIcon("photo", tint: ACColors.accentPurple, background: ACColors.selectedFill, size: 64)
-                Text(item.title)
-                    .font(ACTypography.itemTitle)
-                    .foregroundStyle(ACColors.primaryText)
-                if let imageSize = item.imageSize {
-                    Text(imageSize)
-                        .font(ACTypography.caption)
-                        .foregroundStyle(ACColors.secondaryText)
-                }
-            }
-        case .link:
-            VStack(spacing: 10) {
-                ACTypeIcon("link", tint: ACColors.accentGreen, background: ACColors.selectedFill, size: 64)
-                Text(item.content)
-                    .font(ACTypography.captionMedium)
-                    .foregroundStyle(ACColors.accentBlue)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                    .padding(.horizontal, 16)
-            }
-        case .file:
-            VStack(spacing: 10) {
-                ACTypeIcon("doc", tint: ACColors.accentOrange, background: ACColors.selectedFill, size: 64)
-                Text(item.title)
-                    .font(ACTypography.itemTitle)
-                    .foregroundStyle(ACColors.primaryText)
-                if let fileSize = item.fileSize {
-                    Text(fileSize)
-                        .font(ACTypography.caption)
-                        .foregroundStyle(ACColors.secondaryText)
-                }
+                .frame(height: 250)
             }
         }
     }
@@ -378,6 +493,9 @@ private struct ClipboardPreviewCard: View {
 
 private struct ClipboardActionGroup: View {
     let item: ClipboardItem
+    let copyAction: () -> Void
+    let pinAction: () -> Void
+    let deleteAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -386,9 +504,9 @@ private struct ClipboardActionGroup: View {
                 .foregroundStyle(ACColors.primaryText)
 
             HStack(spacing: 10) {
-                ACButton("粘贴", kind: .primary, action: {})
-                ACButton("复制", kind: .secondary, action: {})
-                ACButton("分享", kind: .secondary, action: {})
+                ACButton("复制", kind: .primary, action: copyAction)
+                ACButton(item.isPinned ? "取消收藏" : "收藏", kind: .secondary, action: pinAction)
+                ACButton("删除", kind: .ghost, action: deleteAction)
             }
         }
     }
@@ -405,256 +523,17 @@ private struct ClipboardMetadataTable: View {
 
             ACInfoTable([
                 .init("类型", value: item.type.displayName),
-                .init("来源", value: item.source),
-                .init("时间", value: item.time),
-                .init("分组", value: item.group),
-                .init("字符数", value: "\(item.characterCount)"),
-                .init("收藏状态", value: item.isFavorite ? "已收藏" : "未收藏")
+                .init("来源", value: item.sourceApp ?? "未知"),
+                .init("创建时间", value: Self.dateFormatter.string(from: item.createdAt)),
+                .init("字符数", value: "\(item.textContent?.count ?? item.content?.count ?? 0)"),
+                .init("收藏状态", value: item.isPinned ? "已收藏" : "未收藏")
             ])
         }
     }
-}
 
-private struct ClipboardGroupSection: Identifiable {
-    let id = UUID()
-    let group: String
-    let items: [ClipboardItem]
-}
-
-private enum ClipboardItemType: String, CaseIterable, Identifiable {
-    case text
-    case image
-    case link
-    case file
-    case code
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .text: return "textformat"
-        case .image: return "photo"
-        case .link: return "link"
-        case .file: return "doc"
-        case .code: return "curlybraces"
-        }
-    }
-
-    var displayName: String {
-        switch self {
-        case .text: return "文本"
-        case .image: return "图片"
-        case .link: return "链接"
-        case .file: return "文件"
-        case .code: return "代码"
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .text: return ACColors.accentBlue
-        case .image: return ACColors.accentPurple
-        case .link: return ACColors.accentGreen
-        case .file: return ACColors.accentOrange
-        case .code: return ACColors.accentTeal
-        }
-    }
-
-    var fill: Color {
-        switch self {
-        case .text: return ACColors.selectedFill
-        case .image: return ACColors.accentPurple.opacity(0.12)
-        case .link: return ACColors.accentGreen.opacity(0.12)
-        case .file: return ACColors.accentOrange.opacity(0.12)
-        case .code: return ACColors.accentTeal.opacity(0.12)
-        }
-    }
-}
-
-private struct ClipboardItem: Identifiable {
-    let id = UUID()
-    let type: ClipboardItemType
-    let title: String
-    let content: String
-    let time: String
-    let source: String
-    let imageSize: String?
-    let fileSize: String?
-    let isFavorite: Bool
-    let group: String
-
-    var subtitle: String {
-        if !content.isEmpty {
-            return content
-        }
-
-        if let imageSize {
-            return imageSize
-        }
-
-        if let fileSize {
-            return fileSize
-        }
-
-        return source
-    }
-
-    var characterCount: Int {
-        content.count
-    }
-}
-
-private let clipboardMockItems: [ClipboardItem] = [
-    .init(
-        type: .text,
-        title: "可以，下面这份就是基于刚才理想图反推的设计 + Codex 可落地任务单...",
-        content: "可以，下面这份就是基于刚才理想图反推的设计 + Codex 可落地任务单。",
-        time: "10:23:45",
-        source: "从 Agent 复制",
-        imageSize: nil,
-        fileSize: nil,
-        isFavorite: false,
-        group: "今天"
-    ),
-    .init(
-        type: .image,
-        title: "产品需求 PRD 初稿.png",
-        content: "",
-        time: "10:21:30",
-        source: "截图",
-        imageSize: "1024 × 768",
-        fileSize: "2.3 MB",
-        isFavorite: false,
-        group: "今天"
-    ),
-    .init(
-        type: .link,
-        title: "https://www.acmind.com/docs/product/overview",
-        content: "https://www.acmind.com/docs/product/overview",
-        time: "10:15:22",
-        source: "从 Chrome 复制",
-        imageSize: nil,
-        fileSize: nil,
-        isFavorite: false,
-        group: "今天"
-    ),
-    .init(
-        type: .file,
-        title: "项目进度周报_2025-05-09.pdf",
-        content: "",
-        time: "09:48:11",
-        source: "从 Finder 复制",
-        imageSize: nil,
-        fileSize: "1.2 MB",
-        isFavorite: false,
-        group: "今天"
-    ),
-    .init(
-        type: .code,
-        title: "function debounce(fn, delay) { timer = null; return function(...args) {...",
-        content: "function debounce(fn, delay) {\n    let timer = null;\n    return function(...args) {\n        if (timer) clearTimeout(timer);\n        timer = setTimeout(() => {\n            fn.apply(this, args);\n        }, delay);\n    };\n}",
-        time: "09:32:05",
-        source: "从 VS Code 复制",
-        imageSize: nil,
-        fileSize: nil,
-        isFavorite: false,
-        group: "今天"
-    ),
-    .init(
-        type: .text,
-        title: "对，现在这版最大的问题可以明确下结论：",
-        content: "对，现在这版最大的问题可以明确下结论：\n\n1. 信息密度太低，不适合高频检索\n2. 分类体系不清晰\n3. 缺少详情处理能力\n4. 视觉层级混乱",
-        time: "18:36:20",
-        source: "从 Agent 复制",
-        imageSize: nil,
-        fileSize: nil,
-        isFavorite: false,
-        group: "昨天"
-    ),
-    .init(
-        type: .image,
-        title: "设计规范参考.png",
-        content: "",
-        time: "18:20:04",
-        source: "截图",
-        imageSize: "1200 × 800",
-        fileSize: "1.6 MB",
-        isFavorite: false,
-        group: "昨天"
-    )
-]
-
-private enum ClipboardCategory: String, CaseIterable, Identifiable {
-    case all = "全部"
-    case text = "文本"
-    case image = "图片"
-    case link = "链接"
-    case file = "文件"
-    case code = "代码"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .all: return "square.stack.3d.up"
-        case .text: return "textformat"
-        case .image: return "photo"
-        case .link: return "link"
-        case .file: return "doc"
-        case .code: return "curlybraces"
-        }
-    }
-
-    var count: Int {
-        switch self {
-        case .all: return clipboardMockItems.count
-        case .text: return clipboardMockItems.filter { $0.type == .text }.count
-        case .image: return clipboardMockItems.filter { $0.type == .image }.count
-        case .link: return clipboardMockItems.filter { $0.type == .link }.count
-        case .file: return clipboardMockItems.filter { $0.type == .file }.count
-        case .code: return clipboardMockItems.filter { $0.type == .code }.count
-        }
-    }
-}
-
-private enum ClipboardManagementGroup: String, CaseIterable, Identifiable {
-    case favorites
-    case cleanup
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .favorites: return "收藏"
-        case .cleanup: return "清理"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .favorites: return "固定重要内容"
-        case .cleanup: return "整理过期内容"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .favorites: return "star.fill"
-        case .cleanup: return "trash"
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .favorites: return ACColors.accentYellow
-        case .cleanup: return ACColors.accentRed
-        }
-    }
-
-    var count: Int {
-        switch self {
-        case .favorites: return 8
-        case .cleanup: return 23
-        }
-    }
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter
+    }()
 }

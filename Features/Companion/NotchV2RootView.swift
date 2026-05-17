@@ -14,16 +14,13 @@ public struct NotchV2RootView: View {
         Group {
             if viewModel.isExpanded {
                 NotchV2ExpandedView(viewModel: viewModel)
-                    .transition(.move(edge: .top).combined(with: .opacity))
             } else {
                 NotchV2CollapsedView(viewModel: viewModel)
-                    .transition(.opacity)
             }
         }
         .frame(width: viewModel.isExpanded ? NotchV2DesignTokens.expandedWidth : NotchV2DesignTokens.collapsedWidth,
                height: viewModel.isExpanded ? viewModel.expandedHeight : NotchV2DesignTokens.collapsedHeight,
                alignment: .top)
-        .animation(.spring(response: CompanionMenuBarLayout.surfaceMorphResponse, dampingFraction: CompanionMenuBarLayout.surfaceMorphDamping), value: viewModel.isExpanded)
         .onHover { hovering in
             viewModel.setPanelHovered(hovering)
         }

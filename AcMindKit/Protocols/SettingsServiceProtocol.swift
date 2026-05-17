@@ -38,5 +38,11 @@ public protocol SettingsServiceProtocol: Sendable {
     func addProvider(_ config: ProviderConfig) async throws
     func updateProvider(_ config: ProviderConfig) async throws
     func removeProvider(id: String) async throws
+    func saveProviderAPIKey(_ apiKey: String, for providerId: String) async throws
+    func deleteProviderAPIKey(for providerId: String) async throws
     func getAPIKey(for providerId: String) async -> String?
+
+    // AI Model Preferences
+    func getAIModelCategoryPreferences() async -> [AIModelCategoryPreference]
+    func updateAIModelCategoryPreferences(_ preferences: [AIModelCategoryPreference]) async throws
 }

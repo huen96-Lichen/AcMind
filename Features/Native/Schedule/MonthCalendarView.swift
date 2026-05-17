@@ -34,7 +34,7 @@ struct MonthCalendarView: View {
                                     date: date,
                                     isToday: calendar.isDateInToday(date),
                                     isSelected: calendar.isDate(date, inSameDayAs: viewModel.selectedDate),
-                                    events: viewModel.events(for: date),
+                                    events: viewModel.events(on: date),
                                     viewModel: viewModel
                                 )
                                 .onTapGesture {

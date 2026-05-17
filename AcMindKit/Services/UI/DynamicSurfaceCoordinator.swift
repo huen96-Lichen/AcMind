@@ -69,12 +69,26 @@ public final class DynamicSurfaceCoordinator: ObservableObject {
     @Published public private(set) var previewScreenID: String?
     @Published public private(set) var capsuleDesktopPosition: CGPoint?
     @Published public private(set) var continentTopDockScreenID: String?
+    @Published public private(set) var preferredCapsuleScreenID: String?
+    @Published public private(set) var preferredContinentScreenID: String?
 
     private var capsuleAdapter: DynamicSurfacePanelAdapter?
     private var continentAdapter: DynamicSurfacePanelAdapter?
+    private let userDefaults: UserDefaults
 
-    public init() {
+    public init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
         loadPersistedState()
+    }
+
+    public func setPreferredCapsuleScreenID(_ screenID: String?) {
+        preferredCapsuleScreenID = screenID
+        persistState()
+    }
+
+    public func setPreferredContinentScreenID(_ screenID: String?) {
+        preferredContinentScreenID = screenID
+        persistState()
     }
 
     public func registerCapsuleAdapter(_ adapter: DynamicSurfacePanelAdapter) {
@@ -85,7 +99,7 @@ public final class DynamicSurfaceCoordinator: ObservableObject {
         continentAdapter = adapter
     }
 
-    public func restoreLastSurface(fallback _: DynamicSurfaceVisibilityState = .capsuleCompact) {
+    public func restoreLastSurface(fallback: DynamicSurfaceVisibilityState = .capsuleCompact) {
         let restoredState = visibilityState
         transition(to: restoredState, reason: .restore)
     }
@@ -274,14 +288,16 @@ public final class DynamicSurfaceCoordinator: ObservableObject {
     // MARK: - Persistence
 
     private func loadPersistedState() {
-        if let dict = UserDefaults.standard.dictionary(forKey: Self.capsulePositionKey),
+        if let dict = userDefaults.dictionary(forKey: Self.capsulePositionKey),
            let x = dict["x"] as? CGFloat,
            let y = dict["y"] as? CGFloat {
             capsuleDesktopPosition = CGPoint(x: x, y: y)
         }
-        continentTopDockScreenID = UserDefaults.standard.string(forKey: Self.continentScreenKey)
-        if let raw = UserDefaults.standard.string(forKey: Self.visibilityStateKey),
-           let state = DynamicSurfaceVisibilityState(rawValue: raw) {
+        continentTopDockScreenID = userDefaults.string(forKey: Self.continentScreenKey)
+        preferredCapsuleScreenID = userDefaults.string(forKey: Self.preferredCapsuleScreenKey)
+        preferredContinentScreenID = userDefaults.string(forKey: Self.preferredContinentScreenKey)
+        let state = Self.loadPersistedVisibilityState(userDefaults: userDefaults, default: nil)
+        if let state {
             visibilityState = state
             surfaceKind = Self.surfaceKind(for: state)
             presentation = Self.presentation(for: state)
@@ -297,26 +313,50 @@ public final class DynamicSurfaceCoordinator: ObservableObject {
     }
 
     private func persistState() {
-        UserDefaults.standard.set(visibilityState.rawValue, forKey: Self.visibilityStateKey)
+        userDefaults.set(visibilityState.rawValue, forKey: Self.visibilityStateKey)
         if let point = capsuleDesktopPosition {
-            UserDefaults.standard.set(["x": point.x, "y": point.y], forKey: Self.capsulePositionKey)
+            userDefaults.set(["x": point.x, "y": point.y], forKey: Self.capsulePositionKey)
         } else {
-            UserDefaults.standard.removeObject(forKey: Self.capsulePositionKey)
+            userDefaults.removeObject(forKey: Self.capsulePositionKey)
         }
         if let screenID = continentTopDockScreenID {
-            UserDefaults.standard.set(screenID, forKey: Self.continentScreenKey)
+            userDefaults.set(screenID, forKey: Self.continentScreenKey)
         } else {
-            UserDefaults.standard.removeObject(forKey: Self.continentScreenKey)
+            userDefaults.removeObject(forKey: Self.continentScreenKey)
+        }
+        if let screenID = preferredCapsuleScreenID {
+            userDefaults.set(screenID, forKey: Self.preferredCapsuleScreenKey)
+        } else {
+            userDefaults.removeObject(forKey: Self.preferredCapsuleScreenKey)
+        }
+        if let screenID = preferredContinentScreenID {
+            userDefaults.set(screenID, forKey: Self.preferredContinentScreenKey)
+        } else {
+            userDefaults.removeObject(forKey: Self.preferredContinentScreenKey)
         }
     }
 
     private static let capsulePositionKey = "DesktopCapsule.position"
     private static let continentScreenKey = "DynamicSurface.continentTopDockScreenID"
+    private static let preferredCapsuleScreenKey = "DynamicSurface.preferredCapsuleScreenID"
+    private static let preferredContinentScreenKey = "DynamicSurface.preferredContinentScreenID"
     private static let visibilityStateKey = "DynamicSurface.visibilityState"
 
     // MARK: - Helpers
 
+    private static func loadPersistedVisibilityState(userDefaults: UserDefaults, default defaultValue: DynamicSurfaceVisibilityState?) -> DynamicSurfaceVisibilityState? {
+        guard let raw = userDefaults.string(forKey: visibilityStateKey),
+              let state = DynamicSurfaceVisibilityState(rawValue: raw) else {
+            return defaultValue
+        }
+        return state
+    }
+
     private func screenForCapsuleDock() -> NSScreen? {
+        if let preferredCapsuleScreenID,
+           let preferredScreen = NSScreen.screens.first(where: { Self.screenIdentifier($0) == preferredCapsuleScreenID }) {
+            return preferredScreen
+        }
         if let point = capsuleDesktopPosition {
             return CompanionScreenPositioning.screen(for: point)
         }
@@ -324,6 +364,10 @@ public final class DynamicSurfaceCoordinator: ObservableObject {
     }
 
     private func screenForContinentDock() -> NSScreen? {
+        if let preferredContinentScreenID,
+           let preferredScreen = NSScreen.screens.first(where: { Self.screenIdentifier($0) == preferredContinentScreenID }) {
+            return preferredScreen
+        }
         if let screenID = continentTopDockScreenID {
             return NSScreen.screens.first(where: { Self.screenIdentifier($0) == screenID }) ?? NSScreen.main ?? NSScreen.screens.first
         }

@@ -1,5 +1,8 @@
 # UI 边界约定
 
+> 说明：这份文档记录的是早期 React / Electron 原型的 UI 边界，仅作为历史参考。
+> 当前主线已经切换为 Swift 原生工程，这里的路径和分层不再作为活跃实现依据。
+
 日期：2026-05-16
 
 这份文档用于约束主界面与二级界面的改动边界，方便后续开发者快速判断：
@@ -38,35 +41,35 @@
 - 增加数据展示区
 - 增加更多子组件拆分
 
-## 2. 当前代码分层
+## 2. 历史代码分层
 
-### 2.1 固定壳
+### 2.1 固定壳（历史）
 
-这些文件尽量保持稳定：
+以下内容来自早期 React / Electron 原型，仅保留历史上下文：
 
-- [`src/renderer/App.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/App.tsx)
-- [`src/renderer/components/layout/Sidebar.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/layout/Sidebar.tsx)
-- [`src/renderer/styles.css`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/styles.css)
+ - `src/renderer/App.tsx`
+ - `src/renderer/components/layout/Sidebar.tsx`
+ - `src/renderer/styles.css`
 
-它们负责：
+它们当时负责：
 
 - 全局布局
 - 左侧导航
 - 主内容区承载
 - 全局样式变量和页面骨架
 
-### 2.2 可编辑工作区
+### 2.2 可编辑工作区（历史）
 
-Agent 页是当前主要的二级工作区：
+Agent 页当时是主要的二级工作区：
 
-- [`src/renderer/pages/AgentPage.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/pages/AgentPage.tsx)
+ - `src/renderer/pages/AgentPage.tsx`
 
 它下面的组件可以继续扩展：
 
-- [`src/renderer/components/agent/AgentPageHeader.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentPageHeader.tsx)
-- [`src/renderer/components/agent/AgentTabBar.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentTabBar.tsx)
-- [`src/renderer/components/agent/AgentChatPanel.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentChatPanel.tsx)
-- [`src/renderer/components/agent/AgentDistillPanel.tsx`](/Users/lichen/Desktop/AcMind_V2.0/src/renderer/components/agent/AgentDistillPanel.tsx)
+ - `src/renderer/components/agent/AgentPageHeader.tsx`
+ - `src/renderer/components/agent/AgentTabBar.tsx`
+ - `src/renderer/components/agent/AgentChatPanel.tsx`
+ - `src/renderer/components/agent/AgentDistillPanel.tsx`
 
 ## 3. 分区规则
 
@@ -187,4 +190,3 @@ Agent 页是当前主要的二级工作区：
 - 可编辑控制区
 - 可编辑工作区
 - 只读展示区
-

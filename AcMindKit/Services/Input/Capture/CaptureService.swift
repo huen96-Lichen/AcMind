@@ -71,7 +71,8 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             status: .captured,
             title: "截图 \(formatDate())",
             previewText: "截图 \(formatDate())",
-            assetFileIds: [assetFile.id]
+            assetFileIds: [assetFile.id],
+            metadata: defaultMetadata(taskType: .imageOCR, outputType: .rawOCR)
         )
         
         try await storage.insertSourceItem(sourceItem)
@@ -82,6 +83,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
                 var updatedItem = sourceItem
                 updatedItem.ocrText = ocrText
                 updatedItem.previewText = ocrText.prefix(200).description
+                updatedItem = updatedItem.withAIMetadata(
+                    taskType: .imageOCR,
+                    providerId: AppleVisionOCRProvider().id,
+                    outputType: .rawOCR,
+                    category: .reference
+                )
                 try? await storage.updateSourceItem(updatedItem)
             }
         }
@@ -208,7 +215,8 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
                 status: .captured,
                 title: "剪贴板图片 \(formatDate())",
                 previewText: "剪贴板图片",
-                assetFileIds: [assetFile.id]
+                assetFileIds: [assetFile.id],
+                metadata: defaultMetadata(taskType: .imageOCR, outputType: .rawOCR)
             )
             
             try await storage.insertSourceItem(sourceItem)
@@ -219,6 +227,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
                     var updatedItem = sourceItem
                     updatedItem.ocrText = ocrText
                     updatedItem.previewText = ocrText.prefix(200).description
+                    updatedItem = updatedItem.withAIMetadata(
+                        taskType: .imageOCR,
+                        providerId: AppleVisionOCRProvider().id,
+                        outputType: .rawOCR,
+                        category: .reference
+                    )
                     try? await storage.updateSourceItem(updatedItem)
                 }
             }
@@ -252,7 +266,11 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             status: .captured,
             title: url.lastPathComponent,
             previewText: "导入文件: \(url.lastPathComponent)",
-            assetFileIds: [assetFile.id]
+            assetFileIds: [assetFile.id],
+            metadata: defaultMetadata(
+                taskType: type == .image ? .imageOCR : .textCleanup,
+                outputType: type == .image ? .rawOCR : .markdownNote
+            )
         )
         
         try await storage.insertSourceItem(sourceItem)
@@ -264,6 +282,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
                     var updatedItem = sourceItem
                     updatedItem.ocrText = ocrText
                     updatedItem.previewText = ocrText.prefix(200).description
+                    updatedItem = updatedItem.withAIMetadata(
+                        taskType: .imageOCR,
+                        providerId: AppleVisionOCRProvider().id,
+                        outputType: .rawOCR,
+                        category: .reference
+                    )
                     try? await storage.updateSourceItem(updatedItem)
                 }
             }
@@ -303,7 +327,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             title: title,
             previewText: previewText,
             originalUrl: url.absoluteString,
-            assetFileIds: [assetFile.id]
+            assetFileIds: [assetFile.id],
+            metadata: defaultMetadata(
+                taskType: .textCleanup,
+                outputType: .knowledgeCard,
+                category: .link
+            )
         )
         
         try await storage.insertSourceItem(sourceItem)
@@ -363,7 +392,8 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             status: .captured,
             title: title,
             previewText: previewText,
-            assetFileIds: [assetFile.id]
+            assetFileIds: [assetFile.id],
+            metadata: defaultMetadata(taskType: .textCleanup, outputType: .markdownNote)
         )
         
         try await storage.insertSourceItem(sourceItem)
@@ -465,7 +495,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             title: "语音记录 \(formatDate())",
             previewText: transcript.prefix(200).description,
             transcript: transcript,
-            assetFileIds: [assetFile.id]
+            assetFileIds: [assetFile.id],
+            metadata: defaultMetadata(
+                taskType: .speechToText,
+                outputType: .rawTranscript,
+                category: .idea
+            )
         )
         
         try await storage.insertSourceItem(sourceItem)
@@ -476,7 +511,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     // MARK: - OCR
     
     public func performOCR(imageURL: URL) async throws -> String {
-        // 使用 vision_ocr.swift 脚本
+        do {
+            return try await VisionOCR.recognizeText(in: imageURL).text
+        } catch {
+            // 保留脚本作为兼容兜底，主路径使用 AcMindKit 内部 VisionOCR。
+        }
+
         let scriptPath = Bundle.main.path(forResource: "vision_ocr", ofType: "swift")
             ?? "scripts/vision_ocr.swift"
         
@@ -552,6 +592,22 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         return formatter.string(from: Date())
+    }
+
+    private func defaultMetadata(
+        taskType: AITaskType,
+        outputType: AcMindOutputType,
+        category: InboxCategory? = nil
+    ) -> [String: String] {
+        var metadata: [String: String] = [
+            AIMetadataKey.taskType: taskType.rawValue,
+            AIMetadataKey.outputType: outputType.rawValue,
+            AIMetadataKey.requiresUserConsent: "false"
+        ]
+        if let category {
+            metadata[AIMetadataKey.inboxCategory] = category.rawValue
+        }
+        return metadata
     }
 }
 

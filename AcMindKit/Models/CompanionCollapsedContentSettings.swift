@@ -35,7 +35,28 @@ public struct CompanionCollapsedContentSettings: Codable, Equatable, Sendable {
         self.customSymbol = customSymbol
     }
 
-    public static let `default` = CompanionCollapsedContentSettings()
+    public static let `default` = CompanionCollapsedContentSettings(mode: .currentStatus)
+
+    public var source: CompanionCollapsedContentMode {
+        get { mode }
+        set { mode = newValue }
+    }
+
+    public init(
+        source: CompanionCollapsedContentMode = .currentStatus,
+        customLabel: String = "当前状态",
+        customTitle: String = "待命",
+        customSubtitle: String = "可自定义展示内容",
+        customSymbol: String = "sparkles"
+    ) {
+        self.init(
+            mode: source,
+            customLabel: customLabel,
+            customTitle: customTitle,
+            customSubtitle: customSubtitle,
+            customSymbol: customSymbol
+        )
+    }
 }
 
 public enum CompanionCollapsedContentStorage {
