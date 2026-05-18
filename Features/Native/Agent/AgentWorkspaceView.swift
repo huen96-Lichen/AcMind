@@ -18,24 +18,50 @@ struct AgentWorkspaceView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let isCompactLayout = geometry.size.width < AgentWorkspaceLayout.compactLayoutThreshold
+            let auxiliaryDrawerWidth = min(max(320, geometry.size.width * 0.24), AgentWorkspaceLayout.auxiliaryDrawerMaxWidth)
+            let stackedDrawerWidth = max(geometry.size.width - ACLayout.pagePaddingX * 2, 0)
+            let stackedDrawerHeight = min(max(420, geometry.size.height * 0.42), 560)
+
             VStack(alignment: .leading, spacing: 0) {
                 conversationHeader
                     .frame(height: ACLayout.pageHeaderHeight)
                     .padding(.horizontal, ACLayout.pagePaddingX)
 
-                ZStack(alignment: .trailing) {
-                    mainConversationPanel
+                if showsAuxiliaryDrawer {
+                    if isCompactLayout {
+                        VStack(alignment: .leading, spacing: ACLayout.panelGap) {
+                            mainConversationContent
+
+                            auxiliaryDrawer(width: stackedDrawerWidth, isCompact: true)
+                                .frame(height: stackedDrawerHeight)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(.horizontal, ACLayout.pagePaddingX)
                         .padding(.vertical, ACLayout.pagePaddingY)
                         .padding(.bottom, ACLayout.pagePaddingBottom)
+                    } else {
+                        HStack(alignment: .top, spacing: ACLayout.panelGap) {
+                            mainConversationContent
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                    if showsAuxiliaryDrawer {
-                        auxiliaryDrawer
-                            .frame(width: min(max(320, geometry.size.width * 0.24), 388))
-                            .padding(.trailing, 12)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                            auxiliaryDrawer(width: auxiliaryDrawerWidth, isCompact: false)
+                                .frame(width: auxiliaryDrawerWidth)
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, ACLayout.pagePaddingX)
+                        .padding(.vertical, ACLayout.pagePaddingY)
+                        .padding(.bottom, ACLayout.pagePaddingBottom)
                     }
+                } else {
+                    mainConversationContent
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, ACLayout.pagePaddingX)
+                        .padding(.vertical, ACLayout.pagePaddingY)
+                        .padding(.bottom, ACLayout.pagePaddingBottom)
                 }
                 .animation(.spring(response: 0.32, dampingFraction: 0.88), value: showsAuxiliaryDrawer)
             }
@@ -71,6 +97,13 @@ struct AgentWorkspaceView: View {
     }
 
     private var conversationHeader: some View {
+        ViewThatFits(in: .horizontal) {
+            conversationHeaderWide
+            conversationHeaderCompact
+        }
+    }
+
+    private var conversationHeaderWide: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(viewModel.activeSessionTitle)
@@ -91,70 +124,103 @@ struct AgentWorkspaceView: View {
                 ACBadge(viewModel.activeActionMode.displayName, kind: .blue)
                 ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
 
-                Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
-                        showsQuickAsk.toggle()
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkle.magnifyingglass")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Quick Ask")
-                            .font(ACTypography.mini)
-                    }
-                    .foregroundStyle(ACColors.primaryText)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(showsQuickAsk ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(showsQuickAsk ? ACColors.accentPurple.opacity(0.35) : ACColors.border, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
+                actionButtonRow
+            }
+        }
+    }
 
-                Button {
-                    showsProviderManager = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "server.rack")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Provider 管理")
-                            .font(ACTypography.mini)
-                    }
+    private var conversationHeaderCompact: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(viewModel.activeSessionTitle)
+                    .font(ACTypography.cardTitle)
                     .foregroundStyle(ACColors.primaryText)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .lineLimit(1)
+
+                Text(viewModel.activeSessionSubtitle)
+                    .font(ACTypography.caption)
+                    .foregroundStyle(ACColors.secondaryText)
+                    .lineLimit(2)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ACBadge(viewModel.connectionStatusLabel, kind: viewModel.connectionStatusKind)
+                    ACBadge(viewModel.activeActionMode.displayName, kind: .blue)
+                    ACBadge(viewModel.statusLabel, kind: viewModel.statusKind)
+
+                    actionButtonRow
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private var actionButtonRow: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                    showsQuickAsk.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Quick Ask")
+                        .font(ACTypography.mini)
+                }
+                .foregroundStyle(ACColors.primaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(showsQuickAsk ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(showsQuickAsk ? ACColors.accentPurple.opacity(0.35) : ACColors.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showsProviderManager = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Provider 管理")
+                        .font(ACTypography.mini)
+                }
+                .foregroundStyle(ACColors.primaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(ACColors.softFill)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(ACColors.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showsAuxiliaryDrawer.toggle()
+            } label: {
+                Image(systemName: showsAuxiliaryDrawer ? "sidebar.right" : "sidebar.left")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ACColors.primaryText)
+                    .frame(width: 32, height: 32)
                     .background(ACColors.softFill)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .stroke(ACColors.border, lineWidth: 1)
                     )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    showsAuxiliaryDrawer.toggle()
-                } label: {
-                    Image(systemName: showsAuxiliaryDrawer ? "sidebar.right" : "sidebar.left")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(ACColors.primaryText)
-                        .frame(width: 32, height: 32)
-                        .background(ACColors.softFill)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(ACColors.border, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
             }
+            .buttonStyle(.plain)
         }
     }
 
-    private var mainConversationPanel: some View {
+    private var mainConversationContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             if showsQuickAsk {
                 AgentQuickAskStrip(
@@ -207,15 +273,15 @@ struct AgentWorkspaceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private var auxiliaryDrawer: some View {
-        managementRail(width: 320, collapsed: false)
+    private func auxiliaryDrawer(width: CGFloat, isCompact: Bool) -> some View {
+        managementRail(width: width, collapsed: false)
             .frame(maxHeight: .infinity, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(Color.white.opacity(0.92))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: isCompact ? 18 : 20, style: .continuous)
                     .stroke(ACColors.border.opacity(0.8), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 8)
@@ -271,7 +337,7 @@ struct AgentWorkspaceView: View {
 
             railResizeHandle
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(width: width, maxHeight: .infinity, alignment: .topLeading)
         .background(
             Group {
                 if collapsed {
@@ -2420,6 +2486,8 @@ private enum AgentWorkspaceLayout {
     static let managementRailCollapsedWidth: CGFloat = 50
     static let managementRailCollapsedTrigger: CGFloat = 84
     static let defaultManagementRailWidth: CGFloat = 232
+    static let auxiliaryDrawerMaxWidth: CGFloat = 388
+    static let compactLayoutThreshold: CGFloat = 1180
     static let autoCollapseThreshold: CGFloat = 1100
 }
 

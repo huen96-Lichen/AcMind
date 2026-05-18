@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var launchWindowController: LaunchWindowController?
     var mainWindowController: MainWindowController?
     private var savedWindowFrame: NSRect?
+    private var lastPrimaryRailWidth: CGFloat = ACLayout.primaryRailExpanded
 
     // MARK: - Notch Panel
 
@@ -125,6 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
         mainWindowController?.window?.setFrame(AppWindowGeometry.mainFrame, display: true)
+        lastPrimaryRailWidth = appState.primaryRailWidth
         mainWindowController?.window?.makeKeyAndOrderFront(nil)
         mainWindowController?.window?.orderFrontRegardless()
         appState.mainWindowDidOpen()
@@ -149,6 +151,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let window = mainWindowController?.window else { return }
 
         savedWindowFrame = window.frame
+        lastPrimaryRailWidth = railWidth
 
         let padding: CGFloat = 32
         let newWidth = railWidth + padding
@@ -165,17 +168,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let savedFrame = savedWindowFrame {
             window.setFrame(savedFrame, display: true)
         }
+        lastPrimaryRailWidth = appState.primaryRailWidth
     }
 
     func updateWindowForRailWidth(_ railWidth: CGFloat) {
-        guard let window = mainWindowController?.window, appState.workspaceMode == .collapsed else { return }
+        guard let window = mainWindowController?.window else { return }
 
-        let padding: CGFloat = 32
-        let newWidth = railWidth + padding
+        let previousRailWidth = lastPrimaryRailWidth
+        lastPrimaryRailWidth = railWidth
+
+        if appState.workspaceMode == .collapsed {
+            let padding: CGFloat = 32
+            let newWidth = railWidth + padding
+
+            var newFrame = window.frame
+            newFrame.size.width = newWidth
+            newFrame.origin.x = window.frame.maxX - newWidth
+            window.setFrame(newFrame, display: true)
+            return
+        }
+
+        let delta = railWidth - previousRailWidth
+        guard delta != 0 else { return }
 
         var newFrame = window.frame
-        newFrame.size.width = newWidth
-        newFrame.origin.x = window.frame.maxX - newWidth
+        newFrame.size.width = max(newFrame.size.width + delta, ACLayout.windowMinWidth)
         window.setFrame(newFrame, display: true)
     }
 
@@ -776,9 +793,8 @@ class MainWindowController: NSWindowController {
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.hideStandardWindowControls()
-        // 最小窗口尺寸：compact rail（88px）+ padding（32px）+ 额外空间（80px）= 200px
-        // 保证一级菜单有足够显示空间，同时允许内容区被压缩
-        window.minSize = NSSize(width: 200, height: 300)
+        // 最小窗口尺寸与壳体断点对齐，避免窗口缩到布局必坏的宽度
+        window.minSize = NSSize(width: ACLayout.windowMinWidth, height: 300)
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -863,7 +879,7 @@ class LaunchWindowController: NSWindowController {
 // MARK: - Window Geometry
 
 enum AppWindowGeometry {
-    static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 800)
+    static let mainFrame = NSRect(x: 120, y: 120, width: ACLayout.windowIdealWidth, height: ACLayout.windowIdealHeight)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
 }
 

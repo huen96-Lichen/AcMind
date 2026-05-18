@@ -27,6 +27,8 @@ struct ACWorkspaceShell<Left: View, Center: View, Right: View>: View {
     var body: some View {
         GeometryReader { geometry in
             let layoutMode = ACLayout.workspaceLayoutMode(for: geometry.size.width)
+            let contentMaxWidth: CGFloat = layoutMode == .tripleColumn ? ACLayout.workspaceContentMaxWidth : .infinity
+            let contentAlignment: Alignment = layoutMode == .tripleColumn ? .center : .leading
 
             VStack(alignment: .leading, spacing: 0) {
                 ACPageHeader(title: title, subtitle: subtitle) {
@@ -48,7 +50,7 @@ struct ACWorkspaceShell<Left: View, Center: View, Right: View>: View {
                     .padding(.horizontal, ACLayout.pagePaddingX)
                     .padding(.vertical, ACLayout.pagePaddingY)
                     .padding(.bottom, ACLayout.pagePaddingBottom)
-                    .frame(maxWidth: ACLayout.workspaceContentMaxWidth, alignment: .center)
+                    .frame(maxWidth: contentMaxWidth, alignment: contentAlignment)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -80,7 +82,13 @@ struct ACWorkspaceShell<Left: View, Center: View, Right: View>: View {
     
     private var singleColumnLayout: some View {
         VStack(alignment: .leading, spacing: ACLayout.panelGap) {
+            left()
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
             center()
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            right()
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }

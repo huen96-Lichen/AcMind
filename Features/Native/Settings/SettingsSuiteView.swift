@@ -61,13 +61,27 @@ struct SettingsSuiteView: View {
                     title: "设置中心",
                     subtitle: "统一管理基础偏好、Agent、信息处理、知识库、工具和模型。"
                 ) {
-                    HStack(spacing: 10) {
-                        ACBadge(selectedSection.title, kind: .neutral)
-                        if let message = viewModel.saveStatusMessage {
-                            ACBadge(message, kind: .green)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) {
+                            ACBadge(selectedSection.title, kind: .neutral)
+                            if let message = viewModel.saveStatusMessage {
+                                ACBadge(message, kind: .green)
+                            }
+                            ACButton("保存设置", kind: .primary) {
+                                Task { await viewModel.saveSettings() }
+                            }
                         }
-                        ACButton("保存设置", kind: .primary) {
-                            Task { await viewModel.saveSettings() }
+
+                        VStack(alignment: .trailing, spacing: 8) {
+                            HStack(spacing: 8) {
+                                ACBadge(selectedSection.title, kind: .neutral)
+                                if let message = viewModel.saveStatusMessage {
+                                    ACBadge(message, kind: .green)
+                                }
+                            }
+                            ACButton("保存设置", kind: .primary) {
+                                Task { await viewModel.saveSettings() }
+                            }
                         }
                     }
                 }
@@ -370,19 +384,38 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            HStack(alignment: .top, spacing: 14) {
-                settingsCard(title: "截图快捷键", subtitle: "快速调用") {
-                    TextField("例如 ⌘⇧3", text: $viewModel.captureScreenshotHotkey)
-                        .textFieldStyle(.roundedBorder)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 14) {
+                    settingsCard(title: "截图快捷键", subtitle: "快速调用") {
+                        TextField("例如 ⌘⇧3", text: $viewModel.captureScreenshotHotkey)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    settingsCard(title: "滚动截图", subtitle: "参数与稳定性") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Slider(value: $viewModel.scrollCaptureSpeed, in: 1...6, step: 0.5)
+                            Text("速度 \(viewModel.scrollCaptureSpeed, specifier: "%.1f")")
+                                .font(ACTypography.caption)
+                                .foregroundStyle(ACColors.secondaryText)
+                            Stepper("最大高度 \(viewModel.scrollCaptureMaxHeight)", value: $viewModel.scrollCaptureMaxHeight, in: 12000...60000, step: 2000)
+                        }
+                    }
                 }
 
-                settingsCard(title: "滚动截图", subtitle: "参数与稳定性") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Slider(value: $viewModel.scrollCaptureSpeed, in: 1...6, step: 0.5)
-                        Text("速度 \(viewModel.scrollCaptureSpeed, specifier: "%.1f")")
-                            .font(ACTypography.caption)
-                            .foregroundStyle(ACColors.secondaryText)
-                        Stepper("最大高度 \(viewModel.scrollCaptureMaxHeight)", value: $viewModel.scrollCaptureMaxHeight, in: 12000...60000, step: 2000)
+                VStack(alignment: .leading, spacing: 14) {
+                    settingsCard(title: "截图快捷键", subtitle: "快速调用") {
+                        TextField("例如 ⌘⇧3", text: $viewModel.captureScreenshotHotkey)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    settingsCard(title: "滚动截图", subtitle: "参数与稳定性") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Slider(value: $viewModel.scrollCaptureSpeed, in: 1...6, step: 0.5)
+                            Text("速度 \(viewModel.scrollCaptureSpeed, specifier: "%.1f")")
+                                .font(ACTypography.caption)
+                                .foregroundStyle(ACColors.secondaryText)
+                            Stepper("最大高度 \(viewModel.scrollCaptureMaxHeight)", value: $viewModel.scrollCaptureMaxHeight, in: 12000...60000, step: 2000)
+                        }
                     }
                 }
             }
@@ -393,10 +426,25 @@ struct SettingsSuiteView: View {
         VStack(spacing: 14) {
             settingsCard(title: "能力分区", subtitle: "直接选择当前模型与保底模型，所有设置都在这一页完成。") {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 8) {
-                        ForEach(AIModelCategory.allCases) { category in
-                            capabilityPartitionTile(for: category)
-                                .frame(maxWidth: .infinity)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(AIModelCategory.allCases) { category in
+                                capabilityPartitionTile(for: category)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8)
+                            ],
+                            alignment: .leading,
+                            spacing: 8
+                        ) {
+                            ForEach(AIModelCategory.allCases) { category in
+                                capabilityPartitionTile(for: category)
+                            }
                         }
                     }
 

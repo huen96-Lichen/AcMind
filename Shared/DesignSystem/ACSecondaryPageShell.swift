@@ -21,25 +21,29 @@ struct ACSecondaryPageShell<Content: View>: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header()
-                .frame(height: ACLayout.pageHeaderHeight)
+        GeometryReader { geometry in
+            let isCompact = layout == .standard && geometry.size.width < ACLayout.Breakpoint.compact
+            let contentSpacing = (layout == .withSidebar || isCompact) ? ACLayout.panelGap : 16
+            let contentMaxWidth: CGFloat = (layout == .withSidebar || isCompact) ? .infinity : ACLayout.secondaryPageContentMaxWidth
+            let contentAlignment: Alignment = (layout == .withSidebar || isCompact) ? .leading : .center
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: layout == .withSidebar ? ACLayout.panelGap : 16) {
-                    content()
+            VStack(alignment: .leading, spacing: 0) {
+                header()
+                    .frame(height: ACLayout.pageHeaderHeight)
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: contentSpacing) {
+                        content()
+                    }
+                    .padding(.horizontal, ACLayout.pagePaddingX)
+                    .padding(.vertical, ACLayout.pagePaddingY)
+                    .padding(.bottom, ACLayout.pagePaddingBottom)
+                    .frame(maxWidth: contentMaxWidth, alignment: contentAlignment)
                 }
-                .padding(.horizontal, ACLayout.pagePaddingX)
-                .padding(.vertical, ACLayout.pagePaddingY)
-                .padding(.bottom, ACLayout.pagePaddingBottom)
-                .frame(
-                    maxWidth: layout == .withSidebar ? .infinity : ACLayout.secondaryPageContentMaxWidth,
-                    alignment: layout == .withSidebar ? .leading : .center
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 

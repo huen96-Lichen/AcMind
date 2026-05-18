@@ -30,15 +30,30 @@ struct DynamicSurfaceCommercialView: View {
                             .font(ACTypography.captionMedium)
                             .foregroundStyle(isSelected ? ACColors.accentBlue : ACColors.primaryText)
                     }
-                    .frame(width: 200)
+                    .frame(width: 256)
                 }
             },
             content: {
-                firstRow
-                monitorRow
-                secondRow
-                featureRow
-                debugBar
+                GeometryReader { geometry in
+                    let isCompact = geometry.size.width < ACLayout.Breakpoint.compact
+
+                    VStack(alignment: .leading, spacing: ACLayout.gapL) {
+                        if isCompact {
+                            firstRowCompact
+                            monitorRowCompact
+                            secondRowCompact
+                            featureRowCompact
+                        } else {
+                            firstRow
+                            monitorRow
+                            secondRow
+                            featureRow
+                        }
+
+                        debugBar
+                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
             }
         )
         .onAppear {
@@ -314,6 +329,208 @@ struct DynamicSurfaceCommercialView: View {
         }
     }
 
+    private var firstRowCompact: some View {
+        VStack(alignment: .leading, spacing: ACLayout.gapL) {
+            SurfaceSectionCard(
+                title: "入口形态预览",
+                subtitle: "胶囊两态 / 大陆收缩态"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewRow(title: "胶囊收缩态", subtitle: "桌面入口", preview: SurfaceCapsuleCompactPreview())
+                    previewRow(title: "胶囊展开态", subtitle: "快捷工具条", preview: SurfaceCapsuleExpandedPreview())
+                    previewRow(title: "大陆收缩态", subtitle: "顶部停靠", preview: SurfaceContinentCompactPreview())
+                }
+            }
+
+            SurfaceSectionCard(
+                title: "大陆展开预览",
+                subtitle: "当前板块与布局切换预览"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(continentTabs) { tab in
+                                Button {
+                                    selectedContinentTabID = tab.id
+                                } label: {
+                                    SurfaceCapsuleTag(title: tab.name, isSelected: selectedContinentTabID == tab.id)
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            Button {
+                                let newTab = SurfaceContinentTab(
+                                    id: UUID(),
+                                    name: "自定义\(continentTabs.filter { !$0.isDefault }.count + 1)",
+                                    icon: "plus",
+                                    enabledModules: [
+                                        SurfaceContinentModule(title: "日程"),
+                                        SurfaceContinentModule(title: "快捷入口"),
+                                        SurfaceContinentModule(title: "天气")
+                                    ],
+                                    isDefault: false
+                                )
+                                continentTabs.append(newTab)
+                                selectedContinentTabID = newTab.id
+                            } label: {
+                                SurfaceCapsuleTag(title: "+ 新建", isSelected: false)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    ContinentExpandedPreview(tab: selectedContinentTab)
+                        .frame(height: 164)
+
+                    HStack(spacing: 8) {
+                        ACBadge("展开态", kind: .blue)
+                        ACBadge("\(selectedContinentTab.enabledModules.count) 个模块", kind: .neutral)
+                        ACBadge(selectedContinentTab.isDefault ? "默认板块" : "自定义板块", kind: .purple)
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+        }
+    }
+
+    private var monitorRowCompact: some View {
+        VStack(alignment: .leading, spacing: ACLayout.gapL) {
+            SurfaceSectionCard(
+                title: "胶囊显示器",
+                subtitle: "指定桌面胶囊默认出现的显示器"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SurfaceMonitorHintRow(
+                        title: "当前设置",
+                        value: preferredScreenLabel(for: coordinator.preferredCapsuleScreenID)
+                    )
+
+                    monitorButtons(
+                        selectedScreenID: coordinator.preferredCapsuleScreenID,
+                        onFollowCurrent: { coordinator.setPreferredCapsuleScreenID(nil) },
+                        onSelect: { coordinator.setPreferredCapsuleScreenID($0) }
+                    )
+                }
+            }
+
+            SurfaceSectionCard(
+                title: "大陆显示器",
+                subtitle: "指定顶部大陆默认出现的显示器"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SurfaceMonitorHintRow(
+                        title: "当前设置",
+                        value: preferredScreenLabel(for: coordinator.preferredContinentScreenID)
+                    )
+
+                    monitorButtons(
+                        selectedScreenID: coordinator.preferredContinentScreenID,
+                        onFollowCurrent: { coordinator.setPreferredContinentScreenID(nil) },
+                        onSelect: { coordinator.setPreferredContinentScreenID($0) }
+                    )
+                }
+            }
+        }
+    }
+
+    private var secondRowCompact: some View {
+        VStack(alignment: .leading, spacing: ACLayout.gapL) {
+            SurfaceSectionCard(
+                title: "联动规则",
+                subtitle: "桌面与顶部的四个核心开关"
+            ) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10)
+                    ],
+                    alignment: .leading,
+                    spacing: 10
+                ) {
+                    SurfaceRuleCard(title: "启用胶囊", subtitle: "桌面入口", symbol: "capsule", isOn: true)
+                    SurfaceRuleCard(title: "启用大陆", subtitle: "顶部入口", symbol: "dock.top", isOn: true)
+                    SurfaceRuleCard(title: "拖到顶部切换", subtitle: "胶囊 → 大陆", symbol: "arrow.up.to.line.compact", isOn: true)
+                    SurfaceRuleCard(title: "长按回桌面", subtitle: "大陆 → 胶囊", symbol: "arrow.down.to.line.compact", isOn: true)
+                }
+            }
+
+            SurfaceSectionCard(
+                title: "组件选择",
+                subtitle: "胶囊组件 / 大陆组件小胶囊选择"
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    widgetGroup(title: "胶囊组件", count: SurfaceWidgetCatalog.capsuleWidgets.filter { selectedWidgetIDs.contains($0.id) }.count, items: SurfaceWidgetCatalog.capsuleWidgets, columns: 3)
+                    widgetGroup(title: "大陆组件", count: SurfaceWidgetCatalog.continentWidgets.filter { selectedWidgetIDs.contains($0.id) }.count, items: SurfaceWidgetCatalog.continentWidgets, columns: 3)
+                }
+            }
+
+            SurfaceSectionCard(
+                title: "板块管理",
+                subtitle: "大陆展开态的板块与内容"
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(continentTabs) { tab in
+                        Button {
+                            selectedContinentTabID = tab.id
+                        } label: {
+                            SurfaceBlockRow(tab: tab, isSelected: selectedContinentTabID == tab.id)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    ACButton("新建板块", kind: .secondary) {
+                        let newTab = SurfaceContinentTab(
+                            id: UUID(),
+                            name: "专注工作",
+                            icon: "target",
+                            enabledModules: [
+                                SurfaceContinentModule(title: "日程"),
+                                SurfaceContinentModule(title: "快捷入口"),
+                                SurfaceContinentModule(title: "天气")
+                            ],
+                            isDefault: false
+                        )
+                        continentTabs.append(newTab)
+                        selectedContinentTabID = newTab.id
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private var featureRowCompact: some View {
+        SurfaceSectionCard(
+            title: "功能模块",
+            subtitle: "AcMind 自有能力模块"
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("已启用 \(selectedFeatureIDs.count) 个模块")
+                        .font(ACTypography.captionMedium)
+                        .foregroundStyle(ACColors.secondaryText)
+                    Spacer(minLength: 0)
+                    ACBadge("商用级", kind: .green)
+                }
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2),
+                    spacing: 12
+                ) {
+                    ForEach(SurfaceFeatureCatalog.cards) { card in
+                        SurfaceFeatureTile(card: card, isEnabled: selectedFeatureIDs.contains(card.id)) {
+                            if selectedFeatureIDs.contains(card.id) {
+                                selectedFeatureIDs.remove(card.id)
+                            } else {
+                                selectedFeatureIDs.insert(card.id)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var debugBar: some View {
         ACCard(padding: 14) {
             HStack(alignment: .center, spacing: 12) {
@@ -425,6 +642,10 @@ struct DynamicSurfaceCommercialView: View {
     }
 
     private func widgetGroup(title: String, count: Int, items: [SurfaceWidgetItem]) -> some View {
+        widgetGroup(title: title, count: count, items: items, columns: 4)
+    }
+
+    private func widgetGroup(title: String, count: Int, items: [SurfaceWidgetItem], columns: Int) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
@@ -437,7 +658,7 @@ struct DynamicSurfaceCommercialView: View {
             }
 
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns),
                 spacing: 8
             ) {
                 ForEach(items) { item in

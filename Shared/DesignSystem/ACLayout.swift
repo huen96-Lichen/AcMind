@@ -2,7 +2,7 @@ import SwiftUI
 
 enum ACLayout {
     // MARK: - Window Size
-    static let windowMinWidth: CGFloat = 1440
+    static let windowMinWidth: CGFloat = 960
     static let windowIdealWidth: CGFloat = 1512
     static let windowMaxReferenceWidth: CGFloat = 1728
     static let windowMinHeight: CGFloat = 900
@@ -11,7 +11,7 @@ enum ACLayout {
 
     // MARK: - Responsive Breakpoints
     enum Breakpoint {
-        static let compact: CGFloat = 900
+        static let compact: CGFloat = 1024
         static let regular: CGFloat = 1200
         static let wide: CGFloat = 1440
     }
@@ -55,6 +55,10 @@ enum ACLayout {
         } else {
             return .stacked
         }
+    }
+
+    static func secondaryPageLayoutMode(for width: CGFloat) -> SettingsLayoutMode {
+        settingsLayoutMode(for: width)
     }
 
     // MARK: - Rail Style
@@ -153,6 +157,9 @@ enum ACLayout {
     static let controlHeight: CGFloat = 40
     static let primaryRailCompact: CGFloat = 88
     static let primaryRailExpanded: CGFloat = 220
+    static let primaryRailMaxWidth: CGFloat = 320
+    static let primaryRailDragHandleWidth: CGFloat = 10
+    static let primaryRailBrandHeight: CGFloat = 56
     static let inspectorWidth: CGFloat = 320
     static let workspaceLeftPanel: CGFloat = 360
     static let workspaceMainMin: CGFloat = 520

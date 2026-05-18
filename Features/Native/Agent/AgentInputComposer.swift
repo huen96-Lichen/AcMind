@@ -55,38 +55,9 @@ struct AgentInputComposer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                ForEach(AgentActionMode.quickActions) { mode in
-                    Button {
-                        selectedActionMode = mode
-                        if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            inputText = mode.suggestedPrompt
-                        }
-                    } label: {
-                        Text(mode.displayName)
-                            .font(ACTypography.mini)
-                            .foregroundStyle(selectedActionMode == mode ? ACColors.primaryText : ACColors.secondaryText)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(selectedActionMode == mode ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill.opacity(0.55))
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule().stroke(selectedActionMode == mode ? ACColors.accentBlue.opacity(0.75) : ACColors.border.opacity(0.6), lineWidth: 1)
-                    )
-                }
-
-                Spacer(minLength: 0)
-
-                Button {
-                    onNewConversation()
-                } label: {
-                    Label("新建对话", systemImage: "square.and.pencil")
-                        .font(ACTypography.mini)
-                        .foregroundStyle(ACColors.secondaryText)
-                }
-                .buttonStyle(.plain)
+            ViewThatFits(in: .horizontal) {
+                wideQuickActionRow
+                compactQuickActionRow
             }
 
             providerStrip
@@ -117,59 +88,9 @@ struct AgentInputComposer: View {
                     .stroke(ACColors.border.opacity(0.75), lineWidth: 1)
             )
 
-            HStack(spacing: 7) {
-                toolbarButton(title: "语音", icon: "mic.fill", action: onVoiceInput)
-                toolbarButton(title: "附件", icon: "paperclip", action: onAttachFile)
-                toolbarButton(title: "工具", icon: "wand.and.stars", action: onTools)
-
-                Spacer(minLength: 0)
-
-                Menu {
-                    ForEach(providers) { provider in
-                        Button {
-                            onProviderSelect(provider.id)
-                        } label: {
-                            Text(provider.name)
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "cpu")
-                            .font(.system(size: 12))
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("模型")
-                                .font(.system(size: 10, weight: .medium))
-                            Text(providerLabel)
-                                .font(ACTypography.mini)
-                                .lineLimit(1)
-                        }
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10))
-                    }
-                    .foregroundStyle(ACColors.primaryText)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 7)
-                    .background(ACColors.softFill)
-                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .stroke(ACColors.border, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    onSend()
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 36)
-                        .background(ACColors.accentPurple)
-                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                }
-                .buttonStyle(SendButtonHoverStyle())
-                .disabled(trimmedInput.isEmpty)
+            ViewThatFits(in: .horizontal) {
+                wideToolbarRow
+                compactToolbarRow
             }
         }
         .padding(12)
@@ -180,6 +101,68 @@ struct AgentInputComposer: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(ACColors.border, lineWidth: 1)
+        )
+    }
+
+    private var wideQuickActionRow: some View {
+        HStack(spacing: 6) {
+            ForEach(AgentActionMode.quickActions) { mode in
+                quickActionButton(for: mode)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                onNewConversation()
+            } label: {
+                Label("新建对话", systemImage: "square.and.pencil")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.secondaryText)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var compactQuickActionRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(AgentActionMode.quickActions) { mode in
+                        quickActionButton(for: mode)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Button {
+                onNewConversation()
+            } label: {
+                Label("新建对话", systemImage: "square.and.pencil")
+                    .font(ACTypography.mini)
+                    .foregroundStyle(ACColors.secondaryText)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func quickActionButton(for mode: AgentActionMode) -> some View {
+        Button {
+            selectedActionMode = mode
+            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                inputText = mode.suggestedPrompt
+            }
+        } label: {
+            Text(mode.displayName)
+                .font(ACTypography.mini)
+                .foregroundStyle(selectedActionMode == mode ? ACColors.primaryText : ACColors.secondaryText)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(selectedActionMode == mode ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill.opacity(0.55))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(selectedActionMode == mode ? ACColors.accentBlue.opacity(0.75) : ACColors.border.opacity(0.6), lineWidth: 1)
         )
     }
 
@@ -247,6 +230,96 @@ struct AgentInputComposer: View {
                 }
             }
         }
+    }
+
+    private var wideToolbarRow: some View {
+        HStack(spacing: 7) {
+            toolbarButton(title: "语音", icon: "mic.fill", action: onVoiceInput)
+            toolbarButton(title: "附件", icon: "paperclip", action: onAttachFile)
+            toolbarButton(title: "工具", icon: "wand.and.stars", action: onTools)
+
+            Spacer(minLength: 0)
+
+            providerMenu
+
+            Button {
+                onSend()
+            } label: {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 36)
+                    .background(ACColors.accentPurple)
+                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            }
+            .buttonStyle(SendButtonHoverStyle())
+            .disabled(trimmedInput.isEmpty)
+        }
+    }
+
+    private var compactToolbarRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                toolbarButton(title: "语音", icon: "mic.fill", action: onVoiceInput)
+                toolbarButton(title: "附件", icon: "paperclip", action: onAttachFile)
+                toolbarButton(title: "工具", icon: "wand.and.stars", action: onTools)
+            }
+
+            HStack(spacing: 8) {
+                providerMenu
+
+                Spacer(minLength: 0)
+
+                Button {
+                    onSend()
+                } label: {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 36)
+                        .background(ACColors.accentPurple)
+                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                }
+                .buttonStyle(SendButtonHoverStyle())
+                .disabled(trimmedInput.isEmpty)
+            }
+        }
+    }
+
+    private var providerMenu: some View {
+        Menu {
+            ForEach(providers) { provider in
+                Button {
+                    onProviderSelect(provider.id)
+                } label: {
+                    Text(provider.name)
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "cpu")
+                    .font(.system(size: 12))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("模型")
+                        .font(.system(size: 10, weight: .medium))
+                    Text(providerLabel)
+                        .font(ACTypography.mini)
+                        .lineLimit(1)
+                }
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10))
+            }
+            .foregroundStyle(ACColors.primaryText)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(ACColors.softFill)
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .stroke(ACColors.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func toolbarButton(title: String, icon: String, action: @escaping () -> Void) -> some View {

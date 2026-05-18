@@ -48,12 +48,14 @@ public final class AppState: ObservableObject, Sendable {
 
     // MARK: - Primary Rail & Workspace State
 
-    @Published public var primaryRailMode: PrimaryRailMode = .compact {
+    @Published public var primaryRailMode: PrimaryRailMode = .expanded {
         didSet {
             guard shouldPersistWorkspaceLayout else { return }
             UserDefaults.standard.set(primaryRailMode.rawValue, forKey: Self.primaryRailModeKey)
         }
     }
+
+    @Published public var primaryRailWidth: CGFloat = ACLayout.primaryRailExpanded
 
     @Published public var workspaceMode: WorkspaceMode = .visible {
         didSet {
@@ -151,9 +153,13 @@ public final class AppState: ObservableObject, Sendable {
 
     private func restorePersistedState() {
         if shouldPersistWorkspaceLayout {
-            if let saved = UserDefaults.standard.string(forKey: Self.primaryRailModeKey),
-               let mode = PrimaryRailMode(rawValue: saved) {
+            if let savedWidth = UserDefaults.standard.object(forKey: Self.primaryRailWidthKey) as? NSNumber {
+                primaryRailWidth = clampPrimaryRailWidth(CGFloat(truncating: savedWidth))
+                primaryRailMode = primaryRailWidth >= ACLayout.primaryRailExpanded ? .expanded : .compact
+            } else if let saved = UserDefaults.standard.string(forKey: Self.primaryRailModeKey),
+                      let mode = PrimaryRailMode(rawValue: saved) {
                 primaryRailMode = mode
+                primaryRailWidth = mode == .compact ? ACLayout.primaryRailCompact : ACLayout.primaryRailExpanded
             }
             if let saved = UserDefaults.standard.string(forKey: Self.workspaceModeKey),
                let mode = WorkspaceMode(rawValue: saved),
@@ -162,7 +168,8 @@ public final class AppState: ObservableObject, Sendable {
                 lastNonHiddenWorkspaceMode = mode
             }
         } else {
-            primaryRailMode = .compact
+            primaryRailMode = .expanded
+            primaryRailWidth = ACLayout.primaryRailExpanded
             workspaceMode = .visible
         }
     }
@@ -186,6 +193,17 @@ public final class AppState: ObservableObject, Sendable {
         lastNonHiddenWorkspaceMode = workspaceMode
     }
 
+    public func toggleSecondaryInterface() {
+        switch workspaceMode {
+        case .visible:
+            handleCollapseWorkspace()
+        case .collapsed:
+            handleExpandWorkspace()
+        case .hidden:
+            restoreWorkspaceFromHidden()
+        }
+    }
+
     public func restoreWorkspaceFromHidden() {
         workspaceMode = lastNonHiddenWorkspaceMode
     }
@@ -204,6 +222,29 @@ public final class AppState: ObservableObject, Sendable {
 
     public func toggleSidebar() {
         sidebarCollapsed.toggle()
+    }
+
+    public func setPrimaryRailWidth(_ width: CGFloat) {
+        let clampedWidth = clampPrimaryRailWidth(width)
+        guard primaryRailWidth != clampedWidth else { return }
+
+        primaryRailWidth = clampedWidth
+
+        if shouldPersistWorkspaceLayout {
+            UserDefaults.standard.set(Double(clampedWidth), forKey: Self.primaryRailWidthKey)
+        }
+
+        let derivedMode: PrimaryRailMode = clampedWidth <= ACLayout.primaryRailCompact + 32 ? .compact : .expanded
+        if primaryRailMode != derivedMode {
+            primaryRailMode = derivedMode
+        }
+
+        guard workspaceMode == .collapsed else { return }
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.workspaceRailWidthChanged"),
+            object: nil,
+            userInfo: ["railWidth": clampedWidth]
+        )
     }
 
     // MARK: - Window Management
@@ -274,7 +315,12 @@ public final class AppState: ObservableObject, Sendable {
         UserDefaults.standard.object(forKey: Self.rememberWorkspaceLayoutKey) as? Bool ?? true
     }
 
+    private func clampPrimaryRailWidth(_ width: CGFloat) -> CGFloat {
+        min(max(width, ACLayout.primaryRailCompact), ACLayout.primaryRailMaxWidth)
+    }
+
     private static let primaryRailModeKey = "AppSettings.primaryRailMode"
+    private static let primaryRailWidthKey = "AppSettings.primaryRailWidth"
     private static let workspaceModeKey = "AppSettings.workspaceMode"
     private static let rememberWorkspaceLayoutKey = "AppSettings.rememberWorkspaceLayout"
 }
