@@ -22,11 +22,13 @@ data/
 
 # OS and editor files
 .DS_Store
+**/.DS_Store
 Thumbs.db
 .vscode/
 .idea/
 *.code-workspace
 **/xcuserdata/
+DerivedData/
 
 # Temporary files
 *.tmp
@@ -37,12 +39,11 @@ Thumbs.db
 # Local assistant / tool state
 .trae/
 .acmind-tmp/
+.worktrees/
+session-*.json
 
 # User data (Obsidian vault)
 ~/PinMind/
 
 # Reference source code (not part of AcMind build)
 临时/
-
-# Local session artifacts
-session-*.json
