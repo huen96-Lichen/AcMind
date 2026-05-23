@@ -2,8 +2,15 @@ import SwiftUI
 import AcMindKit
 
 struct CompanionView: View {
-    @StateObject private var viewModel = SettingsViewModel()
-    @ObservedObject private var session = CompanionVoiceSessionController.shared
+    @StateObject private var viewModel: SettingsViewModel
+    @StateObject private var session: CompanionVoiceSessionController
+    private let toastManager: ToastManager
+
+    init(container: ServiceContainer, appState: AppState, toastManager: ToastManager) {
+        self._viewModel = StateObject(wrappedValue: SettingsViewModel(container: container))
+        self.toastManager = toastManager
+        self._session = StateObject(wrappedValue: CompanionVoiceSessionController(container: container, appState: appState, toastManager: toastManager))
+    }
 
     private let supportedProviders: [STTProvider] = [
         .appleSpeech,
@@ -25,8 +32,7 @@ struct CompanionView: View {
                     ACBadge("Fn 长按", kind: .blue)
                 }
             },
-            content: {
-                ScrollView(.vertical, showsIndicators: false) {
+            content: { width in
                 VStack(alignment: .leading, spacing: 12) {
                     heroCard
                     engineCard
@@ -35,9 +41,8 @@ struct CompanionView: View {
                     outputCard
                     statusCard
                 }
-                    .frame(maxWidth: ACLayout.secondaryPageContentMaxWidth)
-                    .padding(.vertical, 4)
-                }
+                .frame(maxWidth: min(width - ACLayout.pagePaddingX * 2, ACLayout.secondaryPageContentMaxWidth), alignment: .leading)
+                .padding(.vertical, 4)
             }
         )
         .onAppear {

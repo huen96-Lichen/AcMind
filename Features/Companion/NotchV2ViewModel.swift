@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import AppKit
 import SwiftUI
@@ -8,6 +9,7 @@ final class NotchV2ViewModel: ObservableObject {
     @Published var isExpanded = true
     @Published var selectedPage: NotchV2Page = .overview
     @Published var collapsedContentSettings: CompanionCollapsedContentSettings = .default
+    @Published var systemMonitorSnapshot: SystemMonitorSnapshot?
     @Published var playbackState = PlaybackState()
     @Published var isVoiceRecording = false
     @Published var isCapturing = false
@@ -21,6 +23,11 @@ final class NotchV2ViewModel: ObservableObject {
 
     private var hoverOpenTask: Task<Void, Never>?
     private var hoverCollapseTask: Task<Void, Never>?
+    private var musicStateCancellables = Set<AnyCancellable>()
+    private var systemMonitorCancellables = Set<AnyCancellable>()
+    private let musicService: MusicService
+    private let systemMonitorService: SystemMonitorService
+    private let toastManager: ToastManager
 
     struct QuickAction: Identifiable {
         let id = UUID()
@@ -37,23 +44,32 @@ final class NotchV2ViewModel: ObservableObject {
         QuickAction(icon: "ellipsis", title: "更多", action: { [weak self] in self?.showMoreActions() })
     ]
 
-    init() {
-        playbackState = Self.snapshot()
+    init(musicService: MusicService, systemMonitorService: SystemMonitorService, toastManager: ToastManager) {
+        self.musicService = musicService
+        self.systemMonitorService = systemMonitorService
+        self.toastManager = toastManager
+        playbackState = Self.snapshot(from: musicService)
+        systemMonitorSnapshot = systemMonitorService.snapshot
         lastTranscription = CompanionMockData.recentTranscriptions.first
         loadCollapsedContentSettings()
         loadDynamicSurfacePreferences()
         setupObservers()
+        setupMusicObservation()
+        setupSystemMonitorObservation()
+        systemMonitorService.start(cadence: .collapsed)
     }
 
     func toggleExpansion() {
         cancelHoverTasks()
         isExpanded.toggle()
+        updateSystemMonitorCadence()
     }
 
     func collapse() {
         guard isExpanded else { return }
         cancelHoverTasks()
         isExpanded = false
+        updateSystemMonitorCadence()
     }
 
     func setPanelHovered(_ hovering: Bool) {
@@ -75,18 +91,19 @@ final class NotchV2ViewModel: ObservableObject {
         if isExpanded == false {
             isExpanded = true
         }
+        updateSystemMonitorCadence()
     }
 
     func playPause() {
-        MusicService.shared.togglePlay()
+        musicService.togglePlay()
     }
 
     func nextTrack() {
-        MusicService.shared.nextTrack()
+        musicService.nextTrack()
     }
 
     func previousTrack() {
-        MusicService.shared.previousTrack()
+        musicService.previousTrack()
     }
 
     var expandedHeight: CGFloat {
@@ -99,6 +116,8 @@ final class NotchV2ViewModel: ObservableObject {
             return NotchV2DesignTokens.expandedAgentHeight
         case .schedule:
             return NotchV2DesignTokens.expandedScheduleHeight
+        case .systemMonitor:
+            return NotchV2DesignTokens.expandedSystemMonitorHeight
         }
     }
 
@@ -177,6 +196,23 @@ final class NotchV2ViewModel: ObservableObject {
         )
     }
 
+    private func setupMusicObservation() {
+        musicService.$timestampDate
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.playbackState = Self.snapshot(from: self.musicService)
+            }
+            .store(in: &musicStateCancellables)
+    }
+
+    private func setupSystemMonitorObservation() {
+        systemMonitorService.$snapshot
+            .sink { [weak self] snapshot in
+                self?.systemMonitorSnapshot = snapshot
+            }
+            .store(in: &systemMonitorCancellables)
+    }
+
     private func cancelHoverTasks() {
         hoverOpenTask?.cancel()
         hoverCollapseTask?.cancel()
@@ -232,7 +268,7 @@ final class NotchV2ViewModel: ObservableObject {
 
     @objc private func handleCaptureSuccess(_ notification: Notification) {
         isCapturing = false
-        ToastManager.shared.show(.success, "截图已完成")
+        toastManager.show(.success, "截图已完成")
     }
 
     @objc private func handleCollapsedContentSettingsChanged(_ notification: Notification) {
@@ -270,7 +306,7 @@ final class NotchV2ViewModel: ObservableObject {
 
     private func captureScreenshot() {
         isCapturing = true
-        ToastManager.shared.show(.info, "正在截图...")
+        toastManager.show(.info, "正在截图...")
         NotchPanel.shared.orderOut(nil)
         NotificationCenter.default.post(
             name: Notification.Name("AcMind.captureScreenshot"),
@@ -284,7 +320,7 @@ final class NotchV2ViewModel: ObservableObject {
 
     private func quickMarkdown() {
         NotificationCenter.default.post(name: Notification.Name("companion.quickMarkdown"), object: nil)
-        ToastManager.shared.show(.info, "打开 MD")
+        toastManager.show(.info, "打开 MD")
         collapse()
     }
 
@@ -299,10 +335,14 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     private func showMoreActions() {
-        ToastManager.shared.show(.info, "更多入口待接入")
+        toastManager.show(.info, "更多入口待接入")
     }
 
     private var currentStatusCollapsedContent: NotchV2CollapsedContent {
+        if selectedPage == .systemMonitor {
+            return systemMonitorCollapsedContent
+        }
+
         if isVoiceRecording {
             return NotchV2CollapsedContent(
                 label: "状态",
@@ -377,8 +417,72 @@ final class NotchV2ViewModel: ObservableObject {
         }
     }
 
-    private static func snapshot() -> PlaybackState {
-        let service = MusicService.shared
+    private var systemMonitorCollapsedContent: NotchV2CollapsedContent {
+        guard let snapshot = systemMonitorSnapshot else {
+            return NotchV2CollapsedContent(
+                label: "状态",
+                title: "系统监控",
+                subtitle: "正在采样",
+                symbol: "cpu",
+                tint: NotchV2DesignTokens.secondaryText
+            )
+        }
+
+        let cpu = formatPercent(snapshot.cpu.usagePercent)
+        let memory = formatPercent(memoryUsagePercent(snapshot.memory))
+        let battery = snapshot.battery.map { formatPercent($0.percentage) } ?? "—"
+        let networkDown = formatRate(snapshot.network.downloadBytesPerSecond)
+
+        let tint: Color
+        switch snapshot.health.level {
+        case .good:
+            tint = NotchV2DesignTokens.accentGreen
+        case .attention:
+            tint = Color(red: 1.0, green: 0.78, blue: 0.24)
+        case .highLoad:
+            tint = Color(red: 1.0, green: 0.38, blue: 0.33)
+        case .unknown:
+            tint = NotchV2DesignTokens.secondaryText
+        }
+
+        return NotchV2CollapsedContent(
+            label: "状态",
+            title: "CPU \(cpu) · MEM \(memory)",
+            subtitle: "BAT \(battery) · ↓ \(networkDown)",
+            symbol: "cpu",
+            tint: tint
+        )
+    }
+
+    private func updateSystemMonitorCadence() {
+        if isExpanded && selectedPage == .systemMonitor {
+            systemMonitorService.setCadence(.expanded)
+        } else {
+            systemMonitorService.setCadence(.collapsed)
+        }
+    }
+
+    private func memoryUsagePercent(_ memory: MemoryStats) -> Double {
+        guard memory.totalBytes > 0 else { return 0 }
+        return Double(memory.usedBytes) / Double(memory.totalBytes) * 100
+    }
+
+    private func formatPercent(_ value: Double) -> String {
+        String(format: "%.0f%%", value)
+    }
+
+    private func formatRate(_ bytesPerSecond: UInt64) -> String {
+        switch bytesPerSecond {
+        case 0..<1_024:
+            return "\(bytesPerSecond)B/s"
+        case 1_024..<1_048_576:
+            return String(format: "%.0fKB/s", Double(bytesPerSecond) / 1_024.0)
+        default:
+            return String(format: "%.1fMB/s", Double(bytesPerSecond) / 1_048_576.0)
+        }
+    }
+
+    private static func snapshot(from service: MusicService) -> PlaybackState {
         return PlaybackState(
             title: service.songTitle,
             artist: service.artistName,

@@ -31,6 +31,7 @@ enum NotchV2DesignTokens {
     static let agentPanelHeight: CGFloat = 248
     static let expandedAgentHeight: CGFloat = 340
     static let expandedScheduleHeight: CGFloat = 440
+    static let expandedSystemMonitorHeight: CGFloat = 400
     static let notchSafeZoneX: CGFloat = 360
     static let notchSafeZoneY: CGFloat = 0
     static let notchSafeZoneWidth: CGFloat = 160
@@ -66,6 +67,7 @@ enum NotchV2Page: String, CaseIterable, Identifiable {
     case music
     case agent
     case schedule
+    case systemMonitor
 
     var id: String { rawValue }
 
@@ -75,6 +77,7 @@ enum NotchV2Page: String, CaseIterable, Identifiable {
         case .music: return "音乐"
         case .agent: return "AI"
         case .schedule: return "日程"
+        case .systemMonitor: return "状态"
         }
     }
 }

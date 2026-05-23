@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - SourceItem（核心数据实体）
 
 /// 采集内容的统一数据模型
-/// 对齐 Electron source_items 表 schema v21
+/// 对齐迁移前的 source_items 表 schema v21
 public struct SourceItem: Codable, Sendable, Identifiable, Hashable, Equatable {
     public let id: String
     public var type: SourceType

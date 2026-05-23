@@ -61,7 +61,7 @@ public enum RecordingPolishMode: String, Codable, Sendable, Hashable, CaseIterab
 // MARK: - ClipboardItem（剪贴板条目）
 
 /// 剪贴板历史条目
-/// 对齐 Electron clipboard_items 表
+/// 对齐迁移前的 clipboard_items 表
 public struct ClipboardItem: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var type: ClipboardContentType
@@ -151,7 +151,7 @@ public enum ScreenshotMode: String, Sendable, Hashable, Equatable {
 // MARK: - ShelfItem（文件架条目）
 
 /// 文件临时架条目
-/// 对齐 Electron shelf_items 表
+/// 对齐迁移前的 shelf_items 表
 public struct ShelfItem: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String?
@@ -189,7 +189,7 @@ public enum ShelfItemStatus: String, Codable, Sendable, Hashable, CaseIterable {
 // MARK: - Import Types（导入相关）
 
 /// 导入任务
-/// 对齐 Electron import_tasks 表
+/// 对齐迁移前的 import_tasks 表
 public struct ImportTask: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourcePath: String

@@ -127,8 +127,6 @@ struct NotchModuleCard<Content: View>: View {
     }
 }
 
-typealias NotchModuleCardLegacy<Content: View> = NotchV2Card<Content>
-
 struct NotchThreeColumnLayout<Left: View, Center: View, Right: View>: View {
     let left: Left
     let center: Center

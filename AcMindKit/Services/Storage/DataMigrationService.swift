@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - DataMigrationService
 
-/// Electron → Swift 数据迁移服务
+/// 旧运行时 → Swift 数据迁移服务
 ///
 /// 采用本地 SQLite 直接读取旧库并写入新库，不依赖外部 ORM 包。
 public actor DataMigrationService: Sendable {
@@ -24,7 +24,7 @@ public actor DataMigrationService: Sendable {
     }
 
     public enum MigrationError: Error, LocalizedError {
-        case electronDatabaseNotFound
+        case migrationSourceDatabaseNotFound
         case swiftDatabaseNotReady
         case tableReadFailed(table: String, underlying: Error)
         case tableWriteFailed(table: String, underlying: Error)
@@ -32,8 +32,8 @@ public actor DataMigrationService: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .electronDatabaseNotFound:
-                return "未找到 Electron 数据库，无需迁移"
+            case .migrationSourceDatabaseNotFound:
+                return "未找到迁移源数据库，无需迁移"
             case .swiftDatabaseNotReady:
                 return "Swift 数据库未就绪，无法执行迁移"
             case .tableReadFailed(let table, let underlying):
@@ -53,7 +53,7 @@ public actor DataMigrationService: Sendable {
 
     // MARK: - Properties
 
-    private let electronDBPath: URL?
+    private let migrationSourceDBPath: URL?
     private let swiftDBPath: URL
     private let fileManager: FileManager
 
@@ -61,30 +61,32 @@ public actor DataMigrationService: Sendable {
 
     public init(swiftDBPath: URL) {
         self.swiftDBPath = swiftDBPath
-        self.fileManager = FileManager.default
+        let fileManager = FileManager.default
+        self.fileManager = fileManager
 
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let electronPath = appSupport.appendingPathComponent("AcMind/acmind.db")
-        let legacyPath = appSupport.appendingPathComponent("AcMind/pinmind.db")
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
+        let currentPath = appSupport.appendingPathComponent("AcMind/acmind.db")
+        let previousPath = appSupport.appendingPathComponent("AcMind/pinmind.db")
 
-        if fileManager.fileExists(atPath: electronPath.path) {
-            self.electronDBPath = electronPath
-        } else if fileManager.fileExists(atPath: legacyPath.path) {
-            self.electronDBPath = legacyPath
+        if fileManager.fileExists(atPath: currentPath.path) {
+            self.migrationSourceDBPath = currentPath
+        } else if fileManager.fileExists(atPath: previousPath.path) {
+            self.migrationSourceDBPath = previousPath
         } else {
-            self.electronDBPath = nil
+            self.migrationSourceDBPath = nil
         }
     }
 
     // MARK: - Public API
 
     public var needsMigration: Bool {
-        electronDBPath != nil
+        migrationSourceDBPath != nil
     }
 
     public func runIfNeeded() async throws -> MigrationResult {
-        guard let electronDBPath else {
-            throw MigrationError.electronDatabaseNotFound
+        guard let migrationSourceDBPath else {
+            throw MigrationError.migrationSourceDatabaseNotFound
         }
 
         let startTime = Date()
@@ -94,7 +96,7 @@ public actor DataMigrationService: Sendable {
             throw MigrationError.migrationAlreadyCompleted
         }
 
-        let source = try SQLiteConnection(path: electronDBPath.path, readOnly: true)
+        let source = try SQLiteConnection(path: migrationSourceDBPath.path, readOnly: true)
         var tableCounts: [String: Int] = [:]
         var errors: [String] = []
 
@@ -116,12 +118,12 @@ public actor DataMigrationService: Sendable {
             errors.append("_migration 标记写入失败: \(error.localizedDescription)")
         }
 
-        let backupPath = electronDBPath.appendingPathExtension("migrated")
+        let backupPath = migrationSourceDBPath.appendingPathExtension("migrated")
         do {
             if fileManager.fileExists(atPath: backupPath.path) {
                 try fileManager.removeItem(at: backupPath)
             }
-            try fileManager.moveItem(at: electronDBPath, to: backupPath)
+            try fileManager.moveItem(at: migrationSourceDBPath, to: backupPath)
         } catch {
             errors.append("旧数据库备份失败: \(error.localizedDescription)")
         }

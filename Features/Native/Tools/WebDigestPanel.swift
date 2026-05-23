@@ -7,7 +7,11 @@ import UniformTypeIdentifiers
 // 网页精读 - 输入 URL，调用 defuddle 提取 Markdown
 
 struct WebDigestPanel: View {
-    @StateObject private var viewModel = WebDigestViewModel()
+    @StateObject private var viewModel: WebDigestViewModel
+
+    init(toastManager: ToastManager) {
+        self._viewModel = StateObject(wrappedValue: WebDigestViewModel(toastManager: toastManager))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -186,10 +190,11 @@ final class WebDigestViewModel: ObservableObject {
     @Published var statusText = "等待输入 URL"
     @Published var errorMessage: String?
     @Published var isGenerating = false
-
+    private let toastManager: ToastManager
     private let runner: ProcessCommandRunning
 
-    init(runner: ProcessCommandRunning = ProcessCommandRunner()) {
+    init(toastManager: ToastManager, runner: ProcessCommandRunning = ProcessCommandRunner()) {
+        self.toastManager = toastManager
         self.runner = runner
     }
 
@@ -205,7 +210,7 @@ final class WebDigestViewModel: ObservableObject {
         guard let url = normalizeURL(urlString) else {
             errorMessage = "请输入有效的网址，例如 https://example.com"
             statusText = "URL 无效"
-            ToastManager.shared.show(.warning, "请输入有效的网址")
+            toastManager.show(.warning, "请输入有效的网址")
             return
         }
 
@@ -229,12 +234,12 @@ final class WebDigestViewModel: ObservableObject {
                     if output.isEmpty {
                         self.statusText = "完成，但没有提取到正文"
                         self.errorMessage = "defuddle 没有返回可用的 Markdown 内容。"
-                        ToastManager.shared.show(.warning, "没有提取到可用正文")
+                        toastManager.show(.warning, "没有提取到可用正文")
                     } else {
                         self.markdown = output
                         self.statusText = "已生成 Markdown"
                         self.errorMessage = nil
-                        ToastManager.shared.show(.success, "网页已转换为 Markdown")
+                        toastManager.show(.success, "网页已转换为 Markdown")
                     }
                 }
             } catch {
@@ -243,7 +248,7 @@ final class WebDigestViewModel: ObservableObject {
                     self.isGenerating = false
                     self.statusText = "生成失败"
                     self.errorMessage = message
-                    ToastManager.shared.show(.error, message)
+                    toastManager.show(.error, message)
                 }
             }
         }
@@ -251,13 +256,13 @@ final class WebDigestViewModel: ObservableObject {
 
     func copyMarkdown() {
         guard markdown.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的 Markdown")
+            toastManager.show(.warning, "没有可复制的 Markdown")
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(markdown, forType: .string)
-        ToastManager.shared.show(.success, "Markdown 已复制")
+        toastManager.show(.success, "Markdown 已复制")
     }
 
     func saveMarkdown() {
@@ -271,9 +276,9 @@ final class WebDigestViewModel: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try markdown.write(to: url, atomically: true, encoding: .utf8)
-                ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
+                toastManager.show(.success, "已保存到 \(url.lastPathComponent)")
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                toastManager.show(.error, "保存失败: \(error.localizedDescription)")
             }
         }
     }

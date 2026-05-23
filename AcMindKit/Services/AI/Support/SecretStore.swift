@@ -21,7 +21,9 @@ public actor SecretStore {
     
     public func saveAPIKey(_ key: String, for providerId: String) throws {
         let account = "acmind.provider.\(providerId)"
-        let keyData = key.data(using: .utf8)!
+        guard let keyData = key.data(using: .utf8) else {
+            throw SecretError.invalidData
+        }
         
         // 先删除旧的
         let deleteQuery: [String: Any] = [
@@ -127,7 +129,9 @@ public actor SecretStore {
     
     public func updateAPIKey(_ key: String, for providerId: String) throws {
         let account = "acmind.provider.\(providerId)"
-        let keyData = key.data(using: .utf8)!
+        guard let keyData = key.data(using: .utf8) else {
+            throw SecretError.invalidData
+        }
         
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

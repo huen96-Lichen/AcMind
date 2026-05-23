@@ -22,7 +22,9 @@ public final class OpenAIWhisperTranscriber: Transcriber {
     public func transcribe(audioFile: AudioFile) async throws -> String {
         let audioData = try Data(contentsOf: audioFile.url)
         
-        let url = URL(string: "\(baseURL)/audio/transcriptions")!
+        guard let url = URL(string: "\(baseURL)/audio/transcriptions") else {
+            throw STTError.transcriptionFailed("无效转写地址")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -32,34 +34,37 @@ public final class OpenAIWhisperTranscriber: Transcriber {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
         var body = Data()
+        func append(_ string: String) {
+            body.append(string.data(using: .utf8) ?? Data())
+        }
         
         // 文件数据
         let fileName = audioFile.url.lastPathComponent
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/mpeg\r\n\r\n".data(using: .utf8)!)
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n")
+        append("Content-Type: audio/mpeg\r\n\r\n")
         body.append(audioData)
-        body.append("\r\n".data(using: .utf8)!)
+        append("\r\n")
         
         // model 参数
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        body.append(model.data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"model\"\r\n\r\n")
+        append(model)
+        append("\r\n")
         
         // language 参数（可选）
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
-        body.append("zh".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"language\"\r\n\r\n")
+        append("zh")
+        append("\r\n")
         
         // response_format 参数
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"response_format\"\r\n\r\n".data(using: .utf8)!)
-        body.append("json".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"response_format\"\r\n\r\n")
+        append("json")
+        append("\r\n")
         
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        append("--\(boundary)--\r\n")
         
         request.httpBody = body
         

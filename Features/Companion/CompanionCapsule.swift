@@ -2,17 +2,28 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
-// MARK: - Legacy Companion Capsule
-// 旧版随身胶囊兼容层
-// 主线已迁移到 NotchV2RootView，这里保留仅用于兼容旧调用路径
+// MARK: - Companion Capsule Bridge
+// 保留给仍在过渡中的旧调用路径，主线实现已迁移到 NotchV2RootView。
 @available(*, deprecated, message: "Use NotchV2RootView as the mainline notch implementation.")
 public struct CompanionCapsule: View {
-    @StateObject private var viewModel = CompanionCapsuleViewModel()
+    @StateObject private var viewModel: CompanionCapsuleViewModel
     @State private var showQuickNote = false
+    private let container: ServiceContainer
     private let onExpansionChange: (Bool) -> Void
+    private let musicService: MusicService
+    private let toastManager: ToastManager
 
-    public init(onExpansionChange: @escaping (Bool) -> Void = { _ in }) {
+    public init(
+        container: ServiceContainer,
+        musicService: MusicService,
+        toastManager: ToastManager,
+        onExpansionChange: @escaping (Bool) -> Void = { _ in }
+    ) {
+        self.container = container
+        self.musicService = musicService
+        self.toastManager = toastManager
         self.onExpansionChange = onExpansionChange
+        self._viewModel = StateObject(wrappedValue: CompanionCapsuleViewModel(toastManager: toastManager))
     }
 
     public var body: some View {
@@ -30,12 +41,14 @@ public struct CompanionCapsule: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        .environmentObject(musicService)
+        .environmentObject(toastManager)
         .animation(.spring(response: CompanionMenuBarLayout.springResponse, dampingFraction: CompanionMenuBarLayout.springDamping), value: viewModel.isExpanded)
         .onChange(of: viewModel.isExpanded) { _, newValue in
             onExpansionChange(newValue)
         }
         .sheet(isPresented: $showQuickNote) {
-            QuickNotePanel()
+            QuickNotePanel(container: container, toastManager: toastManager)
         }
     }
 
@@ -65,11 +78,11 @@ public struct CompanionCapsule: View {
             HStack(spacing: 8) {
                 CapsuleStatusDot(color: viewModel.isVoiceRecording ? .red : .secondary)
                 CapsuleStatusDot(color: viewModel.playbackState.isPlaying ? .green : .secondary.opacity(0.7))
-                CapsuleIconButton(
-                    icon: viewModel.isExpanded ? "chevron.up" : "chevron.down",
-                    isActive: viewModel.isExpanded,
-                    isLoading: false,
-                    action: { viewModel.toggleExpand() }
+                    CapsuleIconButton(
+                        icon: viewModel.isExpanded ? "chevron.up" : "chevron.down",
+                        isActive: viewModel.isExpanded,
+                        isLoading: false,
+                        action: { viewModel.toggleExpand() }
                 )
             }
         }
@@ -106,7 +119,7 @@ public struct CompanionCapsule: View {
                 spacing: CompanionMenuBarLayout.moduleSpacing
             ) {
                 ModuleCard(title: "音乐", subtitle: "播放链路", symbol: "music.note") {
-                    ExpandedMusicCard(state: viewModel.playbackState)
+                    ExpandedMusicCard(state: viewModel.playbackState, musicService: musicService)
                 }
 
                 ModuleCard(title: "日程", subtitle: "今日待办", symbol: "calendar") {
@@ -131,7 +144,7 @@ public struct CompanionCapsule: View {
                 }
 
                 ModuleCard(title: "暂存区", subtitle: "Obsidian / Markdown", symbol: "square.stack.3d.up") {
-                    ShelfView()
+                    ShelfView(container: container)
                 }
             }
         }
@@ -248,6 +261,7 @@ struct CapsuleStatusChip: View {
 
 struct ExpandedMusicCard: View {
     let state: PlaybackState
+    let musicService: MusicService
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -270,9 +284,9 @@ struct ExpandedMusicCard: View {
                     .scaleEffect(x: 1, y: 0.9, anchor: .center)
 
                 HStack(spacing: 10) {
-                    CapsuleIconButton(icon: "backward.fill", action: { MusicService.shared.previousTrack() })
-                    CapsuleIconButton(icon: state.isPlaying ? "pause.fill" : "play.fill", isActive: state.isPlaying, action: { MusicService.shared.togglePlay() })
-                    CapsuleIconButton(icon: "forward.fill", action: { MusicService.shared.nextTrack() })
+                    CapsuleIconButton(icon: "backward.fill", action: { musicService.previousTrack() })
+                    CapsuleIconButton(icon: state.isPlaying ? "pause.fill" : "play.fill", isActive: state.isPlaying, action: { musicService.togglePlay() })
+                    CapsuleIconButton(icon: "forward.fill", action: { musicService.nextTrack() })
                     Spacer()
                 }
             }
@@ -618,6 +632,7 @@ class CompanionCapsuleViewModel: ObservableObject {
     @Published var isVoiceRecording = false
     @Published var isCapturing = false
     @Published var playbackState: PlaybackState = PlaybackState()
+    private let toastManager: ToastManager
 
     var quickActions: [QuickAction] {
         [
@@ -642,7 +657,8 @@ class CompanionCapsuleViewModel: ObservableObject {
         ]
     }
 
-    init() {
+    init(toastManager: ToastManager) {
+        self.toastManager = toastManager
         // 加载最近转写
         lastTranscription = CompanionMockData.recentTranscriptions.first
 
@@ -712,7 +728,7 @@ class CompanionCapsuleViewModel: ObservableObject {
 
     @objc private func handleCaptureSuccess(_ notification: Notification) {
         isCapturing = false
-        ToastManager.shared.show(.success, "截图已完成")
+        toastManager.show(.success, "截图已完成")
     }
 
     // MARK: - Actions
@@ -735,7 +751,7 @@ class CompanionCapsuleViewModel: ObservableObject {
 
     func showScreenshot(mode: ScreenshotMode = ScreenshotMode.fullscreen) {
         isCapturing = true
-        ToastManager.shared.show(.info, "正在截图...")
+        toastManager.show(.info, "正在截图...")
         
         // 隐藏刘海窗口避免截图遮挡
         NotchPanel.shared.orderOut(nil)
@@ -756,19 +772,19 @@ class CompanionCapsuleViewModel: ObservableObject {
     func showSchedule() {
         NotificationCenter.default.post(name: .companionShowSchedule, object: nil)
         isExpanded = false
-        ToastManager.shared.show(.info, "打开日程")
+        toastManager.show(.info, "打开日程")
     }
 
     func showInbox() {
         NotificationCenter.default.post(name: .companionShowInbox, object: nil)
         isExpanded = false
-        ToastManager.shared.show(.info, "打开收集箱")
+        toastManager.show(.info, "打开收集箱")
     }
 
     func showAgent() {
         NotificationCenter.default.post(name: .companionShowAgent, object: nil)
         isExpanded = false
-        ToastManager.shared.show(.info, "打开 Agent")
+        toastManager.show(.info, "打开 Agent")
     }
 
     func updateStatus(_ newStatus: CompanionStatus) {

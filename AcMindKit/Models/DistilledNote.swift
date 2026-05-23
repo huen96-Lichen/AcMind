@@ -3,7 +3,7 @@ import Foundation
 // MARK: - DistilledNote（蒸馏结果）
 
 /// AI 蒸馏管线的输出结果
-/// 对齐 Electron distilled_outputs + distilled_notes 表
+/// 对齐迁移前的 distilled_outputs + distilled_notes 表
 public struct DistilledNote: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String
@@ -91,7 +91,7 @@ public enum ReviewAction: String, Codable, Sendable, Hashable {
 // MARK: - ExportRecord（导出记录）
 
 /// 导出操作的记录
-/// 对齐 Electron export_records 表
+/// 对齐迁移前的 export_records 表
 public struct ExportRecord: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String
@@ -218,7 +218,7 @@ public struct ExportConfig: Codable, Sendable, Hashable, Equatable {
 // MARK: - ProviderConfig（AI 提供者配置）
 
 /// AI 服务提供商配置
-/// 对齐 Electron provider_configs 表
+/// 对齐迁移前的 provider_configs 表
 public struct ProviderConfig: Codable, Sendable, Identifiable, Hashable, Equatable {
     public let id: String
     public var name: String
@@ -491,7 +491,7 @@ public enum ProviderTier: String, Codable, Sendable, Hashable, CaseIterable {
 // MARK: - ProcessJob（处理任务）
 
 /// 统一处理任务模型
-/// 对齐 Electron process_jobs 表
+/// 对齐迁移前的 process_jobs 表
 public struct ProcessJob: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String?
@@ -584,7 +584,7 @@ public enum ProcessJobStatus: String, Codable, Sendable, Hashable, CaseIterable 
 // MARK: - AITask（AI 任务队列）
 
 /// AI 任务队列项
-/// 对齐 Electron ai_tasks 表
+/// 对齐迁移前的 ai_tasks 表
 public struct AITask: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String

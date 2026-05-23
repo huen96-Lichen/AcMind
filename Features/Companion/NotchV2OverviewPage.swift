@@ -91,7 +91,12 @@ struct NotchV2OverviewPage: View {
         NotchV2Card(title: "快捷入口", subtitle: "Capture / Markdown / Pin / Speech", symbol: "bolt.circle", padding: 16) {
             HStack(spacing: 10) {
                 ForEach(shortcutEntries) { item in
-                    NotchV2QuickActionTile(icon: item.icon, title: item.title, subtitle: item.subtitle)
+                    NotchV2QuickActionTile(
+                        icon: item.icon,
+                        title: item.title,
+                        subtitle: item.subtitle,
+                        action: item.action
+                    )
                 }
             }
         }
@@ -162,13 +167,26 @@ struct NotchV2OverviewPage: View {
     }
 
     private var shortcutEntries: [NotchV2QuickActionEntry] {
-        [
-            .init(icon: quickActionIcon(at: 0, fallback: "camera.viewfinder"), title: "截图", subtitle: "Capture"),
-            .init(icon: quickActionIcon(at: 1, fallback: "doc.text"), title: "MD", subtitle: "Markdown"),
-            .init(icon: quickActionIcon(at: 2, fallback: "pin"), title: "Pin", subtitle: "Pin"),
-            .init(icon: quickActionIcon(at: 3, fallback: "waveform"), title: "SRPT", subtitle: "Speech"),
-            .init(icon: "ellipsis", title: "更多", subtitle: "More")
-        ]
+        viewModel.quickActions.enumerated().compactMap { index, action in
+            guard index < 5 else { return nil }
+
+            let subtitle: String
+            switch index {
+            case 0: subtitle = "Capture"
+            case 1: subtitle = "Markdown"
+            case 2: subtitle = "Pin"
+            case 3: subtitle = "Speech"
+            default: subtitle = "More"
+            }
+
+            return .init(
+                id: action.id,
+                icon: action.icon,
+                title: action.title,
+                subtitle: subtitle,
+                action: action.action
+            )
+        }
     }
 
     private var artistLabel: String {
@@ -181,11 +199,6 @@ struct NotchV2OverviewPage: View {
 
     private var titleText: String {
         viewModel.playbackState.title.isEmpty ? "未播放" : viewModel.playbackState.title
-    }
-
-    private func quickActionIcon(at index: Int, fallback: String) -> String {
-        guard viewModel.quickActions.indices.contains(index) else { return fallback }
-        return viewModel.quickActions[index].icon
     }
 
     private func progressBar(progress: Double) -> some View {
@@ -271,37 +284,43 @@ private struct NotchV2TaskRow: View {
 }
 
 private struct NotchV2QuickActionEntry: Identifiable {
-    let id = UUID()
+    let id: UUID
     let icon: String
     let title: String
     let subtitle: String
+    let action: () -> Void
 }
 
 private struct NotchV2QuickActionTile: View {
     let icon: String
     let title: String
     let subtitle: String
+    let action: () -> Void
 
     var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(NotchV2DesignTokens.innerCardBackground)
-                    .frame(height: 28)
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.accentPurple)
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(NotchV2DesignTokens.innerCardBackground)
+                        .frame(height: 28)
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(NotchV2DesignTokens.accentPurple)
+                }
+
+                Text(title)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+
+                Text(subtitle)
+                    .font(.system(size: 7, weight: .medium))
+                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
             }
-
-            Text(title)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-
-            Text(subtitle)
-                .font(.system(size: 7, weight: .medium))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+            .frame(maxWidth: .infinity)
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .frame(maxWidth: .infinity)
+        .buttonStyle(.plain)
     }
 }
 

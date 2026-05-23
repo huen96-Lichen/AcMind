@@ -10,13 +10,25 @@ import AcMindKit
 /// 2. 用户自定义功能快捷入口
 /// 3. 支持拖拽，位置记忆
 final class DesktopCapsulePanel: NSPanel {
-    static let shared = DesktopCapsulePanel()
+    private static var _shared: DesktopCapsulePanel?
 
-    private let viewModel = DesktopCapsuleViewModel()
+    static var shared: DesktopCapsulePanel {
+        guard let shared = _shared else {
+            fatalError("DesktopCapsulePanel.shared accessed before configuration")
+        }
+        return shared
+    }
+
+    static func configureShared(container: ServiceContainer) {
+        _shared = DesktopCapsulePanel(container: container)
+    }
+
+    private let viewModel: DesktopCapsuleViewModel
     private var hostingView: NSHostingView<DesktopCapsuleView>?
     private var contentContainerView: NSView?
 
-    private init() {
+    init(container: ServiceContainer) {
+        self.viewModel = DesktopCapsuleViewModel(container: container)
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: DesktopCapsuleLayoutMetrics.collapsedDiameter, height: DesktopCapsuleLayoutMetrics.height),
             styleMask: [.nonactivatingPanel, .hudWindow],

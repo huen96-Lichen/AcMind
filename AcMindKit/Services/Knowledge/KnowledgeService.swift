@@ -305,7 +305,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         
         // 最近 7 天新增
         let calendar = Calendar.current
-        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date())!
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date()) ?? .distantPast
         let recentCount = allCards.filter { $0.createdAt >= weekAgo }.count
         
         // 高价值卡片

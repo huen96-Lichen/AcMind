@@ -50,7 +50,6 @@ final class FnVoiceHoldMonitor {
     private func handle(_ event: NSEvent) {
         let session = CompanionVoiceSessionController.shared
         guard session.isHoldToTalkEnabled, session.allowsFnHoldTrigger else { return }
-        guard event.keyCode == 63 else { return }
 
         let fnPressed = event.modifierFlags.contains(.function)
         if fnPressed && !isFnDown {

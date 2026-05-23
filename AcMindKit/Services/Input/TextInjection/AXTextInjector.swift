@@ -15,6 +15,18 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
     // MARK: - Initialization
     
     public init() {}
+
+    private func focusedElement(from axApp: AXUIElement) -> AXUIElement? {
+        var focusedElement: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success else {
+            return nil
+        }
+        guard let focusedElement,
+              CFGetTypeID(focusedElement) == AXUIElementGetTypeID() else {
+            return nil
+        }
+        return unsafeDowncast(focusedElement as AnyObject, to: AXUIElement.self)
+    }
     
     // MARK: - TextInjector Protocol
     
@@ -32,10 +44,7 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
         
         // 获取焦点元素
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        var focusedElement: CFTypeRef?
-        
-        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
-              let element = focusedElement as! AXUIElement? else {
+        guard let element = focusedElement(from: axApp) else {
             return snapshot
         }
         
@@ -60,7 +69,9 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
         // 获取选区范围
         var range: CFTypeRef?
         if AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &range) == .success,
-           let rangeValue = range as! AXValue? {
+           let range,
+           CFGetTypeID(range) == AXValueGetTypeID() {
+            let rangeValue = unsafeDowncast(range as AnyObject, to: AXValue.self)
             var cfRange = CFRange()
             if AXValueGetValue(rangeValue, .cfRange, &cfRange) {
                 snapshot.selectedRange = cfRange
@@ -84,10 +95,7 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
         snapshot.bundleIdentifier = app.bundleIdentifier
         
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        var focusedElement: CFTypeRef?
-        
-        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
-              let element = focusedElement as! AXUIElement? else {
+        guard let element = focusedElement(from: axApp) else {
             snapshot.failureReason = "无法获取焦点元素"
             return snapshot
         }
@@ -128,10 +136,7 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
         // 方法1: 尝试通过 Accessibility API 直接插入
         if let app = NSWorkspace.shared.frontmostApplication {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
-            var focusedElement: CFTypeRef?
-            
-            if AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
-               let element = focusedElement as! AXUIElement? {
+            if let element = focusedElement(from: axApp) {
                 
                 // 尝试设置值
                 let result = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, text as CFTypeRef)
@@ -155,10 +160,7 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
         }
         
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        var focusedElement: CFTypeRef?
-        
-        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
-              let element = focusedElement as! AXUIElement? else {
+        guard let element = focusedElement(from: axApp) else {
             // Fallback to pasteboard
             try insertViaPasteboard(text: text)
             return
@@ -167,10 +169,12 @@ public final class AXTextInjector: TextInjector, @unchecked Sendable {
         // 获取选区范围
         var rangeValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
-              let range = rangeValue as! AXValue? else {
+              let rangeValue,
+              CFGetTypeID(rangeValue) == AXValueGetTypeID() else {
             try insertViaPasteboard(text: text)
             return
         }
+        let range = unsafeDowncast(rangeValue as AnyObject, to: AXValue.self)
         
         var cfRange = CFRange()
         guard AXValueGetValue(range, .cfRange, &cfRange) else {

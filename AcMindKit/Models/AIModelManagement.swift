@@ -166,7 +166,8 @@ public enum AIModelCatalog {
 
     public static func options(
         for category: AIModelCategory,
-        providers: [ProviderConfig]
+        providers: [ProviderConfig],
+        discoveredModelsByProvider: [String: [String]] = [:]
     ) -> [AIModelOption] {
         var options = builtInOptions(for: category)
 
@@ -176,24 +177,57 @@ public enum AIModelCatalog {
             let privacyLevel = isCloud ? "云端" : "本地"
             let costLevel = isCloud ? "付费" : "免费"
             let loadLevel = loadLevelText(provider.tier)
-            let suffix = provider.modelId.isEmpty ? provider.name : provider.modelId
-            let id = "\(provider.id):\(provider.modelId.isEmpty ? category.rawValue : provider.modelId)"
-
-            options.append(
-                AIModelOption(
-                    id: id,
-                    displayName: provider.name.isEmpty ? suffix : provider.name,
-                    providerId: provider.id,
-                    modelId: provider.modelId.isEmpty ? nil : provider.modelId,
-                    category: category,
-                    isSystemDefault: false,
-                    isAvailable: provider.enabled,
-                    privacyLevel: privacyLevel,
-                    costLevel: costLevel,
-                    loadLevel: loadLevel,
-                    description: provider.modelId.isEmpty ? provider.name : "\(provider.name) · \(provider.modelId)"
-                )
+            let discoveredModels = discoveredModelsByProvider[provider.id] ?? []
+            let resolvedModels = orderedUnique(
+                discoveredModels
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                    .appendingIfNeeded(provider.modelId.trimmingCharacters(in: .whitespacesAndNewlines))
             )
+
+            if resolvedModels.isEmpty {
+                let suffix = provider.modelId.isEmpty ? provider.name : provider.modelId
+                let id = "\(provider.id):\(provider.modelId.isEmpty ? category.rawValue : provider.modelId)"
+
+                options.append(
+                    AIModelOption(
+                        id: id,
+                        displayName: provider.name.isEmpty ? suffix : provider.name,
+                        providerId: provider.id,
+                        modelId: provider.modelId.isEmpty ? nil : provider.modelId,
+                        category: category,
+                        isSystemDefault: false,
+                        isAvailable: provider.enabled,
+                        privacyLevel: privacyLevel,
+                        costLevel: costLevel,
+                        loadLevel: loadLevel,
+                        description: provider.modelId.isEmpty ? provider.name : "\(provider.name) · \(provider.modelId)"
+                    )
+                )
+                continue
+            }
+
+            for model in resolvedModels {
+                let displayName = model
+                let description = provider.name.isEmpty ? model : "\(provider.name) · \(model)"
+                let id = "\(provider.id):\(model)"
+
+                options.append(
+                    AIModelOption(
+                        id: id,
+                        displayName: displayName,
+                        providerId: provider.id,
+                        modelId: model,
+                        category: category,
+                        isSystemDefault: false,
+                        isAvailable: provider.enabled,
+                        privacyLevel: privacyLevel,
+                        costLevel: costLevel,
+                        loadLevel: loadLevel,
+                        description: description
+                    )
+                )
+            }
         }
 
         return deduplicated(options)
@@ -246,14 +280,19 @@ public enum AIModelCatalog {
 
     public static func normalize(
         _ preferences: [AIModelCategoryPreference],
-        providers: [ProviderConfig]
+        providers: [ProviderConfig],
+        discoveredModelsByProvider: [String: [String]] = [:]
     ) -> [AIModelCategoryPreference] {
         let categories = AIModelCategory.allCases
         var normalized: [AIModelCategoryPreference] = []
 
         for category in categories {
             let existing = preferences.first(where: { $0.category == category }) ?? defaultPreference(for: category)
-            let options = options(for: category, providers: providers)
+            let options = options(
+                for: category,
+                providers: providers,
+                discoveredModelsByProvider: discoveredModelsByProvider
+            )
             let preferred = option(providerId: existing.selectedProviderId, modelId: existing.selectedModelId, in: options)
             let fallback = option(providerId: existing.fallbackProviderId, modelId: existing.fallbackModelId, in: options)
 
@@ -400,5 +439,20 @@ public enum AIModelCatalog {
     private static func deduplicated(_ options: [AIModelOption]) -> [AIModelOption] {
         var seen = Set<String>()
         return options.filter { seen.insert($0.id).inserted }
+    }
+
+    private static func orderedUnique(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        return values.filter { seen.insert($0).inserted }
+    }
+}
+
+private extension Array where Element == String {
+    func appendingIfNeeded(_ value: String) -> [String] {
+        var copy = self
+        if !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            copy.append(value)
+        }
+        return copy
     }
 }

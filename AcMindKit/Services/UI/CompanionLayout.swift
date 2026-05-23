@@ -97,7 +97,13 @@ public struct CompanionMenuBarLayout {
 public struct CompanionScreenPositioning {
     /// 获取当前主屏幕
     private static var mainScreen: NSScreen {
-        NSScreen.main ?? NSScreen.screens.first!
+        if let screen = NSScreen.main {
+            return screen
+        }
+        if let screen = NSScreen.screens.first {
+            return screen
+        }
+        return NSScreen.screens[0]
     }
     
     /// 获取菜单栏高度

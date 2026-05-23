@@ -21,7 +21,7 @@ public final class OpenAICompatibleProvider: AIProvider {
         timeout: TimeInterval = 120.0,
         defaultHeaders: [String: String] = [:]
     ) {
-        self.baseURL = URL(string: baseURL)!
+        self.baseURL = URL(string: baseURL) ?? URL(fileURLWithPath: "/")
         self.apiKey = apiKey
         self.timeout = timeout
         self.defaultHeaders = defaultHeaders

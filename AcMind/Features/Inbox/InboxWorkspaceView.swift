@@ -4,7 +4,8 @@ import UniformTypeIdentifiers
 import AcMindKit
 
 struct InboxWorkspaceView: View {
-    @StateObject private var viewModel = InboxViewModel()
+    @StateObject private var viewModel: InboxViewModel
+    @EnvironmentObject private var toastManager: ToastManager
     @State private var selectedCategory: InboxFilterCategory = .all
     @State private var selectedItemID: String?
     @State private var showNewTextSheet = false
@@ -13,6 +14,10 @@ struct InboxWorkspaceView: View {
     @State private var showDeleteConfirm = false
     @State private var draftText = ""
     @State private var draftURL = ""
+
+    init(container: ServiceContainer, toastManager: ToastManager) {
+        self._viewModel = StateObject(wrappedValue: InboxViewModel(container: container, toastManager: toastManager))
+    }
 
     var body: some View {
         ACWorkspaceShell(
@@ -63,13 +68,13 @@ struct InboxWorkspaceView: View {
                 switch result {
                 case .success(let urls):
                     guard let url = urls.first else {
-                        ToastManager.shared.show(.warning, "没有选择文件")
+                        toastManager.show(.warning, "没有选择文件")
                         return
                     }
                     await viewModel.importFile(url: url)
                     selectedItemID = viewModel.items.first?.id
                 case .failure(let error):
-                    ToastManager.shared.show(.error, "文件导入失败: \(error.localizedDescription)")
+                    toastManager.show(.error, "文件导入失败: \(error.localizedDescription)")
                 }
             }
         }
@@ -268,7 +273,7 @@ struct InboxWorkspaceView: View {
                 Button("保存") {
                     let text = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else {
-                        ToastManager.shared.show(.warning, "输入不能为空")
+                        toastManager.show(.warning, "输入不能为空")
                         return
                     }
                     Task {
@@ -300,7 +305,7 @@ struct InboxWorkspaceView: View {
                 Button("保存") {
                     guard let url = URL(string: draftURL.trimmingCharacters(in: .whitespacesAndNewlines)),
                           url.scheme != nil else {
-                        ToastManager.shared.show(.warning, "请输入有效网址")
+                        toastManager.show(.warning, "请输入有效网址")
                         return
                     }
                     Task {
@@ -365,12 +370,12 @@ struct InboxWorkspaceView: View {
     private func copyCurrent(_ item: SourceItem) {
         let text = item.polishedTranscript ?? item.transcript ?? item.previewText ?? item.ocrText ?? item.title ?? ""
         guard !text.isEmpty else {
-            ToastManager.shared.show(.warning, "没有可复制的内容")
+            toastManager.show(.warning, "没有可复制的内容")
             return
         }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        ToastManager.shared.show(.success, "已复制到剪贴板")
+        toastManager.show(.success, "已复制到剪贴板")
     }
 
     private static let dateFormatter: DateFormatter = {

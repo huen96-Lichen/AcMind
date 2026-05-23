@@ -92,17 +92,22 @@ public final class ServiceContainer: ObservableObject, Sendable {
     public static var shared: ServiceContainer {
         get {
             guard let instance = _shared else {
-                fatalError("ServiceContainer must be initialized before use. Call setup() first.")
+                assertionFailure("ServiceContainer accessed before setup(); returning a bootstrap container.")
+                let bootstrap = ServiceContainer(configuration: .empty)
+                _shared = bootstrap
+                return bootstrap
             }
             return instance
         }
     }
 
     public static func isInitialized() -> Bool {
-        _shared != nil
+        _shared?.isInitialized == true
     }
 
     // MARK: - Services
+
+    private let appState: AppState?
 
     public let permissionManager: PermissionManager
     public let storageService: StorageServiceProtocol
@@ -115,6 +120,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
     public let voiceService: VoiceServiceProtocol
     public let settingsService: SettingsServiceProtocol
     public let assetStore: AssetStore
+    public let systemMonitorService: SystemMonitorService
 
     // MARK: - State
 
@@ -126,7 +132,9 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
     // MARK: - Initialization
 
-    private init(configuration: ServiceConfiguration = ServiceConfiguration()) {
+    private init(configuration: ServiceConfiguration = ServiceConfiguration(), appState: AppState? = nil) {
+        self.appState = appState
+
         // 阶段 0: 权限管理器（最底层，所有权限检测基础）
         self.permissionManager = PermissionManager()
 
@@ -177,17 +185,22 @@ public final class ServiceContainer: ObservableObject, Sendable {
         self.knowledgeService = configuration.knowledgeService ?? KnowledgeService(
             storage: storageService
         )
+        self.systemMonitorService = SystemMonitorService()
     }
 
     // MARK: - Setup
 
     /// 初始化容器，只能调用一次
-    public static func setup(configuration: ServiceConfiguration = ServiceConfiguration()) async throws {
-        guard _shared == nil else {
-            throw ServiceContainerError.alreadyInitialized
+    public static func setup(configuration: ServiceConfiguration = ServiceConfiguration(), appState: AppState) async throws {
+        if let shared = _shared {
+            if shared.isInitialized {
+                throw ServiceContainerError.alreadyInitialized
+            }
+            try await shared.initialize()
+            return
         }
 
-        let container = ServiceContainer(configuration: configuration)
+        let container = ServiceContainer(configuration: configuration, appState: appState)
         _shared = container
 
         try await container.initialize()
@@ -206,6 +219,13 @@ public final class ServiceContainer: ObservableObject, Sendable {
     private func initialize() async throws {
         initializationTask = Task {
             do {
+                await MainActor.run {
+                    self.initializationError = nil
+                    self.isInitialized = false
+                    self.currentPhase = .idle
+                }
+                syncAppState()
+
                 // 阶段 1: 存储层
                 try await transition(to: .storage) {
                     if let storage = storageService as? StorageService {
@@ -214,7 +234,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
                     try await assetStore.setup()
                 }
 
-                // 阶段 2: 数据迁移（Electron → Swift）
+                // 阶段 2: 数据迁移（旧运行时 → Swift）
                 await transition(to: .dataMigration) {
                     await runDataMigrationIfNeeded()
                 }
@@ -255,12 +275,14 @@ public final class ServiceContainer: ObservableObject, Sendable {
                     self.currentPhase = .completed
                     self.isInitialized = true
                 }
+                syncAppState()
 
             } catch {
                 await MainActor.run {
                     self.currentPhase = .failed
                     self.initializationError = error
                 }
+                syncAppState()
                 throw error
             }
         }
@@ -272,21 +294,22 @@ public final class ServiceContainer: ObservableObject, Sendable {
         await MainActor.run {
             self.currentPhase = phase
         }
+        syncAppState()
         try await operation()
     }
 
     // MARK: - Data Migration
 
-    /// 检测并执行 Electron → Swift 数据迁移
+    /// 检测并执行旧运行时 → Swift 数据迁移
     /// 在存储层初始化之后、其他服务初始化之前运行
     private func runDataMigrationIfNeeded() async {
-        // 检查是否存在 Electron 数据库
-        guard storageService.checkElectronDatabase() != nil else {
-            print("ℹ️ 未检测到 Electron 数据库，跳过数据迁移")
+        // 检查是否存在迁移源数据库
+        guard storageService.checkMigrationSourceDatabase() != nil else {
+            print("ℹ️ 未检测到迁移源数据库，跳过数据迁移")
             return
         }
 
-        print("🔄 检测到 Electron 数据库，开始数据迁移...")
+        print("🔄 检测到迁移源数据库，开始数据迁移...")
 
         print("ℹ️ 数据迁移在当前构建中暂时禁用")
     }
@@ -298,6 +321,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
         // 停止采集监听
         await clipboardService.stopWatching()
+        systemMonitorService.stop()
 
         // 取消正在进行的 AI 任务
         // 持久化设置
@@ -312,6 +336,11 @@ public final class ServiceContainer: ObservableObject, Sendable {
             self.isInitialized = false
             self.currentPhase = .idle
         }
+        syncAppState()
+    }
+
+    private func syncAppState() {
+        appState?.sync(with: self)
     }
 
     // MARK: - Dependency Validation
@@ -329,6 +358,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
         if distillService is DistillService { issues.append("✓ DistillService") }
         if exportService is ExportService { issues.append("✓ ExportService") }
         if knowledgeService is KnowledgeService { issues.append("✓ KnowledgeService") }
+        issues.append("✓ SystemMonitorService")
         issues.append("✓ VoiceService")
 
         return issues

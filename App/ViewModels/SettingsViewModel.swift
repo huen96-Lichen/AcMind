@@ -2,6 +2,72 @@ import Foundation
 import SwiftUI
 import AcMindKit
 
+public enum AIPromptStyle: String, Codable, CaseIterable, Sendable {
+    case technical
+    case creative
+    case business
+    case general
+
+    public var displayName: String {
+        switch self {
+        case .technical: return "技术文档"
+        case .creative: return "创意写作"
+        case .business: return "商务沟通"
+        case .general: return "通用"
+        }
+    }
+}
+
+public enum CensorMode: Int, Codable, CaseIterable {
+    case pixelate = 0
+    case blur = 1
+    case solid = 2
+    case erase = 3
+
+    public var displayName: String {
+        switch self {
+        case .pixelate: return "像素化"
+        case .blur: return "模糊"
+        case .solid: return "纯色填充"
+        case .erase: return "智能擦除"
+        }
+    }
+}
+
+public enum RedactionType: String, Codable, CaseIterable, Sendable {
+    case email
+    case phone
+    case ssn
+    case creditCard
+    case cvv
+    case expiry
+    case ipv4
+    case awsKey
+    case secret
+    case hexKey
+    case bearer
+    case face
+    case person
+
+    public var displayName: String {
+        switch self {
+        case .email: return "邮箱"
+        case .phone: return "电话号码"
+        case .ssn: return "社保号"
+        case .creditCard: return "信用卡"
+        case .cvv: return "CVV"
+        case .expiry: return "有效期"
+        case .ipv4: return "IP 地址"
+        case .awsKey: return "AWS Key"
+        case .secret: return "密钥/Token"
+        case .hexKey: return "Hex Key"
+        case .bearer: return "Bearer Token"
+        case .face: return "人脸"
+        case .person: return "人物"
+        }
+    }
+}
+
 // MARK: - Settings View Model
 
 /// 设置页面视图模型
@@ -97,6 +163,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var providerDraftEnabled: Bool = true
     @Published public var providerAPIKeyPresence: [String: Bool] = [:]
     @Published public var providerHealthStates: [String: ProviderHealthState] = [:]
+    @Published public var providerDiscoveredModels: [String: [String]] = [:]
 
     // AI Model Preferences
     @Published public var aiModelPreferences: [AIModelCategoryPreference] = AIModelCatalog.defaultPreferences()
@@ -108,11 +175,15 @@ public final class SettingsViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    public init(settings: SettingsServiceProtocol? = nil, storage: StorageServiceProtocol? = nil) {
-        self.settings = settings ?? ServiceContainer.shared.settingsService
-        self.storage = storage ?? ServiceContainer.shared.storageService
-        self.aiRuntime = ServiceContainer.shared.aiRuntime
-        self.permissionManager = ServiceContainer.shared.permissionManager
+    public init(
+        container: ServiceContainer,
+        settings: SettingsServiceProtocol? = nil,
+        storage: StorageServiceProtocol? = nil
+    ) {
+        self.settings = settings ?? container.settingsService
+        self.storage = storage ?? container.storageService
+        self.aiRuntime = container.aiRuntime
+        self.permissionManager = container.permissionManager
 
         // 加载设置
         Task {
@@ -370,6 +441,7 @@ public final class SettingsViewModel: ObservableObject {
         do {
             providers = try await settings.listProviders()
             await refreshProviderMetadata()
+            await refreshProviderModelCatalog()
             normalizeAIModelPreferences()
         } catch {
             showError(message: error.localizedDescription)
@@ -655,7 +727,11 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     public func availableAIModelOptions(for category: AIModelCategory) -> [AIModelOption] {
-        AIModelCatalog.options(for: category, providers: providers)
+        AIModelCatalog.options(
+            for: category,
+            providers: providers,
+            discoveredModelsByProvider: providerDiscoveredModels
+        )
     }
 
     public func selectedAIModelOption(for category: AIModelCategory) -> AIModelOption? {
@@ -748,10 +824,47 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     private func normalizeAIModelPreferences() {
-        aiModelPreferences = AIModelCatalog.normalize(aiModelPreferences, providers: providers)
+        aiModelPreferences = AIModelCatalog.normalize(
+            aiModelPreferences,
+            providers: providers,
+            discoveredModelsByProvider: providerDiscoveredModels
+        )
         if !aiModelPreferences.contains(where: { $0.category == selectedAIModelCategory }) {
             selectedAIModelCategory = AIModelCategory.allCases.first ?? .speechToText
         }
+    }
+
+    private func refreshProviderModelCatalog() async {
+        var discoveredModels: [String: [String]] = [:]
+        for provider in providers where provider.enabled {
+            do {
+                let liveModels = try await aiRuntime.listModels(providerId: provider.id)
+                let resolved = normalizeModelIdentifiers(
+                    liveModels,
+                    fallback: provider.modelId
+                )
+                if !resolved.isEmpty {
+                    discoveredModels[provider.id] = resolved
+                }
+            } catch {
+                if !provider.modelId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    discoveredModels[provider.id] = [provider.modelId]
+                }
+            }
+        }
+        providerDiscoveredModels = discoveredModels
+    }
+
+    private func normalizeModelIdentifiers(_ models: [String], fallback: String) -> [String] {
+        var ordered: [String] = []
+        let trimmedFallback = fallback.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedFallback.isEmpty {
+            ordered.append(trimmedFallback)
+        }
+        ordered.append(contentsOf: models.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+
+        var seen = Set<String>()
+        return ordered.filter { seen.insert($0).inserted }
     }
 }
 

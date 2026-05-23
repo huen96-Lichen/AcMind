@@ -3,7 +3,7 @@ import Foundation
 // MARK: - AppSettings（应用设置）
 
 /// 全局应用设置
-/// 对齐 Electron app_settings 表
+/// 对齐迁移前的 app_settings 表
 public struct AppSettings: Codable, Sendable, Equatable {
     // 外观
     public var theme: AppTheme

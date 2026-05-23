@@ -38,8 +38,7 @@ struct NotchToastItem: Identifiable {
 // MARK: - Toast Manager
 
 @MainActor
-final class ToastManager: ObservableObject {
-    static let shared = ToastManager()
+public final class ToastManager: ObservableObject {
 
     @Published var currentToast: NotchToastItem?
     @Published var isShowing = false
@@ -77,7 +76,7 @@ final class ToastManager: ObservableObject {
 // MARK: - Toast View
 
 struct NotchToastView: View {
-    @ObservedObject private var manager = ToastManager.shared
+    @EnvironmentObject private var manager: ToastManager
 
     var body: some View {
         if let toast = manager.currentToast, manager.isShowing {

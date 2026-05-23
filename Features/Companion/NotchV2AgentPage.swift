@@ -3,9 +3,14 @@ import AcMindKit
 
 struct NotchV2AgentPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
-    @StateObject private var agent = AgentWorkspaceViewModel()
+    @StateObject private var agent: AgentWorkspaceViewModel
     @State private var quickAskText = ""
     @FocusState private var quickAskFocused: Bool
+
+    init(viewModel: NotchV2ViewModel, container: ServiceContainer) {
+        self.viewModel = viewModel
+        self._agent = StateObject(wrappedValue: AgentWorkspaceViewModel(container: container))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

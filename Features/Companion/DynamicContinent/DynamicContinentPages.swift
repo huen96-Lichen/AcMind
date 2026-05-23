@@ -18,9 +18,15 @@ struct DynamicContinentMusicPage: View {
 
 struct DynamicContinentAgentPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
+    private let container: ServiceContainer
+
+    init(viewModel: NotchV2ViewModel, container: ServiceContainer) {
+        self.viewModel = viewModel
+        self.container = container
+    }
 
     var body: some View {
-        NotchV2AgentPage(viewModel: viewModel)
+        NotchV2AgentPage(viewModel: viewModel, container: container)
     }
 }
 

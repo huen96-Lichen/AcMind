@@ -7,9 +7,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.acore.acmind</string>
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>0.0.2</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>0.0.2</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2024 AcMind. All rights reserved.</string>
     

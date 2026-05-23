@@ -1,33 +1,23 @@
 # AcMind
 
-Local-first AI 信息中枢 — 将碎片化信息蒸馏为结构化知识，导出到 Obsidian Vault。
+AcMind 是一款面向 macOS 的 local-first AI 信息整理工作台，基于 SwiftUI + AppKit 构建。
 
-## 功能概览
+## 当前入口
 
-- **多源采集**：剪贴板、语音、截图、网页、PDF、DOCX 等 12 种内容类型
-- **AI 蒸馏**：支持本地模型（Ollama）和云端 API（OpenAI 兼容），自动分层路由
-- **Obsidian 导出**：生成带 Frontmatter 的 Markdown，直接写入 Vault
-- **Capsule 悬浮窗**：独立的快速采集入口
-- **知识卡片**：蒸馏结果以知识卡片形式管理，支持搜索和标签
+- `App/`：应用入口、状态、启动和窗口管理
+- `AcMindKit/`：模型、协议和服务层
+- `Features/`：Native 与 Companion 视图
+- `Shared/DesignSystem/`：共享设计系统
+- `Resources/`：图标、资源和 Info.plist
+- `scripts/`：构建与辅助脚本
+- `docs/`：架构说明和迁移记录
 
-## 环境要求
-
-- **Xcode** >= 15.0
-- **macOS** >= 14.0 (Sonoma)
-- **Swift** >= 5.9
-- **Ollama**（可选）— 用于本地 AI 蒸馏
-
-## 快速开始
+## 构建与测试
 
 ```bash
-# 解析 Swift 依赖
 swift package resolve
-
-# 构建 Debug 版本
 swift build
-
-# 运行应用（macOS）
-open .build/debug/AcMind.app
+swift test --parallel
 ```
 
 ## 常用命令
@@ -37,53 +27,20 @@ open .build/debug/AcMind.app
 | `swift build` | 构建 Debug 版本 |
 | `swift build -c release` | 构建 Release 版本 |
 | `swift test --parallel` | 运行测试 |
-| `bash scripts/build.sh` | 完整构建（含 Xcode） |
+| `swift test --list-tests` | 列出可发现的测试 |
+| `bash scripts/build.sh` | 完整构建 |
 | `bash scripts/build.sh --release` | Release 构建 |
 | `bash scripts/build.sh --release --package` | Release + DMG 打包 |
 | `bash scripts/build.sh --clean` | 清理构建产物 |
 
-## 项目结构
+## 结构说明
 
-```
-AcMind.xcodeproj/     # Xcode 项目
-App/                  # SwiftUI 应用入口
-├── AcMindApp.swift   # 应用入口
-├── AppDelegate.swift # 生命周期管理
-├── ServiceContainer.swift # DI 容器
-└── ViewModels/       # 视图模型
-AcMindKit/            # Swift Package 核心库
-├── Models/           # 数据实体
-├── Protocols/        # 服务抽象接口
-└── Services/         # 业务逻辑实现
-    ├── AI/           # Ollama + OpenAI + 任务队列
-    ├── Input/        # 采集 + 剪贴板
-    ├── Storage/      # SQLite 持久化
-    ├── Workflow/     # 蒸馏 + 导出
-    ├── Knowledge/    # 知识库 + 搜索
-    ├── Voice/        # 录音 + ASR + 润色
-    └── Settings/     # 配置 + 权限 + 快捷键
-Features/             # 原生视图
-├── Native/           # Agent/Inbox/Schedule/Settings/Capsule
-└── Companion/        # Companion 浮层
-Design/               # 设计系统
-Resources/            # 资源文件
-scripts/              # 构建脚本
-docs/                 # 文档
-```
+当前仓库的主线实现已经从 Electron 迁移到 Swift 原生架构。仓库里如果仍出现历史迁移残留路径，那些内容不应作为新代码入口。
 
-详细架构说明以源码结构和设计系统为准，当前仓库里的 `docs/Design/` 只保留了少量参考资料。
+当前数据库层直接基于 SQLite3 封装，不再依赖 GRDB.swift 作为主实现。
 
-## 技术栈
+## 说明
 
-| 层 | 技术 |
-|---|---|
-| 框架 | SwiftUI + AppKit |
-| 语言 | Swift 5.9 (strict concurrency) |
-| 构建 | Xcode + SPM |
-| 数据库 | GRDB.swift (SQLite) |
-| 并发 | Swift Actor |
-| CI | GitHub Actions |
-
-## License
-
-MIT
+- 需要 macOS 14 或更高版本。
+- Ollama 是可选能力，用于本地 AI 路由。
+- `docs/Design/` 仅保留少量参考材料，当前架构以源码为准。

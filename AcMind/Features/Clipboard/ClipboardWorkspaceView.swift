@@ -3,11 +3,16 @@ import SwiftUI
 import AcMindKit
 
 struct ClipboardWorkspaceView: View {
-    @StateObject private var viewModel = ClipboardViewModel()
+    @StateObject private var viewModel: ClipboardViewModel
+    @EnvironmentObject private var toastManager: ToastManager
     @State private var selectedFilter: ClipboardFilterCategory = .all
     @State private var selectedItemID: String?
     @State private var searchText = ""
     @State private var showDeleteConfirm = false
+
+    init(container: ServiceContainer, toastManager: ToastManager) {
+        self._viewModel = StateObject(wrappedValue: ClipboardViewModel(container: container, toastManager: toastManager))
+    }
 
     var body: some View {
         ACWorkspaceShell(
@@ -440,6 +445,7 @@ private struct ClipboardRow: View {
 
 private struct ClipboardDetailHeader: View {
     let item: ClipboardItem
+    @EnvironmentObject private var toastManager: ToastManager
 
     var body: some View {
         HStack(spacing: 12) {
@@ -458,7 +464,7 @@ private struct ClipboardDetailHeader: View {
             Spacer(minLength: 0)
 
             ACButton(item.isPinned ? "已收藏" : "收藏", kind: .ghost) {
-                ToastManager.shared.show(.info, item.isPinned ? "收藏状态已开启" : "收藏状态可在列表中切换")
+                toastManager.show(.info, item.isPinned ? "收藏状态已开启" : "收藏状态可在列表中切换")
             }
         }
     }

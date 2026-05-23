@@ -3,7 +3,7 @@ import Foundation
 // MARK: - VaultConfig（Vault 配置）
 
 /// Obsidian Vault 导出配置
-/// 对齐 Electron vault_config 表
+/// 对齐迁移前的 vault_config 表
 public struct VaultConfig: Codable, Sendable, Hashable, Equatable {
     public var vaultPath: String
     public var defaultFolder: String

@@ -8,14 +8,36 @@ import AcMindKit
 
 @MainActor
 final class NotchPanel: NSPanel {
-    static let shared = NotchPanel()
+    private static var _shared: NotchPanel?
 
-    private let viewModel = NotchV2ViewModel()
+    static var shared: NotchPanel {
+        guard let shared = _shared else {
+            fatalError("NotchPanel.shared accessed before configuration")
+        }
+        return shared
+    }
+
+    private let musicService: MusicService
+    private let toastManager: ToastManager
+    private let viewModel: NotchV2ViewModel
+    private let container: ServiceContainer
     private var hostingView: NSHostingView<NotchV2RootView>?
     private var contentContainerView: NSView?
     private var isExpanded = false
 
-    private init() {
+    static func configureShared(container: ServiceContainer, musicService: MusicService, toastManager: ToastManager) {
+        _shared = NotchPanel(container: container, musicService: musicService, toastManager: toastManager)
+    }
+
+    init(container: ServiceContainer, musicService: MusicService, toastManager: ToastManager) {
+        self.container = container
+        self.musicService = musicService
+        self.toastManager = toastManager
+        self.viewModel = NotchV2ViewModel(
+            musicService: musicService,
+            systemMonitorService: container.systemMonitorService,
+            toastManager: toastManager
+        )
         // 初始尺寸，后续会根据内容自适应
         super.init(
             contentRect: CompanionScreenPositioning.collapsedFrame(on: NSScreen.main),
@@ -55,7 +77,12 @@ final class NotchPanel: NSPanel {
         containerView.wantsLayer = true
         containerView.layer?.backgroundColor = NSColor.clear.cgColor
 
-        let capsule = NotchV2RootView(viewModel: viewModel) { [weak self] expanded in
+        let capsule = NotchV2RootView(
+            viewModel: viewModel,
+            container: container,
+            musicService: musicService,
+            toastManager: toastManager
+        ) { [weak self] expanded in
             self?.setExpanded(expanded, animated: true)
         }
         let hosting = NSHostingView(rootView: capsule)

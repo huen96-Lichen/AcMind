@@ -1,0 +1,51 @@
+import SwiftUI
+
+enum AcMindSurfaceTokens {
+    static let workspaceCornerRadius: CGFloat = ACLayout.radiusShell
+    static let panelCornerRadius: CGFloat = ACLayout.radiusPanel
+    static let cardCornerRadius: CGFloat = ACLayout.cardRadius
+    static let workspaceGap: CGFloat = ACLayout.gapM
+    static let workspaceOuterPadding: CGFloat = 18
+    static let workspaceOuterPaddingLeading: CGFloat = 24
+    static let primarySecondaryGap: CGFloat = 26
+    static let pagePadding: CGFloat = ACLayout.pagePaddingX
+    static let pagePaddingY: CGFloat = ACLayout.pagePaddingY
+    static let sectionGap: CGFloat = ACLayout.sectionGap
+    static let controlGap: CGFloat = ACLayout.gapS
+    static let railWidth: CGFloat = 72
+    static let sidebarContainerWidth: CGFloat = 96
+    static let sidebarInnerRailWidth: CGFloat = 64
+    static let sidebarContainerPadding: CGFloat = 10
+    static let sidebarCornerRadius: CGFloat = 30
+    static let mainPanelCornerRadius: CGFloat = 30
+    static let workspacePanelCornerRadius: CGFloat = 30
+    static let railChromeWidth: CGFloat = 208
+    static let navIconSize: CGFloat = 20
+    static let navItemSize: CGFloat = 44
+    static let navItemCompactSize: CGFloat = 40
+    static let navItemCornerRadius: CGFloat = 14
+    static let borderColor = ACColors.border.opacity(0.55)
+    static let borderStrongColor = ACColors.border.opacity(0.72)
+    static let primarySurface = Color.white.opacity(0.88)
+    static let secondarySurface = Color.white.opacity(0.76)
+    static let sidebarSurface = Color.white.opacity(0.96)
+    static let tertiarySurface = Color.black.opacity(0.035)
+    static let workspacePanelSurface = Color.white.opacity(0.94)
+    static let panelBorderOpacity: CGFloat = 0.06
+    static let workspacePanelBorderOpacity: CGFloat = 0.06
+    static let sidebarBorderOpacity: CGFloat = 0.08
+    static let shadowColor = Color.black.opacity(0.06)
+    static let shadowRadius: CGFloat = 18
+    static let shadowYOffset: CGFloat = 8
+    static let workspacePanelShadowColor = Color.black.opacity(0.08)
+    static let workspacePanelShadowRadius: CGFloat = 24
+    static let workspacePanelShadowYOffset: CGFloat = 12
+    static let sidebarShadowColor = Color.black.opacity(0.08)
+    static let sidebarShadowRadius: CGFloat = 26
+    static let sidebarShadowYOffset: CGFloat = 12
+    static let panelInset: CGFloat = 12
+    static let pageContentInset: CGFloat = 24
+    static let composerHeight: CGFloat = 170
+    static let composerCornerRadius: CGFloat = 24
+    static let headerHeight: CGFloat = 60
+}

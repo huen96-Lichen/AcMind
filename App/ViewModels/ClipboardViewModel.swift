@@ -13,17 +13,17 @@ public final class ClipboardViewModel: ObservableObject {
 
     private let clipboardService: ClipboardServiceProtocol
     private let storage: StorageServiceProtocol
+    private let toastManager: ToastManager
 
     public init(
+        container: ServiceContainer,
         clipboardService: ClipboardServiceProtocol? = nil,
-        storage: StorageServiceProtocol? = nil
+        storage: StorageServiceProtocol? = nil,
+        toastManager: ToastManager
     ) {
-        let container = ServiceContainer.isInitialized() ? ServiceContainer.shared : nil
-        self.clipboardService = clipboardService ?? container?.clipboardService ?? ClipboardService(
-            storage: storage ?? container?.storageService,
-            assetStore: container?.assetStore
-        )
-        self.storage = storage ?? container?.storageService ?? StorageService()
+        self.clipboardService = clipboardService ?? container.clipboardService
+        self.storage = storage ?? container.storageService
+        self.toastManager = toastManager
     }
 
     public func load() async {
@@ -61,11 +61,11 @@ public final class ClipboardViewModel: ObservableObject {
             do {
                 try await storage.insertClipboardItem(item)
                 await load()
-                ToastManager.shared.show(.success, "已保存当前剪贴板")
+                toastManager.show(.success, "已保存当前剪贴板")
             } catch {
                 errorMessage = "保存失败: \(error.localizedDescription)"
                 showError = true
-                ToastManager.shared.show(.error, error.localizedDescription)
+                toastManager.show(.error, error.localizedDescription)
             }
             return
         }
@@ -80,18 +80,18 @@ public final class ClipboardViewModel: ObservableObject {
             do {
                 try await storage.insertClipboardItem(item)
                 await load()
-                ToastManager.shared.show(.success, "文件已保存到剪贴板历史")
+                toastManager.show(.success, "文件已保存到剪贴板历史")
             } catch {
                 errorMessage = "保存失败: \(error.localizedDescription)"
                 showError = true
-                ToastManager.shared.show(.error, error.localizedDescription)
+                toastManager.show(.error, error.localizedDescription)
             }
             return
         }
 
         errorMessage = "剪贴板里没有可用内容"
         showError = true
-        ToastManager.shared.show(.warning, "剪贴板里没有可用内容")
+        toastManager.show(.warning, "剪贴板里没有可用内容")
     }
 
     public func copyItem(_ item: ClipboardItem) async {
@@ -103,7 +103,7 @@ public final class ClipboardViewModel: ObservableObject {
         }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        ToastManager.shared.show(.success, "已复制到剪贴板")
+        toastManager.show(.success, "已复制到剪贴板")
     }
 
     public func togglePinned(_ item: ClipboardItem) async {
@@ -114,11 +114,11 @@ public final class ClipboardViewModel: ObservableObject {
                 try await clipboardService.pinItem(id: item.id)
             }
             await load()
-            ToastManager.shared.show(.success, item.isPinned ? "已取消收藏" : "已收藏")
+            toastManager.show(.success, item.isPinned ? "已取消收藏" : "已收藏")
         } catch {
             errorMessage = error.localizedDescription
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -126,11 +126,11 @@ public final class ClipboardViewModel: ObservableObject {
         do {
             try await clipboardService.deleteItem(id: item.id)
             await load()
-            ToastManager.shared.show(.success, "已删除记录")
+            toastManager.show(.success, "已删除记录")
         } catch {
             errorMessage = error.localizedDescription
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -138,11 +138,11 @@ public final class ClipboardViewModel: ObservableObject {
         do {
             try await clipboardService.clearHistory()
             await load()
-            ToastManager.shared.show(.success, "已清空历史")
+            toastManager.show(.success, "已清空历史")
         } catch {
             errorMessage = error.localizedDescription
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 

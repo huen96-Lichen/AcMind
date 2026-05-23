@@ -53,6 +53,12 @@ struct DynamicContinentTopBar: View {
 
 struct DynamicContinentTemplateV2: View {
     @ObservedObject var viewModel: NotchV2ViewModel
+    private let container: ServiceContainer
+
+    init(viewModel: NotchV2ViewModel, container: ServiceContainer) {
+        self.viewModel = viewModel
+        self.container = container
+    }
 
     var body: some View {
         let containerShape = NotchShape(topCornerRadius: 20, bottomCornerRadius: DynamicContinentLayoutMetrics.containerCornerRadius)
@@ -71,9 +77,11 @@ struct DynamicContinentTemplateV2: View {
                 case .music:
                     DynamicContinentMusicPage(viewModel: viewModel)
                 case .agent:
-                    DynamicContinentAgentPage(viewModel: viewModel)
+                    DynamicContinentAgentPage(viewModel: viewModel, container: container)
                 case .schedule:
                     DynamicContinentSchedulePage(viewModel: viewModel)
+                case .systemMonitor:
+                    DynamicContinentSystemMonitorPage(viewModel: viewModel)
                 }
             }
             .zIndex(0)

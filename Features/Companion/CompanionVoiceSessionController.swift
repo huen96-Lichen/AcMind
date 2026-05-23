@@ -6,7 +6,18 @@ import AcMindKit
 
 @MainActor
 final class CompanionVoiceSessionController: ObservableObject {
-    static let shared = CompanionVoiceSessionController()
+    private static var _shared: CompanionVoiceSessionController?
+
+    static var shared: CompanionVoiceSessionController {
+        guard let shared = _shared else {
+            fatalError("CompanionVoiceSessionController.shared accessed before configuration")
+        }
+        return shared
+    }
+
+    static func configureShared(container: ServiceContainer, appState: AppState, toastManager: ToastManager) {
+        _shared = CompanionVoiceSessionController(container: container, appState: appState, toastManager: toastManager)
+    }
 
     enum TriggerSource: String {
         case manual
@@ -39,8 +50,19 @@ final class CompanionVoiceSessionController: ObservableObject {
     private var isClosingSession = false
     private var cancelPendingStart = false
     private let textInjector: TextInjector
+    private let serviceContainer: ServiceContainer
+    private let appState: AppState
+    private let toastManager: ToastManager
 
-    private init(textInjector: TextInjector = AXTextInjector()) {
+    init(
+        container: ServiceContainer,
+        appState: AppState,
+        toastManager: ToastManager,
+        textInjector: TextInjector = AXTextInjector()
+    ) {
+        self.serviceContainer = container
+        self.appState = appState
+        self.toastManager = toastManager
         self.textInjector = textInjector
         setupStateObservations()
     }
@@ -188,7 +210,7 @@ final class CompanionVoiceSessionController: ObservableObject {
         }
 
         let configuration = await refreshConfiguration()
-        let service = ServiceContainer.shared.voiceService
+        let service = serviceContainer.voiceService
         await configureVoiceService(with: configuration)
         phase = triggeredByHold ? .arming : .recording
         elapsedTime = 0
@@ -232,13 +254,13 @@ final class CompanionVoiceSessionController: ObservableObject {
             }
             statusHint = errorMessage ?? "录音失败"
             syncVoiceOverlay()
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         } catch {
             phase = .error
             errorMessage = error.localizedDescription
             statusHint = error.localizedDescription
             syncVoiceOverlay()
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -257,7 +279,7 @@ final class CompanionVoiceSessionController: ObservableObject {
         syncVoiceOverlay()
 
         do {
-            let service = ServiceContainer.shared.voiceService
+            let service = serviceContainer.voiceService
             let sourceItemId = try await service.stopRecording()
             lastSourceItemId = sourceItemId
             NotificationCenter.default.post(name: .companionVoiceRecordingStopped, object: nil)
@@ -269,7 +291,7 @@ final class CompanionVoiceSessionController: ObservableObject {
             phase = .completed
             statusHint = "已完成"
             syncVoiceOverlay()
-            ToastManager.shared.show(.success, "语音已转写")
+            toastManager.show(.success, "语音已转写")
 
             if autoDismiss {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
@@ -282,7 +304,7 @@ final class CompanionVoiceSessionController: ObservableObject {
             errorMessage = error.localizedDescription
             statusHint = error.localizedDescription
             syncVoiceOverlay()
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -327,7 +349,7 @@ final class CompanionVoiceSessionController: ObservableObject {
                 return .inputField
             }
 
-            if AppState.shared.sidebarSelection == .agent || looksLikeAgentIntent(transcript) {
+            if appState.sidebarSelection == .agent || looksLikeAgentIntent(transcript) {
                 return .agent
             }
 
@@ -346,11 +368,11 @@ final class CompanionVoiceSessionController: ObservableObject {
     }
 
     private func deliverToInputField(transcript: String, snapshot: TextSelectionSnapshot) async throws {
-        let voiceSettings = await ServiceContainer.shared.settingsService.getVoiceSettings()
+        let voiceSettings = await serviceContainer.settingsService.getVoiceSettings()
         let polishedText: String
 
         if voiceSettings.autoPolish {
-            polishedText = try await ServiceContainer.shared.voiceService.polishTranscript(transcript, mode: voiceSettings.voicePolishMode)
+            polishedText = try await serviceContainer.voiceService.polishTranscript(transcript, mode: voiceSettings.voicePolishMode)
         } else {
             polishedText = transcript
         }
@@ -397,7 +419,7 @@ final class CompanionVoiceSessionController: ObservableObject {
             isClosingSession = false
             return
         } else if phase == .recording {
-            _ = try? await ServiceContainer.shared.voiceService.stopRecording()
+            _ = try? await serviceContainer.voiceService.stopRecording()
             NotificationCenter.default.post(name: .companionVoiceRecordingStopped, object: nil)
         }
 
@@ -459,7 +481,7 @@ final class CompanionVoiceSessionController: ObservableObject {
     }
 
     private func waitForTranscript(sourceItemId: String) async throws -> String {
-        let storage = ServiceContainer.shared.storageService
+        let storage = serviceContainer.storageService
 
         return try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask {
@@ -518,7 +540,7 @@ final class CompanionVoiceSessionController: ObservableObject {
     private func loadCompanionConfiguration() async -> CompanionConfiguration {
         guard ServiceContainer.isInitialized() else { return .default }
 
-        let storage = ServiceContainer.shared.storageService
+        let storage = serviceContainer.storageService
         do {
             if let jsonString = try await storage.getSetting(key: "companion_config"),
                let jsonData = jsonString.data(using: .utf8),
@@ -540,7 +562,7 @@ final class CompanionVoiceSessionController: ObservableObject {
     }
 
     private func configureVoiceService(with configuration: CompanionConfiguration) async {
-        guard let voiceService = ServiceContainer.shared.voiceService as? VoiceService else { return }
+        guard let voiceService = serviceContainer.voiceService as? VoiceService else { return }
 
         let provider = STTProvider(rawValue: configuration.voiceProvider) ?? .appleSpeech
         await voiceService.configureSpeechInput(provider: provider, modelIdentifier: configuration.voiceModel)

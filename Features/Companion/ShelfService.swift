@@ -92,15 +92,13 @@ public struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
 /// Shelf 服务 - 管理暂存文件
 @MainActor
 public class ShelfService: ObservableObject {
-    public static let shared = ShelfService()
-
     @Published public var items: [ShelfItem] = []
     @Published public var isDropTargeting: Bool = false
 
     private let maxItems = 10
     private let storageKey = "acmind.shelf.items"
 
-    private init() {
+    public init() {
         loadItems()
     }
 
@@ -191,13 +189,17 @@ public class ShelfService: ObservableObject {
 
 /// Shelf 暂存区视图
 public struct ShelfView: View {
-    @ObservedObject private var shelfService = ShelfService.shared
+    @StateObject private var shelfService = ShelfService()
+    @EnvironmentObject private var toastManager: ToastManager
     @State private var isDropTargeting = false
 
     private let itemSize: CGFloat = 48
     private let spacing: CGFloat = 8
+    private let storageService: StorageServiceProtocol
 
-    public init() {}
+    public init(container: ServiceContainer) {
+        self.storageService = container.storageService
+    }
 
     public var body: some View {
         HStack(spacing: spacing) {
@@ -242,7 +244,7 @@ public struct ShelfView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: spacing) {
                 ForEach(shelfService.items) { item in
-                    ShelfItemView(item: item) {
+                    ShelfItemView(item: item, storageService: storageService) {
                         shelfService.removeItem(item)
                     }
                 }
@@ -255,13 +257,16 @@ public struct ShelfView: View {
 /// 单个暂存项视图
 public struct ShelfItemView: View {
     let item: ShelfItem
+    let storageService: StorageServiceProtocol
     let onDelete: () -> Void
+    @EnvironmentObject private var toastManager: ToastManager
 
     @State private var isHovered = false
     @State private var showContextMenu = false
 
-    public init(item: ShelfItem, onDelete: @escaping () -> Void) {
+    public init(item: ShelfItem, storageService: StorageServiceProtocol, onDelete: @escaping () -> Void) {
         self.item = item
+        self.storageService = storageService
         self.onDelete = onDelete
     }
 
@@ -330,15 +335,15 @@ public struct ShelfItemView: View {
         switch item.kind {
         case .file(let url):
             NSWorkspace.shared.open(url)
-            ToastManager.shared.show(.info, "已打开文件")
+            toastManager.show(.info, "已打开文件")
         case .text(let string):
             // 复制到剪贴板
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(string, forType: .string)
-            ToastManager.shared.show(.success, "已复制到剪贴板")
+            toastManager.show(.success, "已复制到剪贴板")
         case .link(let url):
             NSWorkspace.shared.open(url)
-            ToastManager.shared.show(.info, "已打开链接")
+            toastManager.show(.info, "已打开链接")
         }
     }
 
@@ -348,16 +353,16 @@ public struct ShelfItemView: View {
             NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
         case .link:
             // 链接不支持在 Finder 中显示
-            ToastManager.shared.show(.warning, "链接不支持此操作")
+            toastManager.show(.warning, "链接不支持此操作")
         case .text:
-            ToastManager.shared.show(.warning, "文本不支持此操作")
+            toastManager.show(.warning, "文本不支持此操作")
         }
     }
 
     private func sendToInbox() {
         Task {
             do {
-                let storage = ServiceContainer.shared.storageService
+                let storage = storageService
                 switch item.kind {
                 case .file(let url):
                     let sourceType = SourceType.inferred(fromFileURL: url)
@@ -371,7 +376,7 @@ public struct ShelfItemView: View {
                         metadata: ["path": url.path, "size": fileSize(at: url)]
                     )
                     try await storage.insertSourceItem(sourceItem)
-                    ToastManager.shared.show(.success, "已发送到收集箱")
+                    toastManager.show(.success, "已发送到收集箱")
                     onDelete()
 
                 case .text(let string):
@@ -384,7 +389,7 @@ public struct ShelfItemView: View {
                         previewText: string
                     )
                     try await storage.insertSourceItem(sourceItem)
-                    ToastManager.shared.show(.success, "已发送到收集箱")
+                    toastManager.show(.success, "已发送到收集箱")
                     onDelete()
 
                 case .link(let url):
@@ -397,11 +402,11 @@ public struct ShelfItemView: View {
                         previewText: url.absoluteString
                     )
                     try await storage.insertSourceItem(sourceItem)
-                    ToastManager.shared.show(.success, "已发送到收集箱")
+                    toastManager.show(.success, "已发送到收集箱")
                     onDelete()
                 }
             } catch {
-                ToastManager.shared.show(.error, "发送失败: \(error.localizedDescription)")
+                toastManager.show(.error, "发送失败: \(error.localizedDescription)")
             }
         }
     }

@@ -3,7 +3,7 @@ import AppKit
 
 /// Asset storage manager for binary files (images, audio, documents)
 /// Manages local file system storage with SQLite metadata tracking
-/// Compatible with Electron asset paths: ~/Library/Application Support/AcMind/assets/
+/// Compatible with the previous asset path layout: ~/Library/Application Support/AcMind/assets/
 public actor AssetStore: AssetStoreProtocol {
     private var assetsDir: URL
     private let db: Database
@@ -247,7 +247,8 @@ public actor AssetStore: AssetStoreProtocol {
     }
 
     private static func resolveAssetsDirectory() -> URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
             .appendingPathComponent("AcMind", isDirectory: true)
             .appendingPathComponent("assets", isDirectory: true)
     }

@@ -18,7 +18,7 @@ public final class OllamaProvider: AIProvider {
         baseURL: String = "http://localhost:11434",
         timeout: TimeInterval = 120.0
     ) {
-        self.baseURL = URL(string: baseURL)!
+        self.baseURL = URL(string: baseURL) ?? URL(fileURLWithPath: "/")
         self.timeout = timeout
         
         let config = URLSessionConfiguration.default

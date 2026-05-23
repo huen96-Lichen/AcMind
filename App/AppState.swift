@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 import AcMindKit
 
 // MARK: - Window State
@@ -48,14 +47,14 @@ public final class AppState: ObservableObject, Sendable {
 
     // MARK: - Primary Rail & Workspace State
 
-    @Published public var primaryRailMode: PrimaryRailMode = .expanded {
+    @Published public var primaryRailMode: PrimaryRailMode = .compact {
         didSet {
             guard shouldPersistWorkspaceLayout else { return }
             UserDefaults.standard.set(primaryRailMode.rawValue, forKey: Self.primaryRailModeKey)
         }
     }
 
-    @Published public var primaryRailWidth: CGFloat = ACLayout.primaryRailExpanded
+    @Published public var primaryRailWidth: CGFloat = ACLayout.primaryRailCompact
 
     @Published public var workspaceMode: WorkspaceMode = .visible {
         didSet {
@@ -92,41 +91,25 @@ public final class AppState: ObservableObject, Sendable {
 
     // MARK: - Private
 
-    private var cancellables = Set<AnyCancellable>()
     private var shortcutHandlers: [KeyboardShortcut: () -> Void] = [:]
 
     public init() {
         restorePersistedState()
-        setupBindings()
         checkFirstLaunch()
     }
 
-    // MARK: - Setup
+    // MARK: - Setup Sync
 
-    private func setupBindings() {
-        // 监听 ServiceContainer 的初始化状态
-        // 注意：由于 ServiceContainer 也是 @MainActor，这里使用定时轮询
-        Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    await self?.syncWithServiceContainer()
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    private func syncWithServiceContainer() async {
-        guard ServiceContainer.isInitialized() else { return }
-
-        let container = ServiceContainer.shared
-
+    public func sync(with container: ServiceContainer) {
         if initializationPhase != container.currentPhase {
             initializationPhase = container.currentPhase
         }
-        if isInitializing != (container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed) {
-            isInitializing = container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed
+
+        let initializing = container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed
+        if isInitializing != initializing {
+            isInitializing = initializing
         }
+
         if let containerError = container.initializationError {
             if initializationError?.localizedDescription != containerError.localizedDescription {
                 initializationError = containerError
@@ -134,7 +117,11 @@ public final class AppState: ObservableObject, Sendable {
             }
         } else if initializationError != nil {
             initializationError = nil
+            if case .initializationFailed = globalError {
+                clearError()
+            }
         }
+
         if isAppReady != container.isInitialized {
             isAppReady = container.isInitialized
         }
@@ -155,7 +142,7 @@ public final class AppState: ObservableObject, Sendable {
         if shouldPersistWorkspaceLayout {
             if let savedWidth = UserDefaults.standard.object(forKey: Self.primaryRailWidthKey) as? NSNumber {
                 primaryRailWidth = clampPrimaryRailWidth(CGFloat(truncating: savedWidth))
-                primaryRailMode = primaryRailWidth >= ACLayout.primaryRailExpanded ? .expanded : .compact
+                primaryRailMode = primaryRailWidth >= ACLayout.primaryRailLabelThreshold ? .expanded : .compact
             } else if let saved = UserDefaults.standard.string(forKey: Self.primaryRailModeKey),
                       let mode = PrimaryRailMode(rawValue: saved) {
                 primaryRailMode = mode
@@ -168,8 +155,8 @@ public final class AppState: ObservableObject, Sendable {
                 lastNonHiddenWorkspaceMode = mode
             }
         } else {
-            primaryRailMode = .expanded
-            primaryRailWidth = ACLayout.primaryRailExpanded
+            primaryRailMode = .compact
+            primaryRailWidth = ACLayout.primaryRailCompact
             workspaceMode = .visible
         }
     }
@@ -234,7 +221,7 @@ public final class AppState: ObservableObject, Sendable {
             UserDefaults.standard.set(Double(clampedWidth), forKey: Self.primaryRailWidthKey)
         }
 
-        let derivedMode: PrimaryRailMode = clampedWidth <= ACLayout.primaryRailCompact + 32 ? .compact : .expanded
+        let derivedMode: PrimaryRailMode = clampedWidth >= ACLayout.primaryRailLabelThreshold ? .expanded : .compact
         if primaryRailMode != derivedMode {
             primaryRailMode = derivedMode
         }
@@ -305,7 +292,7 @@ public final class AppState: ObservableObject, Sendable {
     public func retryInitialization() async {
         initializationError = nil
         do {
-            try await ServiceContainer.setup()
+            try await ServiceContainer.setup(appState: self)
         } catch {
             showError(AppError.initializationFailed(error))
         }

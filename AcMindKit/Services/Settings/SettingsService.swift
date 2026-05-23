@@ -27,6 +27,7 @@ public actor SettingsService: SettingsServiceProtocol {
 
     // MARK: - Initialization
 
+    @MainActor
     public init(
         storage: StorageServiceProtocol? = nil,
         permissionManager: PermissionManager? = nil,
@@ -35,7 +36,7 @@ public actor SettingsService: SettingsServiceProtocol {
         self.storage = storage ?? StorageService()
         // PermissionManager 必须从 @MainActor 上下文注入
         // 降级时创建一个空壳（实际使用时 ServiceContainer 会注入正确实例）
-        self.permissionManager = permissionManager!
+        self.permissionManager = permissionManager ?? PermissionManager()
         self.hotkeyManager = hotkeyManager ?? HotkeyManager()
     }
 
@@ -161,12 +162,12 @@ public actor SettingsService: SettingsServiceProtocol {
             return mode
         }
 
-        if let legacyValue = try? await storage.getSetting(key: "voice.polishMode") {
-            if let legacySettingMode = PolishMode(rawValue: legacyValue) {
-                return legacySettingMode.asVoicePolishMode
+        if let storedValue = try? await storage.getSetting(key: "voice.polishMode") {
+            if let storedSettingMode = PolishMode(rawValue: storedValue) {
+                return storedSettingMode.asVoicePolishMode
             }
-            if let legacyVoiceMode = VoicePolishMode(rawValue: legacyValue) {
-                return legacyVoiceMode
+            if let storedVoiceMode = VoicePolishMode(rawValue: storedValue) {
+                return storedVoiceMode
             }
         }
 

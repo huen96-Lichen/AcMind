@@ -289,6 +289,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         switch request.action {
         case "format":
             let content = request.parameters["content"] ?? ""
+            _ = content
             return AgentToolResult(
                 toolType: .markdown,
                 action: "format",
@@ -330,6 +331,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         switch request.action {
         case "toObsidian":
             let content = request.parameters["content"] ?? ""
+            _ = content
             return AgentToolResult(
                 toolType: .export,
                 action: "toObsidian",

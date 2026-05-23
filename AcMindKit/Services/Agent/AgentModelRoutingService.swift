@@ -106,8 +106,8 @@ public actor AgentModelRouter {
     // MARK: - Private Methods
 
     private func inferTaskType(request: ModelRouteRequest) -> ModelRoute.TaskType {
-        if request.taskType != nil {
-            return request.taskType!
+        if let taskType = request.taskType {
+            return taskType
         }
 
         if request.inputLength > 5000 {

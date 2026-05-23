@@ -298,7 +298,11 @@ struct EventEditorView: View {
         }
 
         let endDate = startDate.addingTimeInterval(TimeInterval(durationMinutes * 60))
-        let nextDayStart = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: viewModel.newEventDate)!)
+        guard let nextDay = calendar.date(byAdding: .day, value: 1, to: viewModel.newEventDate) else {
+            validationError = "无法解析结束日期"
+            return
+        }
+        let nextDayStart = calendar.startOfDay(for: nextDay)
 
         if endDate > nextDayStart {
             validationError = "结束时间不能超过当天 24:00"

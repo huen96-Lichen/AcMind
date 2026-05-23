@@ -11,9 +11,23 @@ import AcMindKit
 /// 3. 剪贴板采集
 /// 4. 展开更多选项（网页/文件/语音）
 final class CapsulePanel: NSPanel {
-    static let shared = CapsulePanel()
+    private static var _shared: CapsulePanel?
 
-    private init() {
+    static var shared: CapsulePanel {
+        guard let shared = _shared else {
+            fatalError("CapsulePanel.shared accessed before configuration")
+        }
+        return shared
+    }
+
+    static func configureShared(container: ServiceContainer) {
+        _shared = CapsulePanel(container: container)
+    }
+
+    private let serviceContainer: ServiceContainer
+
+    init(container: ServiceContainer) {
+        self.serviceContainer = container
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 48),
             styleMask: [.titled, .nonactivatingPanel, .utilityWindow, .hudWindow],
@@ -30,7 +44,7 @@ final class CapsulePanel: NSPanel {
         self.backgroundColor = .clear
 
         // 设置内容视图
-        let contentView = CapsuleContentView()
+        let contentView = CapsuleContentView(container: container)
         self.contentView = NSHostingView(rootView: contentView)
 
         // 居中显示
@@ -57,6 +71,7 @@ final class CapsulePanel: NSPanel {
 // MARK: - Capsule Content View
 
 struct CapsuleContentView: View {
+    private let serviceContainer: ServiceContainer
     @State private var isExpanded = false
     @State private var inputText = ""
     @State private var showingScreenshotOptions = false
@@ -181,7 +196,7 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
+                let captureService = serviceContainer.captureService
                 let result = try await captureService.captureScreenshot(mode: mode)
                 print("截图成功: \(result.sourceItem.id)")
 
@@ -205,7 +220,7 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
+                let captureService = serviceContainer.captureService
                 if let result = try await captureService.captureFromClipboard() {
                     print("剪贴板采集成功: \(result.sourceItem.id)")
                 } else {
@@ -232,7 +247,7 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
+                let captureService = serviceContainer.captureService
                 let result = try await captureService.captureFromManualText(inputText)
                 print("文本采集成功: \(result.sourceItem.id)")
 
@@ -256,7 +271,7 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
+                let captureService = serviceContainer.captureService
                 let result = try await captureService.captureFromWebpage(url: url)
                 print("网页采集成功: \(result.sourceItem.id)")
 
@@ -291,7 +306,7 @@ struct CapsuleContentView: View {
 
                 Task {
                     do {
-                        let captureService = ServiceContainer.shared.captureService
+                        let captureService = serviceContainer.captureService
                         let result = try await captureService.captureFromFile(url: url)
                         print("文件采集成功: \(result.sourceItem.id)")
 
@@ -317,6 +332,10 @@ struct CapsuleContentView: View {
     @State private var recordingDuration: TimeInterval = 0
     @State private var recordingTimer: Timer?
 
+    init(container: ServiceContainer) {
+        self.serviceContainer = container
+    }
+
     private func captureVoice() {
         Task {
             if isRecordingVoice {
@@ -329,7 +348,7 @@ struct CapsuleContentView: View {
 
     private func startVoiceRecording() async {
         do {
-            let voiceService = ServiceContainer.shared.voiceService
+            let voiceService = serviceContainer.voiceService
             try await voiceService.startRecording()
 
             await MainActor.run {
@@ -347,7 +366,7 @@ struct CapsuleContentView: View {
 
     private func stopVoiceRecording() async {
         do {
-            let voiceService = ServiceContainer.shared.voiceService
+            let voiceService = serviceContainer.voiceService
             let sourceItemId = try await voiceService.stopRecording()
 
             await MainActor.run {
@@ -382,7 +401,7 @@ struct CapsuleContentView: View {
     }
 
     private func waitForVoiceTranscription(sourceItemId: String) async {
-        let storage = ServiceContainer.shared.storageService
+        let storage = serviceContainer.storageService
         var attempts = 0
         let maxAttempts = 30
 

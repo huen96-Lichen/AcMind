@@ -1,5 +1,7 @@
 # AcMind 功能救活与闭环落地报告
 
+> 这是一次迁移过程中的历史记录。文中提到的部分旧路径属于当时的落地点或迁移目标，当前判断入口时请以 README、当前源码结构和工程引用为准。
+
 ## 1. 本次目标
 把 AcMind 当前可见入口从“静态 UI / mock 数据”尽量推进到“真实可用的本地 MVP”，优先救活收集箱、剪贴板、日程、工作台、Agent、灵动设置和工具页，并确保 Swift 原生工程可以正常构建与测试。
 
@@ -9,8 +11,8 @@
 |---|---|---|
 | 剪贴板 ViewModel | `App/ViewModels/ClipboardViewModel.swift` | 统一封装剪贴板保存、复制、收藏、删除、清空与加载。 |
 | 收集箱真实操作 | `App/ViewModels/InboxViewModel.swift` | 增加文本收集、文件导入、网页抓取、状态更新和 toast 反馈。 |
-| 收集箱真实页面 | `AcMind/Features/Inbox/InboxWorkspaceView.swift` | 用 `SourceItem` 本地数据替换 mock 列表。 |
-| 剪贴板真实页面 | `AcMind/Features/Clipboard/ClipboardWorkspaceView.swift` | 用 `ClipboardItem` 本地数据替换 mock 列表。 |
+| 收集箱真实页面 | `历史路径中的收集箱页面` | 用 `SourceItem` 本地数据替换 mock 列表。 |
+| 剪贴板真实页面 | `历史路径中的剪贴板页面` | 用 `ClipboardItem` 本地数据替换 mock 列表。 |
 | 日程真实入口 | `Features/Native/Schedule/ScheduleDashboardView.swift` | 顶层页面直接切到 `ScheduleNativeView()`。 |
 | 工作台本地文档库 | `Features/Native/Workbench/WorkbenchView.swift` | 支持导入 `.md/.txt`、本地保存、摘要/标签/双链解析。 |
 | 工具中心启动器 | `Features/Native/Tools/ToolsView.swift` | 工具卡片点击后打开真实工具面板。 |
@@ -47,8 +49,8 @@
 
 | 文件 | 原 mock 内容 | 替换方式 |
 |---|---|---|
-| `AcMind/Features/Inbox/InboxWorkspaceView.swift` | `inboxMockItems` 假列表 | 改成 `InboxViewModel` 读取真实 `SourceItem` |
-| `AcMind/Features/Clipboard/ClipboardWorkspaceView.swift` | `clipboardMockItems` 假列表 | 改成 `ClipboardViewModel` 读取真实剪贴板历史 |
+| `历史路径中的收集箱页面` | `inboxMockItems` 假列表 | 改成 `InboxViewModel` 读取真实 `SourceItem` |
+| `历史路径中的剪贴板页面` | `clipboardMockItems` 假列表 | 改成 `ClipboardViewModel` 读取真实剪贴板历史 |
 | `Features/Native/Schedule/ScheduleDashboardView.swift` | 硬编码统计卡和日程块 | 直接路由到真实 `ScheduleNativeView` |
 | `Features/Native/Workbench/WorkbenchView.swift` | `workbenchNotes` 静态笔记数组 | 改成本地导入文档列表和 `UserDefaults` 持久化 |
 | `Features/Native/Tools/ToolsView.swift` | 纯目录型卡片 | 改成可点击并打开真实工具面板 |

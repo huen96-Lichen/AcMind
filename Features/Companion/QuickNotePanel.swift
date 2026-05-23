@@ -6,9 +6,13 @@ import AcMindKit
 // 快速记录面板 - 轻量文本输入，保存到收集箱
 
 struct QuickNotePanel: View {
-    @StateObject private var viewModel = QuickNoteViewModel()
+    @StateObject private var viewModel: QuickNoteViewModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
+
+    init(container: ServiceContainer, toastManager: ToastManager) {
+        self._viewModel = StateObject(wrappedValue: QuickNoteViewModel(container: container, toastManager: toastManager))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -115,8 +119,12 @@ final class QuickNoteViewModel: ObservableObject {
     @Published var isSaving = false
     @Published var didSave = false
 
-    private var storage: StorageServiceProtocol {
-        ServiceContainer.shared.storageService
+    private let storage: StorageServiceProtocol
+    private let toastManager: ToastManager
+
+    init(container: ServiceContainer, toastManager: ToastManager) {
+        self.storage = container.storageService
+        self.toastManager = toastManager
     }
 
     func save() {
@@ -140,7 +148,7 @@ final class QuickNoteViewModel: ObservableObject {
                 await MainActor.run {
                     isSaving = false
                     didSave = true
-                    ToastManager.shared.show(.success, "已保存到收集箱")
+                    toastManager.show(.success, "已保存到收集箱")
 
                     // 通知刘海面板刷新
                     NotificationCenter.default.post(
@@ -151,7 +159,7 @@ final class QuickNoteViewModel: ObservableObject {
             } catch {
                 await MainActor.run {
                     isSaving = false
-                    ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                    toastManager.show(.error, "保存失败: \(error.localizedDescription)")
                 }
             }
         }

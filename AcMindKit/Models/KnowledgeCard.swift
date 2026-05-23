@@ -3,7 +3,7 @@ import Foundation
 // MARK: - KnowledgeCard（知识卡片）
 
 /// 知识沉淀的最终形态
-/// 对齐 Electron knowledge_cards 表
+/// 对齐迁移前的 knowledge_cards 表
 public struct KnowledgeCard: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String

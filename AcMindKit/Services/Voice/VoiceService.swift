@@ -37,7 +37,7 @@ public actor VoiceService: VoiceServiceProtocol {
     
     private var sttProvider: STTProvider = .appleSpeech
     
-    // Legacy: 保留旧枚举以兼容
+    // 保留旧枚举以兼容历史数据
     public enum ASRProvider: String, Sendable, CaseIterable {
         case whisperLocal = "whisper_local"
         case whisperAPI = "whisper_api"
@@ -344,7 +344,9 @@ public actor VoiceService: VoiceServiceProtocol {
             throw VoiceError.asrNotAvailable("OpenAI API Key 未配置")
         }
         
-        let url = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
+        guard let url = URL(string: "https://api.openai.com/v1/audio/transcriptions") else {
+            throw VoiceError.transcriptionFailed("无效转写地址")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
@@ -353,20 +355,23 @@ public actor VoiceService: VoiceServiceProtocol {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        func append(_ string: String) {
+            body.append(string.data(using: .utf8) ?? Data())
+        }
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"\r\n")
+        append("Content-Type: audio/m4a\r\n\r\n")
         body.append(audioData)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        body.append("whisper-1".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
-        body.append("zh".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        append("\r\n")
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"model\"\r\n\r\n")
+        append("whisper-1")
+        append("\r\n")
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"language\"\r\n\r\n")
+        append("zh")
+        append("\r\n")
+        append("--\(boundary)--\r\n")
         
         request.httpBody = body
         
@@ -530,7 +535,9 @@ public actor VoiceService: VoiceServiceProtocol {
     }
     
     private func getVoiceSettings() async throws -> VoiceSettings {
-        let settingsService = SettingsService(storage: storage)
+        let settingsService = await MainActor.run {
+            SettingsService(storage: storage)
+        }
         return await settingsService.getVoiceSettings()
     }
     
@@ -615,7 +622,8 @@ extension AssetStore {
     }
     
     private func getAssetDirectory() -> URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
         let assetDir = appSupport.appendingPathComponent("AcMind/Assets", isDirectory: true)
         try? FileManager.default.createDirectory(at: assetDir, withIntermediateDirectories: true)
         return assetDir

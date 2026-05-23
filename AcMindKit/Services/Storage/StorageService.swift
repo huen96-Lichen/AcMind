@@ -1,7 +1,7 @@
 import Foundation
 
 /// Storage service implementation using local SQLite
-/// Replaces the legacy JSON-based storage with proper SQLite persistence
+/// Replaces the previous JSON-based storage with proper SQLite persistence
 public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
     private let db = Database.shared
     
@@ -201,17 +201,17 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
     
     // MARK: - Migration
     
-    /// Import data from legacy JSON file
-    /// - Parameter items: Array of SourceItem from legacy JSON
+    /// Import data from the previous JSON file
+    /// - Parameter items: Array of SourceItem from the previous JSON file
     /// - Returns: Number of items successfully imported
     public func importFromJSON(_ items: [SourceItem]) async throws -> Int {
         try await db.importFromJSON(items)
     }
     
-    /// Check if Electron database exists for migration
-    /// - Returns: URL to Electron database if found, nil otherwise
-    public func checkElectronDatabase() -> URL? {
-        db.checkElectronDatabase()
+    /// Check whether a migration source database exists
+    /// - Returns: URL to the migration source database if found, nil otherwise
+    public func checkMigrationSourceDatabase() -> URL? {
+        db.checkMigrationSourceDatabase()
     }
     
     // MARK: - Database Info

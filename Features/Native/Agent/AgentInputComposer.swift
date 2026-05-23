@@ -54,58 +54,25 @@ struct AgentInputComposer: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ViewThatFits(in: .horizontal) {
-                wideQuickActionRow
-                compactQuickActionRow
-            }
-
-            providerStrip
-
-            ZStack(alignment: .topLeading) {
-                if trimmedInput.isEmpty {
-                    Text("直接和 Agent 说话，或者让它帮你转任务、搜资料、排日程、记笔记。")
-                        .font(ACTypography.mini)
-                        .foregroundStyle(ACColors.tertiaryText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 7)
-                }
-
-                TextEditor(text: $inputText)
-                    .font(ACTypography.caption)
-                    .foregroundStyle(ACColors.primaryText)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 78)
-                    .padding(3)
-                    .background(Color.clear)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(ACColors.softFill.opacity(0.18))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .stroke(ACColors.border.opacity(0.75), lineWidth: 1)
-            )
-
-            ViewThatFits(in: .horizontal) {
-                wideToolbarRow
-                compactToolbarRow
-            }
+        VStack(alignment: .leading, spacing: AcMindSurfaceTokens.sectionGap) {
+            quickIntentTabs
+            providerSelectorRow
+            textInputArea
+            composerActionsRow
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(ACColors.cardBackground)
+            RoundedRectangle(cornerRadius: AcMindSurfaceTokens.composerCornerRadius, style: .continuous)
+                .fill(AcMindSurfaceTokens.secondarySurface)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(ACColors.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AcMindSurfaceTokens.composerCornerRadius, style: .continuous)
+                .stroke(AcMindSurfaceTokens.borderColor, lineWidth: 1)
         )
     }
 
-    private var wideQuickActionRow: some View {
-        HStack(spacing: 6) {
+    private var quickIntentTabs: some View {
+        HStack(spacing: AcMindSurfaceTokens.controlGap) {
             ForEach(AgentActionMode.quickActions) { mode in
                 quickActionButton(for: mode)
             }
@@ -116,131 +83,83 @@ struct AgentInputComposer: View {
                 onNewConversation()
             } label: {
                 Label("新建对话", systemImage: "square.and.pencil")
-                    .font(ACTypography.mini)
+                    .font(ACTypography.miniMedium)
                     .foregroundStyle(ACColors.secondaryText)
             }
             .buttonStyle(.plain)
         }
     }
 
-    private var compactQuickActionRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(AgentActionMode.quickActions) { mode in
-                        quickActionButton(for: mode)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+    private var providerSelectorRow: some View {
+        HStack(spacing: 8) {
+            Text("模型")
+                .font(ACTypography.captionMedium)
+                .foregroundStyle(ACColors.secondaryText)
 
-            Button {
-                onNewConversation()
-            } label: {
-                Label("新建对话", systemImage: "square.and.pencil")
-                    .font(ACTypography.mini)
-                    .foregroundStyle(ACColors.secondaryText)
-            }
-            .buttonStyle(.plain)
+            providerMenu
+
+            Spacer(minLength: 0)
         }
+        .frame(height: 44)
     }
 
-    private func quickActionButton(for mode: AgentActionMode) -> some View {
-        Button {
-            selectedActionMode = mode
-            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                inputText = mode.suggestedPrompt
+    private var textInputArea: some View {
+        ZStack(alignment: .topLeading) {
+            if trimmedInput.isEmpty {
+                Text("直接和 Agent 说话，或者让它帮你转任务、搜资料、排日程、记笔记。")
+                    .font(ACTypography.caption)
+                    .foregroundStyle(ACColors.tertiaryText)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
             }
-        } label: {
-            Text(mode.displayName)
-                .font(ACTypography.mini)
-                .foregroundStyle(selectedActionMode == mode ? ACColors.primaryText : ACColors.secondaryText)
+
+            TextEditor(text: $inputText)
+                .font(ACTypography.caption)
+                .foregroundStyle(ACColors.primaryText)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 84)
+                .padding(4)
+                .background(Color.clear)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(selectedActionMode == mode ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill.opacity(0.55))
-        .clipShape(Capsule())
+        .frame(minHeight: 84)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AcMindSurfaceTokens.primarySurface)
+        )
         .overlay(
-            Capsule().stroke(selectedActionMode == mode ? ACColors.accentBlue.opacity(0.75) : ACColors.border.opacity(0.6), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(AcMindSurfaceTokens.borderColor, lineWidth: 1)
         )
     }
 
-    private var providerStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
-                ForEach(providers.prefix(6)) { provider in
-                    Button {
-                        onProviderSelect(provider.id)
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: selectedProviderID == provider.id ? "checkmark.circle.fill" : "cpu")
-                                .font(.system(size: 11, weight: .semibold))
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(provider.name.isEmpty ? provider.modelId : provider.name)
-                                    .font(ACTypography.mini)
-                                    .lineLimit(1)
-                                Text(provider.providerType.displayName)
-                                    .font(.system(size: 8, weight: .medium))
-                                    .foregroundStyle(ACColors.tertiaryText)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .foregroundStyle(selectedProviderID == provider.id ? ACColors.primaryText : ACColors.secondaryText)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
-                        .background(selectedProviderID == provider.id ? ACColors.selectedFill.opacity(0.8) : ACColors.softFill.opacity(0.6))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(selectedProviderID == provider.id ? ACColors.accentPurple.opacity(0.55) : ACColors.border.opacity(0.7), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if providers.count > 6 {
-                    Menu {
-                        ForEach(providers.dropFirst(6)) { provider in
-                            Button {
-                                onProviderSelect(provider.id)
-                            } label: {
-                                Text(provider.name.isEmpty ? provider.modelId : provider.name)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 10, weight: .semibold))
-                            Text("更多")
-                                .font(ACTypography.mini)
-                        }
-                        .foregroundStyle(ACColors.secondaryText)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
-                        .background(ACColors.softFill.opacity(0.6))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(ACColors.border.opacity(0.7), lineWidth: 1)
-                        )
-                    }
-                    .menuStyle(.borderlessButton)
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    private var wideToolbarRow: some View {
-        HStack(spacing: 7) {
+    private var composerActionsRow: some View {
+        HStack(spacing: AcMindSurfaceTokens.controlGap) {
             toolbarButton(title: "语音", icon: "mic.fill", action: onVoiceInput)
             toolbarButton(title: "附件", icon: "paperclip", action: onAttachFile)
             toolbarButton(title: "工具", icon: "wand.and.stars", action: onTools)
 
             Spacer(minLength: 0)
 
-            providerMenu
+            Button {
+                onNewConversation()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("新建")
+                        .font(ACTypography.mini)
+                }
+                .foregroundStyle(ACColors.secondaryText)
+                .padding(.horizontal, 10)
+                .frame(height: 40)
+                .background(AcMindSurfaceTokens.primarySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(AcMindSurfaceTokens.borderColor, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
 
             Button {
                 onSend()
@@ -248,41 +167,12 @@ struct AgentInputComposer: View {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 40, height: 36)
+                    .frame(width: 40, height: 40)
                     .background(ACColors.accentPurple)
-                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(SendButtonHoverStyle())
             .disabled(trimmedInput.isEmpty)
-        }
-    }
-
-    private var compactToolbarRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 7) {
-                toolbarButton(title: "语音", icon: "mic.fill", action: onVoiceInput)
-                toolbarButton(title: "附件", icon: "paperclip", action: onAttachFile)
-                toolbarButton(title: "工具", icon: "wand.and.stars", action: onTools)
-            }
-
-            HStack(spacing: 8) {
-                providerMenu
-
-                Spacer(minLength: 0)
-
-                Button {
-                    onSend()
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 36)
-                        .background(ACColors.accentPurple)
-                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                }
-                .buttonStyle(SendButtonHoverStyle())
-                .disabled(trimmedInput.isEmpty)
-            }
         }
     }
 
@@ -312,14 +202,35 @@ struct AgentInputComposer: View {
             .foregroundStyle(ACColors.primaryText)
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
-            .background(ACColors.softFill)
-            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .background(AcMindSurfaceTokens.primarySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .stroke(ACColors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AcMindSurfaceTokens.borderColor, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private func quickActionButton(for mode: AgentActionMode) -> some View {
+        Button {
+            selectedActionMode = mode
+            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                inputText = mode.suggestedPrompt
+            }
+        } label: {
+            Text(mode.displayName)
+                .font(ACTypography.mini)
+                .foregroundStyle(selectedActionMode == mode ? ACColors.primaryText : ACColors.secondaryText)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(selectedActionMode == mode ? ACColors.selectedFill.opacity(0.85) : ACColors.softFill.opacity(0.6))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(selectedActionMode == mode ? ACColors.accentBlue.opacity(0.75) : ACColors.border.opacity(0.6), lineWidth: 1)
+        )
     }
 
     private func toolbarButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -332,12 +243,12 @@ struct AgentInputComposer: View {
             }
             .foregroundStyle(ACColors.primaryText)
             .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(ACColors.softFill)
-            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .frame(height: 40)
+            .background(AcMindSurfaceTokens.primarySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .stroke(ACColors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AcMindSurfaceTokens.borderColor, lineWidth: 1)
             )
         }
         .buttonStyle(HoverButtonStyle())

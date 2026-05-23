@@ -19,10 +19,9 @@ struct ACSettingsShell<Sidebar: View, Content: View>: View {
         GeometryReader { geometry in
             let layoutMode = ACLayout.settingsLayoutMode(for: geometry.size.width)
 
-            VStack(alignment: .leading, spacing: 0) {
+            ACShellScaffold {
                 header()
-                    .frame(height: ACLayout.pageHeaderHeight)
-
+            } bodyContent: {
                 switch layoutMode {
                 case .withSidebar:
                     sidebarLayout
@@ -30,34 +29,38 @@ struct ACSettingsShell<Sidebar: View, Content: View>: View {
                     stackedLayout
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
     
     private var sidebarLayout: some View {
-        HStack(spacing: 0) {
-            sidebar()
-                .frame(width: ACLayout.secondarySidebarWidth)
+            HStack(spacing: 0) {
+                sidebar()
+                    .frame(width: ACLayout.secondarySidebarWidth)
+                    .background(ACColors.sidebarBackground)
             
             Divider()
                 .overlay(ACColors.border)
             
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
+            ACShellScrollContainer(
+                maxWidth: ACLayout.secondaryPageContentMaxWidth,
+                alignment: .leading,
+                spacing: 0
+            ) {
+                Group {
                     content()
                 }
-                .padding(.horizontal, ACLayout.pagePaddingX)
-                .padding(.vertical, ACLayout.pagePaddingY)
-                .padding(.bottom, ACLayout.pagePaddingBottom)
-                .frame(maxWidth: ACLayout.secondaryPageContentMaxWidth, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(ACColors.pageBackground)
         }
     }
     
     private var stackedLayout: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: ACLayout.panelGap) {
+        ACShellScrollContainer(
+            maxWidth: ACLayout.secondaryPageContentMaxWidth,
+            alignment: .leading,
+            spacing: ACLayout.panelGap
+        ) {
+            Group {
                 sidebar()
                 
                 Divider()
@@ -65,11 +68,7 @@ struct ACSettingsShell<Sidebar: View, Content: View>: View {
                 
                 content()
             }
-            .padding(.horizontal, ACLayout.pagePaddingX)
-            .padding(.vertical, ACLayout.pagePaddingY)
-            .padding(.bottom, ACLayout.pagePaddingBottom)
-            .frame(maxWidth: ACLayout.secondaryPageContentMaxWidth, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(ACColors.pageBackground)
     }
 }

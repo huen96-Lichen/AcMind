@@ -13,7 +13,7 @@ struct NotchV2TopBar: View {
             Color.black
 
             pageNavView
-                .frame(width: 232, height: 36)
+                .frame(width: 288, height: 36)
                 .clipped()
                 .position(x: 172, y: 18)
                 .offset(y: pageNavYOffset)
@@ -63,8 +63,14 @@ struct NotchV2TopBar: View {
             }
             .frame(width: 32, height: 24, alignment: .center)
             .position(x: 204, y: 18)
+
+            topNavButton(pageTitle(at: 4, fallback: "状态"), selected: viewModel.selectedPage == .systemMonitor) {
+                viewModel.select(.systemMonitor)
+            }
+            .frame(width: 30, height: 24, alignment: .center)
+            .position(x: 258, y: 18)
         }
-        .frame(width: 232, height: 36, alignment: .leading)
+        .frame(width: 288, height: 36, alignment: .leading)
     }
 
     private var rightStatusView: some View {

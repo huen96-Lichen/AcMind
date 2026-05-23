@@ -3,7 +3,11 @@ import AppKit
 import AcMindKit
 
 struct CompanionVoicePanel: View {
-    @ObservedObject private var session = CompanionVoiceSessionController.shared
+    @ObservedObject private var session: CompanionVoiceSessionController
+
+    init(container: ServiceContainer, appState: AppState, toastManager: ToastManager) {
+        self._session = ObservedObject(wrappedValue: CompanionVoiceSessionController(container: container, appState: appState, toastManager: toastManager))
+    }
 
     var body: some View {
         ZStack {

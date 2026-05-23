@@ -3,10 +3,10 @@ import SwiftUI
 enum ACLayout {
     // MARK: - Window Size
     static let windowMinWidth: CGFloat = 960
-    static let windowIdealWidth: CGFloat = 1512
+    static let windowIdealWidth: CGFloat = 1250
     static let windowMaxReferenceWidth: CGFloat = 1728
-    static let windowMinHeight: CGFloat = 900
-    static let windowIdealHeight: CGFloat = 982
+    static let windowMinHeight: CGFloat = 650
+    static let windowIdealHeight: CGFloat = 650
     static let windowMaxReferenceHeight: CGFloat = 1117
 
     // MARK: - Responsive Breakpoints
@@ -155,11 +155,15 @@ enum ACLayout {
     static let pageHeaderHeight: CGFloat = 76
     static let toolbarHeight: CGFloat = 44
     static let controlHeight: CGFloat = 40
-    static let primaryRailCompact: CGFloat = 88
-    static let primaryRailExpanded: CGFloat = 220
-    static let primaryRailMaxWidth: CGFloat = 320
+    static let primaryRailCompact: CGFloat = 52
+    static let primaryRailExpanded: CGFloat = 152
+    static let primaryRailMaxWidth: CGFloat = 208
     static let primaryRailDragHandleWidth: CGFloat = 10
-    static let primaryRailBrandHeight: CGFloat = 56
+    static let primaryRailContentGap: CGFloat = 24
+    static let primaryRailBrandHeight: CGFloat = 52
+    static let primaryRailNavItemHeight: CGFloat = 36
+    static let primaryRailFooterHeight: CGFloat = 30
+    static let primaryRailLabelThreshold: CGFloat = 96
     static let inspectorWidth: CGFloat = 320
     static let workspaceLeftPanel: CGFloat = 360
     static let workspaceMainMin: CGFloat = 520

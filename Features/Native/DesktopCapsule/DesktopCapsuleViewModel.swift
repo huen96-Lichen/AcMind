@@ -30,10 +30,15 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private var hoverOpenTask: Task<Void, Never>?
     private var hoverCollapseTask: Task<Void, Never>?
+    private let serviceContainer: ServiceContainer
 
     // MARK: - Settings
 
     @Published private(set) var settings: DesktopCapsuleSettings = .default
+
+    init(container: ServiceContainer) {
+        self.serviceContainer = container
+    }
 
     var enabledActions: [CapsuleActionConfig] {
         settings.enabledActions
@@ -191,7 +196,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
         DesktopCapsulePanel.shared.hide()
 
         do {
-            let captureService = ServiceContainer.shared.captureService
+            let captureService = serviceContainer.captureService
             let result = try await captureService.captureScreenshot(mode: .fullscreen)
             print("截图成功: \(result.sourceItem.id)")
 
@@ -230,7 +235,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
             if response == .alertFirstButtonReturn, let url = URL(string: textField.stringValue), textField.stringValue.hasPrefix("http") {
                 Task {
                     do {
-                        let captureService = ServiceContainer.shared.captureService
+                    let captureService = serviceContainer.captureService
                         let result = try await captureService.captureFromWebpage(url: url)
                         print("URL转换成功: \(result.sourceItem.id)")
                     } catch {
@@ -248,7 +253,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private func executeClipboard() async {
         do {
-            let captureService = ServiceContainer.shared.captureService
+            let captureService = serviceContainer.captureService
             if let result = try await captureService.captureFromClipboard() {
                 print("剪贴板采集成功: \(result.sourceItem.id)")
             }
@@ -278,8 +283,8 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
             Task {
                 do {
-                    let captureService = ServiceContainer.shared.captureService
-                    let result = try await captureService.captureFromFile(url: url)
+                    let captureService = serviceContainer.captureService
+                        let result = try await captureService.captureFromFile(url: url)
                     print("文件采集成功: \(result.sourceItem.id)")
                 } catch {
                     print("文件采集失败: \(error)")

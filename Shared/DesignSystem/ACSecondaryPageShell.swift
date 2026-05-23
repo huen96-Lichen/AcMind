@@ -8,12 +8,12 @@ enum ACSecondaryPageLayout {
 struct ACSecondaryPageShell<Content: View>: View {
     let layout: ACSecondaryPageLayout
     let header: () -> AnyView
-    let content: () -> Content
+    let content: (CGFloat) -> Content
     
     init<Header: View>(
         layout: ACSecondaryPageLayout = .standard,
         @ViewBuilder header: @escaping () -> Header,
-        @ViewBuilder content: @escaping () -> Content
+        @ViewBuilder content: @escaping (CGFloat) -> Content
     ) {
         self.layout = layout
         self.header = { AnyView(header()) }
@@ -27,22 +27,17 @@ struct ACSecondaryPageShell<Content: View>: View {
             let contentMaxWidth: CGFloat = (layout == .withSidebar || isCompact) ? .infinity : ACLayout.secondaryPageContentMaxWidth
             let contentAlignment: Alignment = (layout == .withSidebar || isCompact) ? .leading : .center
 
-            VStack(alignment: .leading, spacing: 0) {
+            ACShellScaffold {
                 header()
-                    .frame(height: ACLayout.pageHeaderHeight)
-
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: contentSpacing) {
-                        content()
-                    }
-                    .padding(.horizontal, ACLayout.pagePaddingX)
-                    .padding(.vertical, ACLayout.pagePaddingY)
-                    .padding(.bottom, ACLayout.pagePaddingBottom)
-                    .frame(maxWidth: contentMaxWidth, alignment: contentAlignment)
+            } bodyContent: {
+                ACShellScrollContainer(
+                    maxWidth: contentMaxWidth,
+                    alignment: contentAlignment,
+                    spacing: contentSpacing
+                ) {
+                    content(geometry.size.width)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 }
@@ -54,6 +49,6 @@ extension ACSecondaryPageShell where Content == EmptyView {
     ) {
         self.layout = layout
         self.header = { AnyView(header()) }
-        self.content = { EmptyView() }
+        self.content = { _ in EmptyView() }
     }
 }

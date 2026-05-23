@@ -64,7 +64,7 @@ public protocol StorageServiceProtocol: Sendable {
 
     // Migration
     func importFromJSON(_ items: [SourceItem]) async throws -> Int
-    func checkElectronDatabase() -> URL?
+    func checkMigrationSourceDatabase() -> URL?
 
     // Info
     func getDatabasePath() -> String
@@ -132,6 +132,7 @@ public protocol ExportServiceProtocol: Sendable {
 
 public protocol AIRuntimeProtocol: Sendable {
     func listProviders() async -> [ProviderConfig]
+    func listModels(providerId: String) async throws -> [String]
     func addProvider(_ config: ProviderConfig) async throws
     func updateProvider(_ config: ProviderConfig) async throws
     func removeProvider(id: String) async throws

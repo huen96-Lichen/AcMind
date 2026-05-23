@@ -30,20 +30,22 @@ class InboxViewModel: ObservableObject {
     private let storage: StorageServiceProtocol
     private let exportService: ExportServiceProtocol
     private let captureService: CaptureServiceProtocol
+    private let serviceContainer: ServiceContainer
+    private let toastManager: ToastManager
 
     // MARK: - Init
     
     init(
+        container: ServiceContainer,
         storage: StorageServiceProtocol? = nil,
-        exportService: ExportServiceProtocol? = nil
+        exportService: ExportServiceProtocol? = nil,
+        toastManager: ToastManager
     ) {
-        let container = ServiceContainer.isInitialized() ? ServiceContainer.shared : nil
-        self.storage = storage ?? container?.storageService ?? StorageService()
-        self.exportService = exportService ?? container?.exportService ?? ExportService()
-        self.captureService = container?.captureService ?? CaptureService(
-            storage: self.storage,
-            assetStore: container?.assetStore
-        )
+        self.serviceContainer = container
+        self.storage = storage ?? container.storageService
+        self.exportService = exportService ?? container.exportService
+        self.captureService = container.captureService
+        self.toastManager = toastManager
     }
     
     // MARK: - Load
@@ -112,11 +114,11 @@ class InboxViewModel: ObservableObject {
                 markdownPreview = nil
             }
             await loadItems()
-            ToastManager.shared.show(.success, "已删除收集内容")
+            toastManager.show(.success, "已删除收集内容")
         } catch {
             errorMessage = "删除失败: \(error.localizedDescription)"
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -133,11 +135,11 @@ class InboxViewModel: ObservableObject {
         do {
             _ = try await captureService.captureFromManualText(trimmed)
             await loadItems()
-            ToastManager.shared.show(.success, "已创建文本收集")
+            toastManager.show(.success, "已创建文本收集")
         } catch {
             errorMessage = "创建失败: \(error.localizedDescription)"
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -145,11 +147,11 @@ class InboxViewModel: ObservableObject {
         do {
             _ = try await captureService.captureFromFile(url: url)
             await loadItems()
-            ToastManager.shared.show(.success, "文件已导入收集箱")
+            toastManager.show(.success, "文件已导入收集箱")
         } catch {
             errorMessage = "导入失败: \(error.localizedDescription)"
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -157,11 +159,11 @@ class InboxViewModel: ObservableObject {
         do {
             _ = try await captureService.captureFromWebpage(url: url)
             await loadItems()
-            ToastManager.shared.show(.success, "网页已抓取到收集箱")
+            toastManager.show(.success, "网页已抓取到收集箱")
         } catch {
             errorMessage = "抓取失败: \(error.localizedDescription)"
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
 
@@ -172,11 +174,11 @@ class InboxViewModel: ObservableObject {
         do {
             try await storage.updateSourceItem(updated)
             await loadItems()
-            ToastManager.shared.show(.success, "状态已更新")
+            toastManager.show(.success, "状态已更新")
         } catch {
             errorMessage = "更新状态失败: \(error.localizedDescription)"
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
     
@@ -184,7 +186,7 @@ class InboxViewModel: ObservableObject {
     
     func distillItem(_ item: SourceItem) async {
         do {
-            let distillService = ServiceContainer.shared.distillService
+            let distillService = serviceContainer.distillService
             let note = try await distillService.distill(sourceItem: item)
             
             // 更新 SourceItem 状态
@@ -197,11 +199,11 @@ class InboxViewModel: ObservableObject {
             markdownPreview = builder.build(note: note, sourceItem: item)
             
             await loadItems()
-            ToastManager.shared.show(.success, "已完成蒸馏")
+            toastManager.show(.success, "已完成蒸馏")
         } catch {
             errorMessage = "蒸馏失败: \(error.localizedDescription)"
             showError = true
-            ToastManager.shared.show(.error, error.localizedDescription)
+            toastManager.show(.error, error.localizedDescription)
         }
     }
     
@@ -250,15 +252,15 @@ class InboxViewModel: ObservableObject {
                 let fullPath = (record.vaultPath as NSString).appendingPathComponent(record.relativeFilePath)
                 if FileManager.default.fileExists(atPath: fullPath) {
                     NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
-                    ToastManager.shared.show(.success, "已打开 Vault 文件")
+                    toastManager.show(.success, "已打开 Vault 文件")
                     return
                 }
             }
         } catch {}
-        
+
         errorMessage = "未找到关联的 Vault 文件"
         showError = true
-        ToastManager.shared.show(.warning, "未找到关联的 Vault 文件")
+        toastManager.show(.warning, "未找到关联的 Vault 文件")
     }
     
     // MARK: - Private

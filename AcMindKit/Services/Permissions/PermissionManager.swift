@@ -206,7 +206,10 @@ public final class PermissionManager: ObservableObject {
             NSWorkspace.shared.open(url)
         } else {
             // 降级：打开安全性与隐私
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security")!)
+            guard let fallbackURL = URL(string: "x-apple.systempreferences:com.apple.preference.security") else {
+                return
+            }
+            NSWorkspace.shared.open(fallbackURL)
         }
     }
 
