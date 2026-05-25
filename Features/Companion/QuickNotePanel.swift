@@ -23,7 +23,7 @@ struct QuickNotePanel: View {
                     .font(.system(size: 15))
                     .focused($isFocused)
                     .scrollContentBackground(.hidden)
-                    .background(Color(NSColor.controlBackgroundColor))
+                    .background(AppSurfaceTokens.cardBackgroundSoft)
                     .cornerRadius(10)
                     .overlay(alignment: .topLeading) {
                         if viewModel.noteText.isEmpty {
@@ -69,7 +69,7 @@ struct QuickNotePanel: View {
             .padding(20)
         }
         .frame(width: 420, height: 320)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
         .onAppear {
             isFocused = true
         }

@@ -76,7 +76,7 @@ struct CompanionCapabilityCard<Content: View>: View {
             }
         }
         .padding(20)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(18)
         .overlay(
             RoundedRectangle(cornerRadius: 18)

@@ -25,21 +25,21 @@ struct ToolsView: View {
         }) { route in
             toolSheet(for: route)
         }
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("工具")
-                    .font(.title)
+                Text("工具台")
+                    .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("具体小工具集合，提升你的效率")
+                Text("Markdown、OCR、文档转换和批量处理")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -47,7 +47,7 @@ struct ToolsView: View {
             // 搜索
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .font(.caption)
 
                 TextField("搜索工具...", text: $viewModel.searchQuery)
@@ -61,11 +61,11 @@ struct ToolsView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(10)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator, lineWidth: 1)
             )
         }
         .padding(.horizontal, 20)
@@ -89,7 +89,7 @@ struct ToolsView: View {
                         .font(.caption)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(viewModel.selectedCategory == category ? category.color.opacity(0.15) : Color.clear)
+                        .background(viewModel.selectedCategory == category ? category.color.opacity(0.12) : Color.clear)
                         .foregroundStyle(viewModel.selectedCategory == category ? category.color : Color.secondary)
                         .cornerRadius(999)
                         .overlay(
@@ -105,7 +105,7 @@ struct ToolsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
         }
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 
     // MARK: - Tools Grid
@@ -259,7 +259,7 @@ struct ToolCard: View {
             .frame(height: 96)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(NSColor.controlBackgroundColor))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(
@@ -336,9 +336,9 @@ struct RecentToolsSection: View {
                             .font(.caption)
                             .foregroundStyle(Color.secondary)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
 
             // 最近使用工具列表
             if !recentTools.isEmpty {
@@ -365,7 +365,7 @@ struct RecentToolsSection: View {
                     Spacer()
                 }
                 .padding(20)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(12)
             }
         }
@@ -408,7 +408,7 @@ struct RecentToolCard: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(isHovered ? tool.category.color.opacity(0.25) : Color(NSColor.separatorColor), lineWidth: 1)
@@ -651,7 +651,7 @@ class ToolsViewModel: ObservableObject {
 // MARK: - Tool Registry
 
 /// 工具注册表 — 集中管理所有可用工具
-/// TODO(P2): 改为从 JSON/Plist 配置文件加载，支持插件发现
+/// 当前使用内置清单，后续可切到 JSON/Plist 配置并支持插件发现
 enum ToolRegistry {
     static var defaultTools: [Tool] {
         [

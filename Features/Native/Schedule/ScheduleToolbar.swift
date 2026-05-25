@@ -30,7 +30,7 @@ struct ScheduleToolbar: View {
                         .font(.system(size: 12, weight: .medium))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
-                        .background(Color(NSColor.controlBackgroundColor))
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
                         .cornerRadius(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
@@ -59,7 +59,7 @@ struct ScheduleToolbar: View {
                 }
                 .padding(.horizontal, 2)
                 .padding(.vertical, 2)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -94,7 +94,7 @@ struct ScheduleToolbar: View {
         }
         .padding(.horizontal, 20)
         .frame(height: ScheduleLayout.toolbarHeight)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 }
 
@@ -116,7 +116,7 @@ struct ScheduleSegmentedControl: View {
                         .padding(.vertical, 5)
                         .background(
                             selection == mode
-                                ? Color(NSColor.controlBackgroundColor)
+                                ? AppSurfaceTokens.cardBackgroundSoft
                                 : Color.clear
                         )
                         .cornerRadius(5)
@@ -125,7 +125,7 @@ struct ScheduleSegmentedControl: View {
             }
         }
         .padding(2)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
         .cornerRadius(7)
     }
 }

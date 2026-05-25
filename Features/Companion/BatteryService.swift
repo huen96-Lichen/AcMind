@@ -123,7 +123,7 @@ public class BatteryService: ObservableObject {
                 isCharging: isCharging,
                 currentCapacity: currentCapacity,
                 maxCapacity: maxCapacity,
-                isInLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
+                isInLowPowerMode: Foundation.ProcessInfo.processInfo.isLowPowerModeEnabled,
                 timeToFullCharge: timeToFullCharge
             )
         } catch {

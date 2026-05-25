@@ -34,7 +34,7 @@ struct CompanionVoicePanel: View {
             .padding(24)
         }
         .frame(width: 480, height: 560)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Header
@@ -145,7 +145,7 @@ struct CompanionVoicePanel: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color.secondary.opacity(0.05))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(10)
     }
 
@@ -182,7 +182,7 @@ struct CompanionVoicePanel: View {
             }
             .frame(maxHeight: 120)
             .padding(12)
-            .background(Color.secondary.opacity(0.05))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
         }
     }

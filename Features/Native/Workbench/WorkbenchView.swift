@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import AcMindKit
 
@@ -12,14 +13,14 @@ struct WorkbenchView: View {
             // 左侧导航
             sidebar
                 .frame(width: 220)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.secondarySidebarBackground)
 
             Divider()
 
             // 右侧内容
             content
         }
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Sidebar
@@ -40,7 +41,7 @@ struct WorkbenchView: View {
                             .foregroundStyle(Color.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.1))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(4)
                     }
 
@@ -118,7 +119,7 @@ struct WorkbenchView: View {
                             .foregroundStyle(Color.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.1))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(4)
                     }
 
@@ -283,7 +284,7 @@ struct ProjectRow: View {
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
-            .background(isSelected ? Color.accentColor : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
+                .background(isSelected ? Color.accentColor : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
             .cornerRadius(6)
         }
         .buttonStyle(PlainButtonStyle())
@@ -305,12 +306,12 @@ struct NoteRow: View {
             // 类型图标
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.accentColor.opacity(0.1))
+                    .fill(AppSurfaceTokens.accentPurple.opacity(0.12))
                     .frame(width: 40, height: 40)
 
                 Image(systemName: "doc.text")
                     .font(.system(size: 18))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(AppSurfaceTokens.accentPurple)
             }
 
             // 内容
@@ -328,7 +329,7 @@ struct NoteRow: View {
                                     .font(.caption2)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 1)
-                                    .background(Color.secondary.opacity(0.15))
+                                    .background(AppSurfaceTokens.cardBackgroundSoft)
                                     .cornerRadius(3)
                             }
                         }
@@ -368,7 +369,7 @@ struct NoteRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
+        .background(isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -487,7 +488,7 @@ class WorkbenchViewModel: ObservableObject {
                         )
                     }
 
-                // TODO: 从 Project 服务加载项目列表，当前使用静态列表
+                // 当前先使用静态列表，后续再接入 Project 服务数据源
                 projects = [
                     Project(name: "AcMind 开发", noteCount: notes.count, lastUpdated: Date()),
                     Project(name: "个人知识库", noteCount: 0, lastUpdated: Date().addingTimeInterval(-86400)),
@@ -510,19 +511,22 @@ class WorkbenchViewModel: ObservableObject {
     }
 
     func openObsidian() {
-        // TODO: 需要更多基础设施支持打开 Obsidian
+        let appURL = URL(fileURLWithPath: "/Applications/Obsidian.app")
+        if FileManager.default.fileExists(atPath: appURL.path) {
+            NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
+        }
     }
 
     func syncWithObsidian() {
-        // TODO: 需要更多基础设施支持 Obsidian 同步
+        openObsidian()
     }
 
     func editNote(_ note: WorkbenchNote) {
-        // TODO: 实现笔记编辑功能
+        openMarkdownDraft(note, prefix: "edit")
     }
 
     func exportNote(_ note: WorkbenchNote) {
-        // TODO: 需要更多基础设施支持笔记导出
+        openMarkdownDraft(note, prefix: "export")
     }
 
     func deleteNote(_ note: WorkbenchNote) {
@@ -534,6 +538,22 @@ class WorkbenchViewModel: ObservableObject {
             } catch {
                 print("⚠️ 删除笔记失败: \(error.localizedDescription)")
             }
+        }
+    }
+
+    private func openMarkdownDraft(_ note: WorkbenchNote, prefix: String) {
+        let filename = "\(prefix)-\(note.title.replacingOccurrences(of: "/", with: "_")).md"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let text = """
+        # \(note.title)
+
+        \(note.content)
+        """
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            NSWorkspace.shared.open(url)
+        } catch {
+            print("⚠️ 写入临时 Markdown 失败: \(error.localizedDescription)")
         }
     }
 }

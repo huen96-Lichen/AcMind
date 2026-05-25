@@ -11,7 +11,7 @@ struct AgentView: View {
     var body: some View {
         ZStack {
             // 背景
-            Color(NSColor.windowBackgroundColor)
+            AppSurfaceTokens.background
                 .ignoresSafeArea()
 
             // 状态切换
@@ -268,7 +268,7 @@ struct AgentView: View {
                 .lineLimit(10)
         }
         .padding(20)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -325,7 +325,7 @@ struct RecentItemRow: View {
             Image(systemName: iconForType(item.type))
                 .font(.system(size: 16))
                 .frame(width: 32, height: 32)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(6)
 
             VStack(alignment: .leading, spacing: 2) {

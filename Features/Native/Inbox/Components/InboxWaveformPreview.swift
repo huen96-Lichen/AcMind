@@ -38,7 +38,6 @@ private struct InboxWaveformBar: View {
         RoundedRectangle(cornerRadius: 1)
             .fill(color.opacity(0.6))
             .frame(width: 2, height: height)
-            .animation(.none)
     }
 }
 

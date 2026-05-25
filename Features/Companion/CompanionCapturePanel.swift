@@ -34,7 +34,7 @@ struct CompanionCapturePanel: View {
             }
         }
         .frame(width: 480, height: 580)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Header
@@ -125,7 +125,7 @@ struct CompanionCapturePanel: View {
                     .toggleStyle(.switch)
             }
             .padding(16)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
         }
     }
@@ -164,7 +164,7 @@ struct CaptureTypeCard: View {
                 Spacer()
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
@@ -400,7 +400,7 @@ class CompanionCaptureViewModel: ObservableObject {
                 case .selectedText:
                     result = try await captureService.captureFromManualText("")
                 case .webpage:
-                    // TODO: 获取当前浏览器 URL
+                    // 当前先沿用文本采集路径，后续再补当前浏览器 URL 读取
                     result = try await captureService.captureFromManualText("")
                 }
                 _ = result

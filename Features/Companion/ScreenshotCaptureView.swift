@@ -195,7 +195,7 @@ public struct ScreenshotPreviewView: View {
                 .keyboardShortcut(.return)
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             
             // 预览区域
             ScrollView([.horizontal, .vertical]) {
@@ -266,7 +266,7 @@ public struct ScreenshotToolbarView: View {
         .padding(.vertical, 12)
         .background(
             Capsule()
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
                 .shadow(radius: 8)
         )
     }
@@ -303,7 +303,7 @@ private struct ToolbarButton: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
             )
         }
         .buttonStyle(PlainButtonStyle())

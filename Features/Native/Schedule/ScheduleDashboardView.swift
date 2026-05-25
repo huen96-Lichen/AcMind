@@ -22,107 +22,90 @@ enum ScheduleDashboardMode: String, CaseIterable, Identifiable {
 struct ScheduleDashboardView: View {
     @StateObject private var viewModel = ScheduleViewModel()
     @State private var dashboardMode: ScheduleDashboardMode = .day
+    @State private var selectedSidebarItem: String? = "today"
+
+    private var sidebarSections: [SecondarySidebarSection] {
+        [
+            SecondarySidebarSection(
+                id: "view",
+                title: "视图",
+                items: [
+                    SecondarySidebarItem(id: "today", title: "今日", icon: "sun.max"),
+                    SecondarySidebarItem(id: "week", title: "本周", icon: "calendar"),
+                    SecondarySidebarItem(id: "month", title: "本月", icon: "calendar.circle"),
+                    SecondarySidebarItem(id: "year", title: "年视图", icon: "calendar.badge.clock", isComingSoon: true)
+                ]
+            ),
+            SecondarySidebarSection(
+                id: "status",
+                title: "状态",
+                items: [
+                    SecondarySidebarItem(id: "pending", title: "待办", icon: "clock", badge: "\(viewModel.todayEventCount)"),
+                    SecondarySidebarItem(id: "completed", title: "已完成", icon: "checkmark.circle")
+                ]
+            ),
+            SecondarySidebarSection(
+                id: "settings",
+                title: "设置",
+                items: [
+                    SecondarySidebarItem(id: "scheduleSettings", title: "日程设置", icon: "gearshape")
+                ]
+            )
+        ]
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
+        HSplitView {
+            SecondarySidebarWithHeader(
+                title: "日程",
+                subtitle: "\(viewModel.todayEventCount) 项待办",
+                sections: sidebarSections,
+                selectedItem: $selectedSidebarItem,
+                footerAction: { viewModel.openCreateEvent() },
+                footerTitle: "新建日程",
+                footerIcon: "plus"
+            )
+            .frame(width: 220)
 
-            Divider()
-                .overlay(AppSurfaceTokens.separator)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    topBar
-                    content
-                }
-                .padding(28)
-            }
+            mainContent
         }
         .background(AppSurfaceTokens.islandBackground.ignoresSafeArea())
         .sheet(isPresented: $viewModel.isCreatingEvent) {
             ScheduleEventEditorSheet(viewModel: viewModel)
         }
+        .onChange(of: selectedSidebarItem) { _, newValue in
+            switch newValue {
+            case "today": dashboardMode = .day
+            case "week": dashboardMode = .week
+            case "month": dashboardMode = .month
+            case "year": dashboardMode = .year
+            default: break
+            }
+        }
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("日程表")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                Text("今日待办、饱和度和分类总览")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
-
-            AppSurfaceCard(title: "今日概览", subtitle: "高密度时间管理") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ScheduleKeyValueRow(key: "待办", value: "\(viewModel.todayEventCount)")
-                    ScheduleKeyValueRow(key: "专注分钟", value: "\(viewModel.todayFocusMinutes)")
-                    ScheduleKeyValueRow(key: "饱和度", value: "\(viewModel.todayWorkloadPercent)%")
-                }
-            }
-
-            AppSurfaceCard(title: "分类", subtitle: "快速切换") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(viewModel.categories.prefix(6)) { category in
-                        HStack(spacing: 8) {
-                            Circle().fill(category.color).frame(width: 8, height: 8)
-                            Text(category.name)
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Spacer()
-                            Text("\(viewModel.todayCount(for: category.id))")
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        }
-                        .font(.system(size: 13, weight: .medium))
-                    }
-                }
-            }
-
-            AppSurfaceCard(title: "工作饱和度", subtitle: "最近 7 天") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-                    ForEach(viewModel.weekWorkloadDays.prefix(7)) { day in
-                        VStack(spacing: 6) {
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(heatColor(for: day.workloadPercent))
-                                .frame(height: 18)
-                            Text(day.date, format: .dateTime.weekday(.narrow))
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                        }
-                    }
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            Button {
-                viewModel.openCreateEvent()
-            } label: {
-                HStack {
-                    Image(systemName: "plus")
-                    Text("快速新建任务")
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .frame(maxWidth: .infinity)
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            topBar
+                .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(AppSurfaceTokens.cardBackgroundStrong)
-                )
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    content
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.plain)
         }
-        .frame(width: 280)
-        .padding(20)
-        .background(AppSurfaceTokens.islandBackgroundSoft)
     }
 
     private var topBar: some View {
         HStack(spacing: 14) {
             Text(viewModel.viewTitle)
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
 
             Spacer()
@@ -133,12 +116,21 @@ struct ScheduleDashboardView: View {
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 220)
+            .frame(width: 180)
+            .onChange(of: dashboardMode) { _, newMode in
+                switch newMode {
+                case .day: selectedSidebarItem = "today"
+                case .week: selectedSidebarItem = "week"
+                case .month: selectedSidebarItem = "month"
+                case .year: selectedSidebarItem = "year"
+                }
+            }
 
             Button {
                 viewModel.goToPrevious()
             } label: {
                 Image(systemName: "chevron.left")
+                    .font(.system(size: 12))
             }
             .buttonStyle(.bordered)
 
@@ -146,6 +138,7 @@ struct ScheduleDashboardView: View {
                 viewModel.goToToday()
             } label: {
                 Text("今天")
+                    .font(.system(size: 12, weight: .medium))
             }
             .buttonStyle(.borderedProminent)
             .tint(AppSurfaceTokens.accentPurple)
@@ -154,6 +147,7 @@ struct ScheduleDashboardView: View {
                 viewModel.goToNext()
             } label: {
                 Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
             }
             .buttonStyle(.bordered)
         }
@@ -176,170 +170,323 @@ struct ScheduleDashboardView: View {
 
     private var dayOverview: some View {
         HStack(alignment: .top, spacing: 20) {
-            AppSurfaceCard(title: "今日日程", subtitle: "双击时间块快速创建") {
-                VStack(alignment: .leading, spacing: 12) {
-                    if viewModel.todayEvents.isEmpty {
-                        Text("今天还没有安排")
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    } else {
-                        ForEach(viewModel.todayEvents.prefix(6)) { event in
-                            Button {
-                                viewModel.selectDate(event.startAt)
-                            } label: {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Text(event.startAt, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute())
-                                        .foregroundStyle(AppSurfaceTokens.accentPurple)
-                                        .frame(width: 56, alignment: .leading)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(event.title)
-                                            .foregroundStyle(AppSurfaceTokens.primaryText)
-                                        Text(event.categoryId.isEmpty ? "未分类" : viewModel.categoryName(for: event.categoryId))
-                                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                                    }
-                                    Spacer()
-                                }
-                                .font(.system(size: 13, weight: .medium))
-                                .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+            VStack(alignment: .leading, spacing: 16) {
+                todayEventsCard
+                timelineCard
             }
             .frame(maxWidth: .infinity)
 
-            VStack(spacing: 20) {
-                AppSurfaceCard(title: "日视图", subtitle: "时间块与快速创建") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach([9, 11, 14, 16, 19], id: \.self) { hour in
-                            HStack(spacing: 10) {
-                                Text(String(format: "%02d:00", hour))
-                                    .foregroundStyle(AppSurfaceTokens.accentPurple)
-                                    .frame(width: 56, alignment: .leading)
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(AppSurfaceTokens.cardBackground)
-                                    .frame(height: 34)
-                                    .overlay(
-                                        Text("双击添加任务")
-                                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                                            .font(.system(size: 12, weight: .medium))
-                                    )
-                                    .onTapGesture(count: 2) {
-                                        viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
-                                    }
-                            }
-                        }
-                    }
-                }
+            VStack(spacing: 16) {
+                nextEventCard
+                dayStatsCard
+            }
+            .frame(width: 280)
+        }
+    }
 
-                AppSurfaceCard(title: "下一事件", subtitle: "即将开始") {
-                    if let next = viewModel.todayEvents.first {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(next.title)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text("\(next.startAt.formatted(date: .omitted, time: .shortened)) - \(next.endAt.formatted(date: .omitted, time: .shortened))")
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        }
-                    } else {
-                        Text("今天暂无事件")
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+    private var todayEventsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("今日日程")
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+                Text("\(viewModel.todayEvents.count) 项")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if viewModel.todayEvents.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.secondary.opacity(0.3))
+                        Text("今天还没有安排")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    Spacer()
+                }
+                .padding(.vertical, 20)
+            } else {
+                ForEach(viewModel.todayEvents.prefix(6)) { event in
+                    Button {
+                        viewModel.selectDate(event.startAt)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(event.startAt, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(AppSurfaceTokens.accentPurple)
+                                .frame(width: 48, alignment: .leading)
+
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(categoryColor(for: event.categoryId))
+                                .frame(width: 3)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(event.title)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.primary)
+                                Text(event.categoryId.isEmpty ? "未分类" : viewModel.categoryName(for: event.categoryId))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(10)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .frame(width: 300)
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var timelineCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("时间线")
+                .font(.system(size: 15, weight: .semibold))
+
+            ForEach([9, 11, 14, 16, 19], id: \.self) { hour in
+                HStack(spacing: 12) {
+                    Text(String(format: "%02d:00", hour))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 48, alignment: .leading)
+
+                    RoundedRectangle(cornerRadius: 8)
+                            .fill(AppSurfaceTokens.cardBackgroundSoft)
+                        .frame(height: 36)
+                        .overlay(
+                            Text("双击添加任务")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        )
+                        .onTapGesture(count: 2) {
+                            viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
+                        }
+                }
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var nextEventCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("下一事件")
+                .font(.system(size: 15, weight: .semibold))
+
+            if let next = viewModel.todayEvents.first {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(next.title)
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("\(next.startAt.formatted(date: .omitted, time: .shortened)) - \(next.endAt.formatted(date: .omitted, time: .shortened))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("今天暂无事件")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var dayStatsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("今日统计")
+                .font(.system(size: 15, weight: .semibold))
+
+            statRow(label: "待办", value: "\(viewModel.todayEventCount)")
+            statRow(label: "专注分钟", value: "\(viewModel.todayFocusMinutes)")
+            statRow(label: "饱和度", value: "\(viewModel.todayWorkloadPercent)%")
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private func statRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .medium))
         }
     }
 
     private var weekOverview: some View {
         VStack(alignment: .leading, spacing: 20) {
-            AppSurfaceCard(title: "周视图", subtitle: "一周饱和度与事件密度") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 7), spacing: 12) {
-                    ForEach(viewModel.weekWorkloadDays) { day in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(day.date, format: .dateTime.weekday(.narrow))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(heatColor(for: day.workloadPercent))
-                                .frame(height: 38)
-                            Text("\(day.eventCount) 项")
-                                .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                    }
-                }
-            }
+            weekGridCard
+            weekEventsCard
+        }
+    }
 
-            AppSurfaceCard(title: "本周事件", subtitle: "统一宽度内容区") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(viewModel.currentWeekEvents.prefix(8)) { event in
-                        ScheduleKeyValueRow(key: event.title, value: event.startAt.formatted(date: .omitted, time: .shortened))
+    private var weekGridCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("周视图")
+                .font(.system(size: 15, weight: .semibold))
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 7), spacing: 12) {
+                ForEach(viewModel.weekWorkloadDays) { day in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(day.date, format: .dateTime.weekday(.narrow))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(heatColor(for: day.workloadPercent))
+                            .frame(height: 48)
+                        Text("\(day.eventCount) 项")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
         }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var weekEventsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("本周事件")
+                .font(.system(size: 15, weight: .semibold))
+
+            ForEach(viewModel.currentWeekEvents.prefix(8)) { event in
+                HStack {
+                    Text(event.title)
+                        .font(.system(size: 13))
+                    Spacer()
+                    Text(event.startAt.formatted(date: .omitted, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var monthOverview: some View {
         VStack(alignment: .leading, spacing: 20) {
-            AppSurfaceCard(title: "月视图", subtitle: "事件分布") {
-                let days = Array(1...30)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
-                    ForEach(days, id: \.self) { day in
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(day % 5 == 0 ? AppSurfaceTokens.accentPurple.opacity(0.85) : AppSurfaceTokens.cardBackground)
-                            .frame(height: 42)
-                            .overlay(
-                                Text("\(day)")
-                                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                                    .font(.system(size: 12, weight: .semibold))
-                            )
-                    }
-                }
-            }
+            monthGridCard
+            monthEventsCard
+        }
+    }
 
-            AppSurfaceCard(title: "本月事件", subtitle: "摘要") {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(viewModel.currentMonthEvents.prefix(6)) { event in
-                        ScheduleKeyValueRow(key: event.title, value: event.startAt.formatted(date: .abbreviated, time: .omitted))
-                    }
+    private var monthGridCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("月视图")
+                .font(.system(size: 15, weight: .semibold))
+
+            let days = Array(1...30)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
+                ForEach(days, id: \.self) { day in
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(day % 5 == 0 ? AppSurfaceTokens.accentPurple.opacity(0.85) : AppSurfaceTokens.cardBackgroundSoft)
+                        .frame(height: 42)
+                        .overlay(
+                            Text("\(day)")
+                                .font(.system(size: 12, weight: .semibold))
+                        )
                 }
             }
         }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var monthEventsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("本月事件")
+                .font(.system(size: 15, weight: .semibold))
+
+            ForEach(viewModel.currentMonthEvents.prefix(6)) { event in
+                HStack {
+                    Text(event.title)
+                        .font(.system(size: 13))
+                    Spacer()
+                    Text(event.startAt.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var yearOverview: some View {
         VStack(alignment: .leading, spacing: 20) {
-            AppSurfaceCard(title: "年视图", subtitle: "年度热力图") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 13), spacing: 4) {
-                    ForEach(viewModel.yearlyWorkloadDays.prefix(130)) { day in
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(heatColor(for: day.workloadPercent))
-                            .frame(height: 14)
-                    }
-                }
-            }
+            yearHeatmapCard
+            yearStatsRow
+        }
+    }
 
-            HStack(spacing: 20) {
-                AppSurfaceCard(title: "年度统计", subtitle: "活跃日") {
-                    ScheduleKeyValueRow(key: "活跃日", value: "\(viewModel.yearlyStats.activeDays)")
-                    ScheduleKeyValueRow(key: "平均饱和度", value: "\(viewModel.yearlyStats.avgWorkload)%")
-                }
-                AppSurfaceCard(title: "分类状态", subtitle: "今年累计") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.categories.prefix(4)) { category in
-                            ScheduleKeyValueRow(key: category.name, value: "\(viewModel.weekCount(for: category.id))")
-                        }
-                    }
+    private var yearHeatmapCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("年视图")
+                .font(.system(size: 15, weight: .semibold))
+
+            Text("年视图功能暂未完整实现")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Label("规划中", systemImage: "clock")
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.orange.opacity(0.1))
+                .foregroundStyle(.orange)
+                .cornerRadius(6)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var yearStatsRow: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("年度统计")
+                    .font(.system(size: 15, weight: .semibold))
+                statRow(label: "活跃日", value: "\(viewModel.yearlyStats.activeDays)")
+                statRow(label: "平均饱和度", value: "\(viewModel.yearlyStats.avgWorkload)%")
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("分类统计")
+                    .font(.system(size: 15, weight: .semibold))
+                ForEach(viewModel.categories.prefix(4)) { category in
+                    statRow(label: category.name, value: "\(viewModel.weekCount(for: category.id))")
                 }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
         }
     }
 
     private func heatColor(for percent: Int) -> Color {
         switch percent {
         case 0:
-            return AppSurfaceTokens.cardBackground
+            return AppSurfaceTokens.cardBackgroundSoft
         case 1..<25:
             return AppSurfaceTokens.accentPurple.opacity(0.25)
         case 25..<50:
@@ -349,6 +496,13 @@ struct ScheduleDashboardView: View {
         default:
             return AppSurfaceTokens.accentPurple
         }
+    }
+
+    private func categoryColor(for categoryId: String) -> Color {
+        if let category = viewModel.categories.first(where: { $0.id == categoryId }) {
+            return category.color
+        }
+        return .gray
     }
 }
 
@@ -370,7 +524,7 @@ private struct ScheduleEventEditorSheet: View {
                     viewModel.closeCreateEvent()
                     dismiss()
                 }
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .foregroundStyle(.secondary)
 
                 Spacer()
 
@@ -395,9 +549,9 @@ private struct ScheduleEventEditorSheet: View {
                 .tint(AppSurfaceTokens.accentPurple)
             }
             .padding(20)
-            .background(AppSurfaceTokens.islandBackground)
+            .background(AppSurfaceTokens.secondarySidebarBackground)
 
-            Divider().overlay(AppSurfaceTokens.separator)
+            Divider()
 
             VStack(alignment: .leading, spacing: 16) {
                 TextField("输入日程标题", text: $title)
@@ -434,24 +588,8 @@ private struct ScheduleEventEditorSheet: View {
                 }
             }
             .padding(20)
-            .background(AppSurfaceTokens.islandBackgroundSoft)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
         }
-        .frame(width: 440, height: 340)
-    }
-}
-
-private struct ScheduleKeyValueRow: View {
-    let key: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(key)
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Spacer()
-            Text(value)
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-        }
-        .font(.system(size: 13, weight: .medium))
+        .frame(width: 440, height: 380)
     }
 }

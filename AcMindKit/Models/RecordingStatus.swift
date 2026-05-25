@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import CoreGraphics
 
 // MARK: - RecordingStatus（录音状态）
@@ -104,6 +105,24 @@ public enum ClipboardContentType: String, Codable, Sendable, Hashable, CaseItera
         case .image: return "图片"
         case .file: return "文件"
         case .url: return "链接"
+        }
+    }
+
+    public var icon: String {
+        switch self {
+        case .text: return "text.quote"
+        case .image: return "photo"
+        case .file: return "doc"
+        case .url: return "link"
+        }
+    }
+
+    public var color: Color {
+        switch self {
+        case .text: return .blue
+        case .image: return .green
+        case .file: return .orange
+        case .url: return .purple
         }
     }
 }

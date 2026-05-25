@@ -88,8 +88,13 @@ final class WebViewBridge: NSObject, WKScriptMessageHandler {
 
         case "moveToInbox":
             // 将项目移动到 Inbox
-            guard params["id"] as? String != nil else { return ["success": false] }
-            // TODO: 实现移动到 Inbox 的逻辑
+            guard let id = params["id"] as? String else { return ["success": false] }
+            guard let item = try await services.storageService.getSourceItem(id: id) else {
+                return ["success": false]
+            }
+            var updated = item
+            updated.status = .inbox
+            try await services.storageService.updateSourceItem(updated)
             return ["success": true]
 
         case "deleteItem":

@@ -31,7 +31,7 @@ struct CompanionShortcutPanel: View {
             }
         }
         .frame(width: 520, height: 600)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Header
@@ -116,7 +116,7 @@ struct CompanionShortcutPanel: View {
                     }
                 }
             }
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
         }
     }
@@ -142,7 +142,7 @@ struct CompanionShortcutPanel: View {
                     }
                 }
             }
-            .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
         }
     }

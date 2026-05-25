@@ -62,7 +62,7 @@ struct EventEditorView: View {
                         .textFieldStyle(.plain)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
-                        .background(Color(NSColor.controlBackgroundColor))
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
@@ -96,7 +96,7 @@ struct EventEditorView: View {
                                 .padding(.vertical, 6)
                                 .background(selectedCategoryId == category.id
                                     ? category.color.opacity(0.15)
-                                    : Color(NSColor.controlBackgroundColor))
+                                    : AppSurfaceTokens.cardBackgroundSoft)
                                 .cornerRadius(6)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
@@ -145,7 +145,7 @@ struct EventEditorView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color(NSColor.controlBackgroundColor))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -168,7 +168,7 @@ struct EventEditorView: View {
                             .frame(width: 100)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color(NSColor.controlBackgroundColor))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -186,7 +186,7 @@ struct EventEditorView: View {
                                 .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Color(NSColor.controlBackgroundColor))
+                                .background(AppSurfaceTokens.cardBackgroundSoft)
                                 .cornerRadius(8)
                         }
                     }
@@ -227,13 +227,13 @@ struct EventEditorView: View {
             startHour = viewModel.newEventStartHour
             startMinute = viewModel.newEventStartMinute
         }
-        .onChange(of: title) { _ in
+        .onChange(of: title) { _, _ in
             validationError = nil
         }
-        .onChange(of: startHour) { _ in
+        .onChange(of: startHour) { _, _ in
             validationError = nil
         }
-        .onChange(of: durationMinutes) { _ in
+        .onChange(of: durationMinutes) { _, _ in
             validationError = nil
         }
     }

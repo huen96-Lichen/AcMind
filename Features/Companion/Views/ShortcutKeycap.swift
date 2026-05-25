@@ -9,7 +9,7 @@ struct ShortcutKeycap: View {
             .fontWeight(.medium)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .foregroundColor(Color(NSColor.controlTextColor))
             .cornerRadius(6)
             .overlay(
@@ -26,6 +26,6 @@ struct ShortcutKeycapView_Previews: PreviewProvider {
             ShortcutKeycap(key: "Space")
         }
         .padding()
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 }

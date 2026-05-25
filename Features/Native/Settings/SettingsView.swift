@@ -80,7 +80,7 @@ struct SettingsView: View {
                 .scrollDisabled(true)
             }
             .frame(width: 180)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
 
             // 右侧内容
             Divider()
@@ -177,7 +177,7 @@ struct SettingsCard<Content: View>: View {
             content
         }
         .padding(16)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
     }

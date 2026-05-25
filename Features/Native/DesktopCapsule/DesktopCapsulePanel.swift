@@ -162,7 +162,7 @@ struct DesktopCapsuleView: View {
         Button(action: { viewModel.toggleExpand() }) {
             ZStack {
                 Circle()
-                    .fill(Color(NSColor.windowBackgroundColor))
+                    .fill(AppSurfaceTokens.background)
                     .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
 
                 Image(systemName: "brain.head.profile")
@@ -235,7 +235,7 @@ struct DesktopCapsuleView: View {
         .frame(height: 42)
         .background(
             Capsule()
-                .fill(Color(NSColor.windowBackgroundColor))
+                .fill(AppSurfaceTokens.background)
                 .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
         )
         .onHover { hovering in

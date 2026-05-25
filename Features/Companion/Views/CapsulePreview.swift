@@ -14,7 +14,7 @@ struct CapsulePreview: View {
                 // Menu Bar Background
                 RoundedRectangle(cornerRadius: 8)
                     .fill(LinearGradient(
-                        gradient: Gradient(colors: [Color(NSColor.controlBackgroundColor), Color(NSColor.windowBackgroundColor)]),
+                        gradient: Gradient(colors: [AppSurfaceTokens.cardBackgroundSoft, AppSurfaceTokens.background]),
                         startPoint: .top,
                         endPoint: .bottom
                     ))
@@ -37,7 +37,7 @@ struct CapsulePreview: View {
                         )
                     
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(NSColor.controlBackgroundColor))
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 24, height: 18)
                         .overlay(
                             Image(systemName: "mic")

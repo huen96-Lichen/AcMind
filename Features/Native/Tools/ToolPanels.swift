@@ -23,7 +23,7 @@ struct ToolUnavailablePanel: View {
             }
         }
         .frame(width: 700, height: 420)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -56,7 +56,7 @@ struct ToolUnavailablePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -73,7 +73,7 @@ struct ToolUnavailablePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -99,7 +99,7 @@ struct JSONFormatterPanel: View {
             }
         }
         .frame(width: 860, height: 720)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -138,7 +138,7 @@ struct JSONFormatterPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -200,7 +200,7 @@ struct JSONFormatterPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -232,7 +232,7 @@ struct JSONFormatterPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -351,7 +351,7 @@ struct Base64CodecPanel: View {
             }
         }
         .frame(width: 860, height: 720)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -390,7 +390,7 @@ struct Base64CodecPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -452,7 +452,7 @@ struct Base64CodecPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -484,7 +484,7 @@ struct Base64CodecPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -618,7 +618,7 @@ struct MarkdownCleanerPanel: View {
             }
         }
         .frame(width: 860, height: 740)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -657,7 +657,7 @@ struct MarkdownCleanerPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -711,7 +711,7 @@ struct MarkdownCleanerPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -743,7 +743,7 @@ struct MarkdownCleanerPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -919,7 +919,7 @@ struct TextComparePanel: View {
             }
         }
         .frame(width: 940, height: 760)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -958,7 +958,7 @@ struct TextComparePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -1023,7 +1023,7 @@ struct TextComparePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -1065,7 +1065,7 @@ struct TextComparePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -1712,7 +1712,7 @@ struct SRTTFCPXMLPanel: View {
             bottomBar
         }
         .frame(width: 1100, height: 700)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -1819,7 +1819,7 @@ struct SRTTFCPXMLPanel: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -2018,7 +2018,7 @@ struct SubtitleRow: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }

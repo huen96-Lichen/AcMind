@@ -53,7 +53,7 @@ struct CompanionView: View {
             .frame(maxWidth: 1200, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -61,7 +61,7 @@ struct CompanionView: View {
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
         }
-        .onChange(of: isGlobalEnabled) { newValue in
+        .onChange(of: isGlobalEnabled) { _, newValue in
             if newValue {
                 // Save when enabling
                 Task {
@@ -144,7 +144,7 @@ struct CompanionPermissionRow: View {
             .cornerRadius(6)
         }
         .padding(12)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(8)
     }
 }

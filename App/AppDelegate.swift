@@ -295,6 +295,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: Notification.Name("AcMind.captureCompleted"),
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDeleteSourceItem(_:)),
+            name: .acmindDeleteSourceItem,
+            object: nil
+        )
     }
 
     @objc private func handleAppDidBecomeActive(_ notification: Notification) {
@@ -325,6 +332,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .companionCaptureSuccess,
             object: notification.object
         )
+    }
+
+    @objc private func handleDeleteSourceItem(_ notification: Notification) {
+        guard let itemID = notification.object as? String else { return }
+
+        Task {
+            do {
+                try await ServiceContainer.shared.storageService.deleteSourceItem(id: itemID)
+            } catch {
+                await MainActor.run {
+                    appState.showError(.serviceUnavailable("删除收集项"))
+                }
+                print("⚠️ 删除收集项失败: \(error.localizedDescription)")
+            }
+        }
     }
 
     @objc private func handleCaptureNotification(_ notification: Notification) {
@@ -531,7 +553,7 @@ struct ScreenshotPreviewView: View {
                 .keyboardShortcut(.return)
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             
             // 预览区域
             if let image = image {
@@ -556,7 +578,7 @@ struct ScreenshotPreviewView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(NSColor.windowBackgroundColor))
+                .background(AppSurfaceTokens.secondarySidebarBackground)
             }
         }
     }
@@ -579,14 +601,17 @@ struct ScreenshotPreviewView: View {
 class MainWindowController: NSWindowController {
     convenience init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            contentRect: NSRect(x: 0, y: 0, width: 1320, height: 880),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
         window.title = "AcMind"
-        window.minSize = NSSize(width: 800, height: 600)
+        window.minSize = NSSize(width: 1160, height: 760)
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.setFrameAutosaveName("MainWindow")
 
@@ -683,7 +708,7 @@ class LaunchWindowController: NSWindowController {
 // MARK: - Window Geometry
 
 enum AppWindowGeometry {
-    static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 800)
+    static let mainFrame = NSRect(x: 120, y: 120, width: 1320, height: 880)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
     static let capsuleFrame = NSRect(x: 320, y: 260, width: 400, height: 60)
 }
@@ -692,4 +717,8 @@ extension CapsuleWindowController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         AppState.shared.capsuleWindowDidClose()
     }
+}
+
+extension Notification.Name {
+    static let acmindDeleteSourceItem = Notification.Name("AcMind.deleteSourceItem")
 }

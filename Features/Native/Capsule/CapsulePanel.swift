@@ -108,7 +108,7 @@ struct CapsuleContentView: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(NSColor.windowBackgroundColor))
+                    .fill(AppSurfaceTokens.background)
                     .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
             )
 
@@ -148,7 +148,7 @@ struct CapsuleContentView: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(NSColor.windowBackgroundColor))
+                        .fill(AppSurfaceTokens.background)
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
             }

@@ -136,7 +136,7 @@ struct WebViewDisabledView: View {
             .font(.callout)
             .foregroundColor(.secondary)
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(8)
 
             if page == .shelf {

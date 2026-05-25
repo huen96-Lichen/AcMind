@@ -63,7 +63,7 @@ struct ScreenshotPreviewContentView: View {
                 .keyboardShortcut(.return)
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             
             // 预览区域
             if let image = image {
@@ -88,7 +88,7 @@ struct ScreenshotPreviewContentView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(NSColor.windowBackgroundColor))
+                .background(AppSurfaceTokens.background)
             }
         }
     }

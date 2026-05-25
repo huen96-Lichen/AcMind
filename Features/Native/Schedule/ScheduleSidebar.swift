@@ -20,7 +20,7 @@ struct ScheduleSidebar: View {
             }
         }
         .frame(width: ScheduleLayout.sidebarWidth)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 }
 
@@ -49,7 +49,7 @@ struct CalendarCategoryList: View {
                 }
             }
             .padding(8)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(AcMindTheme.cornerRadius)
         }
     }
@@ -147,7 +147,7 @@ struct TodayOverview: View {
                 }
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(AcMindTheme.cornerRadius)
         }
     }
@@ -236,7 +236,7 @@ struct TodayTodoList: View {
                 }
             }
             .padding(8)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(AcMindTheme.cornerRadius)
         }
     }
@@ -411,7 +411,7 @@ struct MiniMonthCalendar: View {
                 }
             }
             .padding(6)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(AcMindTheme.cornerRadius)
         }
     }
@@ -535,7 +535,7 @@ struct WorkloadSummary: View {
                 }
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(AcMindTheme.cornerRadius)
         }
     }
