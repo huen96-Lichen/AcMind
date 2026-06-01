@@ -4,10 +4,10 @@ import SwiftUI
 // MARK: - Schedule Models
 
 /// 日程事件
-struct ScheduleEvent: Identifiable, Equatable, Hashable {
+struct ScheduleEvent: Codable, Identifiable, Equatable, Hashable {
     let id: String
     let title: String
-    var description: String?
+    var description: String? = nil
     let categoryId: String
     let startAt: Date
     let endAt: Date
@@ -16,7 +16,7 @@ struct ScheduleEvent: Identifiable, Equatable, Hashable {
     var priority: EventPriority
     var tag: String? // 可选标签，如「专注」「会议」「整理」
 
-    enum EventStatus: String, CaseIterable {
+    enum EventStatus: String, Codable, CaseIterable {
         case todo
         case done
         case cancelled
@@ -30,7 +30,7 @@ struct ScheduleEvent: Identifiable, Equatable, Hashable {
         }
     }
 
-    enum EventPriority: String, CaseIterable {
+    enum EventPriority: String, Codable, CaseIterable {
         case low
         case medium
         case high

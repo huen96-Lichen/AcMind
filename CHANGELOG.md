@@ -63,7 +63,7 @@
 ## 0.10.0 (2026-05-03) — Phase 6: 语音能力深化
 
 ### Added
-- ASR Provider 真实实现（OpenAI-compatible Whisper API + 本地 whisper CLI fallback）
+- ASR Provider 真实实现（OpenAI-compatible Whisper API + 本地 whisper CLI 兼容路径）
   - `asrProvider.getStatus()` — 检查 ASR 配置状态
   - `asrProvider.transcribe(filePath, options)` — 调用 API 或本地 CLI 转写音频
   - 支持 multipart/form-data 上传、language/prompt/translate 参数
@@ -103,8 +103,8 @@
 ### Changed
 - **Phase 4: 截图→Pin Pool**：`captureService.captureScreenshot()` 在创建 SourceItem 的同时创建 PinItem（sourceType='screenshot'），截图自动进入 Pin Pool
   - 新增 `captureService.emitPinPoolChanged()` 私有方法
-- **Phase 5: AI 预筛**：`prefilterPinItem` 从规则 mock 升级为调用 `realDistiller`（Ollama / OpenAI-compatible）
-  - 新增 `'prefilter'` AiOperation 类型 + prompt 模板 + tier 路由 + mock fallback
+- **Phase 5: AI 预筛**：`prefilterPinItem` 从规则实现升级为调用 `realDistiller`（Ollama / OpenAI-compatible）
+  - 新增 `'prefilter'` AiOperation 类型 + prompt 模板 + tier 路由 + 规则兜底
   - 无可用 provider 或 AI 调用失败时自动降级到规则引擎
 - **Phase 6: 语音→Pin Pool**：`CapsuleExpanded.handleVoiceComplete` 改为调用 `voice.createPinFromTranscript`（已有 IPC），语音内容直接进入 Pin Pool
 - **Phase 7: 胶囊→Pin Pool**：`CapsuleExpanded` 的文字/链接收集改为调用 `pinPool.createFromText`，截图收集通过 Phase 4 的修复自动生效

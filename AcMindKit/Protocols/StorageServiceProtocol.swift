@@ -23,6 +23,7 @@ public protocol StorageServiceProtocol: Sendable {
     // Distilled notes
     func insertDistilledNote(_ note: DistilledNote) async throws
     func updateDistilledNote(_ note: DistilledNote) async throws
+    func deleteDistilledNote(id: String) async throws
     func listDistilledNotes() async throws -> [DistilledNote]
 
     // Export records
@@ -45,13 +46,19 @@ public protocol StorageServiceProtocol: Sendable {
     func updateClipboardItem(_ item: ClipboardItem) async throws
     func deleteClipboardItem(id: String) async throws
 
+    // Provider configs
+    func listProviders() async throws -> [ProviderConfig]
+    func addProvider(_ config: ProviderConfig) async throws
+    func updateProvider(_ config: ProviderConfig) async throws
+    func removeProvider(id: String) async throws
+
     // Settings
     func getSetting(key: String) async throws -> String?
     func setSetting(key: String, value: String) async throws
 
     // Migration
     func importFromJSON(_ items: [SourceItem]) async throws -> Int
-    func checkElectronDatabase() -> URL?
+    func checkLegacyDatabase() -> URL?
 
     // Info
     func getDatabasePath() -> String
@@ -123,6 +130,7 @@ public protocol AIRuntimeProtocol: Sendable {
     func updateProvider(_ config: ProviderConfig) async throws
     func removeProvider(id: String) async throws
     func healthCheck(providerId: String) async throws -> Bool
+    func listModels(providerId: String) async throws -> [String]
     func listJobs() async throws -> [ProcessJob]
     func cancelJob(id: String) async throws
     func runDistillation(sourceItem: SourceItem) async throws -> DistilledNote

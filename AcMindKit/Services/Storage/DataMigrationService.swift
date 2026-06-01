@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - DataMigrationService
 
-/// Electron → Swift 数据迁移服务
+/// 旧桌面版 → Swift 数据迁移服务
 ///
 /// 采用本地 SQLite 直接读取旧库并写入新库，不依赖外部 ORM 包。
 public actor DataMigrationService: Sendable {
@@ -24,7 +24,7 @@ public actor DataMigrationService: Sendable {
     }
 
     public enum MigrationError: Error, LocalizedError {
-        case electronDatabaseNotFound
+        case legacyDatabaseNotFound
         case swiftDatabaseNotReady
         case tableReadFailed(table: String, underlying: Error)
         case tableWriteFailed(table: String, underlying: Error)
@@ -32,8 +32,8 @@ public actor DataMigrationService: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .electronDatabaseNotFound:
-                return "未找到 Electron 数据库，无需迁移"
+            case .legacyDatabaseNotFound:
+                return "未找到旧版数据库，无需迁移"
             case .swiftDatabaseNotReady:
                 return "Swift 数据库未就绪，无法执行迁移"
             case .tableReadFailed(let table, let underlying):
@@ -53,7 +53,7 @@ public actor DataMigrationService: Sendable {
 
     // MARK: - Properties
 
-    private let electronDBPath: URL?
+    private let legacyDBPath: URL?
     private let swiftDBPath: URL
     private let fileManager: FileManager
 
@@ -64,27 +64,24 @@ public actor DataMigrationService: Sendable {
         self.fileManager = FileManager.default
 
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let electronPath = appSupport.appendingPathComponent("AcMind/acmind.db")
         let legacyPath = appSupport.appendingPathComponent("AcMind/pinmind.db")
 
-        if fileManager.fileExists(atPath: electronPath.path) {
-            self.electronDBPath = electronPath
-        } else if fileManager.fileExists(atPath: legacyPath.path) {
-            self.electronDBPath = legacyPath
+        if fileManager.fileExists(atPath: legacyPath.path) {
+            self.legacyDBPath = legacyPath
         } else {
-            self.electronDBPath = nil
+            self.legacyDBPath = nil
         }
     }
 
     // MARK: - Public API
 
     public var needsMigration: Bool {
-        electronDBPath != nil
+        legacyDBPath != nil
     }
 
     public func runIfNeeded() async throws -> MigrationResult {
-        guard let electronDBPath else {
-            throw MigrationError.electronDatabaseNotFound
+        guard let legacyDBPath else {
+            throw MigrationError.legacyDatabaseNotFound
         }
 
         let startTime = Date()
@@ -94,7 +91,7 @@ public actor DataMigrationService: Sendable {
             throw MigrationError.migrationAlreadyCompleted
         }
 
-        let source = try SQLiteConnection(path: electronDBPath.path, readOnly: true)
+        let source = try SQLiteConnection(path: legacyDBPath.path, readOnly: true)
         var tableCounts: [String: Int] = [:]
         var errors: [String] = []
 
@@ -110,18 +107,18 @@ public actor DataMigrationService: Sendable {
         do {
             try target.execute(
                 "INSERT INTO _migration (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                arguments: ["electron_imported", "true"]
+                arguments: ["legacy_imported", "true"]
             )
         } catch {
             errors.append("_migration 标记写入失败: \(error.localizedDescription)")
         }
 
-        let backupPath = electronDBPath.appendingPathExtension("migrated")
+        let backupPath = legacyDBPath.appendingPathExtension("migrated")
         do {
             if fileManager.fileExists(atPath: backupPath.path) {
                 try fileManager.removeItem(at: backupPath)
             }
-            try fileManager.moveItem(at: electronDBPath, to: backupPath)
+            try fileManager.moveItem(at: legacyDBPath, to: backupPath)
         } catch {
             errors.append("旧数据库备份失败: \(error.localizedDescription)")
         }
@@ -139,7 +136,7 @@ public actor DataMigrationService: Sendable {
     private func isMigrationCompleted(in connection: SQLiteConnection) throws -> Bool {
         let rows = try connection.query(
             "SELECT value FROM _migration WHERE key = ? LIMIT 1",
-            arguments: ["electron_imported"]
+            arguments: ["legacy_imported"]
         ) { row in
             row.string("value") ?? ""
         }
@@ -384,14 +381,25 @@ public actor DataMigrationService: Sendable {
                     target: target,
                     insertSQL: """
                         INSERT INTO distilled_notes (
-                            id, source_item_id, title, content, tags, category, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            id, source_item_id, task_id, title, summary, category, tags, document_type,
+                            content_markdown, value_score, clean_suggestion, confidence, review_status,
+                            reviewed_at, accepted_knowledge_card_id, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(id) DO UPDATE SET
                             source_item_id = excluded.source_item_id,
+                            task_id = excluded.task_id,
                             title = excluded.title,
-                            content = excluded.content,
-                            tags = excluded.tags,
+                            summary = excluded.summary,
                             category = excluded.category,
+                            tags = excluded.tags,
+                            document_type = excluded.document_type,
+                            content_markdown = excluded.content_markdown,
+                            value_score = excluded.value_score,
+                            clean_suggestion = excluded.clean_suggestion,
+                            confidence = excluded.confidence,
+                            review_status = excluded.review_status,
+                            reviewed_at = excluded.reviewed_at,
+                            accepted_knowledge_card_id = excluded.accepted_knowledge_card_id,
                             created_at = excluded.created_at,
                             updated_at = excluded.updated_at
                     """,
@@ -491,15 +499,25 @@ public actor DataMigrationService: Sendable {
         let updatedAt = row.int("updated_at") ?? createdAt
         let id = row.string("id") ?? UUID().uuidString
         let sourceItemId = row.string("source_item_id") ?? ""
-        let content = row.string("content") ?? row.string("summary")
+        let summary = row.string("summary")
+        let contentMarkdown = row.string("content_markdown") ?? row.string("content") ?? summary
 
         return [
             id,
             sourceItemId,
+            row.string("task_id"),
             row.string("title"),
-            content,
-            row.string("tags"),
+            summary,
             row.string("category"),
+            row.string("tags"),
+            row.string("document_type"),
+            contentMarkdown,
+            row.double("value_score"),
+            row.string("clean_suggestion"),
+            row.double("confidence"),
+            row.string("review_status") ?? "pending",
+            row.int("reviewed_at"),
+            row.string("accepted_knowledge_card_id"),
             createdAt,
             updatedAt
         ]

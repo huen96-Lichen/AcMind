@@ -78,7 +78,7 @@ public final class ProcessCommandRunner: ProcessCommandRunning {
             process.arguments = arguments
 
             if let environment {
-                var merged = ProcessInfo.processInfo.environment
+                var merged = Foundation.ProcessInfo.processInfo.environment
                 environment.forEach { key, value in merged[key] = value }
                 process.environment = merged
             }

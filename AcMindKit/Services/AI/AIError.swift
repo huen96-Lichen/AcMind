@@ -42,7 +42,7 @@ public enum AIError: Error, LocalizedError {
         case .invalidInput(let message):
             return "输入无效: \(message)"
         case .notImplemented(let message):
-            return "功能未实现: \(message)"
+            return "当前功能不可用: \(message)"
         }
     }
     
@@ -71,7 +71,7 @@ public enum AIError: Error, LocalizedError {
         case .invalidInput:
             return "请检查输入参数"
         case .notImplemented:
-            return "该功能正在开发中"
+            return "该功能当前不可用"
         }
     }
 }

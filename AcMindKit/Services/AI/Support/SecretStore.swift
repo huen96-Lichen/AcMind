@@ -14,84 +14,57 @@ public actor SecretStore {
     public static let shared = SecretStore()
     
     private let serviceIdentifier = "com.acmind.secrets"
+    private let settingsDefaults: UserDefaults
     
-    private init() {}
+    public init(settingsDefaults: UserDefaults = .standard) {
+        self.settingsDefaults = settingsDefaults
+    }
+
+    private var usesKeychain: Bool {
+        SettingsLocalPreferences.loadOrDefault(from: settingsDefaults).apiKeyUsesKeychain
+    }
     
     // MARK: - Save API Key
     
     public func saveAPIKey(_ key: String, for providerId: String) throws {
-        let account = "acmind.provider.\(providerId)"
-        let keyData = key.data(using: .utf8)!
-        
-        // 先删除旧的
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceIdentifier,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
-        
-        // 添加新的
-        let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceIdentifier,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: keyData,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            kSecAttrLabel as String: "AcMind Provider: \(providerId)"
-        ]
-        
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw SecretError.saveFailed(status)
+        if usesKeychain {
+            try saveAPIKeyToKeychain(key, for: providerId)
+            removeAPIKeyFromDefaults(for: providerId)
+        } else {
+            saveAPIKeyToDefaults(key, for: providerId)
+            try? deleteAPIKeyFromKeychain(for: providerId)
         }
     }
     
     // MARK: - Get API Key
     
     public func getAPIKey(for providerId: String) -> String? {
-        let account = "acmind.provider.\(providerId)"
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceIdentifier,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let key = String(data: data, encoding: .utf8) else {
-            return nil
+        if usesKeychain {
+            if let key = loadAPIKeyFromKeychain(for: providerId) {
+                return key
+            }
+            return loadAPIKeyFromDefaults(for: providerId)
         }
-        
-        return key
+
+        if let key = loadAPIKeyFromDefaults(for: providerId) {
+            return key
+        }
+
+        return loadAPIKeyFromKeychain(for: providerId)
     }
     
     // MARK: - Delete API Key
     
     public func deleteAPIKey(for providerId: String) throws {
-        let account = "acmind.provider.\(providerId)"
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceIdentifier,
-            kSecAttrAccount as String: account
-        ]
-        
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw SecretError.deleteFailed(status)
-        }
+        removeAPIKeyFromDefaults(for: providerId)
+        try deleteAPIKeyFromKeychain(for: providerId)
     }
     
     // MARK: - List All Keys
     
     public func listStoredProviderIds() -> [String] {
+        var ids = Set<String>()
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceIdentifier,
@@ -104,17 +77,20 @@ public actor SecretStore {
         
         guard status == errSecSuccess,
               let items = result as? [[String: Any]] else {
-            return []
+            return listStoredProviderIdsFromDefaults()
         }
-        
+
         let prefix = "acmind.provider."
-        return items.compactMap { item in
+        ids.formUnion(items.compactMap { item in
             guard let account = item[kSecAttrAccount as String] as? String,
                   account.hasPrefix(prefix) else {
                 return nil
             }
             return String(account.dropFirst(prefix.count))
-        }
+        })
+
+        ids.formUnion(listStoredProviderIdsFromDefaults())
+        return Array(ids).sorted()
     }
     
     // MARK: - Check Key Exists
@@ -126,32 +102,14 @@ public actor SecretStore {
     // MARK: - Update API Key
     
     public func updateAPIKey(_ key: String, for providerId: String) throws {
-        let account = "acmind.provider.\(providerId)"
-        let keyData = key.data(using: .utf8)!
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceIdentifier,
-            kSecAttrAccount as String: account
-        ]
-        
-        let attributes: [String: Any] = [
-            kSecValueData as String: keyData
-        ]
-        
-        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        
-        if status == errSecItemNotFound {
-            // 如果不存在，则创建
-            try saveAPIKey(key, for: providerId)
-        } else if status != errSecSuccess {
-            throw SecretError.updateFailed(status)
-        }
+        try saveAPIKey(key, for: providerId)
     }
     
     // MARK: - Clear All
     
     public func clearAll() throws {
+        settingsDefaults.removeObject(forKey: Self.plaintextKeysStorageKey)
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceIdentifier
@@ -161,6 +119,98 @@ public actor SecretStore {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw SecretError.deleteFailed(status)
         }
+    }
+
+    // MARK: - Private Storage Helpers
+
+    private static let plaintextKeysStorageKey = "acmind.provider.apiKeys.v1"
+
+    private func saveAPIKeyToKeychain(_ apiKey: String, for providerId: String) throws {
+        let account = "acmind.provider.\(providerId)"
+        let keyData = apiKey.data(using: .utf8)!
+
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceIdentifier,
+            kSecAttrAccount as String: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        let addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceIdentifier,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: keyData,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrLabel as String: "AcMind Provider: \(providerId)"
+        ]
+
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecretError.saveFailed(status)
+        }
+    }
+
+    private func loadAPIKeyFromKeychain(for providerId: String) -> String? {
+        let account = "acmind.provider.\(providerId)"
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceIdentifier,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let key = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return key
+    }
+
+    private func deleteAPIKeyFromKeychain(for providerId: String) throws {
+        let account = "acmind.provider.\(providerId)"
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceIdentifier,
+            kSecAttrAccount as String: account
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw SecretError.deleteFailed(status)
+        }
+    }
+
+    private func saveAPIKeyToDefaults(_ apiKey: String, for providerId: String) {
+        var keys = loadPlaintextKeys()
+        keys[providerId] = apiKey
+        settingsDefaults.set(keys, forKey: Self.plaintextKeysStorageKey)
+    }
+
+    private func removeAPIKeyFromDefaults(for providerId: String) {
+        var keys = loadPlaintextKeys()
+        keys.removeValue(forKey: providerId)
+        settingsDefaults.set(keys, forKey: Self.plaintextKeysStorageKey)
+    }
+
+    private func loadAPIKeyFromDefaults(for providerId: String) -> String? {
+        loadPlaintextKeys()[providerId]
+    }
+
+    private func listStoredProviderIdsFromDefaults() -> [String] {
+        Array(loadPlaintextKeys().keys).sorted()
+    }
+
+    private func loadPlaintextKeys() -> [String: String] {
+        settingsDefaults.dictionary(forKey: Self.plaintextKeysStorageKey) as? [String: String] ?? [:]
     }
 }
 

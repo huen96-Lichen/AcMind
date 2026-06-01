@@ -8,12 +8,14 @@ public enum SherpaOnnxModel: String, Sendable, CaseIterable {
     case senseVoiceSmall = "sense_voice_small"
     case qwen3ASR = "qwen3_asr"
     case funASR = "fun_asr"
+    case parakeet = "parakeet"
 
     public var displayName: String {
         switch self {
         case .senseVoiceSmall: return "SenseVoice Small"
         case .qwen3ASR: return "Qwen3-ASR"
         case .funASR: return "FunASR"
+        case .parakeet: return "Parakeet"
         }
     }
 
@@ -23,6 +25,7 @@ public enum SherpaOnnxModel: String, Sendable, CaseIterable {
         case .senseVoiceSmall: return "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
         case .qwen3ASR: return "Qwen/Qwen3-ASR-0.6B"
         case .funASR: return "csukuangfj/sherpa-onnx-paraformer-zh"
+        case .parakeet: return "nvidia/parakeet-tdt-0.6b-v2"
         }
     }
 }
@@ -150,6 +153,15 @@ public final class SherpaOnnxCommandLineDecoder: Sendable {
                 "--provider=cpu",
                 audioURL.path,
             ]
+
+        case .parakeet:
+            return [
+                "--print-args=false",
+                "--tokens=\(modelDirectory.appendingPathComponent("tokens.txt").path)",
+                "--paraformer=\(modelDirectory.appendingPathComponent("model.int8.onnx").path)",
+                "--provider=cpu",
+                audioURL.path,
+            ]
         }
     }
 
@@ -255,6 +267,10 @@ public final class SherpaOnnxCommandLineDecoder: Sendable {
                    fm.fileExists(atPath: modelDir.appendingPathComponent("tokenizer").path)
 
         case .funASR:
+            return fm.fileExists(atPath: modelDir.appendingPathComponent("model.int8.onnx").path) &&
+                   fm.fileExists(atPath: modelDir.appendingPathComponent("tokens.txt").path)
+
+        case .parakeet:
             return fm.fileExists(atPath: modelDir.appendingPathComponent("model.int8.onnx").path) &&
                    fm.fileExists(atPath: modelDir.appendingPathComponent("tokens.txt").path)
         }

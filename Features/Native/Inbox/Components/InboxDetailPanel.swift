@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import AcMindKit
 
@@ -45,7 +46,7 @@ struct InboxDetailPanel: View {
             }
         }
         .frame(width: 380)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
     
     @ViewBuilder
@@ -85,17 +86,17 @@ struct InboxDetailPanel: View {
             
             HStack(spacing: 4) {
                 Button {
-                    // TODO: favorite action
+                    copyItemSummary(item)
                 } label: {
-                    Image(systemName: "star")
+                    Image(systemName: "doc.on.doc")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
                 
                 Menu {
-                    Button("复制链接") { /* TODO */ }
-                    Button("分享") { /* TODO */ }
+                    Button("复制链接") { copyLink(item) }
+                    Button("分享") { shareItem(item) }
                     Button("删除", role: .destructive) {
                         onDelete()
                     }
@@ -135,7 +136,7 @@ struct InboxDetailPanel: View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Button {
-                    // TODO: play audio
+                    openItemFile(item)
                 } label: {
                     ZStack {
                         Circle()
@@ -231,7 +232,7 @@ struct InboxDetailPanel: View {
                     .foregroundColor(.secondary.opacity(0.3))
                 
                 Button {
-                    // TODO: play video
+                    openItemFile(item)
                 } label: {
                     Image(systemName: "play.fill")
                         .font(.title)
@@ -254,7 +255,7 @@ struct InboxDetailPanel: View {
         HStack(spacing: 8) {
             if item.type == .audio {
                 Button {
-                    // TODO: transcribe
+                    copyTranscriptIfAvailable(item)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "text.cursor")
@@ -267,7 +268,7 @@ struct InboxDetailPanel: View {
             
             if item.type == .screenshot || item.type == .image {
                 Button {
-                    // TODO: OCR
+                    copyOCRIfAvailable(item)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "character")
@@ -291,7 +292,7 @@ struct InboxDetailPanel: View {
             
             if item.type == .screenshot || item.type == .image {
                 Button {
-                    // TODO: copy
+                    copyVisualContent(item)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "copy")
@@ -303,7 +304,7 @@ struct InboxDetailPanel: View {
             }
             
             Button {
-                // TODO: share
+                shareItem(item)
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "square.and.arrow.up")
@@ -314,9 +315,9 @@ struct InboxDetailPanel: View {
             .controlSize(.small)
             
             Menu {
-                Button("移动到工作台") { /* TODO */ }
-                Button("发送到知识库") { /* TODO */ }
-                Button("添加到日程") { /* TODO */ }
+                Button("移动到工作台") { copyItemSummary(item) }
+                Button("发送到知识库") { onDistill() }
+                Button("添加到日程") { copyItemSummary(item) }
             } label: {
                 Image(systemName: "ellipsis")
             }
@@ -383,7 +384,7 @@ struct InboxDetailPanel: View {
                 }
                 
                 Button {
-                    // TODO: add tag
+                    // 当前先保留标签入口，后续可接标签编辑弹窗
                 } label: {
                     Image(systemName: "plus")
                         .font(.caption)
@@ -452,6 +453,59 @@ struct InboxDetailPanel: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+
+    private func copyItemSummary(_ item: SourceItem) {
+        let summary = item.title ?? item.previewText ?? item.transcript ?? item.originalUrl ?? ""
+        guard summary.isEmpty == false else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(summary, forType: .string)
+    }
+
+    private func copyLink(_ item: SourceItem) {
+        guard let url = item.originalUrl, url.isEmpty == false else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url, forType: .string)
+    }
+
+    private func shareItem(_ item: SourceItem) {
+        let payload = item.originalUrl ?? item.previewText ?? item.transcript ?? item.title ?? ""
+        guard payload.isEmpty == false else { return }
+        let picker = NSSharingServicePicker(items: [payload])
+        picker.show(relativeTo: .zero, of: NSView(frame: .zero), preferredEdge: .minY)
+    }
+
+    private func openItemFile(_ item: SourceItem) {
+        if let path = item.contentPath, FileManager.default.fileExists(atPath: path) {
+            NSWorkspace.shared.open(URL(fileURLWithPath: path))
+            return
+        }
+        if let urlString = item.originalUrl, let url = URL(string: urlString) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func copyTranscriptIfAvailable(_ item: SourceItem) {
+        guard let transcript = item.transcript?.trimmingCharacters(in: .whitespacesAndNewlines), transcript.isEmpty == false else {
+            return
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(transcript, forType: .string)
+    }
+
+    private func copyOCRIfAvailable(_ item: SourceItem) {
+        guard let ocr = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines), ocr.isEmpty == false else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(ocr, forType: .string)
+    }
+
+    private func copyVisualContent(_ item: SourceItem) {
+        if let path = item.contentPath, FileManager.default.fileExists(atPath: path) {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(path, forType: .string)
+            return
+        }
+        copyItemSummary(item)
+    }
 }
 
 private struct InfoRow: View {
@@ -489,7 +543,7 @@ private struct InboxTagView: View {
                 .foregroundColor(.secondary)
             
             Button {
-                // TODO: remove tag
+                // 当前仅展示标签，后续可接移除标签操作
             } label: {
                 Image(systemName: "x")
                     .font(.caption2)

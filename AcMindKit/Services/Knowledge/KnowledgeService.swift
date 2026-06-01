@@ -202,7 +202,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
                 }
             }
             
-            // 降级：逐字段匹配
+            // 兼容路径：逐字段匹配
             let titleMatch = card.canonicalTitle.lowercased().contains(lowercasedQuery)
             let summaryMatch = card.summary?.lowercased().contains(lowercasedQuery) ?? false
             let tagMatch = card.tags.contains { $0.lowercased().contains(lowercasedQuery) }

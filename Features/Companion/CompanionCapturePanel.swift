@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Foundation
 import AcMindKit
 
 // MARK: - Companion Capture Panel
@@ -34,7 +35,7 @@ struct CompanionCapturePanel: View {
             }
         }
         .frame(width: 480, height: 580)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Header
@@ -101,7 +102,15 @@ struct CompanionCapturePanel: View {
 
             VStack(spacing: 8) {
                 ForEach(viewModel.recentCaptures.prefix(3)) { capture in
-                    RecentCaptureRow(capture: capture)
+                    RecentCaptureRow(
+                        capture: capture,
+                        onCopy: {
+                            viewModel.copyCapture(capture)
+                        },
+                        onDelete: {
+                            viewModel.deleteCapture(id: capture.id)
+                        }
+                    )
                 }
             }
         }
@@ -125,7 +134,7 @@ struct CompanionCapturePanel: View {
                     .toggleStyle(.switch)
             }
             .padding(16)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
         }
     }
@@ -164,7 +173,7 @@ struct CaptureTypeCard: View {
                 Spacer()
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
@@ -190,7 +199,9 @@ struct CaptureTypeCard: View {
 // MARK: - Recent Capture Row
 
 struct RecentCaptureRow: View {
-    let capture: MockCapture
+    let capture: CaptureRecord
+    let onCopy: () -> Void
+    let onDelete: () -> Void
     @State private var isHovered = false
 
     var body: some View {
@@ -225,13 +236,13 @@ struct RecentCaptureRow: View {
             // 悬停操作
             if isHovered {
                 HStack(spacing: 8) {
-                    Button(action: {}) {
+                    Button(action: onCopy) {
                         Image(systemName: "doc.on.doc")
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
 
-                    Button(action: {}) {
+                    Button(action: onDelete) {
                         Image(systemName: "trash")
                             .font(.caption)
                     }
@@ -286,7 +297,7 @@ struct CompanionCaptureStatusBadge: View {
     }
 }
 
-// MARK: - Mock Types
+// MARK: - Capture Types
 
 enum CaptureStatus {
     case success
@@ -302,8 +313,8 @@ enum CaptureStatus {
     }
 }
 
-/// CapturePreview - renamed from MockCapture
-struct MockCapture: Identifiable {
+/// Capture record used for previewing recent items
+struct CaptureRecord: Identifiable {
     let id = UUID()
     let type: CompanionCaptureType
     let title: String
@@ -320,7 +331,7 @@ class CompanionCaptureViewModel: ObservableObject {
     private let captureService: CaptureServiceProtocol
     private let storage: StorageServiceProtocol
 
-    @Published var recentCaptures: [MockCapture] = []
+    @Published var recentCaptures: [CaptureRecord] = []
     @Published var autoSaveToInbox = true
     @Published var openDetailAfterCapture = false
     @Published var showCaptureNotification = true
@@ -347,7 +358,7 @@ class CompanionCaptureViewModel: ObservableObject {
                     .sorted { $0.createdAt > $1.createdAt }
                     .prefix(10)
                     .map { item in
-                        MockCapture(
+                        CaptureRecord(
                             type: mapSourceTypeToCaptureType(item.type),
                             title: item.title ?? "未命名捕获",
                             timestamp: item.createdAt,
@@ -387,6 +398,11 @@ class CompanionCaptureViewModel: ObservableObject {
     func performCapture(type: CompanionCaptureType) {
         Task {
             do {
+                if type == .screenshot, !SettingsLocalPreferences.isCaptureScreenshotEnabled() {
+                    ToastManager.shared.show(.warning, "截图捕获已在设置中关闭")
+                    return
+                }
+
                 let result: CaptureResult
                 switch type {
                 case .screenshot:
@@ -398,10 +414,19 @@ class CompanionCaptureViewModel: ObservableObject {
                     }
                     result = clipboardResult
                 case .selectedText:
-                    result = try await captureService.captureFromManualText("")
+                    let context = await ContextCaptureService.shared.captureContext()
+                    let selectedText = context.selectedText?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let selectedText, !selectedText.isEmpty else {
+                        print("⚠️ 未检测到选中文本")
+                        return
+                    }
+                    result = try await captureService.captureFromManualText(selectedText)
                 case .webpage:
-                    // TODO: 获取当前浏览器 URL
-                    result = try await captureService.captureFromManualText("")
+                    guard let url = Self.frontmostBrowserURL() else {
+                        print("⚠️ 未检测到当前网页 URL")
+                        return
+                    }
+                    result = try await captureService.captureFromWebpage(url: url)
                 }
                 _ = result
 
@@ -422,6 +447,57 @@ class CompanionCaptureViewModel: ObservableObject {
 
     func showAllCaptures() {
         NotificationCenter.default.post(name: .companionShowInbox, object: nil)
+    }
+
+    func copyCapture(_ capture: CaptureRecord) {
+        let text = "\(capture.title)\n\(formatDate(capture.timestamp))"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    func deleteCapture(id: UUID) {
+        recentCaptures.removeAll { $0.id == id }
+    }
+
+    private static func frontmostBrowserURL() -> URL? {
+        let script = """
+        on browserURL(appName)
+            tell application appName
+                if it is running then
+                    try
+                        if exists front window then
+                            set tabRef to current tab of front window
+                            if tabRef is not missing value then
+                                return URL of tabRef
+                            end if
+                        end if
+                    end try
+                end if
+            end tell
+            return ""
+        end browserURL
+
+        set browserApps to {"Safari", "Google Chrome", "Microsoft Edge"}
+        repeat with appName in browserApps
+            set value to browserURL(appName)
+            if value is not "" then return value
+        end repeat
+        return ""
+        """
+
+        guard let appleScript = NSAppleScript(source: script) else { return nil }
+        var error: NSDictionary?
+        let output = appleScript.executeAndReturnError(&error)
+        if error != nil { return nil }
+        let urlString = output.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return URL(string: urlString)
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

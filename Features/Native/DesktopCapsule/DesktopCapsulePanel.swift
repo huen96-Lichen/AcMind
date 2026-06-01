@@ -13,6 +13,7 @@ final class DesktopCapsulePanel: NSPanel {
     static let shared = DesktopCapsulePanel()
 
     private var hostingView: NSHostingView<DesktopCapsuleView>?
+    private var isDockedToNotch = false
 
     private init() {
         super.init(
@@ -39,6 +40,7 @@ final class DesktopCapsulePanel: NSPanel {
         self.acceptsMouseMovedEvents = true
         self.hidesOnDeactivate = false
         self.becomesKeyOnlyIfNeeded = true
+        self.delegate = self
     }
 
     private func setupContentView() {
@@ -51,6 +53,9 @@ final class DesktopCapsulePanel: NSPanel {
     // MARK: - Public Methods
 
     func show(at position: CGPoint? = nil) {
+        isDockedToNotch = false
+        alphaValue = 1
+        NotchPanel.shared.hide()
         if let position = position {
             setFrameOrigin(position)
         } else {
@@ -61,6 +66,16 @@ final class DesktopCapsulePanel: NSPanel {
     }
 
     func hide() {
+        isDockedToNotch = false
+        alphaValue = 1
+        orderOut(nil)
+    }
+
+    func dockToNotch() {
+        guard isVisible, isDockedToNotch == false else { return }
+
+        isDockedToNotch = true
+        alphaValue = 0
         orderOut(nil)
     }
 
@@ -133,6 +148,12 @@ final class DesktopCapsulePanel: NSPanel {
     }
 }
 
+extension DesktopCapsulePanel: NSWindowDelegate {
+    func windowDidMove(_ notification: Notification) {
+        DesktopCapsuleDockingCoordinator.shared.handleWindowMoved(self)
+    }
+}
+
 // MARK: - Desktop Capsule View
 
 struct DesktopCapsuleView: View {
@@ -162,7 +183,7 @@ struct DesktopCapsuleView: View {
         Button(action: { viewModel.toggleExpand() }) {
             ZStack {
                 Circle()
-                    .fill(Color(NSColor.windowBackgroundColor))
+                    .fill(AppSurfaceTokens.background)
                     .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
 
                 Image(systemName: "brain.head.profile")
@@ -235,7 +256,7 @@ struct DesktopCapsuleView: View {
         .frame(height: 42)
         .background(
             Capsule()
-                .fill(Color(NSColor.windowBackgroundColor))
+                .fill(AppSurfaceTokens.background)
                 .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
         )
         .onHover { hovering in

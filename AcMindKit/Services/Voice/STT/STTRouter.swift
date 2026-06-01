@@ -15,6 +15,7 @@ public final class STTRouter: @unchecked Sendable {
     private var senseVoiceTranscriber: Transcriber?
     private var whisperKitTranscriber: Transcriber?
     private var qwen3ASRTranscriber: Transcriber?
+    private var parakeetTranscriber: Transcriber?
     private var appleSpeechTranscriber: Transcriber?
     private var openAITranscriber: Transcriber?
     private var aliCloudTranscriber: Transcriber?
@@ -57,6 +58,20 @@ public final class STTRouter: @unchecked Sendable {
         try await transcribeStream(audioFile: audioFile) { _ in }
     }
     
+    public func transcribe(
+        audioFile: AudioFile,
+        language: String
+    ) async throws -> String {
+        if language != "auto" {
+            let langProvider = selectProviderForLanguage(language)
+            if langProvider != currentProvider {
+                let transcriber = try await getTranscriber(for: langProvider)
+                return try await transcriber.transcribe(audioFile: audioFile)
+            }
+        }
+        return try await transcribe(audioFile: audioFile)
+    }
+    
     public func transcribeStream(
         audioFile: AudioFile,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
@@ -69,17 +84,28 @@ public final class STTRouter: @unchecked Sendable {
                 onUpdate: onUpdate
             )
         } catch {
-            // 尝试 fallback 到系统听写
+            // 尝试兼容路径：系统听写
             if currentProvider != .appleSpeech {
-                print("STT failed with \(currentProvider), falling back to Apple Speech: \(error)")
-                if let fallback = appleSpeechTranscriber {
-                    return try await fallback.transcribeStream(
+                print("STT failed with \(currentProvider), using Apple Speech compatibility path: \(error)")
+                if let compatibilityTranscriber = appleSpeechTranscriber {
+                    return try await compatibilityTranscriber.transcribeStream(
                         audioFile: audioFile,
                         onUpdate: onUpdate
                     )
                 }
             }
             throw error
+        }
+    }
+    
+    // MARK: - Language Routing
+    
+    private func selectProviderForLanguage(_ language: String) -> STTProvider {
+        switch language {
+        case "zh": return .senseVoice
+        case "en": return .parakeet
+        case "ja": return .whisperKit
+        default: return currentProvider
         }
     }
     
@@ -93,6 +119,8 @@ public final class STTRouter: @unchecked Sendable {
             await (whisperKitTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
         case .qwen3ASR:
             await (qwen3ASRTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
+        case .parakeet:
+            await (parakeetTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
         default:
             break
         }
@@ -106,6 +134,8 @@ public final class STTRouter: @unchecked Sendable {
             await (whisperKitTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
         case .qwen3ASR:
             await (qwen3ASRTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
+        case .parakeet:
+            await (parakeetTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
         default:
             break
         }
@@ -138,6 +168,14 @@ public final class STTRouter: @unchecked Sendable {
             }
             let transcriber = try await createQwen3ASRTranscriber()
             qwen3ASRTranscriber = transcriber
+            return transcriber
+            
+        case .parakeet:
+            if let transcriber = parakeetTranscriber {
+                return transcriber
+            }
+            let transcriber = try await createParakeetTranscriber()
+            parakeetTranscriber = transcriber
             return transcriber
             
         case .appleSpeech:
@@ -173,7 +211,7 @@ public final class STTRouter: @unchecked Sendable {
             return transcriber
             
         default:
-            // Fallback to Apple Speech
+            // 兼容路径：Apple Speech
             if let transcriber = appleSpeechTranscriber {
                 return transcriber
             }
@@ -188,19 +226,34 @@ public final class STTRouter: @unchecked Sendable {
     private func createSenseVoiceTranscriber() async throws -> Transcriber {
         // SenseVoice 基于 sherpa-onnx，需要先下载模型
         // 模型下载: https://github.com/k2-fsa/sherpa-onnx/releases
-        // 默认模型路径: ~/Library/Application Support/AcMind/models/sensevoice
-        let modelPath = NSHomeDirectory() + "/Library/Application Support/AcMind/models/sensevoice"
-        let modelDir = URL(fileURLWithPath: modelPath)
-        let modelExists = FileManager.default.fileExists(atPath: modelDir.path)
+        // 默认模型路径: ~/Library/Application Support/AcMind/LocalModels
+        let modelFolder: String
+        if let sherpaOnnxModelFolder {
+            modelFolder = sherpaOnnxModelFolder
+        } else {
+            let modelsDirectory = await LocalASRManager.shared.getModelsDirectory()
+            modelFolder = modelsDirectory.path
+        }
+        let storageURL = URL(fileURLWithPath: modelFolder, isDirectory: true)
+        let decoder = SherpaOnnxCommandLineDecoder(
+            model: .senseVoiceSmall,
+            modelIdentifier: "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17",
+            modelFolder: modelFolder
+        )
 
-        guard modelExists else {
-            throw STTError.modelNotDownloaded(
-                "SenseVoice 模型未找到。请在设置中下载模型，" +
-                "或手动放置到: \(modelPath)"
+        guard decoder.isRuntimeInstalled(storageURL: storageURL) else {
+            throw STTError.providerNotAvailable(
+                "sherpa-onnx 运行时未找到。请先在模型管理中下载运行时。"
             )
         }
 
-        return SenseVoiceTranscriber(modelPath: modelPath)
+        guard decoder.isModelInstalled(storageURL: storageURL) else {
+            throw STTError.modelNotDownloaded(
+                "SenseVoice 模型未找到。请先在模型管理中下载后重试。"
+            )
+        }
+
+        return SenseVoiceTranscriber(modelFolder: modelFolder)
     }
 
     private func createWhisperKitTranscriber() async throws -> Transcriber {
@@ -253,6 +306,41 @@ public final class STTRouter: @unchecked Sendable {
             modelIdentifier: "Qwen/Qwen3-ASR-0.6B",
             modelFolder: modelFolder
         )
+    }
+
+    private func createParakeetTranscriber() async throws -> Transcriber {
+        guard let modelFolder = sherpaOnnxModelFolder else {
+            throw STTError.providerNotAvailable("sherpa-onnx 模型目录未配置")
+        }
+
+        let storageURL = URL(fileURLWithPath: modelFolder, isDirectory: true)
+
+        let decoder = SherpaOnnxCommandLineDecoder(
+            model: .parakeet,
+            modelIdentifier: "nvidia/parakeet-tdt-0.6b-v2",
+            modelFolder: modelFolder
+        )
+
+        guard decoder.isRuntimeInstalled(storageURL: storageURL) else {
+            throw STTError.modelNotDownloaded(
+                "sherpa-onnx 运行时未找到。\n" +
+                "请下载 sherpa-onnx-macos tar.bz2 并解压到:\n" +
+                "\(modelFolder)/sherpa-onnx-macos/\n" +
+                "下载地址: https://github.com/k2-fsa/sherpa-onnx/releases"
+            )
+        }
+
+        guard decoder.isModelInstalled(storageURL: storageURL) else {
+            throw STTError.modelNotDownloaded(
+                "Parakeet 模型文件不完整。\n" +
+                "需要以下文件:\n" +
+                "  - parakeet/model.int8.onnx\n" +
+                "  - parakeet/tokens.txt\n" +
+                "下载地址: https://github.com/k2-fsa/sherpa-onnx/releases"
+            )
+        }
+
+        return ParakeetTranscriber(modelFolder: modelFolder)
     }
     
     private func createOpenAITranscriber() async throws -> Transcriber {

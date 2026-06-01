@@ -108,7 +108,7 @@ struct CapsuleContentView: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(NSColor.windowBackgroundColor))
+                    .fill(AppSurfaceTokens.background)
                     .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
             )
 
@@ -148,7 +148,7 @@ struct CapsuleContentView: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(NSColor.windowBackgroundColor))
+                        .fill(AppSurfaceTokens.background)
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -177,6 +177,12 @@ struct CapsuleContentView: View {
     }
 
     private func captureScreenshot(mode: ScreenshotMode) {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            errorMessage = "截图捕获已在设置中关闭"
+            showError = true
+            return
+        }
+
         isCapturing = true
 
         Task {
@@ -318,6 +324,12 @@ struct CapsuleContentView: View {
     @State private var recordingTimer: Timer?
 
     private func captureVoice() {
+        guard SettingsLocalPreferences.isVoiceInputEnabled() else {
+            errorMessage = "说入法输入已在设置中关闭"
+            showError = true
+            return
+        }
+
         Task {
             if isRecordingVoice {
                 await stopVoiceRecording()

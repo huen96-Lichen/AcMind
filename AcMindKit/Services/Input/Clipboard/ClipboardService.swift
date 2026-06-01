@@ -18,6 +18,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
     
     private let storage: StorageServiceProtocol
     private let assetStore: AssetStore
+    private let settingsDefaults: UserDefaults
     
     // MARK: - State
     
@@ -40,10 +41,12 @@ public final class ClipboardService: ClipboardServiceProtocol {
     
     public init(
         storage: StorageServiceProtocol? = nil,
-        assetStore: AssetStore? = nil
+        assetStore: AssetStore? = nil,
+        settingsDefaults: UserDefaults = .standard
     ) {
         self.storage = storage ?? StorageService()
         self.assetStore = assetStore ?? AssetStore()
+        self.settingsDefaults = settingsDefaults
     }
     
     // MARK: - Lifecycle
@@ -87,6 +90,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
     
     private func checkClipboard() async {
         guard !isPaused else { return }
+        guard shouldCaptureAutomatically else { return }
         
         let pasteboard = NSPasteboard.general
         let currentChangeCount = pasteboard.changeCount
@@ -193,6 +197,19 @@ public final class ClipboardService: ClipboardServiceProtocol {
         await MainActor.run {
             NSWorkspace.shared.frontmostApplication?.localizedName
         }
+    }
+
+    private var shouldCaptureAutomatically: Bool {
+        let preferences = SettingsLocalPreferences.loadOrDefault(from: settingsDefaults)
+        return Self.shouldCaptureAutomatically(
+            captureOnlyWhenAppActive: preferences.captureOnlyWhenAppActive,
+            isAppActive: NSApp.isActive
+        )
+    }
+
+    nonisolated static func shouldCaptureAutomatically(captureOnlyWhenAppActive: Bool, isAppActive: Bool) -> Bool {
+        guard captureOnlyWhenAppActive else { return true }
+        return isAppActive
     }
     
     private func hashForItem(_ item: ClipboardItem) -> String {

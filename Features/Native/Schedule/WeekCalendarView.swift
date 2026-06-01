@@ -68,7 +68,7 @@ private struct WeekHeader: View {
             }
         }
         .padding(.vertical, 8)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 }
 
@@ -106,7 +106,7 @@ private struct AllDayEventRow: View {
             }
         }
         .padding(.vertical, 4)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 }
 

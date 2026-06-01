@@ -4,53 +4,53 @@ import Foundation
 
 /// SenseVoice 本地语音识别
 /// 基于 sherpa-onnx 实现
-/// 
-/// ⚠️ TODO: 需要集成 sherpa-onnx 依赖
-/// 依赖: https://github.com/k2-fsa/sherpa-onnx
+/// 依赖: sherpa-onnx 运行时
 /// 模型大小: ~350MB (SenseVoiceSmall)
 /// 支持语言: 中文、英文、日语、韩语、粤语
-public final class SenseVoiceTranscriber: Transcriber {
+public final class SenseVoiceTranscriber: Transcriber, RecordingPrewarmingTranscriber {
     
     // MARK: - Properties
     
-    private let modelPath: String
-    private let processRunner: ProcessCommandRunning
+    private let modelFolder: String
+    private let decoder: SherpaOnnxCommandLineDecoder
     
     // MARK: - Initialization
     
     public init(
-        modelPath: String,
+        modelFolder: String,
         processRunner: ProcessCommandRunning = ProcessCommandRunner()
     ) {
-        self.modelPath = modelPath
-        self.processRunner = processRunner
+        self.modelFolder = modelFolder
+        self.decoder = SherpaOnnxCommandLineDecoder(
+            model: .senseVoiceSmall,
+            modelIdentifier: "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17",
+            modelFolder: modelFolder,
+            processRunner: processRunner
+        )
     }
     
     // MARK: - Transcriber Protocol
-    
+
     public func transcribe(audioFile: AudioFile) async throws -> String {
-        // ⚠️ TODO: 实现 SenseVoice 转写
-        // 1. 检查模型文件是否存在
-        // 2. 调用 sherpa-onnx 命令行工具
-        // 3. 解析输出结果
-        
-        throw STTError.providerNotAvailable(
-            "SenseVoice 尚未实现。需要:\n" +
-            "1. 集成 sherpa-onnx 依赖\n" +
-            "2. 下载 SenseVoice 模型 (~350MB)\n" +
-            "3. 实现命令行调用"
-        )
+        try await decoder.decode(audioFile: audioFile)
     }
     
     public func transcribeStream(
         audioFile: AudioFile,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
     ) async throws -> String {
-        // ⚠️ TODO: 实现流式转写
-        // SenseVoice 本身不支持流式，需要模拟
-        
         let text = try await transcribe(audioFile: audioFile)
         await onUpdate(TranscriptionSnapshot(text: text, isFinal: true))
         return text
+    }
+
+    // MARK: - RecordingPrewarmingTranscriber
+
+    public func prepareForRecording() async {
+        _ = modelFolder
+    }
+
+    public func cancelPreparedRecording() async {
+        // CLI 模式不需要预热取消
     }
 }

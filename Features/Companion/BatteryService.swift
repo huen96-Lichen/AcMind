@@ -17,23 +17,37 @@ public struct BatteryInfo: Sendable {
     public var isCharging: Bool
     public var currentCapacity: Float
     public var maxCapacity: Float
+    public var designCapacity: Float?
     public var isInLowPowerMode: Bool
     public var timeToFullCharge: Int
+    public var powerSourceState: String
+    public var healthPercentage: Float?
+
+    public var percentage: Float {
+        guard maxCapacity > 0 else { return currentCapacity }
+        return max(0, min(100, (currentCapacity / maxCapacity) * 100))
+    }
 
     public init(
         isPluggedIn: Bool = false,
         isCharging: Bool = false,
         currentCapacity: Float = 0,
         maxCapacity: Float = 100,
+        designCapacity: Float? = nil,
         isInLowPowerMode: Bool = false,
-        timeToFullCharge: Int = 0
+        timeToFullCharge: Int = 0,
+        powerSourceState: String = "",
+        healthPercentage: Float? = nil
     ) {
         self.isPluggedIn = isPluggedIn
         self.isCharging = isCharging
         self.currentCapacity = currentCapacity
         self.maxCapacity = maxCapacity
+        self.designCapacity = designCapacity
         self.isInLowPowerMode = isInLowPowerMode
         self.timeToFullCharge = timeToFullCharge
+        self.powerSourceState = powerSourceState
+        self.healthPercentage = healthPercentage
     }
 }
 
@@ -114,17 +128,25 @@ public class BatteryService: ObservableObject {
 
             let currentCapacity = description[kIOPSCurrentCapacityKey] as? Float ?? 0
             let maxCapacity = description[kIOPSMaxCapacityKey] as? Float ?? 100
+            let designCapacity = description[kIOPSDesignCapacityKey] as? Float
             let isCharging = description["Is Charging"] as? Bool ?? false
             let powerSource = description[kIOPSPowerSourceStateKey] as? String ?? ""
             let timeToFullCharge = description[kIOPSTimeToFullChargeKey] as? Int ?? 0
+            let healthPercentage: Float? = {
+                guard let designCapacity, designCapacity > 0 else { return nil }
+                return max(0, min(100, (maxCapacity / designCapacity) * 100))
+            }()
 
             batteryInfo = BatteryInfo(
                 isPluggedIn: powerSource == kIOPSACPowerValue,
                 isCharging: isCharging,
                 currentCapacity: currentCapacity,
                 maxCapacity: maxCapacity,
-                isInLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
-                timeToFullCharge: timeToFullCharge
+                designCapacity: designCapacity,
+                isInLowPowerMode: Foundation.ProcessInfo.processInfo.isLowPowerModeEnabled,
+                timeToFullCharge: timeToFullCharge,
+                powerSourceState: powerSource,
+                healthPercentage: healthPercentage
             )
         } catch {
             // 保持默认值
@@ -151,7 +173,7 @@ public struct BatteryIndicatorView: View {
     public var body: some View {
         HStack(spacing: 6) {
             if showPercentage {
-                Text("\(Int(batteryService.batteryInfo.currentCapacity))%")
+                Text("\(Int(batteryService.batteryInfo.percentage.rounded()))%")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.white)
             }
@@ -174,7 +196,7 @@ public struct BatteryIndicatorView: View {
             RoundedRectangle(cornerRadius: 2.5)
                 .fill(batteryColor)
                 .frame(
-                    width: CGFloat((CGFloat(batteryService.batteryInfo.currentCapacity) / 100) * (batteryWidth - 6)),
+                    width: CGFloat((CGFloat(batteryService.batteryInfo.percentage) / 100) * (batteryWidth - 6)),
                     height: (batteryWidth - 2.75) - 18
                 )
                 .padding(.leading, 2)
@@ -195,9 +217,9 @@ public struct BatteryIndicatorView: View {
         let info = batteryService.batteryInfo
         if info.isInLowPowerMode {
             return .yellow
-        } else if info.currentCapacity <= 20 && !info.isCharging && !info.isPluggedIn {
+        } else if info.percentage <= 20 && !info.isCharging && !info.isPluggedIn {
             return .red
-        } else if info.isCharging || info.isPluggedIn || info.currentCapacity == 100 {
+        } else if info.isCharging || info.isPluggedIn || info.percentage >= 100 {
             return .green
         } else {
             return .white

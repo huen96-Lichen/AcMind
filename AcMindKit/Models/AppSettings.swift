@@ -3,7 +3,7 @@ import Foundation
 // MARK: - AppSettings（应用设置）
 
 /// 全局应用设置
-/// 对齐 Electron app_settings 表
+/// 对齐旧版 app_settings 表
 public struct AppSettings: Codable, Sendable, Equatable {
     // 外观
     public var theme: AppTheme
@@ -12,6 +12,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
     // AI 默认配置
     public var defaultProviderId: String?
     public var defaultModelId: String?
+    public var modelRoutingStrategy: ModelRoutingStrategy
 
     // Vault
     public var vaultPath: String
@@ -27,28 +28,35 @@ public struct AppSettings: Codable, Sendable, Equatable {
     // 桌面胶囊
     public var desktopCapsule: DesktopCapsuleSettings
 
+    // 热区触发角
+    public var hotCornerSettings: HotCornerSettings
+
     public init(
         theme: AppTheme = .system,
         language: String = "zh-CN",
         defaultProviderId: String? = nil,
         defaultModelId: String? = nil,
+        modelRoutingStrategy: ModelRoutingStrategy = .automatic,
         vaultPath: String = "",
         autoCaptureClipboard: Bool = true,
         captureScreenshotHotkey: String? = nil,
         defaultExportTarget: ExportTarget = .obsidian,
         autoFrontmatter: Bool = true,
-        desktopCapsule: DesktopCapsuleSettings = .default
+        desktopCapsule: DesktopCapsuleSettings = .default,
+        hotCornerSettings: HotCornerSettings = .defaultSettings
     ) {
         self.theme = theme
         self.language = language
         self.defaultProviderId = defaultProviderId
         self.defaultModelId = defaultModelId
+        self.modelRoutingStrategy = modelRoutingStrategy
         self.vaultPath = vaultPath
         self.autoCaptureClipboard = autoCaptureClipboard
         self.captureScreenshotHotkey = captureScreenshotHotkey
         self.defaultExportTarget = defaultExportTarget
         self.autoFrontmatter = autoFrontmatter
         self.desktopCapsule = desktopCapsule
+        self.hotCornerSettings = hotCornerSettings
     }
 }
 
@@ -77,17 +85,50 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
     public var defaultLanguage: String
     public var autoPolish: Bool
     public var voicePolishMode: VoicePolishMode
+    public var triggerMode: SayInputTriggerMode
+    public var silenceTimeout: TimeInterval
+    public var enableSilenceDetection: Bool
+    public var outputMode: SayInputOutputMode
+    public var saveToInbox: Bool
+    public var allowContinuation: Bool
+    public var continuationWindow: TimeInterval
+    public var enablePunctuationAppend: Bool
+    public var injectionStrategy: String
+    public var enableCloudSync: Bool
+    public var preferredLanguage: String
 
     public init(
         defaultProvider: String = "whisper",
         defaultLanguage: String = "zh",
         autoPolish: Bool = true,
-        voicePolishMode: VoicePolishMode = .light
+        voicePolishMode: VoicePolishMode = .light,
+        triggerMode: SayInputTriggerMode = .hold,
+        silenceTimeout: TimeInterval = 3.0,
+        enableSilenceDetection: Bool = false,
+        outputMode: SayInputOutputMode = .copyToClipboard,
+        saveToInbox: Bool = true,
+        allowContinuation: Bool = true,
+        continuationWindow: TimeInterval = 12.0,
+        enablePunctuationAppend: Bool = false,
+        injectionStrategy: String = "postToPid",
+        enableCloudSync: Bool = false,
+        preferredLanguage: String = "auto"
     ) {
         self.defaultProvider = defaultProvider
         self.defaultLanguage = defaultLanguage
         self.autoPolish = autoPolish
         self.voicePolishMode = voicePolishMode
+        self.triggerMode = triggerMode
+        self.silenceTimeout = silenceTimeout
+        self.enableSilenceDetection = enableSilenceDetection
+        self.outputMode = outputMode
+        self.saveToInbox = saveToInbox
+        self.allowContinuation = allowContinuation
+        self.continuationWindow = continuationWindow
+        self.enablePunctuationAppend = enablePunctuationAppend
+        self.injectionStrategy = injectionStrategy
+        self.enableCloudSync = enableCloudSync
+        self.preferredLanguage = preferredLanguage
     }
 }
 
@@ -121,6 +162,26 @@ public extension PolishMode {
     }
 }
 
+public extension VoiceSettings {
+    /// 将语音设置转换为说入法配置
+    var asSayInputConfiguration: SayInputConfiguration {
+        SayInputConfiguration(
+            autoPolish: autoPolish,
+            polishMode: voicePolishMode,
+            outputMode: outputMode,
+            saveToInbox: saveToInbox,
+            allowContinuation: allowContinuation,
+            continuationWindow: continuationWindow,
+            transcriptTimeout: 30.0,
+            transcriptPollInterval: 1.0,
+            triggerMode: triggerMode,
+            silenceTimeout: silenceTimeout,
+            enableSilenceDetection: enableSilenceDetection,
+            preferredLanguage: preferredLanguage
+        )
+    }
+}
+
 // MARK: - System Types
 
 public enum SystemPermission: String, Codable, Sendable, Hashable, CaseIterable {
@@ -129,9 +190,10 @@ public enum SystemPermission: String, Codable, Sendable, Hashable, CaseIterable 
     case accessibility
     case fullDiskAccess
     case notifications
+    case speechRecognition
 
     public static var allCases: [SystemPermission] {
-        [.microphone, .screenRecording, .accessibility, .fullDiskAccess, .notifications]
+        [.microphone, .screenRecording, .accessibility, .fullDiskAccess, .notifications, .speechRecognition]
     }
 
     public var displayName: String {
@@ -141,6 +203,7 @@ public enum SystemPermission: String, Codable, Sendable, Hashable, CaseIterable 
         case .accessibility: return "辅助功能"
         case .fullDiskAccess: return "完全磁盘访问"
         case .notifications: return "通知"
+        case .speechRecognition: return "语音识别"
         }
     }
 }
@@ -208,6 +271,7 @@ public extension SystemPermission {
         case .accessibility: return .accessibility
         case .fullDiskAccess: return .fullDiskAccess
         case .notifications: return .notifications
+        case .speechRecognition: return .speechRecognition
         }
     }
 }

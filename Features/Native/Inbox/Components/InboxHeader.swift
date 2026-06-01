@@ -4,6 +4,7 @@ import AcMindKit
 struct InboxHeader: View {
     @Binding var searchQuery: String
     @Binding var selectedType: SourceType?
+    @Binding var selectedStatus: SourceItemStatus?
     let counts: [SourceType: Int]
     let totalCount: Int
     let totalSize: String
@@ -45,7 +46,7 @@ struct InboxHeader: View {
                 HStack(spacing: 0) {
                     // List view
                     Button {
-                        // TODO: switch to list view
+                        selectedStatus = nil
                     } label: {
                         Image(systemName: "list.bullet")
                             .font(.caption)
@@ -55,7 +56,7 @@ struct InboxHeader: View {
                     
                     // Compact view
                     Button {
-                        // TODO: switch to compact view
+                        selectedStatus = .pending
                     } label: {
                         Image(systemName: "square.grid.2x2")
                             .font(.caption)
@@ -65,7 +66,7 @@ struct InboxHeader: View {
                     
                     // Card view
                     Button {
-                        // TODO: switch to card view
+                        selectedStatus = .distilled
                     } label: {
                         Image(systemName: "square.grid.3x3")
                             .font(.caption)
@@ -114,11 +115,12 @@ struct InboxHeader: View {
                 
                 // 筛选器按钮
                 Menu {
-                    Button("未处理") { /* TODO */ }
-                    Button("待 AI 整理") { /* TODO */ }
-                    Button("整理中") { /* TODO */ }
-                    Button("已整理") { /* TODO */ }
-                    Button("已归档") { /* TODO */ }
+                    Button("全部") { selectedStatus = nil }
+                    Button("未处理") { selectedStatus = .inbox }
+                    Button("待 AI 整理") { selectedStatus = .pending }
+                    Button("整理中") { selectedStatus = .distilling }
+                    Button("已整理") { selectedStatus = .distilled }
+                    Button("已归档") { selectedStatus = .archived }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "filter")

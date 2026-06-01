@@ -110,6 +110,7 @@ public class MusicService: ObservableObject {
     @Published public var repeatMode: RepeatMode = .off
 
     private var updateTimer: Timer?
+    private var currentArtworkData: Data?
 
     // MARK: - Initialization
 
@@ -175,8 +176,10 @@ public class MusicService: ObservableObject {
         timestampDate = Date()
         if let artworkData = snapshot.artworkData, let image = NSImage(data: artworkData) {
             albumArt = image
+            currentArtworkData = artworkData
         } else {
             albumArt = nil
+            currentArtworkData = nil
         }
 
         Self.logger.debug(
@@ -191,6 +194,7 @@ public class MusicService: ObservableObject {
             title: songTitle,
             artist: artistName,
             album: album,
+            artwork: currentArtworkData,
             isPlaying: isPlaying,
             duration: songDuration,
             currentTime: elapsedTime,
@@ -295,7 +299,7 @@ public class MusicService: ObservableObject {
                 return
             }
         }
-        // 降级：打开汽水音乐
+        // 兼容路径：打开汽水音乐
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.soda.music") {
             NSWorkspace.shared.open(url)
         }
@@ -529,7 +533,7 @@ private enum QishuiMusicNowPlayingProbe {
         
         let isTrusted = AXIsProcessTrusted()
         if !isTrusted {
-            logger.debug("Accessibility not trusted, trying AppleScript fallback for 汽水音乐")
+            logger.debug("Accessibility not trusted, trying AppleScript compatibility path for 汽水音乐")
             return await fetchWithAppleScript(logger: logger)
         }
 

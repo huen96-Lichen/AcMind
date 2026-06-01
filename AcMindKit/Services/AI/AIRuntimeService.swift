@@ -17,65 +17,73 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     private var defaultProviderId: String?
     private let taskQueue: TaskQueue
     private let storage: StorageServiceProtocol
+    private let settingsDefaults: UserDefaults
     
     // MARK: - Initialization
     
-    public init(storage: StorageServiceProtocol? = nil) {
+    public convenience init(storage: StorageServiceProtocol? = nil) {
+        self.init(storage: storage, settingsDefaults: .standard)
+    }
+
+    public init(storage: StorageServiceProtocol? = nil, settingsDefaults: UserDefaults = .standard) {
         self.storage = storage ?? StorageService()
         self.taskQueue = TaskQueue(maxConcurrent: 2)
+        self.settingsDefaults = settingsDefaults
     }
     
     // MARK: - Provider Management
-    
+
     public func listProviders() async -> [ProviderConfig] {
-        configs
+        await refreshProvidersFromStorageIfNeeded()
+        return configs
     }
-    
+
     public func addProvider(_ config: ProviderConfig) async throws {
-        // 检查是否已存在
+        await refreshProvidersFromStorageIfNeeded()
+
         if configs.contains(where: { $0.id == config.id }) {
             throw AIError.providerNotFound("Provider 已存在: \(config.id)")
         }
-        
-        // 初始化 Provider
+
+        try await storage.addProvider(config)
         try await initProvider(config)
-        
         configs.append(config)
-        
-        // 设置为默认（如果是第一个）
+
         if configs.count == 1 {
             defaultProviderId = config.id
         }
     }
-    
+
     public func updateProvider(_ config: ProviderConfig) async throws {
+        await refreshProvidersFromStorageIfNeeded()
+
         guard let index = configs.firstIndex(where: { $0.id == config.id }) else {
             throw AIError.providerNotFound(config.id)
         }
-        
-        // 移除旧的 Provider 实例
+
         providers.removeValue(forKey: config.id)
-        
-        // 重新初始化
+
+        try await storage.updateProvider(config)
         try await initProvider(config)
-        
+
         configs[index] = config
     }
-    
+
     public func removeProvider(id: String) async throws {
+        await refreshProvidersFromStorageIfNeeded()
+
         guard let index = configs.firstIndex(where: { $0.id == id }) else {
             throw AIError.providerNotFound(id)
         }
-        
+
         configs.remove(at: index)
         providers.removeValue(forKey: id)
-        
-        // 更新默认 Provider
+
         if defaultProviderId == id {
             defaultProviderId = configs.first?.id
         }
-        
-        // 删除存储的 API Key
+
+        try await storage.removeProvider(id: id)
         try? await SecretStore.shared.deleteAPIKey(for: id)
     }
     
@@ -85,7 +93,14 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         }
         return try await provider.healthCheck()
     }
-    
+
+    public func listModels(providerId: String) async throws -> [String] {
+        guard let provider = providers[providerId] else {
+            throw AIError.providerNotFound(providerId)
+        }
+        return try await provider.listModels()
+    }
+
     public func healthCheckAll() async -> [String: Bool] {
         var results: [String: Bool] = [:]
         for (id, provider) in providers {
@@ -108,7 +123,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Chat
     
     public func chat(messages: [ChatMessage]) async throws -> ChatResponse {
-        guard let providerId = defaultProviderId,
+        guard let providerId = preferredProviderId(),
               let provider = providers[providerId] else {
             throw AIError.noProvider
         }
@@ -140,7 +155,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let providerId = defaultProviderId,
+                    guard let providerId = self.preferredProviderId(),
                           let provider = providers[providerId] else {
                         continuation.finish(throwing: AIError.noProvider)
                         return
@@ -166,7 +181,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Distillation
     
     public func runDistillation(sourceItem: SourceItem) async throws -> DistilledNote {
-        guard let providerId = defaultProviderId,
+        guard let providerId = preferredProviderId(),
               let provider = providers[providerId] else {
             throw AIError.noProvider
         }
@@ -323,15 +338,6 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         await taskQueue.stats()
     }
     
-    // MARK: - Models
-    
-    public func listModels(providerId: String) async throws -> [String] {
-        guard let provider = providers[providerId] else {
-            throw AIError.providerNotFound(providerId)
-        }
-        return try await provider.listModels()
-    }
-    
     // MARK: - Private
     
     private func initProvider(_ config: ProviderConfig) async throws {
@@ -359,5 +365,40 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             )
             providers[config.id] = provider
         }
+    }
+
+    private func refreshProvidersFromStorageIfNeeded() async {
+        let storedConfigs = (try? await storage.listProviders()) ?? []
+
+        configs = storedConfigs
+        providers = [:]
+
+        for config in storedConfigs {
+            do {
+                try await initProvider(config)
+            } catch {
+                // 没有 API Key 或 Provider 初始化失败时，仍保留配置供 UI 展示
+            }
+        }
+
+        if let currentDefaultProviderId = defaultProviderId,
+           configs.contains(where: { $0.id == currentDefaultProviderId }) == false {
+            defaultProviderId = configs.first?.id
+        } else if defaultProviderId == nil {
+            defaultProviderId = configs.first?.id
+        }
+    }
+
+    func preferredProviderId(explicitProviderId: String? = nil) -> String? {
+        if let explicitProviderId {
+            return explicitProviderId
+        }
+
+        let prefersLocal = SettingsLocalPreferences.loadOrDefault(from: settingsDefaults).localFirstMode
+        if prefersLocal, let localProvider = configs.first(where: { $0.tier.isLocal }) {
+            return localProvider.id
+        }
+
+        return defaultProviderId ?? configs.first?.id
     }
 }

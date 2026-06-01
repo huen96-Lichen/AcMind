@@ -4,15 +4,15 @@ import PackageDescription
 
 // MARK: - AcMind Package Configuration
 //
-// ⚠️ 本 Package 可独立构建和发布，不依赖 Electron 运行时。
-// Electron 代码已归档到 src.legacy/ 作为参考实现。
+// ⚠️ 本 Package 可独立构建和发布，不依赖旧桌面前端运行时。
+// 旧前端代码已完全移除。
 //
 // 构建方式：
 //   swift build                          # Debug 构建
 //   swift build -c Release               # Release 构建
 //   scripts/build.sh                     # 完整构建 + 签名 + 打包
 //
-// 详见 docs/electron-decommission-guide.md
+// 详见仓库内的 Swift 构建与交接文档。
 
 let package = Package(
     name: "AcMind",
@@ -26,12 +26,16 @@ let package = Package(
             targets: ["AcMindKit"]
         ),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "0.18.0"),
+    ],
     targets: [
         // 核心库：Models + Protocols + Services
         .target(
             name: "AcMindKit",
-            dependencies: [],
+            dependencies: [
+                .product(name: "WhisperKit", package: "argmax-oss-swift"),
+            ],
             path: "AcMindKit",
             linkerSettings: [
                 .linkedLibrary("sqlite3")

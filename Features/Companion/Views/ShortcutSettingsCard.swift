@@ -31,7 +31,7 @@ struct ShortcutSettingsCard: View {
                         }
                         
                         Spacer()
-                        
+
                         HStack(spacing: 4) {
                             ForEach(shortcut.shortcut.split(separator: " "), id: \.self) { key in
                                 ShortcutKeycap(key: String(key))
@@ -47,20 +47,15 @@ struct ShortcutSettingsCard: View {
                     }
                 }
                 
-                // Note
-                Text("* 快捷键在后续版本中可自定义")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
-                    .padding(.top, 12)
             }
         }
     }
     
     private func isShortcutEnabled(shortcut: CompanionShortcut) -> Bool {
-        guard isEnabled else { return false }
+        guard isEnabled, shortcut.isEnabled else { return false }
         
         switch shortcut.action {
-        case "随身语音":
+        case "说入法":
             return voiceEnabled
         case "截图捕获":
             return captureEnabled

@@ -41,6 +41,7 @@ public final class ScrollCaptureService: @unchecked Sendable {
     private var hasScrolledOnce: Bool = false
     private var consecutiveZeroShifts: Int = 0
     private var backingScale: CGFloat = 1.0
+    private var captureDisplayID: CGDirectDisplayID?
     
     private var autoScrollTask: Task<Void, Never>?
     
@@ -52,6 +53,7 @@ public final class ScrollCaptureService: @unchecked Sendable {
         guard !state.isActive else { return }
         
         backingScale = screen.backingScaleFactor
+        captureDisplayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
         
         guard let firstFrame = await captureSettledFrame(captureRect: captureRect) else {
             onSessionDone?(nil)
@@ -114,10 +116,6 @@ public final class ScrollCaptureService: @unchecked Sendable {
     }
     
     private func startAutoScroll(captureRect: NSRect, screen: NSScreen) {
-        let primaryScreenH = NSScreen.screens.first?.frame.height ?? screen.frame.height
-        let cursorX = captureRect.midX
-        let cursorY = primaryScreenH - captureRect.midY
-        
         let linesPerTick: Int32
         let burstCount: Int
         
@@ -259,6 +257,10 @@ public final class ScrollCaptureService: @unchecked Sendable {
     }
     
     private func captureFrame(captureRect: NSRect) -> CGImage? {
+        guard let displayID = captureDisplayID else {
+            return nil
+        }
+
         let primaryScreenH = NSScreen.screens.first?.frame.height ?? 0
         let cgRect = CGRect(
             x: captureRect.origin.x,
@@ -266,13 +268,8 @@ public final class ScrollCaptureService: @unchecked Sendable {
             width: captureRect.width,
             height: captureRect.height
         )
-        
-        return CGWindowListCreateImage(
-            cgRect,
-            .optionOnScreenBelowWindow,
-            kCGNullWindowID,
-            [.boundsIgnoreFraming]
-        )
+
+        return CGDisplayCreateImage(displayID, rect: cgRect)
     }
     
     private func captureSettledFrame(captureRect: NSRect) async -> CGImage? {

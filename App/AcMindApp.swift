@@ -34,7 +34,7 @@ struct AcMindCommands: Commands {
         // 替换标准菜单
         CommandGroup(replacing: .appInfo) {
             Button("关于 AcMind") {
-                // 显示关于窗口
+                appDelegate?.showAboutPanel()
             }
         }
 
@@ -45,7 +45,7 @@ struct AcMindCommands: Commands {
             .keyboardShortcut("n", modifiers: .command)
 
             Button("新建文本") {
-                // 显示文本输入对话框
+                appDelegate?.showQuickNotePanel()
             }
             .keyboardShortcut("t", modifiers: .command)
         }
@@ -56,14 +56,14 @@ struct AcMindCommands: Commands {
             }
             .keyboardShortcut("0", modifiers: .command)
 
-            Button("显示胶囊") {
-                appDelegate?.showCapsuleWindow()
+            Button("显示灵动胶囊") {
+                appDelegate?.showDesktopCapsule()
             }
             .keyboardShortcut(KeyEquivalent(" "), modifiers: [.command, .shift])
 
             Divider()
 
-            ForEach(SidebarItem.allCases) { item in
+            ForEach(SidebarItem.mainItems) { item in
                 if let shortcut = item.shortcut {
                     Button(item.displayName) {
                         appState.selectSidebarItem(item)
@@ -84,7 +84,7 @@ struct AcMindCommands: Commands {
             .keyboardShortcut("4", modifiers: [.command, .shift])
 
             Button("区域截图") {
-                // 区域截图模式
+                appDelegate?.captureAreaScreenshot()
             }
             .keyboardShortcut("5", modifiers: [.command, .shift])
 
@@ -93,7 +93,7 @@ struct AcMindCommands: Commands {
             }
             .keyboardShortcut("v", modifiers: [.command, .shift])
 
-            Button("语音输入") {
+            Button("说入法") {
                 NotificationCenter.default.post(name: Notification.Name("AcMind.captureVoice"), object: nil, userInfo: nil)
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
@@ -106,7 +106,7 @@ struct AcMindCommands: Commands {
             .keyboardShortcut("s", modifiers: .command)
 
             Button("全屏") {
-                // 切换全屏
+                appDelegate?.toggleMainWindowFullScreen()
             }
             .keyboardShortcut("f", modifiers: [.command, .control])
         }

@@ -25,21 +25,21 @@ struct ToolsView: View {
         }) { route in
             toolSheet(for: route)
         }
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("工具")
-                    .font(.title)
+                Text("工具台")
+                    .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("具体小工具集合，提升你的效率")
+                Text("Markdown、OCR、文档转换和批量处理")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -47,7 +47,7 @@ struct ToolsView: View {
             // 搜索
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .font(.caption)
 
                 TextField("搜索工具...", text: $viewModel.searchQuery)
@@ -61,11 +61,11 @@ struct ToolsView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(10)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator, lineWidth: 1)
             )
         }
         .padding(.horizontal, 20)
@@ -89,7 +89,7 @@ struct ToolsView: View {
                         .font(.caption)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(viewModel.selectedCategory == category ? category.color.opacity(0.15) : Color.clear)
+                        .background(viewModel.selectedCategory == category ? category.color.opacity(0.12) : Color.clear)
                         .foregroundStyle(viewModel.selectedCategory == category ? category.color : Color.secondary)
                         .cornerRadius(999)
                         .overlay(
@@ -105,7 +105,7 @@ struct ToolsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
         }
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 
     // MARK: - Tools Grid
@@ -136,6 +136,7 @@ struct ToolsView: View {
                 // 最近使用区
                 RecentToolsSection(
                     recentTools: viewModel.recentTools,
+                    canRestoreRecentTools: viewModel.canRestoreRecentTools,
                     onToolTap: { tool in
                         viewModel.openTool(Tool(
                             name: tool.name,
@@ -148,6 +149,9 @@ struct ToolsView: View {
                     },
                     onClear: {
                         viewModel.clearRecentTools()
+                    },
+                    onRestore: {
+                        viewModel.restoreRecentTools()
                     }
                 )
                 .padding(.horizontal, 20)
@@ -179,8 +183,14 @@ struct ToolsView: View {
             BatchRenamePanel()
         case .srtToFcpxml:
             SRTToFCPXMLPanel()
-        case let .unavailable(title, description, hint):
-            ToolUnavailablePanel(title: title, description: description, hint: hint)
+        case .batchDownload:
+            BatchDownloadPanel()
+        case .videoDownload:
+            VideoDownloadPanel()
+        case .modelManagement:
+            ModelManagementPanel()
+        case .apiTest:
+            APITestPanel()
         }
     }
 }
@@ -259,7 +269,7 @@ struct ToolCard: View {
             .frame(height: 96)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(NSColor.controlBackgroundColor))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(
@@ -317,8 +327,10 @@ private struct PressActionModifier: ViewModifier {
 
 struct RecentToolsSection: View {
     let recentTools: [RecentTool]
+    let canRestoreRecentTools: Bool
     let onToolTap: (RecentTool) -> Void
     let onClear: () -> Void
+    let onRestore: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
@@ -329,6 +341,13 @@ struct RecentToolsSection: View {
                     .fontWeight(.semibold)
 
                 Spacer()
+
+                if canRestoreRecentTools {
+                    Button("恢复记录", action: onRestore)
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+
+                }
 
                 if !recentTools.isEmpty {
                     Button(action: onClear) {
@@ -365,7 +384,7 @@ struct RecentToolsSection: View {
                     Spacer()
                 }
                 .padding(20)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(12)
             }
         }
@@ -408,7 +427,7 @@ struct RecentToolCard: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(isHovered ? tool.category.color.opacity(0.25) : Color(NSColor.separatorColor), lineWidth: 1)
@@ -468,7 +487,10 @@ enum ToolRoute: Identifiable, Sendable {
     case imageProcess
     case batchRename
     case srtToFcpxml
-    case unavailable(title: String, description: String, hint: String)
+    case batchDownload
+    case videoDownload
+    case modelManagement
+    case apiTest
 
     var id: String {
         switch self {
@@ -492,8 +514,36 @@ enum ToolRoute: Identifiable, Sendable {
             return "batchRename"
         case .srtToFcpxml:
             return "srtToFcpxml"
-        case let .unavailable(title, description, hint):
-            return "unavailable:\(title):\(description):\(hint)"
+        case .batchDownload:
+            return "batchDownload"
+        case .videoDownload:
+            return "videoDownload"
+        case .modelManagement:
+            return "modelManagement"
+        case .apiTest:
+            return "apiTest"
+        }
+    }
+
+    var storageID: String { id }
+
+    init?(storageID: String) {
+        switch storageID {
+        case "webDigest": self = .webDigest
+        case "jsonFormatter": self = .jsonFormatter
+        case "base64Codec": self = .base64Codec
+        case "markdownCleaner": self = .markdownCleaner
+        case "textCompare": self = .textCompare
+        case "documentConvert": self = .documentConvert
+        case "ocr": self = .ocr
+        case "imageProcess": self = .imageProcess
+        case "batchRename": self = .batchRename
+        case "srtToFcpxml": self = .srtToFcpxml
+        case "batchDownload": self = .batchDownload
+        case "videoDownload": self = .videoDownload
+        case "modelManagement": self = .modelManagement
+        case "apiTest": self = .apiTest
+        default: return nil
         }
     }
 }
@@ -564,6 +614,39 @@ struct RecentTool: Identifiable {
     }
 }
 
+private extension RecentTool {
+    init?(record: RecentToolRecord) {
+        guard let category = ToolCategory(rawValue: record.category),
+              let route = ToolRoute(storageID: record.route) else {
+            return nil
+        }
+
+        self.init(
+            id: record.id,
+            toolId: record.toolId,
+            name: record.name,
+            description: record.description,
+            icon: record.icon,
+            category: category,
+            route: route,
+            lastUsedDate: record.lastUsedDate
+        )
+    }
+
+    var record: RecentToolRecord {
+        RecentToolRecord(
+            id: id,
+            toolId: toolId,
+            name: name,
+            description: description,
+            icon: icon,
+            category: category.rawValue,
+            route: route.storageID,
+            lastUsedDate: lastUsedDate
+        )
+    }
+}
+
 @MainActor
 class ToolsViewModel: ObservableObject {
     @Published var tools: [Tool] = []
@@ -571,6 +654,11 @@ class ToolsViewModel: ObservableObject {
     @Published var selectedCategory: ToolCategory = .all
     @Published var activeToolRoute: ToolRoute?
     @Published var recentTools: [RecentTool] = []
+    private var recentToolsRestoreBackup: [RecentTool] = []
+
+    var canRestoreRecentTools: Bool {
+        !recentToolsRestoreBackup.isEmpty
+    }
 
     var filteredTools: [Tool] {
         var result = tools
@@ -602,9 +690,8 @@ class ToolsViewModel: ObservableObject {
     }
 
     private func loadRecentTools() {
-        // 初始化一些模拟的最近使用数据
-        // 实际应用中应该从存储读取
-        recentTools = []
+        recentToolsRestoreBackup = []
+        recentTools = RecentToolsStore.load(from: .standard).compactMap(RecentTool.init(record:))
     }
 
     func openTool(_ tool: Tool) {
@@ -613,6 +700,8 @@ class ToolsViewModel: ObservableObject {
     }
 
     private func recordRecentTool(_ tool: Tool) {
+        recentToolsRestoreBackup = []
+
         // 移除已存在的记录
         recentTools.removeAll { $0.toolId == tool.id }
         
@@ -634,10 +723,25 @@ class ToolsViewModel: ObservableObject {
         if recentTools.count > 10 {
             recentTools = Array(recentTools.prefix(10))
         }
+
+        saveRecentTools()
     }
 
     func clearRecentTools() {
+        recentToolsRestoreBackup = recentTools
         recentTools.removeAll()
+        saveRecentTools()
+    }
+
+    func restoreRecentTools() {
+        guard !recentToolsRestoreBackup.isEmpty else { return }
+        recentTools = recentToolsRestoreBackup
+        recentToolsRestoreBackup = []
+        saveRecentTools()
+    }
+
+    private func saveRecentTools() {
+        RecentToolsStore.save(recentTools.map(\.record), to: .standard)
     }
 
     func toolCount(for category: ToolCategory) -> Int {
@@ -651,7 +755,7 @@ class ToolsViewModel: ObservableObject {
 // MARK: - Tool Registry
 
 /// 工具注册表 — 集中管理所有可用工具
-/// TODO(P2): 改为从 JSON/Plist 配置文件加载，支持插件发现
+/// 当前使用内置清单，后续可切到 JSON/Plist 配置并支持插件发现
 enum ToolRegistry {
     static var defaultTools: [Tool] {
         [
@@ -668,12 +772,12 @@ enum ToolRegistry {
             
             // 下载工具
             Tool(name: "WebDigest｜网页精读", description: "输入 URL，抓取网页正文并生成 Markdown", icon: "globe", category: .download, tags: [.download, .new], route: .webDigest),
-            Tool(name: "批量下载", description: "批量下载网页中的图片或文件", icon: "arrow.down.circle", category: .download, tags: [.download], route: .unavailable(title: "批量下载", description: "批量下载网页中的图片或文件", hint: "后续可接爬取、队列和下载任务管理。")),
-            Tool(name: "视频下载", description: "下载在线视频", icon: "video", category: .download, tags: [.download], route: .unavailable(title: "视频下载", description: "下载在线视频", hint: "后续可接命令行下载器或站点专用解析器。")),
+            Tool(name: "批量下载", description: "批量下载网页中的图片或文件", icon: "arrow.down.circle", category: .download, tags: [.download], route: .batchDownload),
+            Tool(name: "视频下载", description: "下载在线视频", icon: "video", category: .download, tags: [.download], route: .videoDownload),
             
             // AI 工具
-            Tool(name: "模型管理", description: "管理本地和远程 AI 模型", icon: "cpu", category: .ai, tags: [.ai], route: .unavailable(title: "模型管理", description: "管理本地和远程 AI 模型", hint: "后续可接模型列表、下载、启停和配置管理。")),
-            Tool(name: "API 测试", description: "测试 AI 提供商的 API", icon: "network", category: .ai, tags: [.ai, .dev], route: .unavailable(title: "API 测试", description: "测试 AI 提供商的 API", hint: "后续可接请求参数、响应预览和连通性检查。")),
+            Tool(name: "模型管理", description: "管理本地和远程 AI 模型", icon: "cpu", category: .ai, tags: [.ai], route: .modelManagement),
+            Tool(name: "API 测试", description: "测试 AI 提供商的 API", icon: "network", category: .ai, tags: [.ai, .dev], route: .apiTest),
             
             // 实用工具
             Tool(name: "批量重命名", description: "批量重命名文件和文件夹", icon: "character.cursor.ibeam", category: .utility, tags: [.document, .local], route: .batchRename),

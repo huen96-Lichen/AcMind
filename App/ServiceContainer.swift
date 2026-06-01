@@ -3,7 +3,7 @@ import AcMindKit
 
 // MARK: - Service Configuration
 
-/// 服务容器配置，用于测试时注入 Mock 实现
+/// 服务容器配置，用于测试时注入可替换实现
 public struct ServiceConfiguration {
     var storageService: StorageServiceProtocol?
     var captureService: CaptureServiceProtocol?
@@ -81,7 +81,7 @@ public enum InitializationPhase: String, Sendable, CaseIterable {
 /// 设计原则：
 /// 1. 显式依赖：所有依赖通过构造函数注入
 /// 2. 阶段初始化：按固定顺序初始化服务
-/// 3. 可测试性：支持配置注入 Mock 实现
+    /// 3. 可测试性：支持配置注入可替换实现
 /// 4. 无隐式状态：所有状态通过协议暴露
 @MainActor
 public final class ServiceContainer: ObservableObject, Sendable {
@@ -115,6 +115,10 @@ public final class ServiceContainer: ObservableObject, Sendable {
     public let voiceService: VoiceServiceProtocol
     public let settingsService: SettingsServiceProtocol
     public let assetStore: AssetStore
+
+    public var hotCornerSettingsStore: HotCornerSettingsStore? {
+        settingsService as? HotCornerSettingsStore
+    }
 
     // MARK: - State
 
@@ -214,7 +218,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
                     try await assetStore.setup()
                 }
 
-                // 阶段 2: 数据迁移（Electron → Swift）
+                // 阶段 2: 数据迁移（旧桌面版 → Swift）
                 await transition(to: .dataMigration) {
                     await runDataMigrationIfNeeded()
                 }
@@ -277,18 +281,38 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
     // MARK: - Data Migration
 
-    /// 检测并执行 Electron → Swift 数据迁移
+    /// 检测并执行旧桌面版 → Swift 数据迁移
     /// 在存储层初始化之后、其他服务初始化之前运行
     private func runDataMigrationIfNeeded() async {
-        // 检查是否存在 Electron 数据库
-        guard storageService.checkElectronDatabase() != nil else {
-            print("ℹ️ 未检测到 Electron 数据库，跳过数据迁移")
+        // 检查是否存在旧版数据库
+        guard storageService.checkLegacyDatabase() != nil else {
+            print("ℹ️ 未检测到旧版数据库，跳过数据迁移")
             return
         }
 
-        print("🔄 检测到 Electron 数据库，开始数据迁移...")
-
-        print("ℹ️ 数据迁移在当前构建中暂时禁用")
+        print("🔄 检测到旧版数据库，开始数据迁移...")
+        do {
+            let migrationService = DataMigrationService(swiftDBPath: URL(fileURLWithPath: storageService.getDatabasePath()))
+            let result = try await migrationService.runIfNeeded()
+            if result.migrated {
+                print("✅ 数据迁移完成，耗时 \(String(format: "%.2f", result.duration)) 秒")
+                if result.tables.isEmpty == false {
+                    print("📦 迁移表: \(result.tables)")
+                }
+                if result.errors.isEmpty == false {
+                    print("⚠️ 迁移过程中出现问题: \(result.errors)")
+                }
+            }
+        } catch let migrationError as DataMigrationService.MigrationError {
+            switch migrationError {
+            case .migrationAlreadyCompleted:
+                print("ℹ️ 旧数据迁移已完成，跳过")
+            default:
+                print("⚠️ 数据迁移失败: \(migrationError.localizedDescription)")
+            }
+        } catch {
+            print("⚠️ 数据迁移失败: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Shutdown
@@ -368,13 +392,15 @@ extension ServiceContainer {
     }
 }
 
-// MARK: - Preview Mock Services
+// MARK: - Preview Services
 
 private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked Sendable {
     func setup() async throws {}
     func save() async {}
     func getSettings() async -> AppSettings { AppSettings() }
     func updateSettings(_ settings: AppSettings) async throws {}
+    func getHotCornerSettings() async -> HotCornerSettings { .defaultSettings }
+    func updateHotCornerSettings(_ settings: HotCornerSettings) async throws {}
     func getVoiceSettings() async -> VoiceSettings { VoiceSettings() }
     func updateVoiceSettings(_ settings: VoiceSettings) async throws {}
     func getVaultConfig() async -> VaultConfig { VaultConfig() }
@@ -391,8 +417,8 @@ private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked 
     func getRegisteredShortcuts() async -> [KeyboardShortcut] { [] }
     func unregisterAllShortcuts() async {}
     func listProviders() async throws -> [ProviderConfig] { [] }
-    func addProvider(_ config: ProviderConfig) async throws {}
-    func updateProvider(_ config: ProviderConfig) async throws {}
+    func addProvider(_ config: ProviderConfig, apiKey: String?) async throws {}
+    func updateProvider(_ config: ProviderConfig, apiKey: String?) async throws {}
     func removeProvider(id: String) async throws {}
     func getAPIKey(for providerId: String) async -> String? { nil }
 }

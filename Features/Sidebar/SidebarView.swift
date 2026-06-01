@@ -11,7 +11,7 @@ struct SidebarView: View {
     @EnvironmentObject private var container: ServiceContainer
 
     var body: some View {
-        List(SidebarItem.allCases, selection: $appState.sidebarSelection) { item in
+        List(SidebarItem.mainItems, selection: $appState.sidebarSelection) { item in
             SidebarItemRow(item: item, isSelected: appState.sidebarSelection == item)
                 .tag(item)
         }

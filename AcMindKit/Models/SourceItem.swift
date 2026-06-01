@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - SourceItem（核心数据实体）
 
 /// 采集内容的统一数据模型
-/// 对齐 Electron source_items 表 schema v21
+/// 对齐旧版 source_items 表 schema v21
 public struct SourceItem: Codable, Sendable, Identifiable, Hashable, Equatable {
     public let id: String
     public var type: SourceType
@@ -103,6 +103,20 @@ public enum SourceType: String, Codable, Sendable, Hashable, CaseIterable {
         }
     }
 
+    public var iconName: String {
+        switch self {
+        case .text: return "text.quote"
+        case .image: return "photo"
+        case .audio: return "waveform"
+        case .video: return "video"
+        case .pdf: return "doc.richtext"
+        case .docx: return "doc"
+        case .screenshot: return "camera.viewfinder"
+        case .webpage: return "globe"
+        case .unknownFile: return "doc.questionmark"
+        }
+    }
+
     public var color: Color {
         switch self {
         case .text: return .blue
@@ -119,20 +133,6 @@ public enum SourceType: String, Codable, Sendable, Hashable, CaseIterable {
 
     public var bgColor: Color {
         color.opacity(0.15)
-    }
-
-    public var iconName: String {
-        switch self {
-        case .text: return "doc.text"
-        case .image: return "photo"
-        case .audio: return "waveform"
-        case .video: return "video"
-        case .pdf: return "doc.richtext"
-        case .docx: return "doc"
-        case .screenshot: return "camera.viewfinder"
-        case .webpage: return "globe"
-        case .unknownFile: return "doc.questionmark"
-        }
     }
 
     public static func inferred(fromFileURL url: URL) -> SourceType {
@@ -155,6 +155,7 @@ public enum SourceType: String, Codable, Sendable, Hashable, CaseIterable {
 public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
     case manual
     case clipboard
+    case agent
     case screenshot
     case webpage
     case file
@@ -163,13 +164,14 @@ public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
     case imported
 
     public static var allCases: [SourceOrigin] {
-        [.manual, .clipboard, .screenshot, .webpage, .file, .voice, .capsule, .imported]
+        [.manual, .clipboard, .agent, .screenshot, .webpage, .file, .voice, .capsule, .imported]
     }
 
     public var displayName: String {
         switch self {
         case .manual: return "手动输入"
         case .clipboard: return "剪贴板"
+        case .agent: return "Agent"
         case .screenshot: return "截图"
         case .webpage: return "网页"
         case .file: return "文件"

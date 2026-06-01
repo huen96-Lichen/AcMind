@@ -8,7 +8,7 @@ public protocol AgentModelRouterProtocol: Sendable {
     func recordUsage(_ usage: ModelUsage) async
     func getUsageSummary(sessionId: String?) async -> UsageSummary
     func getCurrentSessionUsage() async -> CurrentSessionUsage
-    func getPricing(for modelId: String) -> PricingConfig?
+    func getPricing(for modelId: String) async -> PricingConfig?
 }
 
 /// Agent 模型路由器实现
@@ -16,42 +16,27 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
     private var usageHistory: [ModelUsage] = []
     private var currentSessionUsages: [ModelUsage] = []
     private var pricingConfig: [String: PricingConfig]
-    private let defaultProviders: [ModelRoute.TaskType: String]
-    private let defaultModels: [ModelRoute.TaskType: String]
+    private let strategy: ModelRoutingStrategy
 
-    public init() {
+    private struct RouteCandidate {
+        let providerId: String
+        let modelId: String
+        let tier: ProviderTier
+        let qualityScore: Int
+    }
+
+    public init(strategy: ModelRoutingStrategy = .automatic) {
+        self.strategy = strategy
         self.pricingConfig = Dictionary(uniqueKeysWithValues: PricingConfig.defaultPricing.map { ("\($0.providerId)_\($0.modelId)", $0) })
-
-        self.defaultProviders = [
-            .simpleChat: "ollama",
-            .textSummarize: "ollama",
-            .longTextProcess: "deepseek",
-            .codeGeneration: "openai",
-            .codeReview: "anthropic",
-            .complexReasoning: "anthropic",
-            .vision: "openai",
-            .voice: "ollama"
-        ]
-
-        self.defaultModels = [
-            .simpleChat: "llama3",
-            .textSummarize: "llama3",
-            .longTextProcess: "deepseek-chat",
-            .codeGeneration: "gpt-4o-mini",
-            .codeReview: "claude-sonnet-4-20250514",
-            .complexReasoning: "claude-3-5-haiku-20241022",
-            .vision: "gpt-4o",
-            .voice: "whisper"
-        ]
     }
 
     public func route(request: ModelRouteRequest) async throws -> ModelRoute {
         let taskType = request.taskType ?? inferTaskType(request: request)
+        let candidate = selectCandidate(for: taskType, request: request)
+        let providerId = candidate.providerId
+        let modelId = candidate.modelId
 
-        let providerId = defaultProviders[taskType] ?? "ollama"
-        let modelId = defaultModels[taskType] ?? "llama3"
-
-        let reason = buildRouteReason(taskType: taskType, request: request)
+        let reason = buildRouteReason(taskType: taskType, request: request, candidate: candidate)
 
         var estimatedCost: Double? = nil
         if let pricing = pricingConfig["\(providerId)_\(modelId)"] {
@@ -95,7 +80,7 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
         )
     }
 
-    public func getPricing(for modelId: String) -> PricingConfig? {
+    public func getPricing(for modelId: String) async -> PricingConfig? {
         pricingConfig.values.first { $0.modelId == modelId }
     }
 
@@ -121,7 +106,11 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
         return .simpleChat
     }
 
-    private func buildRouteReason(taskType: ModelRoute.TaskType, request: ModelRouteRequest) -> String {
+    private func buildRouteReason(
+        taskType: ModelRoute.TaskType,
+        request: ModelRouteRequest,
+        candidate: RouteCandidate
+    ) -> String {
         var reasons: [String] = []
 
         switch taskType {
@@ -151,6 +140,9 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
             reasons.append("隐私优先")
         }
 
+        reasons.append("策略: \(strategy.displayName)")
+        reasons.append("模型: \(candidate.providerId)_\(candidate.modelId)")
+
         switch request.complexity {
         case .low:
             reasons.append("复杂度低")
@@ -161,6 +153,109 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
         }
 
         return reasons.joined(separator: "，")
+    }
+
+    private func selectCandidate(for taskType: ModelRoute.TaskType, request: ModelRouteRequest) -> RouteCandidate {
+        let candidates = routeCandidates(for: taskType)
+        let filteredCandidates: [RouteCandidate]
+
+        if let preferredTier = request.preferredTier,
+           candidates.contains(where: { $0.tier == preferredTier }) {
+            filteredCandidates = candidates.filter { $0.tier == preferredTier }
+        } else {
+            filteredCandidates = candidates
+        }
+
+        let baseCandidate = filteredCandidates.first ?? candidates.first ?? RouteCandidate(
+            providerId: "ollama",
+            modelId: "local",
+            tier: .localLight,
+            qualityScore: 0
+        )
+
+        switch strategy {
+        case .automatic:
+            return baseCandidate
+        case .localPriority:
+            return filteredCandidates.first(where: { $0.tier.isLocal }) ?? baseCandidate
+        case .cloudPriority:
+            return filteredCandidates.first(where: { $0.tier.isCloud }) ?? baseCandidate
+        case .costPriority:
+            return filteredCandidates.min(by: { candidateCost($0, taskType: taskType, inputLength: request.inputLength) < candidateCost($1, taskType: taskType, inputLength: request.inputLength) })
+                ?? baseCandidate
+        case .qualityPriority:
+            return filteredCandidates.max(by: { lhs, rhs in
+                if lhs.qualityScore != rhs.qualityScore {
+                    return lhs.qualityScore < rhs.qualityScore
+                }
+                return candidateCost(lhs, taskType: taskType, inputLength: request.inputLength) > candidateCost(rhs, taskType: taskType, inputLength: request.inputLength)
+            }) ?? baseCandidate
+        case .privacyPriority:
+            return filteredCandidates.first(where: { $0.tier.isLocal }) ?? baseCandidate
+        }
+    }
+
+    private func routeCandidates(for taskType: ModelRoute.TaskType) -> [RouteCandidate] {
+        switch taskType {
+        case .simpleChat:
+            return [
+                RouteCandidate(providerId: "ollama", modelId: "llama3", tier: .localLight, qualityScore: 2),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o-mini", tier: .cloudLight, qualityScore: 3),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o", tier: .cloudHeavy, qualityScore: 5)
+            ]
+        case .textSummarize:
+            return [
+                RouteCandidate(providerId: "ollama", modelId: "llama3", tier: .localLight, qualityScore: 2),
+                RouteCandidate(providerId: "deepseek", modelId: "deepseek-chat", tier: .cloudLight, qualityScore: 3),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o-mini", tier: .cloudLight, qualityScore: 4)
+            ]
+        case .longTextProcess:
+            return [
+                RouteCandidate(providerId: "deepseek", modelId: "deepseek-chat", tier: .cloudLight, qualityScore: 3),
+                RouteCandidate(providerId: "anthropic", modelId: "claude-3-5-haiku-20241022", tier: .cloudHeavy, qualityScore: 4),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o-mini", tier: .cloudLight, qualityScore: 4)
+            ]
+        case .codeGeneration:
+            return [
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o-mini", tier: .cloudLight, qualityScore: 4),
+                RouteCandidate(providerId: "anthropic", modelId: "claude-sonnet-4-20250514", tier: .cloudHeavy, qualityScore: 5),
+                RouteCandidate(providerId: "deepseek", modelId: "deepseek-chat", tier: .cloudLight, qualityScore: 3)
+            ]
+        case .codeReview:
+            return [
+                RouteCandidate(providerId: "anthropic", modelId: "claude-sonnet-4-20250514", tier: .cloudHeavy, qualityScore: 5),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o", tier: .cloudHeavy, qualityScore: 5),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o-mini", tier: .cloudLight, qualityScore: 4)
+            ]
+        case .complexReasoning:
+            return [
+                RouteCandidate(providerId: "anthropic", modelId: "claude-sonnet-4-20250514", tier: .cloudHeavy, qualityScore: 5),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o", tier: .cloudHeavy, qualityScore: 5),
+                RouteCandidate(providerId: "anthropic", modelId: "claude-3-5-haiku-20241022", tier: .cloudHeavy, qualityScore: 4)
+            ]
+        case .vision:
+            return [
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o", tier: .cloudHeavy, qualityScore: 5),
+                RouteCandidate(providerId: "openai", modelId: "gpt-4o-mini", tier: .cloudLight, qualityScore: 3)
+            ]
+        case .voice:
+            return [
+                RouteCandidate(providerId: "ollama", modelId: "whisper", tier: .localLight, qualityScore: 2)
+            ]
+        }
+    }
+
+    private func candidateCost(_ candidate: RouteCandidate, taskType: ModelRoute.TaskType, inputLength: Int) -> Double {
+        if let pricing = pricingConfig["\(candidate.providerId)_\(candidate.modelId)"] {
+            let tokens = estimateTokens(inputLength: inputLength, taskType: taskType)
+            return pricing.calculateCost(promptTokens: tokens, completionTokens: tokens / 2).usd
+        }
+
+        if candidate.tier.isLocal {
+            return 0
+        }
+
+        return candidate.qualityScore > 0 ? Double(candidate.qualityScore) * 1000 : .greatestFiniteMagnitude
     }
 
     private func estimateTokens(inputLength: Int, taskType: ModelRoute.TaskType) -> Int {

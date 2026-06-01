@@ -80,7 +80,7 @@ AcMind/
 
 | 模式 | 实现 |
 |---|---|
-| **依赖注入 (DI)** | `ServiceContainer` 中央容器，管理 11 个核心服务生命周期，支持 Mock 注入 |
+| **依赖注入 (DI)** | `ServiceContainer` 中央容器，管理 11 个核心服务生命周期，支持可替换实现注入 |
 | **协议驱动** | 所有服务通过 Protocol 抽象（`StorageServiceProtocol`, `AIRuntimeProtocol` 等） |
 | **单例** | `ServiceContainer.shared`、`AppState.shared`、`AcMindKit.shared` |
 | **MVVM** | App 层 ViewModel 分离 |
@@ -216,9 +216,9 @@ swift test --parallel
 ## 十、已知事项与注意事项
 
 ### 10.1 历史遗留
-- **Electron → Swift 数据迁移**: 代码中存在 Electron 版本的迁移逻辑，当前已暂时禁用
-- **`dist/` 和 `dist-electron/`**: 为旧版 Electron 构建产物，可考虑清理
-- **`node_modules/`**: 旧版 Electron 依赖，不再使用
+- **旧桌面版 → Swift 数据迁移**: 已恢复为首次启动自动检查并执行，失败会记录日志并保留回退路径
+- **`dist/`**: 为旧版前端构建产物，已不再参与主构建
+- **`node_modules/`**: 旧版前端依赖，已不再使用
 
 ### 10.2 开发注意
 - 项目使用 **strict concurrency**，所有并发代码需遵循 Swift 6 并发模型
@@ -253,3 +253,52 @@ swift test --parallel
 | 设计令牌 | `Design/AcMindDesignTokens.swift` |
 | 主题 | `Design/AcMindTheme.swift` |
 | 规划文档 | `.trae/documents/` |
+
+---
+
+## 十二、任务单落地清单
+
+### 12.1 已落地
+| 项目 | 状态 | 说明 |
+|---|---|---|
+| WebView 迁移壳 | 已移除 | `WebViewPage` / `WebViewContainer` / `WebViewBridge` 已从主工程删除，工程元数据与 README 里的 WebView 入口也已同步清理 |
+| Shelf 临时暂存区 | 已下线 | `ShelfService` 与主界面入口已移除，不再作为半成品功能暴露 |
+| Workbench 项目列表 | 已接真实存储 | 项目、选择态、统计和编辑删除已接到本地存储，首次打开不再注入默认演示项目 |
+| 最近工具记录 | 已持久化 | 最近使用记录已跨启动保存 |
+| 最近工具恢复 | 已接通 | 清空最近使用后可恢复上一次历史记录 |
+| 随身快捷键 | 已接真实设置 | 支持启用、编辑、保存、恢复默认值 |
+| 灵动大陆显示配置 | 已接真实存储 | 配置页与胶囊/状态条共享同一份持久化显示设置 |
+| 模型路由策略 | 已接真实路由 | `Settings` 中的策略会影响 `AgentModelRouter` 的实际选路 |
+| 截图捕获开关 | 已接入口 | 菜单、快捷键、胶囊和 Notch 截图动作都会读取本地开关 |
+| 说入法设备偏好 | 已明确降级 | 仍仅作为偏好保存，不再伪装为已生效输入源 |
+| 说入法录音设备标签 | 已对齐 | `录音设备偏好` 明确标注为偏好项，避免误读成已接通的输入源切换 |
+| 说入法输入开关 | 已接入口 | Fn、菜单、胶囊和 Notch 的说入法入口都会读取本地开关 |
+| 旧桌面版迁移 | 已恢复 | 启动时自动检查旧库并迁移关键数据 |
+| Notch 热图 | 已接真实数据 | 近 7 天收集箱数据会生成热力图，空态时保持空白而非样例数据 |
+| 动态大陆权限概览 | 已接真实状态 | 配置页的权限状态卡现在直接读取运行时权限，而不是写死已授权 |
+| 权限状态文案 | 已对齐 | `未接入` 已改为 `未确定`，避免把运行时权限状态写成未完成功能 |
+| Agent / Notch 模型展示 | 已接真实配置 | 模型名现在从实际 provider / model 配置读取，不再写死 `GPT-5.5` 文案 |
+| Notch Agent 状态项 | 已接真实状态 | 最近状态列表改为读取模型、说入法、截图和处理状态，不再含固定演示文案 |
+| Agent 项目上下文 | 已接真实数据 | 右侧项目上下文改为读取工作台项目快照，不再写死固定 AcMind / PinMind 列表 |
+| Notch 天气卡 | 已收回空状态 | 天气字段不再暴露为主路径数据，避免继续冒充已接入真实天气源 |
+| Vault frontmatter 模板 | 已接通 | 模板已从设置页写入存储并影响导出结果 |
+| 导出冲突记录 | 已对齐 | `ExportRecord.relativeFilePath` 现在记录冲突处理后的最终路径，而不是初始候选路径 |
+| 导出闭环 | 已接通 | `ExportService` 已按真实配置构建 Markdown 和 frontmatter |
+| 自动备份 | 已接通 | `autoBackupEnabled` 现在会驱动按周备份策略并落盘备份文件 |
+| 窗口位置恢复 | 已接通 | `restoreWindowPosition` 现在会真正决定主窗口是否沿用 autosave 位置 |
+| 仅在激活应用时采集 | 已接通 | `captureOnlyWhenAppActive` 现在会限制剪贴板自动监听只在应用激活时生效 |
+| 本地优先模式 | 已接通 | `localFirstMode` 现在会优先选择本地 tier 的 AI Provider 作为默认运行时 |
+| API Key 存储模式 | 已接通 | `apiKeyUsesKeychain` 现在会决定 SecretStore 是写入 Keychain 还是本地偏好存储 |
+| 任务完成通知 | 已接通 | `notificationsEnabled` 与 `taskCompletedNotificationsEnabled` 现在会驱动采集完成的本地通知 |
+| 诊断信息 | 已接通 | 设置页和复制诊断信息现在改为读取运行时版本、设备和硬件信息 |
+| 关于页版本号 | 已接通 | 版本展示已改为运行时 bundle 版本与 build 号 |
+| 日程编辑 / 删除 | 已补齐 | 今日待办与日程列表现在支持编辑、删除与状态持久化 |
+
+### 12.2 仍保留为已弃用
+| 项目 | 状态 | 说明 |
+|---|---|---|
+| WebView 路线 | 已弃用 | 不再作为主路径入口；相关工程引用已移除，仅保留历史记录 |
+| Shelf 临时模型 | 已弃用 | 临时暂存壳已移除，不再推荐使用 |
+| 样例数据入口 | 已弃用 | `CompanionSampleData`、`NotchDashboardData.sample` 等 sample data 已从主路径移除 |
+| ToolUnavailablePanel | 已弃用 | 旧的“死接口”说明面板已移除，避免继续暗示半成品能力 |
+| 更新可用通知 | 已降级 | 当前仅保留偏好字段，不再传入通知服务，也未接入真实更新检查与通知触发 |

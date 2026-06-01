@@ -85,6 +85,10 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.updateDistilledNote(note)
     }
 
+    public func deleteDistilledNote(id: String) async throws {
+        try await db.deleteDistilledNote(id: id)
+    }
+
     public func listDistilledNotes() async throws -> [DistilledNote] {
         try await db.listDistilledNotes()
     }
@@ -145,6 +149,24 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.deleteClipboardItem(id: id)
     }
 
+    // MARK: - Provider Config Operations
+
+    public func listProviders() async -> [ProviderConfig] {
+        (try? await db.listProviders()) ?? []
+    }
+
+    public func addProvider(_ config: ProviderConfig) async throws {
+        try await db.addProvider(config)
+    }
+
+    public func updateProvider(_ config: ProviderConfig) async throws {
+        try await db.updateProvider(config)
+    }
+
+    public func removeProvider(id: String) async throws {
+        try await db.removeProvider(id: id)
+    }
+
     // MARK: - Settings Operations
     
     public func getSetting(key: String) async throws -> String? {
@@ -164,10 +186,10 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.importFromJSON(items)
     }
     
-    /// Check if Electron database exists for migration
-    /// - Returns: URL to Electron database if found, nil otherwise
-    public func checkElectronDatabase() -> URL? {
-        db.checkElectronDatabase()
+    /// Check if a legacy database exists for migration
+    /// - Returns: URL to the legacy database if found, nil otherwise
+    public func checkLegacyDatabase() -> URL? {
+        db.checkLegacyDatabase()
     }
     
     // MARK: - Database Info

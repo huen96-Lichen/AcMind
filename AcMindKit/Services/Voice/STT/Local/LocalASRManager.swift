@@ -5,6 +5,7 @@ public enum LocalASRModelType: String, Codable, CaseIterable, Sendable {
     case whisperKit
     case funASR
     case qwen3ASR
+    case parakeet
     
     public var displayName: String {
         switch self {
@@ -12,6 +13,7 @@ public enum LocalASRModelType: String, Codable, CaseIterable, Sendable {
         case .whisperKit: return "WhisperKit"
         case .funASR: return "FunASR"
         case .qwen3ASR: return "Qwen3-ASR"
+        case .parakeet: return "Parakeet"
         }
     }
     
@@ -21,6 +23,7 @@ public enum LocalASRModelType: String, Codable, CaseIterable, Sendable {
         case .whisperKit: return "~1.5 GB"
         case .funASR: return "~180 MB"
         case .qwen3ASR: return "~1.3 GB"
+        case .parakeet: return "~600 MB"
         }
     }
     
@@ -30,6 +33,7 @@ public enum LocalASRModelType: String, Codable, CaseIterable, Sendable {
         case .whisperKit: return "多语言（英语优化）"
         case .funASR: return "中文（优化）"
         case .qwen3ASR: return "中文（上下文理解）"
+        case .parakeet: return "英文（优化）、中文"
         }
     }
 }
@@ -52,6 +56,17 @@ public struct LocalASRModelInfo: Codable, Sendable {
         self.isDownloaded = isDownloaded
         self.size = size
     }
+
+    public var modelSize: String {
+        guard size > 0 else { return type.modelSize }
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: size)
+    }
+
+    public var supportedLanguages: String {
+        type.supportedLanguages
+    }
 }
 
 public struct DownloadProgress: Sendable {
@@ -73,7 +88,7 @@ public actor LocalASRManager: @unchecked Sendable {
     public static let shared = LocalASRManager()
     
     private let modelsDirectory: URL
-    private var downloadTasks: [String: Task<Void, Never>] = [:]
+    private var downloadTasks: [String: Task<Void, Error>] = [:]
     
     public var onDownloadProgress: ((DownloadProgress) -> Void)?
     public var onDownloadComplete: ((String) -> Void)?
@@ -90,11 +105,21 @@ public actor LocalASRManager: @unchecked Sendable {
     public func getModelsDirectory() -> URL {
         return modelsDirectory
     }
+
+    public func setDownloadObservers(
+        progress: ((DownloadProgress) -> Void)? = nil,
+        complete: ((String) -> Void)? = nil,
+        error: ((String, Error) -> Void)? = nil
+    ) {
+        onDownloadProgress = progress
+        onDownloadComplete = complete
+        onDownloadError = error
+    }
     
     public func listAvailableModels() -> [LocalASRModelInfo] {
         var models: [LocalASRModelInfo] = []
         
-        let senseVoicePath = modelsDirectory.appendingPathComponent("sensevoice")
+        let senseVoicePath = modelsDirectory.appendingPathComponent("sense_voice_small")
         models.append(LocalASRModelInfo(
             id: "sensevoice-small",
             type: .senseVoice,
@@ -114,7 +139,7 @@ public actor LocalASRManager: @unchecked Sendable {
             isDownloaded: FileManager.default.fileExists(atPath: whisperKitPath.path)
         ))
         
-        let funASRPath = modelsDirectory.appendingPathComponent("funasr")
+        let funASRPath = modelsDirectory.appendingPathComponent("fun_asr")
         models.append(LocalASRModelInfo(
             id: "funasr-paraformer",
             type: .funASR,
@@ -124,7 +149,7 @@ public actor LocalASRManager: @unchecked Sendable {
             isDownloaded: FileManager.default.fileExists(atPath: funASRPath.path)
         ))
         
-        let qwen3Path = modelsDirectory.appendingPathComponent("qwen3-asr")
+        let qwen3Path = modelsDirectory.appendingPathComponent("qwen3_asr")
         models.append(LocalASRModelInfo(
             id: "qwen3-asr-0.6b",
             type: .qwen3ASR,
@@ -152,18 +177,24 @@ public actor LocalASRManager: @unchecked Sendable {
         guard downloadTasks[modelId] == nil else {
             return
         }
+
+        if modelId == "whisperkit-medium" {
+            throw LocalASRError.unsupportedModel("whisperkit-medium")
+        }
         
-        let task = Task { [weak self] in
+        let task = Task<Void, Error> { [weak self] in
             guard let self = self else { return }
-            do {
-                try await self.performDownload(modelId: modelId)
-                await self.completeDownload(modelId: modelId)
-            } catch {
-                await self.failDownload(modelId: modelId, error: error)
-            }
+            try await self.performDownload(modelId: modelId)
         }
         
         downloadTasks[modelId] = task
+        do {
+            try await task.value
+            await completeDownload(modelId: modelId)
+        } catch {
+            await failDownload(modelId: modelId, error: error)
+            throw error
+        }
     }
     
     public func cancelDownload(_ modelId: String) {
@@ -186,16 +217,15 @@ public actor LocalASRManager: @unchecked Sendable {
         switch modelId {
         case "sensevoice-small":
             downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.1.10/sherpa-onnx-sense-voice-small-linux-x86_64.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("sensevoice")
+            destinationPath = modelsDirectory.appendingPathComponent("sense_voice_small")
         case "whisperkit-medium":
-            downloadURL = URL(string: "https://example.com/whisperkit-medium.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("whisperkit")
+            throw LocalASRError.unsupportedModel(modelId)
         case "funasr-paraformer":
             downloadURL = URL(string: "https://huggingface.co/spaces/sherpa/sherpa-onnx-int8-paraformer-zh-en/raw/main/paraformer.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("funasr")
+            destinationPath = modelsDirectory.appendingPathComponent("fun_asr")
         case "qwen3-asr-0.6b":
             downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.1.10/sherpa-onnx-qwen3-asr.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("qwen3-asr")
+            destinationPath = modelsDirectory.appendingPathComponent("qwen3_asr")
         default:
             throw LocalASRError.unsupportedModel(modelId)
         }
@@ -212,10 +242,12 @@ public actor LocalASRManager: @unchecked Sendable {
         var downloadedBytes: Int64 = 0
         
         let tempFile = modelsDirectory.appendingPathComponent("\(modelId).tar.bz2.tmp")
+        try Data().write(to: tempFile)
         let fileHandle = try FileHandle(forWritingTo: tempFile)
+        defer { try? fileHandle.close() }
         
         for try await byte in asyncBytes {
-            try fileHandle.write(Data([byte]))
+            try fileHandle.write(contentsOf: Data([byte]))
             downloadedBytes += 1
             
             if downloadedBytes % 1024 == 0 {
@@ -231,8 +263,6 @@ public actor LocalASRManager: @unchecked Sendable {
             }
         }
         
-        try fileHandle.close()
-        
         try FileManager.default.createDirectory(at: destinationPath, withIntermediateDirectories: true)
         
         let process = Process()
@@ -240,6 +270,10 @@ public actor LocalASRManager: @unchecked Sendable {
         process.arguments = ["-xjf", tempFile.path, "-C", destinationPath.path]
         try process.run()
         process.waitUntilExit()
+        
+        guard process.terminationStatus == 0 else {
+            throw LocalASRError.extractionFailed("tar 解压失败")
+        }
         
         try FileManager.default.removeItem(at: tempFile)
     }

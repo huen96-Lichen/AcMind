@@ -1,0 +1,274 @@
+import SwiftUI
+import AppKit
+import AcMindKit
+
+struct NotchV2TopBar: View {
+    @ObservedObject var viewModel: NotchV2ViewModel
+
+    var body: some View {
+        ZStack {
+            NotchV2DesignTokens.rootBackground
+
+            HStack(alignment: .center, spacing: 8) {
+                leftTabs
+                    .frame(width: 300, alignment: .leading)
+
+                Spacer(minLength: 6)
+
+                Color.clear
+                    .frame(width: NotchV2DesignTokens.notchSafeZoneWidth, height: 1)
+
+                Spacer(minLength: 6)
+
+                rightStatus
+                    .frame(width: 240, alignment: .trailing)
+            }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+        .frame(width: NotchV2DesignTokens.expandedWidth, height: NotchV2DesignTokens.topBarHeight)
+    }
+
+    private var leftTabs: some View {
+        HStack(spacing: 8) {
+            topNavButton(title: "今日", icon: "calendar", selected: viewModel.effectiveSelectedPage == .overview) {
+                viewModel.select(.overview)
+            }
+
+            if viewModel.isModuleEnabled(.music) {
+                topNavButton(title: "音乐", icon: "music.note", selected: viewModel.effectiveSelectedPage == .music) {
+                    viewModel.select(.music)
+                }
+            }
+
+            if viewModel.isModuleEnabled(.agent) {
+                topNavButton(title: "AI", icon: "sparkles", selected: viewModel.effectiveSelectedPage == .agent) {
+                    viewModel.select(.agent)
+                }
+            }
+
+            if viewModel.isModuleEnabled(.schedule) {
+                topNavButton(title: "日程", icon: "calendar.badge.clock", selected: viewModel.effectiveSelectedPage == .schedule) {
+                    viewModel.select(.schedule)
+                }
+            }
+        }
+    }
+
+    private var rightStatus: some View {
+        HStack(spacing: 5) {
+            if viewModel.isModuleEnabled(.systemStatus) {
+                topNavButton(title: "状态", icon: "cpu", selected: viewModel.effectiveSelectedPage == .systemStatus) {
+                    viewModel.select(.systemStatus)
+                }
+            }
+
+            statusPill(
+                icon: batteryIconName,
+                title: batteryText,
+                accent: batteryAccent
+            )
+
+            statusPill(
+                icon: viewModel.status.icon,
+                title: viewModel.status.displayName,
+                accent: viewModel.status.color
+            )
+
+            if viewModel.hasVoiceOverride {
+                voiceStatusPill
+            }
+
+            NotchV2StatusPill(
+                icon: "gearshape",
+                title: "设置",
+                accent: NotchV2DesignTokens.cardBackgroundStrong,
+                action: {
+                    (NSApp.delegate as? NSObject)?.perform(Selector(("showSettings")))
+                }
+            )
+
+            collapseButton
+        }
+    }
+
+    private var voiceStatusPill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: viewModel.voiceDisplayIcon)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(viewModel.voiceDisplayAccent)
+
+            Text(voiceCompactTitle)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            if viewModel.isVoicePriorityActive {
+                MiniVoiceWaveform(mode: viewModel.voiceWaveformMode, accent: viewModel.voiceDisplayAccent)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(viewModel.voiceDisplayAccent.opacity(0.13))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(viewModel.voiceDisplayAccent.opacity(0.26), lineWidth: 1)
+        )
+    }
+
+    private var voiceCompactTitle: String {
+        switch viewModel.voiceSurfaceState {
+        case .idle:
+            return "说入法"
+        case .listening:
+            return "收音中"
+        case .processing:
+            return "清洗中"
+        case .completed:
+            return "已写入"
+        case .cancelled:
+            return "已取消"
+        }
+    }
+
+    private func statusPill(icon: String, title: String, accent: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(accent)
+
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private var collapseButton: some View {
+        Button(action: { viewModel.collapse() }) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .frame(width: 20, height: 20)
+                .background(
+                    Circle()
+                        .fill(NotchV2DesignTokens.cardBackgroundStrong)
+                )
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var batteryText: String {
+        "\(Int(viewModel.batteryInfo.percentage.rounded()))%"
+    }
+
+    private var batteryAccent: Color {
+        if viewModel.batteryInfo.isInLowPowerMode {
+            return .orange
+        }
+        if viewModel.batteryInfo.percentage <= 20 && viewModel.batteryInfo.isCharging == false {
+            return .red
+        }
+        if viewModel.batteryInfo.isCharging || viewModel.batteryInfo.isPluggedIn {
+            return NotchV2DesignTokens.accentGreen
+        }
+        return NotchV2DesignTokens.secondaryText
+    }
+
+    private var batteryIconName: String {
+        if viewModel.batteryInfo.isCharging {
+            return "bolt.fill"
+        }
+        if viewModel.batteryInfo.isPluggedIn {
+            return "plug.fill"
+        }
+
+        let level = viewModel.batteryInfo.percentage
+        switch level {
+        case ..<10: return "battery.0"
+        case ..<25: return "battery.25"
+        case ..<50: return "battery.50"
+        case ..<75: return "battery.75"
+        default: return "battery.100"
+        }
+    }
+
+    private func topNavButton(title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(selected ? NotchV2DesignTokens.primaryText : NotchV2DesignTokens.secondaryText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .frame(height: 28)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(selected ? NotchV2DesignTokens.accentPurple : NotchV2DesignTokens.cardBackgroundStrong.opacity(0.54))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(selected ? Color.white.opacity(0.08) : Color.white.opacity(0.03), lineWidth: 1)
+            )
+            .shadow(color: selected ? NotchV2DesignTokens.accentPurple.opacity(0.22) : .clear, radius: 10, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+    private struct MiniVoiceWaveform: View {
+        let mode: NotchV2VoiceWaveformMode
+        let accent: Color
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let time = context.date.timeIntervalSinceReferenceDate
+
+            HStack(alignment: .center, spacing: 1.2) {
+                ForEach(0..<5, id: \.self) { index in
+                    Capsule(style: .continuous)
+                        .fill(accent)
+                        .frame(width: 2.2, height: barHeight(for: index, time: time))
+                        .opacity(barOpacity(for: index, time: time))
+                }
+            }
+            .frame(height: 10)
+            .padding(.leading, 1)
+        }
+    }
+
+    private func barHeight(for index: Int, time: TimeInterval) -> CGFloat {
+        let base: CGFloat = mode == .processing ? 2.5 : 3.5
+        let amplitude: CGFloat = mode == .processing ? 2.5 : 4.5
+        let phase = time * (mode == .processing ? 4.0 : 6.0) + Double(index) * 0.62
+        let sample = CGFloat((sin(phase) + 1.0) / 2.0)
+        return base + amplitude * sample
+    }
+
+    private func barOpacity(for index: Int, time: TimeInterval) -> Double {
+        let phase = time * 5.0 + Double(index) * 0.35
+        return mode == .processing ? 0.62 + 0.2 * ((sin(phase) + 1.0) / 2.0) : 0.72 + 0.22 * ((sin(phase) + 1.0) / 2.0)
+    }
+}

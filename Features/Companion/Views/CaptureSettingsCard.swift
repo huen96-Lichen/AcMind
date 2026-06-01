@@ -3,6 +3,10 @@ import SwiftUI
 struct CaptureSettingsCard: View {
     @Binding var isEnabled: Bool
     let isGlobalEnabled: Bool
+    @Binding var autoSaveToInbox: Bool
+    @Binding var textCaptureEnabled: Bool
+    @Binding var linkCaptureEnabled: Bool
+    @Binding var saveDestinationIndex: Int
     
     var body: some View {
         CompanionCapabilityCard(
@@ -18,15 +22,15 @@ struct CaptureSettingsCard: View {
                 // Left: Settings
                 VStack(alignment: .leading, spacing: 12) {
                     // Screenshot to Inbox
-                    Toggle("截图后自动保存到收集箱", isOn: .constant(true))
+                    Toggle("截图后自动保存到收集箱", isOn: $autoSaveToInbox)
                         .disabled(!isEnabled)
                     
                     // Text Capture
-                    Toggle("复制文本后支持快速收集", isOn: .constant(true))
+                    Toggle("复制文本后支持快速收集", isOn: $textCaptureEnabled)
                         .disabled(!isEnabled)
                     
                     // Link Capture
-                    Toggle("复制链接后支持快速收集", isOn: .constant(true))
+                    Toggle("复制链接后支持快速收集", isOn: $linkCaptureEnabled)
                         .disabled(!isEnabled)
                     
                     // Save Location
@@ -34,7 +38,7 @@ struct CaptureSettingsCard: View {
                         Text("保存位置")
                             .font(.headline)
                         
-                        Picker("", selection: .constant(0)) {
+                        Picker("", selection: $saveDestinationIndex) {
                             Text("收集箱").tag(0)
                             Text("剪贴板").tag(1)
                             Text("询问").tag(2)

@@ -27,9 +27,27 @@ public actor AgentTaskBoardService: AgentTaskBoardServiceProtocol {
     }
 
     public func createTask(_ task: AgentTask) async throws -> AgentTask {
-        var newTask = task
-        newTask.createdAt = Date()
-        newTask.updatedAt = Date()
+        let now = Date()
+        let newTask = AgentTask(
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            steps: task.steps,
+            currentStepIndex: task.currentStepIndex,
+            products: task.products,
+            dependencies: task.dependencies,
+            relatedSkillIds: task.relatedSkillIds,
+            errorMessage: task.errorMessage,
+            retryCount: task.retryCount,
+            maxRetries: task.maxRetries,
+            sourceMessageId: task.sourceMessageId,
+            createdAt: now,
+            updatedAt: now,
+            startedAt: task.startedAt,
+            completedAt: task.completedAt
+        )
         try await storage.setSetting(key: "task_\(newTask.id)", value: encodeTask(newTask))
         await updateTaskIndex(taskId: newTask.id, add: true)
         return newTask

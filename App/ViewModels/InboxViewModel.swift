@@ -112,6 +112,21 @@ class InboxViewModel: ObservableObject {
             showError = true
         }
     }
+
+    func archive(item: SourceItem) async {
+        do {
+            var updated = item
+            updated.status = .archived
+            try await storage.updateSourceItem(updated)
+            if selectedItem?.id == item.id {
+                selectedItem = updated
+            }
+            await loadItems()
+        } catch {
+            errorMessage = "归档失败: \(error.localizedDescription)"
+            showError = true
+        }
+    }
     
     // MARK: - Distill
     
@@ -135,6 +150,30 @@ class InboxViewModel: ObservableObject {
             showError = true
         }
     }
+
+    func moveToWorkbench(item: SourceItem) async {
+        await distillItem(item)
+        AppState.shared.selectSidebarItem(.workbench)
+    }
+
+    func sendToKnowledgeBase(item: SourceItem) async {
+        do {
+            if item.status != .distilled && item.status != .exported {
+                await distillItem(item)
+            }
+
+            let notes = try await storage.listDistilledNotes()
+            guard let note = notes.first(where: { $0.sourceItemId == item.id }) else {
+                throw NSError(domain: "InboxViewModel", code: 1, userInfo: [NSLocalizedDescriptionKey: "未找到可发送的蒸馏笔记"])
+            }
+
+            _ = try await ServiceContainer.shared.knowledgeService.createCard(from: note)
+            AppState.shared.selectSidebarItem(.agent)
+        } catch {
+            errorMessage = "发送到知识库失败: \(error.localizedDescription)"
+            showError = true
+        }
+    }
     
     // MARK: - Markdown Preview
     
@@ -153,7 +192,7 @@ class InboxViewModel: ObservableObject {
             } catch {}
         }
         
-        // 降级：使用原始内容生成预览
+        // 兼容路径：使用原始内容生成预览
         let md = """
         # \(item.title ?? "未命名")
 

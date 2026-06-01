@@ -33,7 +33,7 @@ public actor SettingsService: SettingsServiceProtocol {
     ) {
         self.storage = storage ?? StorageService()
         // PermissionManager 必须从 @MainActor 上下文注入
-        // 降级时创建一个空壳（实际使用时 ServiceContainer 会注入正确实例）
+        // 兼容路径下创建一个空壳（实际使用时 ServiceContainer 会注入正确实例）
         self.permissionManager = permissionManager!
         self.hotkeyManager = hotkeyManager ?? HotkeyManager()
     }
@@ -78,24 +78,55 @@ public actor SettingsService: SettingsServiceProtocol {
         try await saveSettingsToStorage(settings)
     }
 
+    public func getHotCornerSettings() async -> HotCornerSettings {
+        if let cached = settingsCache?.hotCornerSettings {
+            return cached
+        }
+        return (try? await loadHotCornerSettings()) ?? .defaultSettings
+    }
+
+    public func updateHotCornerSettings(_ settings: HotCornerSettings) async throws {
+        if var cached = settingsCache {
+            cached.hotCornerSettings = settings
+            settingsCache = cached
+            try await saveSettingsToStorage(cached)
+            await MainActor.run {
+                NotificationCenter.default.post(name: .hotCornersDidChange, object: nil)
+            }
+            return
+        }
+
+        var appSettings = AppSettings()
+        appSettings.hotCornerSettings = settings
+        settingsCache = appSettings
+        try await saveSettingsToStorage(appSettings)
+        await MainActor.run {
+            NotificationCenter.default.post(name: .hotCornersDidChange, object: nil)
+        }
+    }
+
     private func loadSettings() async throws -> AppSettings {
         // 从 SQLite 加载
+        var settings = AppSettings()
+
         if let themeStr = try await storage.getSetting(key: "app.theme"),
            let theme = AppTheme(rawValue: themeStr) {
-            var settings = AppSettings()
             settings.theme = theme
-            settings.language = (try? await storage.getSetting(key: "app.language")) ?? "zh-CN"
-            settings.defaultProviderId = try await storage.getSetting(key: "app.defaultProviderId")
-            settings.defaultModelId = try await storage.getSetting(key: "app.defaultModelId")
-            settings.vaultPath = (try? await storage.getSetting(key: "app.vaultPath")) ?? ""
-            settings.autoCaptureClipboard = (try? await storage.getSetting(key: "app.autoCaptureClipboard")) == "true"
-            settings.captureScreenshotHotkey = try await storage.getSetting(key: "app.captureScreenshotHotkey")
-            settings.defaultExportTarget = ExportTarget(rawValue: (try? await storage.getSetting(key: "app.defaultExportTarget")) ?? "obsidian") ?? .obsidian
-            settings.autoFrontmatter = (try? await storage.getSetting(key: "app.autoFrontmatter")) != "false"
-            settingsCache = settings
-            return settings
         }
-        return AppSettings()
+
+        settings.language = (try? await storage.getSetting(key: "app.language")) ?? "zh-CN"
+        settings.defaultProviderId = try await storage.getSetting(key: "app.defaultProviderId")
+        settings.defaultModelId = try await storage.getSetting(key: "app.defaultModelId")
+        settings.modelRoutingStrategy = ModelRoutingStrategy(rawValue: (try? await storage.getSetting(key: "app.modelRoutingStrategy")) ?? "automatic") ?? .automatic
+        settings.vaultPath = (try? await storage.getSetting(key: "app.vaultPath")) ?? ""
+        settings.autoCaptureClipboard = (try? await storage.getSetting(key: "app.autoCaptureClipboard")) == "true"
+        settings.captureScreenshotHotkey = try await storage.getSetting(key: "app.captureScreenshotHotkey")
+        settings.defaultExportTarget = ExportTarget(rawValue: (try? await storage.getSetting(key: "app.defaultExportTarget")) ?? "obsidian") ?? .obsidian
+        settings.autoFrontmatter = (try? await storage.getSetting(key: "app.autoFrontmatter")) != "false"
+        settings.hotCornerSettings = (try? await loadHotCornerSettings()) ?? .defaultSettings
+
+        settingsCache = settings
+        return settings
     }
 
     private func saveSettingsToStorage(_ settings: AppSettings) async throws {
@@ -107,6 +138,7 @@ public actor SettingsService: SettingsServiceProtocol {
         if let modelId = settings.defaultModelId {
             try await storage.setSetting(key: "app.defaultModelId", value: modelId)
         }
+        try await storage.setSetting(key: "app.modelRoutingStrategy", value: settings.modelRoutingStrategy.rawValue)
         try await storage.setSetting(key: "app.vaultPath", value: settings.vaultPath)
         try await storage.setSetting(key: "app.autoCaptureClipboard", value: settings.autoCaptureClipboard ? "true" : "false")
         if let hotkey = settings.captureScreenshotHotkey {
@@ -114,6 +146,25 @@ public actor SettingsService: SettingsServiceProtocol {
         }
         try await storage.setSetting(key: "app.defaultExportTarget", value: settings.defaultExportTarget.rawValue)
         try await storage.setSetting(key: "app.autoFrontmatter", value: settings.autoFrontmatter ? "true" : "false")
+        try await saveHotCornerSettingsToStorage(settings.hotCornerSettings)
+    }
+
+    private func loadHotCornerSettings() async throws -> HotCornerSettings? {
+        guard let raw = try await storage.getSetting(key: "app.hotCornerSettings") else {
+            return nil
+        }
+
+        guard let data = raw.data(using: .utf8) else {
+            return nil
+        }
+
+        return try JSONDecoder().decode(HotCornerSettings.self, from: data)
+    }
+
+    private func saveHotCornerSettingsToStorage(_ settings: HotCornerSettings) async throws {
+        let data = try JSONEncoder().encode(settings)
+        let raw = String(decoding: data, as: UTF8.self)
+        try await storage.setSetting(key: "app.hotCornerSettings", value: raw)
     }
 
     // MARK: - Voice Settings
@@ -135,12 +186,26 @@ public actor SettingsService: SettingsServiceProtocol {
         let language = (try? await storage.getSetting(key: "voice.defaultLanguage")) ?? "zh"
         let autoPolish = (try? await storage.getSetting(key: "voice.autoPolish")) == "true"
         let voicePolishMode = try await loadVoicePolishMode()
+        let triggerMode = try await loadSayInputTriggerMode()
+        let silenceTimeout = (try? await storage.getSetting(key: "voice.silenceTimeout")).flatMap(Double.init) ?? 3.0
+        let enableSilenceDetection = (try? await storage.getSetting(key: "voice.enableSilenceDetection")) == "true"
+        let outputMode = try await loadSayInputOutputMode()
+        let saveToInbox = (try? await storage.getSetting(key: "voice.saveToInbox")) != "false" // 默认 true
+        let allowContinuation = (try? await storage.getSetting(key: "voice.allowContinuation")) != "false" // 默认 true
+        let continuationWindow = (try? await storage.getSetting(key: "voice.continuationWindow")).flatMap(Double.init) ?? 12.0
 
         let settings = VoiceSettings(
             defaultProvider: provider,
             defaultLanguage: language,
             autoPolish: autoPolish,
-            voicePolishMode: voicePolishMode
+            voicePolishMode: voicePolishMode,
+            triggerMode: triggerMode,
+            silenceTimeout: silenceTimeout,
+            enableSilenceDetection: enableSilenceDetection,
+            outputMode: outputMode,
+            saveToInbox: saveToInbox,
+            allowContinuation: allowContinuation,
+            continuationWindow: continuationWindow
         )
         voiceSettingsCache = settings
         return settings
@@ -151,6 +216,29 @@ public actor SettingsService: SettingsServiceProtocol {
         try await storage.setSetting(key: "voice.defaultLanguage", value: settings.defaultLanguage)
         try await storage.setSetting(key: "voice.autoPolish", value: settings.autoPolish ? "true" : "false")
         try await storage.setSetting(key: "voice.voicePolishMode", value: settings.voicePolishMode.rawValue)
+        try await storage.setSetting(key: "voice.triggerMode", value: settings.triggerMode.rawValue)
+        try await storage.setSetting(key: "voice.silenceTimeout", value: String(settings.silenceTimeout))
+        try await storage.setSetting(key: "voice.enableSilenceDetection", value: settings.enableSilenceDetection ? "true" : "false")
+        try await storage.setSetting(key: "voice.outputMode", value: settings.outputMode.rawValue)
+        try await storage.setSetting(key: "voice.saveToInbox", value: settings.saveToInbox ? "true" : "false")
+        try await storage.setSetting(key: "voice.allowContinuation", value: settings.allowContinuation ? "true" : "false")
+        try await storage.setSetting(key: "voice.continuationWindow", value: String(settings.continuationWindow))
+    }
+    
+    private func loadSayInputTriggerMode() async throws -> SayInputTriggerMode {
+        if let rawValue = try? await storage.getSetting(key: "voice.triggerMode"),
+           let mode = SayInputTriggerMode(rawValue: rawValue) {
+            return mode
+        }
+        return .hold
+    }
+    
+    private func loadSayInputOutputMode() async throws -> SayInputOutputMode {
+        if let rawValue = try? await storage.getSetting(key: "voice.outputMode"),
+           let mode = SayInputOutputMode(rawValue: rawValue) {
+            return mode
+        }
+        return .copyToClipboard
     }
 
     private func loadVoicePolishMode() async throws -> VoicePolishMode {
@@ -214,6 +302,7 @@ public actor SettingsService: SettingsServiceProtocol {
         let pathRule = VaultConfig.VaultPathRule(rawValue: (try? await storage.getSetting(key: "vault.pathRule")) ?? "categoryDate") ?? .categoryDate
         let conflictStrategy = ConflictStrategy(rawValue: (try? await storage.getSetting(key: "vault.conflictStrategy")) ?? "rename") ?? .rename
         let autoFrontmatter = (try? await storage.getSetting(key: "vault.autoFrontmatter")) != "false"
+        let frontmatterTemplateText = (try? await storage.getSetting(key: "vault.frontmatterTemplate")) ?? "{}"
 
         let config = VaultConfig(
             vaultPath: path,
@@ -222,7 +311,7 @@ public actor SettingsService: SettingsServiceProtocol {
             pathRule: pathRule,
             conflictStrategy: conflictStrategy,
             autoFrontmatter: autoFrontmatter,
-            frontmatterTemplate: [:] // 简化处理
+            frontmatterTemplate: decodeFrontmatterTemplate(frontmatterTemplateText)
         )
         vaultConfigCache = config
         return config
@@ -235,6 +324,37 @@ public actor SettingsService: SettingsServiceProtocol {
         try await storage.setSetting(key: "vault.pathRule", value: config.pathRule.rawValue)
         try await storage.setSetting(key: "vault.conflictStrategy", value: config.conflictStrategy.rawValue)
         try await storage.setSetting(key: "vault.autoFrontmatter", value: config.autoFrontmatter ? "true" : "false")
+        try await storage.setSetting(key: "vault.frontmatterTemplate", value: encodeFrontmatterTemplate(config.frontmatterTemplate))
+    }
+
+    private func encodeFrontmatterTemplate(_ template: [String: String]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: template, options: [.sortedKeys]),
+              let json = String(data: data, encoding: .utf8) else {
+            return "{}"
+        }
+        return json
+    }
+
+    private func decodeFrontmatterTemplate(_ text: String) -> [String: String] {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false,
+              let data = trimmed.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data, options: []),
+              let dict = object as? [String: Any] else {
+            return [:]
+        }
+
+        var result: [String: String] = [:]
+        for (key, value) in dict {
+            if let string = value as? String {
+                result[key] = string
+            } else if let convertible = value as? CustomStringConvertible {
+                result[key] = convertible.description
+            } else {
+                result[key] = "\(value)"
+            }
+        }
+        return result
     }
 
     // MARK: - Provider Config (with Keychain API Key storage)
@@ -243,51 +363,45 @@ public actor SettingsService: SettingsServiceProtocol {
         if let cached = providersCache {
             return cached
         }
-
-        // 从 SQLite 加载 Provider 列表（不含 API Key）
-        // 实际实现需要查询 provider_configs 表
-        // 这里简化处理，返回缓存或空数组
-        providersCache = []
-        return []
-    }
-
-    public func addProvider(_ config: ProviderConfig) async throws {
-        // 保存到 SQLite
-        // 如果有 API Key，保存到 Keychain
-        if let apiKey = config.apiKey {
-            try await saveAPIKey(apiKey, for: config.id)
-        }
-
-        // 更新缓存
-        var providers = (try? await listProviders()) ?? []
-        providers.append(config)
+        let providers = try await storage.listProviders()
         providersCache = providers
+        return providers
     }
 
-    public func updateProvider(_ config: ProviderConfig) async throws {
-        // 更新 SQLite
-        // 更新 Keychain 中的 API Key
-        if let apiKey = config.apiKey {
+    public func addProvider(_ config: ProviderConfig, apiKey: String? = nil) async throws {
+        if let apiKey, apiKey.isEmpty == false {
             try await saveAPIKey(apiKey, for: config.id)
         }
 
-        // 更新缓存
-        var providers = (try? await listProviders()) ?? []
-        if let index = providers.firstIndex(where: { $0.id == config.id }) {
-            providers[index] = config
-            providersCache = providers
+        var configToSave = config
+        configToSave.apiKeyRef = config.apiKeyRef ?? (apiKey?.isEmpty == false ? config.id : nil)
+        try await storage.addProvider(configToSave)
+
+        providersCache = (try? await storage.listProviders()) ?? []
+    }
+
+    public func updateProvider(_ config: ProviderConfig, apiKey: String? = nil) async throws {
+        if let apiKey {
+            if apiKey.isEmpty == false {
+                try await saveAPIKey(apiKey, for: config.id)
+            } else {
+                try await deleteAPIKey(for: config.id)
+            }
         }
+
+        var configToSave = config
+        if let apiKey {
+            configToSave.apiKeyRef = apiKey.isEmpty ? nil : config.apiKeyRef ?? config.id
+        }
+        try await storage.updateProvider(configToSave)
+
+        providersCache = (try? await storage.listProviders()) ?? []
     }
 
     public func removeProvider(id: String) async throws {
-        // 从 SQLite 删除
-        // 从 Keychain 删除 API Key
         try await deleteAPIKey(for: id)
-
-        // 更新缓存
-        var providers = (try? await listProviders()) ?? []
-        providers.removeAll { $0.id == id }
-        providersCache = providers
+        try await storage.removeProvider(id: id)
+        providersCache = (try? await storage.listProviders()) ?? []
     }
 
     public func getAPIKey(for providerId: String) async -> String? {
@@ -297,49 +411,15 @@ public actor SettingsService: SettingsServiceProtocol {
     // MARK: - API Key Keychain Storage
 
     private func saveAPIKey(_ apiKey: String, for providerId: String) async throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: "acmind.provider.\(providerId)",
-            kSecValueData as String: apiKey.data(using: .utf8)!,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-
-        // 先删除旧的
-        SecItemDelete(query as CFDictionary)
-
-        // 添加新的
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw SettingsError.keychainError(status)
-        }
+        try await SecretStore.shared.saveAPIKey(apiKey, for: providerId)
     }
 
     private func loadAPIKey(for providerId: String) async -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: "acmind.provider.\(providerId)",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let apiKey = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        return apiKey
+        await SecretStore.shared.getAPIKey(for: providerId)
     }
 
     private func deleteAPIKey(for providerId: String) async throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: "acmind.provider.\(providerId)"
-        ]
-
-        SecItemDelete(query as CFDictionary)
+        try await SecretStore.shared.deleteAPIKey(for: providerId)
     }
 
     // MARK: - Permissions (delegated to PermissionManager)
@@ -435,15 +515,5 @@ public enum SettingsError: Error, LocalizedError {
         case .shortcutRegistrationFailed:
             return "快捷键注册失败"
         }
-    }
-}
-
-// MARK: - ProviderConfig Extension
-
-extension ProviderConfig {
-    /// API Key（内存中临时存储，不持久化到 SQLite）
-    public var apiKey: String? {
-        get { nil } // 实际使用时从 Keychain 加载
-        set { } // 实际使用时保存到 Keychain
     }
 }

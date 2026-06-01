@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import AcMindKit
 
 // MARK: - Settings Category (New)
@@ -44,6 +45,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @State private var selectedCategory: SettingsCategory = .general
+    @State private var searchQuery = ""
+    @State private var recordingShortcutTarget: ShortcutRecordingTarget?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -53,7 +56,7 @@ struct SettingsView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(Color.secondary)
-                    TextField("搜索设置...", text: .constant(""))
+                    TextField("搜索设置...", text: $searchQuery)
                         .textFieldStyle(.plain)
                         .font(.caption)
                 }
@@ -80,7 +83,7 @@ struct SettingsView: View {
                 .scrollDisabled(true)
             }
             .frame(width: 180)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
 
             // 右侧内容
             Divider()
@@ -94,7 +97,7 @@ struct SettingsView: View {
                     case .general:
                         GeneralSettingsPage(viewModel: viewModel)
                     case .companion:
-                        CompanionSettingsPage(viewModel: viewModel)
+                        CompanionSettingsPage(viewModel: viewModel, recordingShortcutTarget: $recordingShortcutTarget)
                     case .aiModels:
                         AIModelsSettingsPage(viewModel: viewModel)
                     case .dataKnowledge:
@@ -119,6 +122,11 @@ struct SettingsView: View {
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
         }
+        .sheet(item: $recordingShortcutTarget) { target in
+            ShortcutRecorderSheet(title: target.title) { shortcut in
+                target.apply(shortcut: shortcut, on: viewModel)
+            }
+        }
     }
 
     private var settingsHeader: some View {
@@ -134,6 +142,167 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Shortcut Recorder
+
+enum ShortcutRecordingTarget: String, Identifiable {
+    case voiceShortcut
+    case captureShortcut
+    case screenshotShortcut
+    case agentShortcut
+    case scheduleShortcut
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .voiceShortcut: return "录制说入法入口快捷键"
+        case .captureShortcut: return "录制快速收集快捷键"
+        case .screenshotShortcut: return "录制截图捕获快捷键"
+        case .agentShortcut: return "录制 Agent 快捷键"
+        case .scheduleShortcut: return "录制今日日程快捷键"
+        }
+    }
+
+    @MainActor
+    func apply(shortcut: String, on viewModel: SettingsViewModel) {
+        switch self {
+        case .voiceShortcut:
+            viewModel.companionVoiceShortcut = shortcut
+        case .captureShortcut:
+            viewModel.companionCaptureShortcut = shortcut
+        case .screenshotShortcut:
+            viewModel.companionScreenshotShortcut = shortcut
+        case .agentShortcut:
+            viewModel.companionAgentShortcut = shortcut
+        case .scheduleShortcut:
+            viewModel.companionScheduleShortcut = shortcut
+        }
+    }
+}
+
+struct ShortcutRecorderSheet: View {
+    let title: String
+    let onSave: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var shortcut = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Text("按下你想要绑定的组合键，然后点击保存。")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+            }
+
+            ShortcutCaptureField(shortcut: $shortcut)
+                .frame(height: 120)
+                .background(Color.secondary.opacity(0.06))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+                )
+
+            HStack {
+                Button("清空") {
+                    shortcut = ""
+                }
+                .buttonStyle(.bordered)
+
+                Spacer()
+
+                Button("取消") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+
+                Button("保存") {
+                    let value = shortcut.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !value.isEmpty else { return }
+                    onSave(value)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(shortcut.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
+        .onAppear {
+            shortcut = ""
+        }
+    }
+}
+
+struct ShortcutCaptureField: NSViewRepresentable {
+    @Binding var shortcut: String
+
+    func makeNSView(context: Context) -> ShortcutCaptureNSView {
+        let view = ShortcutCaptureNSView()
+        view.onShortcut = { shortcut = $0 }
+        return view
+    }
+
+    func updateNSView(_ nsView: ShortcutCaptureNSView, context: Context) {
+        nsView.onShortcut = { shortcut = $0 }
+        nsView.focus()
+    }
+}
+
+final class ShortcutCaptureNSView: NSView {
+    var onShortcut: (String) -> Void = { _ in }
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        focus()
+    }
+
+    func focus() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window else { return }
+            window.makeFirstResponder(self)
+        }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        onShortcut(Self.formatShortcut(from: event))
+    }
+
+    private static func formatShortcut(from event: NSEvent) -> String {
+        var components: [String] = []
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+
+        if flags.contains(.command) { components.append("⌘") }
+        if flags.contains(.option) { components.append("⌥") }
+        if flags.contains(.control) { components.append("⌃") }
+        if flags.contains(.shift) { components.append("⇧") }
+
+        let key: String
+        switch event.keyCode {
+        case 36: key = "Return"
+        case 49: key = "Space"
+        case 53: key = "Esc"
+        case 51: key = "Delete"
+        case 123: key = "Left"
+        case 124: key = "Right"
+        case 125: key = "Down"
+        case 126: key = "Up"
+        default:
+            let raw = event.charactersIgnoringModifiers?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            key = raw.isEmpty ? "Key\(event.keyCode)" : raw.uppercased()
+        }
+
+        components.append(key)
+        return components.joined()
+    }
+}
+
 // MARK: - Settings Category Description
 
 extension SettingsCategory {
@@ -143,7 +312,7 @@ extension SettingsCategory {
         case .companion: return "设置随身胶囊、语音和快捷键等全局能力"
         case .aiModels: return "管理 AI Provider、模型选择和使用统计"
         case .dataKnowledge: return "配置数据存储、Vault 和知识库"
-        case .captureInput: return "设置剪贴板、截图、语音输入等捕获能力"
+        case .captureInput: return "设置剪贴板、截图、说入法等捕获能力"
         case .security: return "管理系统权限、隐私设置和安全选项"
         case .about: return "查看版本信息、帮助和反馈"
         }
@@ -177,7 +346,7 @@ struct SettingsCard<Content: View>: View {
             content
         }
         .padding(16)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
@@ -209,16 +378,23 @@ struct GeneralSettingsPage: View {
 
             SettingsCard(title: "启动行为", description: "配置应用启动时的行为") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("启动时显示随身胶囊", isOn: .constant(true))
-                    Toggle("启动时恢复上次窗口位置", isOn: .constant(true))
+                    Toggle("启动时显示随身胶囊", isOn: $viewModel.companionCapsuleShowOnLaunch)
+                    Toggle("启动时恢复上次窗口位置", isOn: $viewModel.restoreWindowPosition)
                 }
             }
 
             SettingsCard(title: "通知", description: "管理应用通知偏好") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("启用通知", isOn: .constant(true))
-                    Toggle("任务完成时通知", isOn: .constant(true))
-                    Toggle("更新可用时通知", isOn: .constant(true))
+                    Toggle("启用通知", isOn: $viewModel.notificationsEnabled)
+                    Toggle("任务完成时通知", isOn: $viewModel.taskCompletedNotificationsEnabled)
+                    HStack {
+                        Toggle("更新可用时通知", isOn: $viewModel.updateAvailableNotificationsEnabled)
+                            .disabled(true)
+                        Spacer()
+                    }
+                    Text("当前仅保留偏好，不会触发实际更新检查。")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
 
@@ -253,6 +429,7 @@ struct GeneralSettingsPage: View {
 
 struct CompanionSettingsPage: View {
     @ObservedObject var viewModel: SettingsViewModel
+    @Binding var recordingShortcutTarget: ShortcutRecordingTarget?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -285,18 +462,18 @@ struct CompanionSettingsPage: View {
                                 )
                             }
 
-                            Toggle("启动时自动显示", isOn: .constant(true))
+                            Toggle("启动时自动显示", isOn: $viewModel.companionCapsuleShowOnLaunch)
                             Toggle("默认展开", isOn: $viewModel.companionCapsuleExpanded)
-                            Toggle("菜单栏贴合", isOn: .constant(false))
+                            Toggle("菜单栏贴合", isOn: $viewModel.restoreWindowPosition)
                         }
                         .padding(.leading, 8)
                     }
                 }
             }
 
-            SettingsCard(title: "随身语音", description: "全局语音转写能力") {
+            SettingsCard(title: "说入法入口", description: "长按 Fn 唤起、选择输出落点与收集行为") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("启用随身语音", isOn: $viewModel.companionVoiceEnabled)
+                    Toggle("启用说入法", isOn: $viewModel.companionVoiceEnabled)
 
                     if viewModel.companionVoiceEnabled {
                         VStack(alignment: .leading, spacing: 8) {
@@ -304,14 +481,16 @@ struct CompanionSettingsPage: View {
                                 Text("快捷键")
                                     .font(.subheadline)
                                 Spacer()
-                                TextField("", text: .constant("⌘⇧V"))
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(width: 120)
-                                Button("录制") {}
+                                TextField("", text: $viewModel.companionVoiceShortcut)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 120)
+                                Button("录制") {
+                                    recordingShortcutTarget = .voiceShortcut
+                                }
                                     .controlSize(.small)
                             }
 
-                            Text("转写完成后")
+                            Text("清洗完成后")
                                 .font(.subheadline)
 
                             Picker("", selection: $viewModel.companionVoiceOutputMode) {
@@ -321,7 +500,7 @@ struct CompanionSettingsPage: View {
                             }
                             .labelsHidden()
 
-                            Toggle("保存转写历史到收集箱", isOn: $viewModel.companionVoiceSaveToInbox)
+                            Toggle("保存说入法结果到收集箱", isOn: $viewModel.companionVoiceSaveToInbox)
                         }
                         .padding(.leading, 8)
                     }
@@ -330,19 +509,29 @@ struct CompanionSettingsPage: View {
 
             SettingsCard(title: "随身快捷键", description: "配置全局快捷键") {
                 VStack(spacing: 8) {
-                    ShortcutConfigRow(action: "随身语音", shortcut: "⌘⇧V")
-                    ShortcutConfigRow(action: "快速收集", shortcut: "⌘⇧C")
-                    ShortcutConfigRow(action: "截图捕获", shortcut: "⌘⇧4")
-                    ShortcutConfigRow(action: "打开 Agent", shortcut: "⌘1")
-                    ShortcutConfigRow(action: "今日日程", shortcut: "⌘4")
+                    ShortcutConfigRow(action: "说入法入口", shortcut: $viewModel.companionVoiceShortcut) {
+                        recordingShortcutTarget = .voiceShortcut
+                    }
+                    ShortcutConfigRow(action: "快速收集", shortcut: $viewModel.companionCaptureShortcut) {
+                        recordingShortcutTarget = .captureShortcut
+                    }
+                    ShortcutConfigRow(action: "截图捕获", shortcut: $viewModel.companionScreenshotShortcut) {
+                        recordingShortcutTarget = .screenshotShortcut
+                    }
+                    ShortcutConfigRow(action: "打开 Agent", shortcut: $viewModel.companionAgentShortcut) {
+                        recordingShortcutTarget = .agentShortcut
+                    }
+                    ShortcutConfigRow(action: "今日日程", shortcut: $viewModel.companionScheduleShortcut) {
+                        recordingShortcutTarget = .scheduleShortcut
+                    }
                 }
             }
 
             SettingsCard(title: "随身捕获", description: "快速收集内容到 AcMind") {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("截图到收集箱", isOn: $viewModel.autoCaptureClipboard)
-                    Toggle("文本快速收集", isOn: .constant(true))
-                    Toggle("链接快速收集", isOn: .constant(true))
+                    Toggle("文本快速收集", isOn: $viewModel.companionCaptureTextEnabled)
+                    Toggle("链接快速收集", isOn: $viewModel.companionCaptureLinkEnabled)
                 }
             }
 
@@ -375,12 +564,30 @@ struct AIModelsSettingsPage: View {
         VStack(alignment: .leading, spacing: 24) {
             SettingsCard(title: "模型路由策略", description: "选择 AcMind 如何为不同任务选择最合适的模型") {
                 HStack(spacing: 8) {
-                    StrategyButton(title: "自动", subtitle: "智能选择最佳模型", icon: "wand.and.stars", selected: true)
-                    StrategyButton(title: "优先本地", subtitle: "优先使用本地模型", icon: "harddrive")
-                    StrategyButton(title: "优先云端", subtitle: "优先使用云端模型", icon: "cloud")
-                    StrategyButton(title: "低成本", subtitle: "优先选择低成本模型", icon: "coins")
-                    StrategyButton(title: "高质量", subtitle: "优先选择高质量模型", icon: "sparkles")
-                    StrategyButton(title: "隐私优先", subtitle: "优先本地处理", icon: "lock")
+                    StrategyButton(title: "自动", subtitle: "智能选择最佳模型", icon: "wand.and.stars", selected: viewModel.modelRoutingStrategy == .automatic) {
+                        viewModel.modelRoutingStrategy = .automatic
+                        Task { await viewModel.saveSettings() }
+                    }
+                    StrategyButton(title: "优先本地", subtitle: "优先使用本地模型", icon: "harddrive", selected: viewModel.modelRoutingStrategy == .localPriority) {
+                        viewModel.modelRoutingStrategy = .localPriority
+                        Task { await viewModel.saveSettings() }
+                    }
+                    StrategyButton(title: "优先云端", subtitle: "优先使用云端模型", icon: "cloud", selected: viewModel.modelRoutingStrategy == .cloudPriority) {
+                        viewModel.modelRoutingStrategy = .cloudPriority
+                        Task { await viewModel.saveSettings() }
+                    }
+                    StrategyButton(title: "低成本", subtitle: "优先选择低成本模型", icon: "coins", selected: viewModel.modelRoutingStrategy == .costPriority) {
+                        viewModel.modelRoutingStrategy = .costPriority
+                        Task { await viewModel.saveSettings() }
+                    }
+                    StrategyButton(title: "高质量", subtitle: "优先选择高质量模型", icon: "sparkles", selected: viewModel.modelRoutingStrategy == .qualityPriority) {
+                        viewModel.modelRoutingStrategy = .qualityPriority
+                        Task { await viewModel.saveSettings() }
+                    }
+                    StrategyButton(title: "隐私优先", subtitle: "优先本地处理", icon: "lock", selected: viewModel.modelRoutingStrategy == .privacyPriority) {
+                        viewModel.modelRoutingStrategy = .privacyPriority
+                        Task { await viewModel.saveSettings() }
+                    }
                 }
             }
 
@@ -416,28 +623,30 @@ struct AIModelsSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "使用概览（本月）", description: "查看 AI 使用统计和消耗") {
+            SettingsCard(title: "使用概览", description: "查看本地实时统计与已保存的提供商配置") {
                 VStack(spacing: 16) {
                     HStack {
-                        StatBox(label: "总调用次数", value: "2,633", change: "+18%")
-                        StatBox(label: "总消耗", value: "$12.45", change: "+22%")
-                        StatBox(label: "输入 Tokens", value: "1.32M", change: "+15%")
-                        StatBox(label: "输出 Tokens", value: "0.48M", change: "+20%")
+                        StatBox(label: "收集条目", value: "\(viewModel.usageSummary.sourceItems)", change: "本地存储")
+                        StatBox(label: "蒸馏笔记", value: "\(viewModel.usageSummary.distilledNotes)", change: "本地存储")
+                        StatBox(label: "导出记录", value: "\(viewModel.usageSummary.exportRecords)", change: "本地存储")
+                        StatBox(label: "Clipboard", value: "\(viewModel.usageSummary.clipboardItems)", change: "本地存储")
                     }
 
-                    // 简化的图表占位
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("每日消耗趋势")
+                            Text("当前配置快照")
                                 .font(.subheadline)
                             Spacer()
-                            Text("5月")
+                            Text("实时")
                                 .font(.caption)
                                 .foregroundStyle(Color.secondary)
                         }
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.1))
-                            .frame(height: 100)
+
+                        HStack(spacing: 10) {
+                            StatBox(label: "Providers", value: "\(viewModel.usageSummary.providers)", change: viewModel.usageSummary.providers == 0 ? "未配置" : "已保存")
+                            StatBox(label: "自动采集", value: viewModel.autoCaptureClipboard ? "开" : "关", change: viewModel.autoCaptureClipboard ? "Clipboard" : "Manual")
+                            StatBox(label: "语音润色", value: viewModel.voiceAutoPolish ? "开" : "关", change: viewModel.voicePolishMode.displayName)
+                        }
                     }
                 }
             }
@@ -474,17 +683,33 @@ struct DataKnowledgeSettingsPage: View {
             SettingsCard(title: "数据存储", description: "配置本地数据和附件存储位置") {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("本地数据库位置")
+                        HStack {
+                            Text("本地数据库位置")
+                            Text("只读")
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondary.opacity(0.12))
+                                .cornerRadius(4)
+                        }
                             .font(.subheadline)
-                        TextField("", text: .constant("~/Library/Application Support/AcMind"))
+                        TextField("", text: .constant(viewModel.databaseDirectoryPath))
                             .textFieldStyle(.roundedBorder)
                             .disabled(true)
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("附件存储位置")
+                        HStack {
+                            Text("附件存储位置")
+                            Text("只读")
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondary.opacity(0.12))
+                                .cornerRadius(4)
+                        }
                             .font(.subheadline)
-                        TextField("", text: .constant("~/Library/Application Support/AcMind/Attachments"))
+                        TextField("", text: .constant(viewModel.assetsDirectoryPath))
                             .textFieldStyle(.roundedBorder)
                             .disabled(true)
                     }
@@ -549,18 +774,38 @@ struct DataKnowledgeSettingsPage: View {
                     }
 
                     Toggle("自动添加 Frontmatter", isOn: $viewModel.autoFrontmatter)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Frontmatter 模板 (JSON)")
+                            .font(.subheadline)
+
+                        TextEditor(text: $viewModel.vaultFrontmatterTemplateText)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(minHeight: 120)
+                            .padding(8)
+                            .background(Color.secondary.opacity(0.08))
+                            .cornerRadius(8)
+                    }
                 }
             }
 
             SettingsCard(title: "备份与恢复", description: "管理数据备份") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Button("创建备份") {}
+                    Button("创建备份") {
+                        Task {
+                            await viewModel.createBackup()
+                        }
+                    }
                         .buttonStyle(.bordered)
 
-                    Button("恢复备份") {}
+                    Button("恢复备份") {
+                        Task {
+                            await viewModel.restoreBackup()
+                        }
+                    }
                         .buttonStyle(.bordered)
 
-                    Toggle("自动备份（每周）", isOn: .constant(true))
+                    Toggle("自动备份（每周）", isOn: $viewModel.autoBackupEnabled)
                 }
             }
 
@@ -593,13 +838,13 @@ struct CaptureInputSettingsPage: View {
             SettingsCard(title: "剪贴板捕获", description: "配置剪贴板自动采集") {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("自动采集剪贴板", isOn: $viewModel.autoCaptureClipboard)
-                    Toggle("仅在激活应用时采集", isOn: .constant(false))
+                    Toggle("仅在激活应用时采集", isOn: $viewModel.captureOnlyWhenAppActive)
                 }
             }
 
             SettingsCard(title: "截图捕获", description: "配置截图和滚动截图设置") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("启用截图捕获", isOn: .constant(true))
+                    Toggle("启用截图捕获", isOn: $viewModel.captureScreenshotEnabled)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("滚动截图")
@@ -634,9 +879,9 @@ struct CaptureInputSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "语音输入", description: "配置语音转写输入") {
+            SettingsCard(title: "说入法结果", description: "配置转写后的自动润色方式") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("启用语音输入", isOn: .constant(true))
+                    Toggle("启用说入法输入", isOn: $viewModel.voiceInputEnabled)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("润色模式")
@@ -706,6 +951,56 @@ struct CaptureInputSettingsPage: View {
                 }
             }
 
+            SettingsCard(title: "ASR 引擎", description: "选择语音识别引擎") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("识别引擎")
+                        .font(.subheadline)
+
+                    Picker("", selection: $viewModel.voiceDefaultProvider) {
+                        ForEach(STTProvider.allCases, id: \.rawValue) { provider in
+                            Text(provider.displayName).tag(provider.rawValue)
+                        }
+                    }
+                    .labelsHidden()
+                }
+            }
+
+            SettingsCard(title: "录音增强", description: "配置录音时的附加处理") {
+                Toggle("录音结束后自动追加标点", isOn: $viewModel.enablePunctuationAppend)
+            }
+
+            SettingsCard(title: "高级注入设置", description: "配置转写结果的注入方式") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("注入策略")
+                        .font(.subheadline)
+
+                    Picker("", selection: $viewModel.injectionStrategy) {
+                        Text("postToPid 优先").tag("postToPid")
+                        Text("剪贴板优先").tag("clipboard")
+                    }
+                    .labelsHidden()
+                }
+            }
+
+            SettingsCard(title: "语言", description: "配置语音识别的首选语言") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("首选语言")
+                        .font(.subheadline)
+
+                    Picker("", selection: $viewModel.preferredLanguage) {
+                        Text("自动").tag("auto")
+                        Text("中文").tag("zh")
+                        Text("英文").tag("en")
+                        Text("日文").tag("ja")
+                    }
+                    .labelsHidden()
+                }
+            }
+
+            SettingsCard(title: "云端同步", description: "配置数据云端同步") {
+                Toggle("启用云端同步", isOn: $viewModel.enableCloudSync)
+            }
+
             saveButton
         }
     }
@@ -736,7 +1031,7 @@ struct SecuritySettingsPage: View {
                 VStack(spacing: 12) {
                     PermissionRow(
                         title: "麦克风",
-                        description: "用于语音输入",
+                        description: "用于说入法输入",
                         status: viewModel.microphoneStatus,
                         onRequest: {
                             Task {
@@ -818,20 +1113,22 @@ struct SecuritySettingsPage: View {
 
             SettingsCard(title: "隐私安全", description: "配置隐私相关设置") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("本地优先模式", isOn: .constant(true))
-                    Toggle("敏感内容不上传云端", isOn: .constant(true))
-                    Toggle("API Key 使用 Keychain 存储", isOn: .constant(true))
+                    Toggle("本地优先模式", isOn: $viewModel.localFirstMode)
+                    Toggle("敏感内容不上传云端", isOn: $viewModel.sensitiveContentNotUpload)
+                    Toggle("API Key 使用 Keychain 存储", isOn: $viewModel.apiKeyUsesKeychain)
                 }
             }
 
             SettingsCard(title: "日志", description: "管理应用日志") {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Toggle("AI 调用日志", isOn: .constant(true))
-                        Toggle("错误日志", isOn: .constant(true))
+                        Toggle("AI 调用日志", isOn: $viewModel.aiCallLogEnabled)
+                        Toggle("错误日志", isOn: $viewModel.errorLogEnabled)
                     }
 
-                    Button("打开日志文件夹") {}
+                    Button("打开日志文件夹") {
+                        viewModel.openLogsFolder()
+                    }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
@@ -877,7 +1174,7 @@ struct AboutSettingsPage: View {
                             Text("AI 驱动的知识助手")
                                 .font(.caption)
                                 .foregroundStyle(Color.secondary)
-                            Text("版本 1.0.0 (1234)")
+                            Text("版本 \(viewModel.diagnosticAppVersionString)")
                                 .font(.caption)
                                 .foregroundStyle(Color.secondary)
                         }
@@ -886,11 +1183,17 @@ struct AboutSettingsPage: View {
                     Divider()
 
                     HStack(spacing: 16) {
-                        Button("检查更新") {}
+                        Button("检查更新") {
+                            viewModel.openReleasesPage()
+                        }
                             .buttonStyle(.bordered)
-                        Button("帮助与反馈") {}
+                        Button("帮助与反馈") {
+                            viewModel.openFeedbackPage()
+                        }
                             .buttonStyle(.bordered)
-                        Button("开源许可") {}
+                        Button("开源许可") {
+                            viewModel.openLicensePage()
+                        }
                             .buttonStyle(.bordered)
                     }
                 }
@@ -898,13 +1201,15 @@ struct AboutSettingsPage: View {
 
             SettingsCard(title: "诊断信息", description: "查看应用诊断信息") {
                 VStack(alignment: .leading, spacing: 8) {
-                    SettingsInfoRow(label: "应用版本", value: "1.0.0 (1234)")
-                    SettingsInfoRow(label: "macOS 版本", value: "14.5 (23F79)")
-                    SettingsInfoRow(label: "设备", value: "MacBook Pro (16-inch, 2023)")
-                    SettingsInfoRow(label: "处理器", value: "Apple M3 Max")
-                    SettingsInfoRow(label: "内存", value: "36 GB Unified Memory")
+                    SettingsInfoRow(label: "应用版本", value: viewModel.diagnosticAppVersionString)
+                    SettingsInfoRow(label: "macOS 版本", value: viewModel.diagnosticMacOSVersionString)
+                    SettingsInfoRow(label: "设备", value: viewModel.diagnosticDeviceModelString)
+                    SettingsInfoRow(label: "处理器", value: viewModel.diagnosticProcessorString)
+                    SettingsInfoRow(label: "内存", value: viewModel.diagnosticMemoryString)
 
-                    Button("复制诊断信息") {}
+                    Button("复制诊断信息") {
+                        viewModel.copyDiagnosticsToPasteboard()
+                    }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
@@ -945,7 +1250,8 @@ struct SettingsShortcutRow: View {
 
 struct ShortcutConfigRow: View {
     let action: String
-    let shortcut: String
+    @Binding var shortcut: String
+    let onRecord: () -> Void
 
     var body: some View {
         HStack {
@@ -959,7 +1265,7 @@ struct ShortcutConfigRow: View {
                     .padding(.vertical, 4)
                     .background(Color.secondary.opacity(0.2))
                     .cornerRadius(4)
-                Button("录制") {}
+                Button("录制", action: onRecord)
                     .controlSize(.small)
                     .buttonStyle(.borderless)
             }
@@ -989,24 +1295,28 @@ struct StrategyButton: View {
     let title: String
     let subtitle: String
     let icon: String
-    var selected: Bool = false
+    let selected: Bool
+    let action: () -> Void
 
     var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.title)
-            Text(title)
-                .font(.caption)
-                .fontWeight(.medium)
-            Text(subtitle)
-                .font(.caption2)
-                .foregroundStyle(Color.secondary)
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title)
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(Color.secondary)
+            }
+            .padding(12)
+            .background(selected ? Color(NSColor.systemBlue).opacity(0.1) : Color.secondary.opacity(0.05))
+            .foregroundStyle(selected ? Color(NSColor.systemBlue) : Color.primary)
+            .cornerRadius(8)
+            .frame(width: 90)
         }
-        .padding(12)
-        .background(selected ? Color(NSColor.systemBlue).opacity(0.1) : Color.secondary.opacity(0.05))
-        .foregroundStyle(selected ? Color(NSColor.systemBlue) : Color.primary)
-        .cornerRadius(8)
-        .frame(width: 90)
+        .buttonStyle(.plain)
     }
 }
 
@@ -1042,7 +1352,14 @@ struct ProviderCard: View {
             Spacer()
 
             HStack(spacing: 8) {
-                Button("管理配置") {}
+                Button("管理配置") {
+                    if let url = URL(string: provider.baseURL), !provider.baseURL.isEmpty {
+                        NSWorkspace.shared.open(url)
+                    } else {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(provider.modelId, forType: .string)
+                    }
+                }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 Button("删除") {
@@ -1230,7 +1547,7 @@ struct AddProviderSheet: View {
                         modelId: modelId
                     )
                     Task {
-                        await viewModel.addProvider(config)
+                        await viewModel.addProvider(config, apiKey: apiKey)
                         dismiss()
                     }
                 }

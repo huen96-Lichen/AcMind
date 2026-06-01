@@ -7,6 +7,8 @@ class ScheduleViewModel: ObservableObject {
     // MARK: - Dependencies
 
     private let eventStore = EKEventStore()
+    private let localStore = LocalScheduleStore()
+    private var calendarAccessGranted = false
     // MARK: - Published State
 
     @Published var viewMode: ScheduleViewMode = .week
@@ -14,6 +16,7 @@ class ScheduleViewModel: ObservableObject {
     @Published var categories: [ScheduleCategory] = ScheduleCategory.defaultCategories
     @Published var events: [ScheduleEvent] = []
     @Published var searchText: String = ""
+    @Published var accessNotice: String? = nil
 
     // MARK: - Event Editor State
 
@@ -27,13 +30,45 @@ class ScheduleViewModel: ObservableObject {
     @Published var newEventStartMinute: Int = 0
     /// 创建错误信息
     @Published var createError: String? = nil
+    /// 正在编辑的事件
+    @Published var editingEvent: ScheduleEvent? = nil
 
     // MARK: - Computed Properties
+
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var isSearching: Bool {
+        !normalizedSearchText.isEmpty
+    }
+
+    private func searchableText(for event: ScheduleEvent) -> String {
+        [
+            event.title,
+            event.description ?? "",
+            event.tag ?? "",
+            categoryName(for: event.categoryId),
+            event.status.displayName
+        ]
+        .joined(separator: " ")
+        .lowercased()
+    }
+
+    private func matchesSearch(_ event: ScheduleEvent) -> Bool {
+        guard isSearching else { return true }
+        return searchableText(for: event).contains(normalizedSearchText)
+    }
+
+    private func filteredEvents(_ input: [ScheduleEvent]) -> [ScheduleEvent] {
+        guard isSearching else { return input }
+        return input.filter(matchesSearch)
+    }
 
     /// 今日事件（按时间排序）
     var todayEvents: [ScheduleEvent] {
         let cal = Calendar.current
-        return events
+        return filteredEvents(events)
             .filter { cal.isDate($0.startAt, inSameDayAs: Date()) && $0.status != .cancelled }
             .sorted { $0.startAt < $1.startAt }
     }
@@ -67,11 +102,12 @@ class ScheduleViewModel: ObservableObject {
         guard let weekInterval = cal.dateInterval(of: .weekOfYear, for: selectedDate) else {
             return []
         }
+        let visibleEvents = filteredEvents(events)
         var days: [WorkloadDay] = []
         var current = weekInterval.start
         let end = weekInterval.end
         while current < end {
-            let dayEvents = events.filter { cal.isDate($0.startAt, inSameDayAs: current) && $0.status != .cancelled }
+            let dayEvents = visibleEvents.filter { cal.isDate($0.startAt, inSameDayAs: current) && $0.status != .cancelled }
             let scheduledMinutes = dayEvents.reduce(0) { $0 + $1.durationMinutes }
             let dateStr = ISO8601DateFormatter().string(from: current)
             days.append(WorkloadDay(
@@ -89,17 +125,17 @@ class ScheduleViewModel: ObservableObject {
 
     /// 当前周的事件
     var currentWeekEvents: [ScheduleEvent] {
-        events.filter { $0.isIn(weekOf: selectedDate) && $0.status != .cancelled }
+        filteredEvents(events).filter { $0.isIn(weekOf: selectedDate) && $0.status != .cancelled }
     }
 
     /// 当前月的事件
     var currentMonthEvents: [ScheduleEvent] {
-        events.filter { $0.isIn(monthOf: selectedDate) && $0.status != .cancelled }
+        filteredEvents(events).filter { $0.isIn(monthOf: selectedDate) && $0.status != .cancelled }
     }
 
     /// 当前年事件
     var currentYearEvents: [ScheduleEvent] {
-        events.filter { $0.isIn(yearOf: selectedDate) && $0.status != .cancelled }
+        filteredEvents(events).filter { $0.isIn(yearOf: selectedDate) && $0.status != .cancelled }
     }
 
     /// 过去 365 天的饱和度数据
@@ -107,11 +143,12 @@ class ScheduleViewModel: ObservableObject {
         let cal = Calendar.current
         let today = Date()
         guard let oneYearAgo = cal.date(byAdding: .year, value: -1, to: today) else { return [] }
+        let visibleEvents = filteredEvents(events)
         var days: [WorkloadDay] = []
         var current = cal.startOfDay(for: oneYearAgo)
         let end = cal.startOfDay(for: cal.date(byAdding: .day, value: 1, to: today)!)
         while current < end {
-            let dayEvents = events.filter { cal.isDate($0.startAt, inSameDayAs: current) && $0.status != .cancelled }
+            let dayEvents = visibleEvents.filter { cal.isDate($0.startAt, inSameDayAs: current) && $0.status != .cancelled }
             let scheduledMinutes = dayEvents.reduce(0) { $0 + $1.durationMinutes }
             let dateStr = ISO8601DateFormatter().string(from: current)
             days.append(WorkloadDay(
@@ -187,7 +224,7 @@ class ScheduleViewModel: ObservableObject {
     /// 获取指定日期的事件
     func events(for date: Date) -> [ScheduleEvent] {
         let cal = Calendar.current
-        return events
+        return filteredEvents(events)
             .filter { cal.isDate($0.startAt, inSameDayAs: date) && $0.status != .cancelled }
             .sorted { $0.startAt < $1.startAt }
     }
@@ -195,7 +232,7 @@ class ScheduleViewModel: ObservableObject {
     /// 获取指定日期有事件的标记
     func hasEvents(on date: Date) -> Bool {
         let cal = Calendar.current
-        return events.contains { cal.isDate($0.startAt, inSameDayAs: date) && $0.status != .cancelled }
+        return filteredEvents(events).contains { cal.isDate($0.startAt, inSameDayAs: date) && $0.status != .cancelled }
     }
 
     /// 获取分类颜色
@@ -254,12 +291,14 @@ class ScheduleViewModel: ObservableObject {
         } else {
             events[index].status = .done
         }
+        persistLocalEvent(events[index])
     }
 
     // MARK: - Event Creation
 
     /// 打开新建日程弹窗（从工具栏按钮触发）
     func openCreateEvent() {
+        editingEvent = nil
         let cal = Calendar.current
         newEventDate = selectedDate
         let (hour, minute) = ScheduleTimeGridLayout.nearestHourForNewEvent(calendar: cal)
@@ -270,15 +309,25 @@ class ScheduleViewModel: ObservableObject {
 
     /// 打开新建日程弹窗（从点击时间格触发）
     func openCreateEvent(on date: Date, hour: Int, minute: Int) {
+        editingEvent = nil
         newEventDate = date
         newEventStartHour = hour
         newEventStartMinute = minute
         isCreatingEvent = true
     }
 
+    func openEditEvent(_ event: ScheduleEvent) {
+        editingEvent = event
+        newEventDate = event.startAt
+        newEventStartHour = Calendar.current.component(.hour, from: event.startAt)
+        newEventStartMinute = Calendar.current.component(.minute, from: event.startAt)
+        isCreatingEvent = true
+    }
+
     /// 关闭新建日程弹窗
     func closeCreateEvent() {
         isCreatingEvent = false
+        editingEvent = nil
     }
 
     /// 检测新日程是否与现有日程冲突
@@ -316,6 +365,25 @@ class ScheduleViewModel: ObservableObject {
             return
         }
 
+        if let editingEvent {
+            let updatedEvent = ScheduleEvent(
+                id: editingEvent.id,
+                title: title,
+                categoryId: categoryId,
+                startAt: startDate,
+                endAt: endDate,
+                isAllDay: isAllDay,
+                status: editingEvent.status,
+                priority: editingEvent.priority,
+                tag: editingEvent.tag
+            )
+            upsertEvent(updatedEvent, replacing: editingEvent.id)
+            createError = nil
+            isCreatingEvent = false
+            self.editingEvent = nil
+            return
+        }
+
         let newEvent = ScheduleEvent(
             id: UUID().uuidString,
             title: title,
@@ -328,29 +396,43 @@ class ScheduleViewModel: ObservableObject {
             tag: nil
         )
 
-        events.append(newEvent)
-
-        // 尝试同步到系统日历
-        saveToSystemCalendar(event: newEvent)
+        upsertEvent(newEvent)
 
         createError = nil
         isCreatingEvent = false
     }
 
-    /// 保存事件到系统日历 (EventKit)
-    private func saveToSystemCalendar(event: ScheduleEvent) {
-        let ekEvent = EKEvent(eventStore: eventStore)
-        ekEvent.title = event.title
-        ekEvent.startDate = event.startAt
-        ekEvent.endDate = event.endAt
-        ekEvent.isAllDay = event.isAllDay
-        ekEvent.calendar = eventStore.defaultCalendarForNewEvents
+    func deleteEvent(_ eventID: String) {
+        guard let existing = events.first(where: { $0.id == eventID }) else { return }
 
-        do {
-            try eventStore.save(ekEvent, span: .thisEvent)
-            // 更新本地事件 ID 为系统日历 ID
-            if let index = events.firstIndex(where: { $0.id == event.id }) {
-                events[index] = ScheduleEvent(
+        if calendarAccessGranted, let ekEvent = eventStore.event(withIdentifier: eventID) {
+            do {
+                try eventStore.remove(ekEvent, span: .thisEvent)
+            } catch {
+                print("⚠️ 删除系统日历事件失败: \(error.localizedDescription)")
+            }
+        }
+
+        events.removeAll { $0.id == eventID }
+        removeLocalEvent(id: eventID)
+
+        if editingEvent?.id == existing.id {
+            editingEvent = nil
+            isCreatingEvent = false
+        }
+    }
+
+    /// 保存事件到系统日历 (EventKit)
+    private func saveToSystemCalendar(event: ScheduleEvent, existingIdentifier: String? = nil) -> ScheduleEvent? {
+        if let existingIdentifier, let ekEvent = eventStore.event(withIdentifier: existingIdentifier) {
+            ekEvent.title = event.title
+            ekEvent.startDate = event.startAt
+            ekEvent.endDate = event.endAt
+            ekEvent.isAllDay = event.isAllDay
+
+            do {
+                try eventStore.save(ekEvent, span: .thisEvent)
+                return ScheduleEvent(
                     id: ekEvent.eventIdentifier,
                     title: event.title,
                     categoryId: event.categoryId,
@@ -361,27 +443,64 @@ class ScheduleViewModel: ObservableObject {
                     priority: event.priority,
                     tag: event.tag
                 )
+            } catch {
+                print("⚠️ 更新系统日历事件失败: \(error.localizedDescription)")
+                return nil
             }
+        }
+
+        let ekEvent = EKEvent(eventStore: eventStore)
+        ekEvent.title = event.title
+        ekEvent.startDate = event.startAt
+        ekEvent.endDate = event.endAt
+        ekEvent.isAllDay = event.isAllDay
+        ekEvent.calendar = eventStore.defaultCalendarForNewEvents
+
+        do {
+            try eventStore.save(ekEvent, span: .thisEvent)
+            return ScheduleEvent(
+                id: ekEvent.eventIdentifier,
+                title: event.title,
+                categoryId: event.categoryId,
+                startAt: event.startAt,
+                endAt: event.endAt,
+                isAllDay: event.isAllDay,
+                status: event.status,
+                priority: event.priority,
+                tag: event.tag
+            )
         } catch {
             print("⚠️ 保存到系统日历失败: \(error.localizedDescription)")
+            return nil
         }
     }
 
     // MARK: - Initialization
 
-    init() {
-        loadEvents()
+    init(shouldLoadEvents: Bool = true) {
+        if shouldLoadEvents {
+            loadEvents()
+        }
     }
 
     // MARK: - Event Loading
 
     private func loadEvents() {
         Task {
+            let localEvents = localStore.load()
+
             do {
                 let granted = try await eventStore.requestFullAccessToEvents()
-                guard granted else {
-                    print("⚠️ 日历访问被拒绝，使用 fallback 数据")
-                    events = generateMockEvents(around: Date(), calendar: Calendar.current)
+                await MainActor.run {
+                    self.calendarAccessGranted = granted
+                }
+                if granted == false {
+                    await MainActor.run {
+                        self.events = localEvents
+                        self.accessNotice = localEvents.isEmpty
+                            ? "系统日历访问未授权，当前仅显示本地保存的日程。"
+                            : "系统日历访问未授权，当前优先显示本地保存的日程。"
+                    }
                     return
                 }
 
@@ -392,14 +511,17 @@ class ScheduleViewModel: ObservableObject {
                 // 查询范围：过去 12 个月到未来 1 个月
                 guard let startDate = cal.date(byAdding: .month, value: -12, to: today),
                       let endDate = cal.date(byAdding: .month, value: 1, to: today) else {
-                    events = []
+                    await MainActor.run {
+                        self.events = localEvents
+                        self.accessNotice = localEvents.isEmpty ? nil : "已加载本地保存的日程。"
+                    }
                     return
                 }
 
                 let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendars)
                 let ekEvents = eventStore.events(matching: predicate)
 
-                events = ekEvents.map { ekEvent -> ScheduleEvent in
+                let systemEvents = ekEvents.map { ekEvent -> ScheduleEvent in
                     ScheduleEvent(
                         id: ekEvent.eventIdentifier,
                         title: ekEvent.title ?? "无标题",
@@ -412,9 +534,18 @@ class ScheduleViewModel: ObservableObject {
                         tag: nil
                     )
                 }
+                await MainActor.run {
+                    self.events = self.mergeEvents(localEvents + systemEvents)
+                    self.accessNotice = self.events.isEmpty ? "没有可显示的日程。" : nil
+                }
             } catch {
-                print("⚠️ EventKit 错误: \(error.localizedDescription)，使用 fallback 数据")
-                events = generateMockEvents(around: Date(), calendar: Calendar.current)
+                print("⚠️ EventKit 错误: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.events = localEvents
+                    self.accessNotice = localEvents.isEmpty
+                        ? "日历读取失败，当前仅显示本地保存的日程。"
+                        : "日历读取失败，当前优先显示本地保存的日程。"
+                }
             }
         }
     }
@@ -431,129 +562,85 @@ class ScheduleViewModel: ObservableObject {
         return "acmind"
     }
 
-    // MARK: - Mock Data (Fallback)
-
-    private func generateMockEvents(around today: Date, calendar: Calendar) -> [ScheduleEvent] {
-        var events: [ScheduleEvent] = []
-
-        // --- 今天的事件 ---
-        let todayEvents: [(String, String, String, Int, Int, Bool, String?)] = [
-            ("e1", "晨间回顾", "personal", 9, 0, false, "整理"),
-            ("e2", "团队站会", "work", 10, 30, false, "会议"),
-            ("e3", "整理笔记", "acmind", 11, 0, false, "整理"),
-            ("e4", "午餐 & 休息", "life", 12, 0, false, nil),
-            ("e5", "深度工作", "acmind", 14, 0, false, "专注"),
-            ("e6", "阅读技术文档", "study", 16, 0, false, "专注"),
-            ("e7", "健身", "fitness", 18, 0, false, nil),
-            ("e8", "今日复盘", "personal", 20, 0, false, "整理"),
-        ]
-
-        for (id, title, catId, h, m, done, tag) in todayEvents {
-            let start = calendar.date(bySettingHour: h, minute: m, second: 0, of: today)!
-            let durations: [String: Int] = [
-                "晨间回顾": 60, "团队站会": 30, "整理笔记": 60,
-                "午餐 & 休息": 90, "深度工作": 120, "阅读技术文档": 90,
-                "健身": 60, "今日复盘": 30
-            ]
-            let dur = durations[title] ?? 60
-            let end = start.addingTimeInterval(TimeInterval(dur * 60))
-            events.append(ScheduleEvent(
-                id: id, title: title, categoryId: catId,
-                startAt: start, endAt: end,
-                isAllDay: false, status: done ? .done : .todo,
-                priority: .medium, tag: tag
-            ))
+    private func persistLocalEvent(_ event: ScheduleEvent) {
+        var stored = localStore.load()
+        if let index = stored.firstIndex(where: { $0.id == event.id }) {
+            stored[index] = event
+        } else {
+            stored.append(event)
         }
+        localStore.save(stored)
+    }
 
-        // --- 本周其他天的事件 ---
-        let weekDayData: [(Int, [(String, String, Int, Int, Int)])] = [
-            (-2, [("项目规划", "work", 9, 0, 120), ("英语学习", "study", 14, 0, 90)]),
-            (-1, [("代码评审", "work", 10, 0, 60), ("产品设计讨论", "work", 14, 0, 90), ("跑步", "fitness", 18, 0, 45)]),
-            (1, [("周会", "work", 9, 0, 60), ("写作", "acmind", 14, 0, 120), ("冥想", "personal", 21, 0, 20)]),
-            (2, [("客户沟通", "work", 10, 0, 60), ("学习 SwiftUI", "study", 14, 0, 90), ("瑜伽", "fitness", 18, 0, 60)]),
-            (3, [("冲刺回顾", "work", 9, 0, 90), ("读书", "study", 15, 0, 60)]),
-            (4, [("周末计划", "personal", 10, 0, 30), ("采购", "life", 14, 0, 90)]),
-        ]
+    private func removeLocalEvent(id: String) {
+        var stored = localStore.load()
+        stored.removeAll { $0.id == id }
+        localStore.save(stored)
+    }
 
-        for (dayOffset, dayEvents) in weekDayData {
-            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: today) else { continue }
-            for (i, (title, catId, h, m, dur)) in dayEvents.enumerated() {
-                let start = calendar.date(bySettingHour: h, minute: m, second: 0, of: day)!
-                let end = start.addingTimeInterval(TimeInterval(dur * 60))
-                events.append(ScheduleEvent(
-                    id: "w\(dayOffset)_\(i)", title: title, categoryId: catId,
-                    startAt: start, endAt: end,
-                    isAllDay: false, status: dayOffset < 0 ? .done : .todo,
-                    priority: .medium, tag: nil
-                ))
+    private func upsertEvent(_ event: ScheduleEvent, replacing originalID: String? = nil) {
+        var candidate = event
+        if calendarAccessGranted {
+            if let synced = saveToSystemCalendar(event: event, existingIdentifier: originalID) {
+                candidate = synced
             }
         }
 
-        // --- 过去几个月的随机事件（用于热力图） ---
-        var seed = 42
-        func nextRandom() -> Int {
-            seed = (seed &* 1103515245 &+ 12345) & 0x7FFFFFFF
-            return seed
+        if let originalID, originalID != candidate.id {
+            events.removeAll { $0.id == originalID }
+            removeLocalEvent(id: originalID)
         }
 
-        for monthOffset in (-11)...(-1) {
-            guard let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: today) else { continue }
-            let daysInMonth = calendar.range(of: .day, in: .month, for: monthStart)!.count
-            let component = calendar.dateComponents([.year, .month], from: monthStart)
-            let firstDay = calendar.date(from: component)!
-
-            for day in 1...daysInMonth {
-                let r = nextRandom() % 100
-                guard r < 70 else { continue } // 70% 概率有事件
-
-                guard let date = calendar.date(byAdding: .day, value: day - 1, to: firstDay) else { continue }
-
-                let eventCount = (nextRandom() % 3) + 1
-                var currentHour = 8 + (nextRandom() % 3)
-                let titles = ["深度工作", "会议", "学习", "整理", "写作", "阅读", "健身", "复盘", "规划"]
-                let catIds = ["work", "acmind", "study", "personal", "fitness", "life"]
-
-                for j in 0..<eventCount {
-                    guard currentHour < 20 else { break }
-                    let titleIdx = nextRandom() % titles.count
-                    let catIdx = nextRandom() % catIds.count
-                    let dur = [30, 60, 90, 120][nextRandom() % 4]
-
-                    let start = calendar.date(bySettingHour: currentHour, minute: 0, second: 0, of: date)!
-                    let end = start.addingTimeInterval(TimeInterval(dur * 60))
-
-                    events.append(ScheduleEvent(
-                        id: "past_\(monthOffset)_\(day)_\(j)",
-                        title: titles[titleIdx],
-                        categoryId: catIds[catIdx],
-                        startAt: start, endAt: end,
-                        isAllDay: false, status: .done,
-                        priority: .medium, tag: nil
-                    ))
-                    currentHour += dur / 60 + 1
-                }
-            }
+        if let index = events.firstIndex(where: { $0.id == candidate.id }) {
+            events[index] = candidate
+        } else {
+            events.append(candidate)
         }
+        persistLocalEvent(candidate)
+        events = mergeEvents(events)
+    }
 
-        // --- 全天事件 ---
-        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
-            events.append(ScheduleEvent(
-                id: "allday_1", title: "项目截止日", categoryId: "work",
-                startAt: calendar.startOfDay(for: tomorrow),
-                endAt: calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: tomorrow))!,
-                isAllDay: true, status: .todo, priority: .high, tag: nil
-            ))
+    private func mergeEvents(_ allEvents: [ScheduleEvent]) -> [ScheduleEvent] {
+        var unique: [String: ScheduleEvent] = [:]
+        for event in allEvents {
+            unique[event.id] = event
         }
+        return unique.values.sorted { $0.startAt < $1.startAt }
+    }
+}
 
-        if let nextWeek = calendar.date(byAdding: .day, value: 3, to: today) {
-            events.append(ScheduleEvent(
-                id: "allday_2", title: "团建活动", categoryId: "life",
-                startAt: calendar.startOfDay(for: nextWeek),
-                endAt: calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: nextWeek))!,
-                isAllDay: true, status: .todo, priority: .medium, tag: nil
-            ))
-        }
+// MARK: - Local Schedule Store
 
-        return events
+private final class LocalScheduleStore {
+    private let fileURL: URL
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+    private let lock = NSLock()
+
+    init() {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser
+        let folder = base.appendingPathComponent("AcMind", isDirectory: true)
+            .appendingPathComponent("Schedule", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        fileURL = folder.appendingPathComponent("local-events.json")
+        encoder.dateEncodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .iso8601
+    }
+
+    func load() -> [ScheduleEvent] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let data = try? Data(contentsOf: fileURL) else { return [] }
+        return (try? decoder.decode([ScheduleEvent].self, from: data)) ?? []
+    }
+
+    func save(_ events: [ScheduleEvent]) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let data = try? encoder.encode(events) else { return }
+        try? data.write(to: fileURL, options: .atomic)
     }
 }

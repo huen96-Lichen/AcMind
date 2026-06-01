@@ -104,6 +104,11 @@ final class DesktopCapsuleViewModel: ObservableObject {
     // MARK: - Action Implementations
 
     private func executeScreenshot() async {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            print("⚠️ 截图捕获已在设置中关闭")
+            return
+        }
+
         // 隐藏胶囊
         DesktopCapsulePanel.shared.hide()
 
@@ -125,7 +130,12 @@ final class DesktopCapsuleViewModel: ObservableObject {
     }
 
     private func executeVoiceNote() async {
-        // 显示语音输入界面
+        guard SettingsLocalPreferences.isVoiceInputEnabled() else {
+            print("⚠️ 说入法输入已在设置中关闭")
+            return
+        }
+
+        // 显示说入法界面
         NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
     }
 

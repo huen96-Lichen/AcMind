@@ -28,7 +28,7 @@ public final class AppState: ObservableObject, Sendable {
 
     // MARK: - Navigation State
 
-    @Published public var sidebarSelection: SidebarItem = .agent
+    @Published public var sidebarSelection: SidebarItem = .home
     @Published public var sidebarCollapsed = false
 
     // MARK: - Window State

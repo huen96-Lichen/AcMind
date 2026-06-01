@@ -40,7 +40,11 @@ public actor ExportService: ExportServiceProtocol {
         }
         
         // 构建 Markdown
-        let markdown = markdownBuilder.build(note: note)
+        let markdown = markdownBuilder.build(
+            note: note,
+            includeFrontmatter: config.autoFrontmatter,
+            frontmatterTemplate: config.frontmatterTemplate
+        )
         
         // 计算导出路径
         let relativePath = buildRelativePath(note: note, config: config)
@@ -61,12 +65,14 @@ public actor ExportService: ExportServiceProtocol {
         }
         
         // 创建导出记录
+        let finalRelativePath = self.relativePath(from: vaultPath, absolutePath: finalPath)
+
         let record = ExportRecord(
             sourceItemId: note.sourceItemId,
             distilledOutputId: note.id,
             vaultPath: vaultPath,
-            relativeFilePath: relativePath,
-            frontmatter: buildFrontmatterDict(note: note),
+            relativeFilePath: finalRelativePath,
+            frontmatter: buildFrontmatterDict(note: note, config: config),
             status: .success,
             conflictResolution: absolutePath != finalPath ? config.conflictStrategy : nil
         )
@@ -89,7 +95,12 @@ public actor ExportService: ExportServiceProtocol {
         }
         
         // 构建 Markdown（包含来源信息）
-        let markdown = markdownBuilder.build(note: note, sourceItem: sourceItem)
+        let markdown = markdownBuilder.build(
+            note: note,
+            sourceItem: sourceItem,
+            includeFrontmatter: config.autoFrontmatter,
+            frontmatterTemplate: config.frontmatterTemplate
+        )
         
         // 计算导出路径
         let relativePath = buildRelativePath(note: note, sourceItem: sourceItem, config: config)
@@ -110,12 +121,14 @@ public actor ExportService: ExportServiceProtocol {
         }
         
         // 创建导出记录
+        let finalRelativePath = self.relativePath(from: vaultPath, absolutePath: finalPath)
+
         let record = ExportRecord(
             sourceItemId: note.sourceItemId,
             distilledOutputId: note.id,
             vaultPath: vaultPath,
-            relativeFilePath: relativePath,
-            frontmatter: buildFrontmatterDict(note: note, sourceItem: sourceItem),
+            relativeFilePath: finalRelativePath,
+            frontmatter: buildFrontmatterDict(note: note, sourceItem: sourceItem, config: config),
             status: .success,
             conflictResolution: absolutePath != finalPath ? config.conflictStrategy : nil
         )
@@ -174,7 +187,11 @@ public actor ExportService: ExportServiceProtocol {
     // MARK: - Preview
     
     public func preview(note: DistilledNote, config: ExportConfig) async throws -> String {
-        markdownBuilder.build(note: note)
+        markdownBuilder.build(
+            note: note,
+            includeFrontmatter: config.autoFrontmatter,
+            frontmatterTemplate: config.frontmatterTemplate
+        )
     }
     
     // MARK: - Conflict Resolution
@@ -269,6 +286,21 @@ public actor ExportService: ExportServiceProtocol {
         
         return sanitized.trimmingCharacters(in: .whitespaces)
     }
+
+    private func relativePath(from vaultPath: String, absolutePath: String) -> String {
+        let vaultURL = URL(fileURLWithPath: vaultPath)
+        let absoluteURL = URL(fileURLWithPath: absolutePath)
+
+        let vaultComponents = vaultURL.standardizedFileURL.pathComponents
+        let absoluteComponents = absoluteURL.standardizedFileURL.pathComponents
+
+        guard absoluteComponents.starts(with: vaultComponents),
+              absoluteComponents.count > vaultComponents.count else {
+            return absoluteURL.lastPathComponent
+        }
+
+        return absoluteComponents.dropFirst(vaultComponents.count).joined(separator: "/")
+    }
     
     private func formatDatePath(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -278,7 +310,7 @@ public actor ExportService: ExportServiceProtocol {
     
     // MARK: - Frontmatter Dict
     
-    private func buildFrontmatterDict(note: DistilledNote) -> [String: String] {
+    private func buildFrontmatterDict(note: DistilledNote, config: ExportConfig) -> [String: String] {
         var dict: [String: String] = [
             "title": note.title ?? "",
             "created": ISO8601DateFormatter().string(from: note.createdAt),
@@ -289,24 +321,32 @@ public actor ExportService: ExportServiceProtocol {
         if let score = note.valueScore {
             dict["value_score"] = String(score)
         }
-        
+
+        for (key, value) in config.frontmatterTemplate {
+            dict[key] = value
+        }
+
         return dict
     }
-    
-    private func buildFrontmatterDict(note: DistilledNote, sourceItem: SourceItem) -> [String: String] {
-        var dict = buildFrontmatterDict(note: note)
-        
+
+    private func buildFrontmatterDict(note: DistilledNote, sourceItem: SourceItem, config: ExportConfig) -> [String: String] {
+        var dict = buildFrontmatterDict(note: note, config: config)
+
         dict["source_type"] = sourceItem.type.rawValue
         dict["source_id"] = sourceItem.id
-        
+
         if let url = sourceItem.originalUrl {
             dict["source_url"] = url
         }
-        
+
         if let app = sourceItem.sourceApp {
             dict["source_app"] = app
         }
-        
+
+        for (key, value) in config.frontmatterTemplate {
+            dict[key] = value
+        }
+
         return dict
     }
     
@@ -376,17 +416,24 @@ public enum ExportError: Error, LocalizedError {
 // MARK: - Local Markdown Builder
 
 private struct ExportMarkdownBuilder {
-    func build(note: DistilledNote) -> String {
-        buildMarkdown(note: note, sourceItem: nil)
+    func build(note: DistilledNote, includeFrontmatter: Bool = true, frontmatterTemplate: [String: String] = [:]) -> String {
+        buildMarkdown(note: note, sourceItem: nil, includeFrontmatter: includeFrontmatter, frontmatterTemplate: frontmatterTemplate)
     }
 
-    func build(note: DistilledNote, sourceItem: SourceItem) -> String {
-        buildMarkdown(note: note, sourceItem: sourceItem)
+    func build(note: DistilledNote, sourceItem: SourceItem, includeFrontmatter: Bool = true, frontmatterTemplate: [String: String] = [:]) -> String {
+        buildMarkdown(note: note, sourceItem: sourceItem, includeFrontmatter: includeFrontmatter, frontmatterTemplate: frontmatterTemplate)
     }
 
-    private func buildMarkdown(note: DistilledNote, sourceItem: SourceItem?) -> String {
+    private func buildMarkdown(
+        note: DistilledNote,
+        sourceItem: SourceItem?,
+        includeFrontmatter: Bool,
+        frontmatterTemplate: [String: String]
+    ) -> String {
         var parts: [String] = []
-        parts.append(buildFrontmatter(note: note, sourceItem: sourceItem))
+        if includeFrontmatter {
+            parts.append(buildFrontmatter(note: note, sourceItem: sourceItem, frontmatterTemplate: frontmatterTemplate))
+        }
         if let title = note.title, !title.isEmpty {
             parts.append("# \(title)")
         }
@@ -405,7 +452,7 @@ private struct ExportMarkdownBuilder {
         return parts.joined(separator: "\n\n")
     }
 
-    private func buildFrontmatter(note: DistilledNote, sourceItem: SourceItem?) -> String {
+    private func buildFrontmatter(note: DistilledNote, sourceItem: SourceItem?, frontmatterTemplate: [String: String]) -> String {
         var lines = ["---"]
         let pairs: [(String, String)] = [
             ("title", note.title ?? ""),
@@ -420,7 +467,10 @@ private struct ExportMarkdownBuilder {
             ("source_id", $0.id)
         ] } ?? [])
 
-        for (key, value) in pairs where !value.isEmpty {
+        let customPairs = frontmatterTemplate.map { ($0.key, $0.value) }
+        let mergedPairs = pairs + customPairs
+
+        for (key, value) in mergedPairs where !value.isEmpty {
             lines.append("\(key): \(escape(value))")
         }
         lines.append("---")

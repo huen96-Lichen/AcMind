@@ -160,7 +160,9 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         switch request.action {
         case "read":
             let items = try await storage.listClipboardItems(limit: 5)
-            let output = items.map { "\($0.content.prefix(100))" }.joined(separator: "\n---\n")
+            let output = items.compactMap { item -> String? in
+                item.content.map { String($0.prefix(100)) }
+            }.joined(separator: "\n---\n")
             return AgentToolResult(
                 toolType: .clipboard,
                 action: "read",
@@ -288,7 +290,6 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
     private func routeToMarkdown(_ request: AgentToolRequest) async throws -> AgentToolResult {
         switch request.action {
         case "format":
-            let content = request.parameters["content"] ?? ""
             return AgentToolResult(
                 toolType: .markdown,
                 action: "format",
@@ -329,7 +330,6 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
     private func routeToExport(_ request: AgentToolRequest) async throws -> AgentToolResult {
         switch request.action {
         case "toObsidian":
-            let content = request.parameters["content"] ?? ""
             return AgentToolResult(
                 toolType: .export,
                 action: "toObsidian",

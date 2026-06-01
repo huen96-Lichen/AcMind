@@ -34,7 +34,7 @@ struct CompanionView: View {
                 ShortcutSettingsCard(
                     isEnabled: $viewModel.companionShortcutsEnabled,
                     isGlobalEnabled: isGlobalEnabled,
-                    shortcuts: CompanionMockData.shortcuts,
+                    shortcuts: viewModel.companionShortcuts,
                     voiceEnabled: viewModel.companionVoiceEnabled,
                     captureEnabled: viewModel.companionCaptureEnabled
                 )
@@ -42,7 +42,11 @@ struct CompanionView: View {
                 // Capture Card
                 CaptureSettingsCard(
                     isEnabled: $viewModel.companionCaptureEnabled,
-                    isGlobalEnabled: isGlobalEnabled
+                    isGlobalEnabled: isGlobalEnabled,
+                    autoSaveToInbox: $viewModel.companionCaptureAutoSaveToInbox,
+                    textCaptureEnabled: $viewModel.companionCaptureTextEnabled,
+                    linkCaptureEnabled: $viewModel.companionCaptureLinkEnabled,
+                    saveDestinationIndex: $viewModel.companionCaptureSaveDestinationIndex
                 )
                 
                 // Permissions Section (optional, kept at bottom)
@@ -53,7 +57,7 @@ struct CompanionView: View {
             .frame(maxWidth: 1200, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -61,7 +65,7 @@ struct CompanionView: View {
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
         }
-        .onChange(of: isGlobalEnabled) { newValue in
+        .onChange(of: isGlobalEnabled) { _, newValue in
             if newValue {
                 // Save when enabling
                 Task {
@@ -69,6 +73,20 @@ struct CompanionView: View {
                 }
             }
         }
+        .onChange(of: viewModel.companionCapsuleEnabled) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCapsuleShowOnLaunch) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCapsulePosition) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCapsuleExpanded) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionVoiceEnabled) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionVoiceOutputMode) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionVoiceSaveToInbox) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionShortcutsEnabled) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionShortcuts) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCaptureEnabled) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCaptureAutoSaveToInbox) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCaptureTextEnabled) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCaptureLinkEnabled) { _, _ in persistCompanionSettings() }
+        .onChange(of: viewModel.companionCaptureSaveDestinationIndex) { _, _ in persistCompanionSettings() }
     }
     
     // MARK: - Companion Permissions Section
@@ -87,7 +105,7 @@ struct CompanionView: View {
             VStack(spacing: 12) {
                 CompanionPermissionRow(
                     title: "麦克风权限",
-                    description: "用于随身语音转文字",
+                    description: "用于说入法转文字",
                     status: viewModel.microphonePermissionStatus
                 )
                 
@@ -105,6 +123,12 @@ struct CompanionView: View {
             }
         }
         .opacity(isGlobalEnabled ? 1.0 : 0.55)
+    }
+
+    private func persistCompanionSettings() {
+        Task {
+            await viewModel.saveCompanionSettings()
+        }
     }
 }
 
@@ -144,7 +168,7 @@ struct CompanionPermissionRow: View {
             .cornerRadius(6)
         }
         .padding(12)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(8)
     }
 }

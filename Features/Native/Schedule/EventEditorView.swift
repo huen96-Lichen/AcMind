@@ -16,6 +16,7 @@ struct EventEditorView: View {
 
     private let calendar = Calendar.current
     private let durationOptions = [15, 30, 45, 60, 90, 120, 180]
+    private var isEditing: Bool { viewModel.editingEvent != nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,12 +31,12 @@ struct EventEditorView: View {
 
                 Spacer()
 
-                Text("新建日程")
+                Text(isEditing ? "编辑日程" : "新建日程")
                     .font(.system(size: 15, weight: .semibold))
 
                 Spacer()
 
-                Button("创建") {
+                Button(isEditing ? "更新" : "创建") {
                     validateAndCreate()
                 }
                 .font(.system(size: 13, weight: .medium))
@@ -62,7 +63,7 @@ struct EventEditorView: View {
                         .textFieldStyle(.plain)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
-                        .background(Color(NSColor.controlBackgroundColor))
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
@@ -96,7 +97,7 @@ struct EventEditorView: View {
                                 .padding(.vertical, 6)
                                 .background(selectedCategoryId == category.id
                                     ? category.color.opacity(0.15)
-                                    : Color(NSColor.controlBackgroundColor))
+                                    : AppSurfaceTokens.cardBackgroundSoft)
                                 .cornerRadius(6)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
@@ -145,7 +146,7 @@ struct EventEditorView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color(NSColor.controlBackgroundColor))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -168,7 +169,7 @@ struct EventEditorView: View {
                             .frame(width: 100)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color(NSColor.controlBackgroundColor))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -186,7 +187,7 @@ struct EventEditorView: View {
                                 .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Color(NSColor.controlBackgroundColor))
+                                .background(AppSurfaceTokens.cardBackgroundSoft)
                                 .cornerRadius(8)
                         }
                     }
@@ -224,16 +225,25 @@ struct EventEditorView: View {
         }
         .frame(width: 420)
         .onAppear {
-            startHour = viewModel.newEventStartHour
-            startMinute = viewModel.newEventStartMinute
+            if let editingEvent = viewModel.editingEvent {
+                title = editingEvent.title
+                selectedCategoryId = editingEvent.categoryId
+                startHour = calendar.component(.hour, from: editingEvent.startAt)
+                startMinute = calendar.component(.minute, from: editingEvent.startAt)
+                durationMinutes = max(15, editingEvent.durationMinutes)
+                isAllDay = editingEvent.isAllDay
+            } else {
+                startHour = viewModel.newEventStartHour
+                startMinute = viewModel.newEventStartMinute
+            }
         }
-        .onChange(of: title) { _ in
+        .onChange(of: title) { _, _ in
             validationError = nil
         }
-        .onChange(of: startHour) { _ in
+        .onChange(of: startHour) { _, _ in
             validationError = nil
         }
-        .onChange(of: durationMinutes) { _ in
+        .onChange(of: durationMinutes) { _, _ in
             validationError = nil
         }
     }

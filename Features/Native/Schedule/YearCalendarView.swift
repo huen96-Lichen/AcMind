@@ -121,7 +121,7 @@ private struct MiniMonthCard: View {
         .background(
             isCurrentMonth
                 ? Color.accentColor.opacity(0.05)
-                : Color(NSColor.controlBackgroundColor)
+                : AppSurfaceTokens.cardBackgroundSoft
         )
         .cornerRadius(AcMindTheme.cornerRadius)
         .overlay(
@@ -245,7 +245,7 @@ private struct WorkloadHeatmap: View {
                         .foregroundStyle(Color.secondary)
                 }
                 .padding(10)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)

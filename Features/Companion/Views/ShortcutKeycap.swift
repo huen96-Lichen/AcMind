@@ -2,19 +2,19 @@ import SwiftUI
 
 struct ShortcutKeycap: View {
     let key: String
-    
+
     var body: some View {
         Text(key)
-            .font(.system(.body, design: .monospaced))
+            .font(.system(size: 12, design: .monospaced))
             .fontWeight(.medium)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color(NSColor.controlBackgroundColor))
-            .foregroundColor(Color(NSColor.controlTextColor))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .foregroundStyle(AppSurfaceTokens.primaryText)
             .cornerRadius(6)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.separator, lineWidth: 1)
             )
     }
 }
@@ -22,10 +22,11 @@ struct ShortcutKeycap: View {
 struct ShortcutKeycapView_Previews: PreviewProvider {
     static var previews: some View {
         HStack(spacing: 4) {
-            ShortcutKeycap(key: "⌥")
+            ShortcutKeycap(key: "Fn")
             ShortcutKeycap(key: "Space")
+            ShortcutKeycap(key: "Shift")
         }
         .padding()
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 }

@@ -3,6 +3,7 @@ import AppKit
 import AVFoundation
 import CoreGraphics
 import UserNotifications
+import Speech
 
 // MARK: - App Permission Kind
 
@@ -13,6 +14,7 @@ public enum AppPermissionKind: String, CaseIterable, Sendable, Hashable {
     case accessibility
     case fullDiskAccess
     case notifications
+    case speechRecognition
 
     public var displayName: String {
         switch self {
@@ -21,6 +23,7 @@ public enum AppPermissionKind: String, CaseIterable, Sendable, Hashable {
         case .accessibility: return "辅助功能"
         case .fullDiskAccess: return "完全磁盘访问"
         case .notifications: return "通知"
+        case .speechRecognition: return "语音识别"
         }
     }
 
@@ -31,6 +34,7 @@ public enum AppPermissionKind: String, CaseIterable, Sendable, Hashable {
         case .accessibility: return "figure.stand"
         case .fullDiskAccess: return "internaldrive.fill"
         case .notifications: return "bell.fill"
+        case .speechRecognition: return "waveform"
         }
     }
 
@@ -39,7 +43,7 @@ public enum AppPermissionKind: String, CaseIterable, Sendable, Hashable {
         switch self {
         case .microphone, .notifications:
             return true
-        case .screenRecording, .accessibility, .fullDiskAccess:
+        case .screenRecording, .accessibility, .fullDiskAccess, .speechRecognition:
             return false
         }
     }
@@ -205,7 +209,7 @@ public final class PermissionManager: ObservableObject {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy") {
             NSWorkspace.shared.open(url)
         } else {
-            // 降级：打开安全性与隐私
+            // 兼容路径：打开安全性与隐私
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security")!)
         }
     }
@@ -230,6 +234,8 @@ public final class PermissionManager: ObservableObject {
                 return
             }
             anchor = "Privacy"
+        case .speechRecognition:
+            anchor = "Privacy_SpeechRecognition"
         }
 
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") {
@@ -253,6 +259,8 @@ public final class PermissionManager: ObservableObject {
             return checkFullDiskAccess()
         case .notifications:
             return await checkNotifications()
+        case .speechRecognition:
+            return checkSpeechRecognition()
         }
     }
 
@@ -270,6 +278,8 @@ public final class PermissionManager: ObservableObject {
             throw PermissionError.requiresManualGrant(.fullDiskAccess)
         case .notifications:
             try await requestNotifications()
+        case .speechRecognition:
+            throw PermissionError.requiresManualGrant(.speechRecognition)
         }
     }
 
@@ -382,6 +392,17 @@ public final class PermissionManager: ObservableObject {
         log("requestNotifications: result = \(granted)")
         if !granted {
             throw PermissionError.denied(.notifications)
+        }
+    }
+
+    private func checkSpeechRecognition() -> AppPermissionStatus {
+        let status = SFSpeechRecognizer.authorizationStatus()
+        switch status {
+        case .notDetermined: return .notDetermined
+        case .restricted: return .restricted
+        case .denied: return .denied
+        case .authorized: return .authorized
+        @unknown default: return .unknown
         }
     }
 }

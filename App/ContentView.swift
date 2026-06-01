@@ -5,17 +5,27 @@ import AcMindKit
 // AcMind 主应用框架
 
 struct ContentView: View {
-    @State private var selectedItem: SidebarItem = .agent
+    @EnvironmentObject private var appState: AppState
     @State private var showVoicePanel = false
     @State private var showCapturePanel = false
     @State private var showQuickNote = false
 
+    private var selectedItemBinding: Binding<SidebarItem> {
+        Binding(
+            get: { appState.sidebarSelection },
+            set: { appState.selectSidebarItem($0) }
+        )
+    }
+
     var body: some View {
         NavigationSplitView {
-            MainSidebar(selectedItem: $selectedItem)
+            MainSidebar(selectedItem: selectedItemBinding)
         } detail: {
-            MainContent(selectedItem: selectedItem)
+            MainContent(selectedItem: appState.sidebarSelection)
         }
+        .navigationSplitViewStyle(.balanced)
+        .navigationSplitViewColumnWidth(min: 292, ideal: 320, max: 380)
+        .background(AppSurfaceTokens.background.ignoresSafeArea())
         .sheet(isPresented: $showVoicePanel) {
             CompanionVoicePanel()
         }
@@ -26,15 +36,19 @@ struct ContentView: View {
             QuickNotePanel()
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowAgent)) { _ in
-            selectedItem = .agent
+            appState.selectSidebarItem(.agent)
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowInbox)) { _ in
-            selectedItem = .inbox
+            appState.selectSidebarItem(.inbox)
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowSchedule)) { _ in
-            selectedItem = .schedule
+            appState.selectSidebarItem(.schedule)
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowVoicePanel)) { _ in
+            guard SettingsLocalPreferences.isVoiceInputEnabled() else {
+                appState.showError(.serviceUnavailable("说入法输入已在设置中关闭"))
+                return
+            }
             showVoicePanel = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowCapturePanel)) { _ in
@@ -54,8 +68,10 @@ struct MainSidebar: View {
 
     var body: some View {
         List(selection: $selectedItem) {
+            sidebarHeader
+
             Section {
-                ForEach(SidebarItem.mainItems) { item in
+                ForEach(SidebarItem.coreWorkflow) { item in
                     SidebarItemView(
                         item: item,
                         isSelected: selectedItem == item,
@@ -66,10 +82,72 @@ struct MainSidebar: View {
                         hoveredItem = isHovered ? item : nil
                     }
                 }
+            } header: {
+                sidebarSectionHeader("核心工作流")
+            }
+
+            Section {
+                ForEach(SidebarItem.companionCapabilities) { item in
+                    SidebarItemView(
+                        item: item,
+                        isSelected: selectedItem == item,
+                        isHovered: hoveredItem == item
+                    )
+                    .tag(item)
+                    .onHover { isHovered in
+                        hoveredItem = isHovered ? item : nil
+                    }
+                }
+            } header: {
+                sidebarSectionHeader("伴随能力")
+            }
+
+            Section {
+                ForEach(SidebarItem.systemItems) { item in
+                    SidebarItemView(
+                        item: item,
+                        isSelected: selectedItem == item,
+                        isHovered: hoveredItem == item
+                    )
+                    .tag(item)
+                    .onHover { isHovered in
+                        hoveredItem = isHovered ? item : nil
+                    }
+                }
+            } header: {
+                sidebarSectionHeader("系统")
             }
         }
         .listStyle(.sidebar)
-        .frame(minWidth: 200)
+        .scrollContentBackground(.hidden)
+        .frame(minWidth: 300, idealWidth: 320, maxWidth: 360)
+        .background(AppSurfaceTokens.sidebarBackground.ignoresSafeArea())
+    }
+
+    private var sidebarHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("AcMind")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+
+            Text("主导航")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 8)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+        .listRowBackground(Color.clear)
+    }
+
+    private func sidebarSectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .textCase(nil)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
     }
 }
 
@@ -81,31 +159,57 @@ struct SidebarItemView: View {
     let isHovered: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: item.icon)
-                .font(.system(size: 16, weight: .medium))
-                .frame(width: 20)
-                .foregroundStyle(isSelected ? Color.white : Color.primary)
+        HStack(spacing: 9) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? Color.accentColor.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+                    .frame(width: 26, height: 26)
 
-            Text(item.title)
-                .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
+                Image(systemName: item.icon)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(isSelected ? Color.accentColor : AppSurfaceTokens.secondaryText)
+            }
 
-            Spacer()
+            VStack(alignment: .leading, spacing: 0) {
+                Text(item.title)
+                    .font(.system(size: 13.5, weight: isSelected ? .semibold : .regular))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.72)
+                    .layoutPriority(1)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+
+                if item.group == .companionCapabilities {
+                    Text("伴随能力")
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 6)
 
             if let shortcut = item.shortcut {
                 Text(shortcut.displayString)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.secondary)
-                    .opacity(0.7)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.accentColor : AppSurfaceTokens.secondaryText)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isSelected ? Color.accentColor.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
+                    )
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
         .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft.opacity(0.72) : Color.clear))
         )
-        .foregroundStyle(isSelected ? Color.white : Color.primary)
+        .foregroundStyle(AppSurfaceTokens.primaryText)
         .contentShape(Rectangle())
     }
 }
@@ -118,29 +222,35 @@ struct MainContent: View {
     var body: some View {
         Group {
             switch selectedItem {
+            case .home:
+                WorkspaceHomeView()
+                    .navigationTitle("首页")
             case .agent:
-                AgentView()
+                AgentDashboardView()
                     .navigationTitle("Agent")
             case .inbox:
                 InboxView()
                     .navigationTitle("收集箱")
             case .clipboard:
                 ClipboardView()
-                    .navigationTitle("剪贴板")
+                    .navigationTitle("剪贴板 & 手机响")
             case .schedule:
-                ScheduleNativeView()
+                ScheduleDashboardView()
                     .navigationTitle("日程")
             case .workbench:
-                WorkbenchView()
-                    .navigationTitle("工作台")
-            case .tools:
                 ToolsView()
-                    .navigationTitle("工具")
-            case .companion:
-                CompanionView()
-                    .navigationTitle("随身")
+                    .navigationTitle("工具台")
+            case .dynamicContinent:
+                DynamicContinentConfigView()
+                    .navigationTitle("灵动大陆 & 配置")
+            case .systemStatus:
+                SystemStatusView()
+                    .navigationTitle("系统状态")
+            case .voiceEntry:
+                VoiceEntryView()
+                    .navigationTitle("说入法设置")
             case .settings:
-                SettingsView()
+                SettingsSuiteView()
                     .navigationTitle("设置")
             }
         }

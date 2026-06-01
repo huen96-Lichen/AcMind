@@ -96,6 +96,7 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
     case whisperKit = "whisper_kit"
     case qwen3ASR = "qwen3_asr"
     case funASR = "fun_asr"
+    case parakeet = "parakeet"
     
     // 云端服务
     case openAI = "openai"
@@ -116,6 +117,7 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
         case .whisperKit: return "WhisperKit (本地)"
         case .qwen3ASR: return "Qwen3-ASR (本地)"
         case .funASR: return "FunASR (本地)"
+        case .parakeet: return "Parakeet (本地)"
         case .openAI: return "OpenAI Whisper"
         case .aliCloud: return "阿里云 ASR"
         case .doubao: return "火山引擎 ASR"
@@ -128,7 +130,7 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
     
     public var isLocal: Bool {
         switch self {
-        case .senseVoice, .whisperKit, .qwen3ASR, .funASR:
+        case .senseVoice, .whisperKit, .qwen3ASR, .funASR, .parakeet:
             return true
         default:
             return false

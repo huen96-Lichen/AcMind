@@ -2,15 +2,18 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
-// MARK: - Companion Capsule
-// 随身胶囊 - 顶部刘海式入口
-
+// MARK: - Legacy Companion Capsule
+// 旧版随身胶囊兼容层
+// 主线已迁移到 NotchV2RootView，这里保留仅用于兼容旧调用路径
+@available(*, deprecated, message: "Use NotchV2RootView as the mainline notch implementation.")
 public struct CompanionCapsule: View {
     @StateObject private var viewModel = CompanionCapsuleViewModel()
-    @State private var isHovered = false
     @State private var showQuickNote = false
+    private let onExpansionChange: (Bool) -> Void
 
-    public init() {}
+    public init(onExpansionChange: @escaping (Bool) -> Void = { _ in }) {
+        self.onExpansionChange = onExpansionChange
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +31,9 @@ public struct CompanionCapsule: View {
             }
         }
         .animation(.spring(response: CompanionMenuBarLayout.springResponse, dampingFraction: CompanionMenuBarLayout.springDamping), value: viewModel.isExpanded)
+        .onChange(of: viewModel.isExpanded) { _, newValue in
+            onExpansionChange(newValue)
+        }
         .sheet(isPresented: $showQuickNote) {
             QuickNotePanel()
         }
@@ -36,184 +42,483 @@ public struct CompanionCapsule: View {
     // MARK: - Collapsed Capsule
 
     private var collapsedCapsule: some View {
-        HStack(spacing: 12) {
-            // 电池状态
-            BatteryIndicatorView(batteryWidth: 22, showPercentage: false)
-
-            // 分隔线
-            Divider()
-                .frame(height: 16)
-
-            // 品牌标识
-            HStack(spacing: 6) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 14, weight: .medium))
-
-                Text("AcMind")
-                    .font(.system(size: 13, weight: .medium))
+        ZStack {
+            if viewModel.voiceSurfaceState.isActive {
+                SayInputWaveformHalo(
+                    isActive: viewModel.voiceSurfaceState == .listening || viewModel.voiceSurfaceState == .processing,
+                    mode: viewModel.voiceSurfaceState == .processing ? .processing : .listening,
+                    accent: viewModel.voiceSurfaceState == .cancelled ? .red : .purple
+                )
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .allowsHitTesting(false)
             }
 
-            // 分隔线
-            Divider()
-                .frame(height: 16)
-
-            // 音乐播放器（迷你）- 从 ViewModel 获取真实状态
-            NowPlayingCapsuleView(state: viewModel.playbackState)
-
-            // 分隔线
-            Divider()
-                .frame(height: 16)
-
-            // 快捷操作图标
             HStack(spacing: 10) {
-                CapsuleIconButton(
-                    icon: "mic.fill",
-                    isActive: viewModel.isVoiceRecording,
-                    isLoading: false,
-                    action: { viewModel.showVoicePanel() }
+                ArtworkGlowView(
+                    artworkData: viewModel.playbackState.artwork,
+                    isPlaying: viewModel.playbackState.isPlaying
                 )
-                .help("随身语音")
+                .frame(width: 28, height: 28)
 
-                CapsuleIconButton(
-                    icon: "square.and.pencil",
-                    isActive: false,
-                    isLoading: false,
-                    action: { showQuickNote = true }
-                )
-                .help("快速记录")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(collapsedTitle)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
 
-                // 截图按钮 - 右键菜单选择截图模式
-                Menu {
-                    Button("全屏截图") {
-                        viewModel.showScreenshot(mode: ScreenshotMode.fullscreen)
+                    if let subtitle = collapsedSubtitle {
+                        Text(subtitle)
+                            .font(.system(size: 9))
+                            .foregroundStyle(collapsedSubtitleColor)
+                            .lineLimit(1)
                     }
-                    Button("区域截图") {
-                        viewModel.showScreenshot(mode: ScreenshotMode.area)
-                    }
-                    Button("窗口截图") {
-                        viewModel.showScreenshot(mode: ScreenshotMode.window)
-                    }
-                } label: {
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 8) {
+                    CapsuleStatusDot(color: collapsedVoiceAccent)
+                    CapsuleStatusDot(color: viewModel.playbackState.isPlaying ? .green : .secondary.opacity(0.7))
                     CapsuleIconButton(
-                        icon: "camera",
-                        isActive: false,
-                        isLoading: viewModel.isCapturing,
-                        action: { viewModel.showScreenshot(mode: ScreenshotMode.fullscreen) }
+                        icon: viewModel.isExpanded ? "chevron.up" : "chevron.down",
+                        isActive: viewModel.isExpanded,
+                        isLoading: false,
+                        action: { viewModel.toggleExpand() }
                     )
                 }
-                .menuStyle(.borderlessButton)
-                .help("截图收集")
-
-                CapsuleIconButton(
-                    icon: "calendar",
-                    isActive: false,
-                    isLoading: false,
-                    action: { viewModel.showSchedule() }
-                )
-                .help("今日日程")
             }
-
-            // 展开/收起按钮
-            Button(action: { viewModel.toggleExpand() }) {
-                Image(systemName: viewModel.isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.secondary)
-            }
-            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 6)
-        .frame(height: CompanionMenuBarLayout.collapsedHeight)
+        .frame(width: CompanionMenuBarLayout.collapsedWidth, height: CompanionMenuBarLayout.collapsedHeight)
+        .clipped()
         .background(
-            Capsule()
-                .fill(Color(NSColor.controlBackgroundColor).opacity(0.95))
-                .shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 4)
+            NotchShape(topCornerRadius: 8, bottomCornerRadius: 18)
+                .fill(Color.black.opacity(0.98))
+                .shadow(color: .black.opacity(0.22), radius: 8, x: 0, y: 2)
         )
         .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+            NotchShape(topCornerRadius: 8, bottomCornerRadius: 18)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
-        .onHover { hovering in
-            isHovered = hovering
-        }
     }
 
     // MARK: - Expanded Panel
 
     private var expandedPanel: some View {
-        VStack(spacing: 16) {
-            // Shelf 暂存区
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "tray.and.arrow.down")
-                        .foregroundStyle(Color.secondary)
-                        .font(.caption)
+        VStack(spacing: CompanionMenuBarLayout.moduleSpacing) {
+            NotchHeaderStrip(
+                playbackState: viewModel.playbackState,
+                status: viewModel.status,
+                voiceSurfaceState: viewModel.voiceSurfaceState,
+                isCapturing: viewModel.isCapturing
+            )
 
-                    Text("文件暂存")
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: CompanionMenuBarLayout.moduleSpacing),
+                    GridItem(.flexible(), spacing: CompanionMenuBarLayout.moduleSpacing)
+                ],
+                spacing: CompanionMenuBarLayout.moduleSpacing
+            ) {
+                ModuleCard(title: "音乐", subtitle: "播放链路", symbol: "music.note") {
+                    ExpandedMusicCard(state: viewModel.playbackState)
                 }
 
-                ShelfView()
+                ModuleCard(title: "日程", subtitle: "今日待办", symbol: "calendar") {
+                    ExpandedScheduleCard()
+                }
+
+                ModuleCard(title: "Agent", subtitle: "任务中枢", symbol: "bubble.left.and.bubble.right") {
+                    ExpandedAgentCard(status: viewModel.status)
+                }
+
+                ModuleCard(title: "工作台", subtitle: "快速入库", symbol: "tray.and.arrow.down") {
+                    ExpandedWorkbenchCard(lastTranscription: viewModel.lastTranscription)
+                }
             }
 
-            Divider()
-
-            // 快捷入口网格
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 12) {
+            ModuleCard(title: "最近任务", subtitle: "快捷指令与动作", symbol: "bolt.fill") {
                 ForEach(viewModel.quickActions) { action in
                     QuickActionButton(action: action)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            }
-
-            Divider()
-
-            // 最近语音转写
-            if let lastTranscription = viewModel.lastTranscription {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "waveform")
-                            .foregroundStyle(Color.secondary)
-                            .font(.caption)
-
-                        Text("最近转写")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-
-                        Spacer()
-
-                        Text(formatTime(lastTranscription.timestamp))
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    Text(lastTranscription.text)
-                        .font(.body)
-                        .lineLimit(2)
-                        .foregroundStyle(Color.primary)
-                }
-                .padding(12)
-                .background(Color.secondary.opacity(0.05))
-                .cornerRadius(10)
             }
         }
-        .padding(16)
+        .padding(20)
         .frame(width: CompanionMenuBarLayout.expandedWidth)
         .background(
-            RoundedRectangle(cornerRadius: CompanionMenuBarLayout.cornerRadiusExpanded)
-                .fill(Color(NSColor.controlBackgroundColor).opacity(0.98))
-                .shadow(color: .black.opacity(0.18), radius: 44, x: 0, y: 18)
+            NotchShape(topCornerRadius: 12, bottomCornerRadius: CompanionMenuBarLayout.cornerRadiusExpanded)
+                .fill(Color.black.opacity(0.98))
+                .shadow(color: .black.opacity(0.55), radius: 42, x: 0, y: 22)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: CompanionMenuBarLayout.cornerRadiusExpanded)
-                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+            NotchShape(topCornerRadius: 12, bottomCornerRadius: CompanionMenuBarLayout.cornerRadiusExpanded)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
+    }
+
+    private var collapsedTitle: String {
+        switch viewModel.voiceSurfaceState {
+        case .idle:
+            return viewModel.playbackState.title.isEmpty ? "AcMind" : viewModel.playbackState.title
+        case .listening:
+            return "说入法收音中"
+        case .processing:
+            return "正在清洗文稿"
+        case .completed(let destination):
+            return destination.title
+        case .cancelled:
+            return "已取消"
+        }
+    }
+
+    private var collapsedSubtitle: String? {
+        switch viewModel.voiceSurfaceState {
+        case .idle:
+            if viewModel.playbackState.isPlaying {
+                if viewModel.playbackState.artist.isEmpty {
+                    return "正在播放"
+                }
+                return viewModel.playbackState.artist
+            }
+
+            if viewModel.playbackState.title.isEmpty == false {
+                return viewModel.playbackState.artist.isEmpty ? "已暂停" : viewModel.playbackState.artist
+            }
+
+            return "顶部信息中枢"
+        case .listening:
+            return "松开 Fn 完成 · Esc 取消"
+        case .processing:
+            return "准备写入当前光标"
+        case .completed(let destination):
+            return destination.subtitle
+        case .cancelled:
+            return nil
+        }
+    }
+
+    private var collapsedSubtitleColor: Color {
+        switch viewModel.voiceSurfaceState {
+        case .idle:
+            return .secondary
+        case .listening, .processing, .completed:
+            return .white.opacity(0.78)
+        case .cancelled:
+            return .red.opacity(0.9)
+        }
+    }
+
+    private var collapsedVoiceAccent: Color {
+        switch viewModel.voiceSurfaceState {
+        case .idle:
+            return viewModel.playbackState.isPlaying ? .green : .secondary
+        case .listening, .processing, .completed:
+            return .purple
+        case .cancelled:
+            return .red
+        }
     }
 
     private func formatTime(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Notch Module Views
+
+struct ModuleCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: symbol)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    Text(subtitle)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            content
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+    }
+}
+
+struct NotchHeaderStrip: View {
+    let playbackState: PlaybackState
+    let status: CompanionStatus
+    let voiceSurfaceState: NotchV2VoiceSurfaceState
+    let isCapturing: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CapsuleStatusChip(label: playbackState.isPlaying ? "音乐同步中" : "音乐待机", color: playbackState.isPlaying ? .green : .secondary)
+            CapsuleStatusChip(label: status.displayName, color: status.color)
+            CapsuleStatusChip(label: voiceTitle, color: voiceColor)
+            CapsuleStatusChip(label: isCapturing ? "截图处理中" : "工具在线", color: isCapturing ? .orange : .secondary)
+            Spacer()
+        }
+    }
+
+    private var voiceTitle: String {
+        switch voiceSurfaceState {
+        case .idle:
+            return "说入法待命"
+        case .listening:
+            return "说入法收音中"
+        case .processing:
+            return "正在清洗文稿"
+        case .completed(let destination):
+            return destination.title
+        case .cancelled:
+            return "已取消"
+        }
+    }
+
+    private var voiceColor: Color {
+        switch voiceSurfaceState {
+        case .idle:
+            return .secondary
+        case .listening, .processing, .completed:
+            return .purple
+        case .cancelled:
+            return .red
+        }
+    }
+}
+
+struct CapsuleStatusChip: View {
+    let label: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.white.opacity(0.04))
+        .clipShape(Capsule())
+    }
+}
+
+struct ExpandedMusicCard: View {
+    let state: PlaybackState
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            ArtworkGlowView(artworkData: state.artwork, isPlaying: state.isPlaying)
+                .frame(width: 92, height: 92)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(state.title.isEmpty ? "暂无播放" : state.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(2)
+
+                Text(expandedSubtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                ProgressView(value: state.duration > 0 ? state.currentTime / state.duration : 0)
+                    .tint(.white)
+                    .scaleEffect(x: 1, y: 0.9, anchor: .center)
+
+                HStack(spacing: 10) {
+                    CapsuleIconButton(icon: "backward.fill", action: { MusicService.shared.previousTrack() })
+                    CapsuleIconButton(icon: state.isPlaying ? "pause.fill" : "play.fill", isActive: state.isPlaying, action: { MusicService.shared.togglePlay() })
+                    CapsuleIconButton(icon: "forward.fill", action: { MusicService.shared.nextTrack() })
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private var expandedSubtitle: String {
+        let artist = state.artist.isEmpty ? "未知艺术家" : state.artist
+        let album = state.album.isEmpty ? "未知专辑" : state.album
+        return "\(artist) · \(album)"
+    }
+}
+
+struct ExpandedScheduleCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("今日待办")
+                .font(.system(size: 14, weight: .semibold))
+            ForEach(["整理输入队列", "推进 Agent 链路", "确认音乐同步"], id: \.self) { item in
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color.white.opacity(0.4))
+                        .frame(width: 6, height: 6)
+                    Text(item)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+        }
+    }
+}
+
+struct ExpandedAgentCard: View {
+    let status: CompanionStatus
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Agent 状态")
+                .font(.system(size: 14, weight: .semibold))
+            Text(status.displayName)
+                .font(.system(size: 18, weight: .semibold))
+            Text("任务入口 / 工具调用 / 反馈循环")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct ExpandedWorkbenchCard: View {
+    let lastTranscription: CompanionVoiceTranscription?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("快速入库")
+                .font(.system(size: 14, weight: .semibold))
+            if let lastTranscription {
+                Text(lastTranscription.text)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                Text(formatDate(lastTranscription.timestamp))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text("等待输入内容")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+struct ArtworkGlowView: View {
+    let artworkData: Data?
+    let isPlaying: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(glowColor.opacity(isPlaying ? 0.55 : 0.3))
+                .blur(radius: 18)
+                .scaleEffect(1.12)
+
+            Circle()
+                .fill(Color.black.opacity(0.92))
+
+            if let artworkData, let image = NSImage(data: artworkData) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(Circle())
+                    .padding(4)
+            } else {
+                Image(systemName: "music.note")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+    }
+
+    private var glowColor: Color {
+        dominantColor(from: artworkData) ?? Color(red: 0.28, green: 0.6, blue: 1.0)
+    }
+
+    private func dominantColor(from data: Data?) -> Color? {
+        guard let data, let image = NSImage(data: data), let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return nil
+        }
+
+        let width = cgImage.width
+        let height = cgImage.height
+        guard width > 0, height > 0 else { return nil }
+
+        let pixelCount = width * height
+        let bytesPerRow = width * 4
+        var pixels = [UInt8](repeating: 0, count: pixelCount * 4)
+
+        let success: Bool = pixels.withUnsafeMutableBytes { rawBuffer in
+            guard let baseAddress = rawBuffer.baseAddress else { return false }
+            guard let context = CGContext(
+                data: baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else {
+                return false
+            }
+
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+
+        guard success else { return nil }
+
+        var red: Double = 0
+        var green: Double = 0
+        var blue: Double = 0
+        let sampleStep = max(1, pixelCount / 96)
+        var samples = 0.0
+
+        for index in stride(from: 0, to: pixels.count, by: sampleStep * 4) {
+            red += Double(pixels[index])
+            green += Double(pixels[index + 1])
+            blue += Double(pixels[index + 2])
+            samples += 1
+        }
+
+        guard samples > 0 else { return nil }
+        return Color(
+            red: red / (255.0 * samples),
+            green: green / (255.0 * samples),
+            blue: blue / (255.0 * samples)
+        )
     }
 }
 
@@ -291,6 +596,17 @@ struct NowPlayingCapsuleView: View {
         }
 
         return nil
+    }
+}
+
+struct CapsuleStatusDot: View {
+    let color: Color
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 8, height: 8)
+            .shadow(color: color.opacity(0.35), radius: 5, x: 0, y: 0)
     }
 }
 
@@ -383,12 +699,16 @@ class CompanionCapsuleViewModel: ObservableObject {
     @Published var status: CompanionStatus = .idle
     @Published var lastTranscription: CompanionVoiceTranscription?
     @Published var isVoiceRecording = false
+    @Published var isVoiceProcessing = false
+    @Published var voiceSurfaceState: NotchV2VoiceSurfaceState = .idle
     @Published var isCapturing = false
     @Published var playbackState: PlaybackState = PlaybackState()
 
+    private var voiceStateResetTask: Task<Void, Never>?
+
     var quickActions: [QuickAction] {
         [
-            QuickAction(icon: "mic.fill", title: "随身语音", handler: { [weak self] in
+            QuickAction(icon: "mic.fill", title: "说入法", handler: { [weak self] in
                 self?.showVoicePanel()
             }),
             QuickAction(icon: "square.and.pencil", title: "快速记录", handler: { [weak self] in
@@ -411,7 +731,7 @@ class CompanionCapsuleViewModel: ObservableObject {
 
     init() {
         // 加载最近转写
-        lastTranscription = CompanionMockData.recentTranscriptions.first
+        lastTranscription = nil
 
         // 订阅音乐播放状态
         setupMusicObserver()
@@ -450,6 +770,24 @@ class CompanionCapsuleViewModel: ObservableObject {
             name: .companionVoiceRecordingStopped,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVoiceProcessingStarted(_:)),
+            name: .companionVoiceProcessingStarted,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVoiceProcessingFinished(_:)),
+            name: .companionVoiceProcessingFinished,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVoiceCancelled(_:)),
+            name: .companionVoiceCancelled,
+            object: nil
+        )
     }
 
     // MARK: - Capture Observer
@@ -470,16 +808,68 @@ class CompanionCapsuleViewModel: ObservableObject {
     }
 
     @objc private func handleVoiceRecordingStarted(_ notification: Notification) {
-        isVoiceRecording = true
+        updateVoiceState(.listening)
     }
 
     @objc private func handleVoiceRecordingStopped(_ notification: Notification) {
-        isVoiceRecording = false
+        updateVoiceState(.processing)
+    }
+
+    @objc private func handleVoiceProcessingStarted(_ notification: Notification) {
+        updateVoiceState(.processing)
+    }
+
+    @objc private func handleVoiceProcessingFinished(_ notification: Notification) {
+        let destination = voiceDestination(from: notification.object) ?? .clipboard
+        updateVoiceState(.completed(destination: destination), autoResetAfter: 1.0)
+    }
+
+    @objc private func handleVoiceCancelled(_ notification: Notification) {
+        updateVoiceState(.cancelled, autoResetAfter: 0.7)
     }
 
     @objc private func handleCaptureSuccess(_ notification: Notification) {
         isCapturing = false
         ToastManager.shared.show(.success, "截图已完成")
+    }
+
+    private func updateVoiceState(_ state: NotchV2VoiceSurfaceState, autoResetAfter delay: TimeInterval? = nil) {
+        voiceStateResetTask?.cancel()
+        voiceSurfaceState = state
+
+        switch state {
+        case .idle:
+            isVoiceRecording = false
+            isVoiceProcessing = false
+        case .listening:
+            isVoiceRecording = true
+            isVoiceProcessing = false
+        case .processing:
+            isVoiceRecording = false
+            isVoiceProcessing = true
+        case .completed, .cancelled:
+            isVoiceRecording = false
+            isVoiceProcessing = false
+        }
+
+        guard let delay else { return }
+        voiceStateResetTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.updateVoiceState(.idle)
+            }
+        }
+    }
+
+    private func voiceDestination(from object: Any?) -> NotchV2VoiceCompletionDestination? {
+        if let object = object as? [String: Any], let destination = object["destination"] as? String {
+            return NotchV2VoiceCompletionDestination(rawValue: destination)
+        }
+        if let destination = object as? String {
+            return NotchV2VoiceCompletionDestination(rawValue: destination)
+        }
+        return nil
     }
 
     // MARK: - Actions
@@ -491,6 +881,11 @@ class CompanionCapsuleViewModel: ObservableObject {
     }
 
     func showVoicePanel() {
+        guard SettingsLocalPreferences.isVoiceInputEnabled() else {
+            ToastManager.shared.show(.warning, "说入法输入已在设置中关闭")
+            return
+        }
+
         NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
         isExpanded = false
     }
@@ -501,11 +896,16 @@ class CompanionCapsuleViewModel: ObservableObject {
     }
 
     func showScreenshot(mode: ScreenshotMode = ScreenshotMode.fullscreen) {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            ToastManager.shared.show(.warning, "截图捕获已在设置中关闭")
+            return
+        }
+
         isCapturing = true
         ToastManager.shared.show(.info, "正在截图...")
         
         // 隐藏刘海窗口避免截图遮挡
-        NotchPanel.shared.orderOut(nil)
+        NotchPanel.shared.hide()
         
         // 触发截图（携带截图模式）
         NotificationCenter.default.post(
@@ -514,8 +914,8 @@ class CompanionCapsuleViewModel: ObservableObject {
         )
         
         // 截图完成后需要重新显示刘海
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            NotchPanel.shared.show()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            NotchPanel.shared.showCompact()
         }
         isExpanded = false
     }
@@ -554,6 +954,9 @@ extension Notification.Name {
     public static let companionPlaybackStateChanged = Notification.Name("companion.playbackStateChanged")
     public static let companionVoiceRecordingStarted = Notification.Name("companion.voiceRecordingStarted")
     public static let companionVoiceRecordingStopped = Notification.Name("companion.voiceRecordingStopped")
+    public static let companionVoiceProcessingStarted = Notification.Name("companion.voiceProcessingStarted")
+    public static let companionVoiceProcessingFinished = Notification.Name("companion.voiceProcessingFinished")
+    public static let companionVoiceCancelled = Notification.Name("companion.voiceCancelled")
     public static let companionCaptureSuccess = Notification.Name("companion.captureSuccess")
     public static let companionShowQuickNote = Notification.Name("companion.showQuickNote")
     public static let companionQuickNoteSaved = Notification.Name("companion.quickNoteSaved")

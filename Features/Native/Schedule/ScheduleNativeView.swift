@@ -19,7 +19,7 @@ struct ScheduleNativeView: View {
             // 右侧主日历区域
             ScheduleMain(viewModel: viewModel)
         }
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
         .sheet(isPresented: $viewModel.isCreatingEvent) {
             ScheduleEventEditorView(viewModel: viewModel)
         }
@@ -42,6 +42,7 @@ struct ScheduleMain: View {
             ScheduleViewSurface(viewModel: viewModel)
         }
         .frame(minWidth: ScheduleLayout.mainMinWidth)
+        .background(AppSurfaceTokens.background)
     }
 }
 
@@ -76,6 +77,7 @@ private struct ScheduleEventEditorView: View {
     @State private var isAllDay: Bool = false
 
     private let durationOptions = [15, 30, 45, 60, 90, 120, 180]
+    private var isEditing: Bool { viewModel.editingEvent != nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -88,12 +90,12 @@ private struct ScheduleEventEditorView: View {
 
                 Spacer()
 
-                Text("新建日程")
+                Text(isEditing ? "编辑日程" : "新建日程")
                     .font(.system(size: 15, weight: .semibold))
 
                 Spacer()
 
-                Button("保存") {
+                Button(isEditing ? "更新" : "保存") {
                     guard title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else { return }
                     viewModel.createEvent(
                         title: title.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -146,6 +148,18 @@ private struct ScheduleEventEditorView: View {
                 }
             }
             .padding()
+            .onAppear {
+                if let editingEvent = viewModel.editingEvent {
+                    title = editingEvent.title
+                    selectedCategoryId = editingEvent.categoryId
+                    startHour = Calendar.current.component(.hour, from: editingEvent.startAt)
+                    startMinute = Calendar.current.component(.minute, from: editingEvent.startAt)
+                    durationMinutes = max(15, editingEvent.durationMinutes)
+                    isAllDay = editingEvent.isAllDay
+                } else {
+                    title = ""
+                }
+            }
         }
         .frame(width: 420, height: 320)
     }

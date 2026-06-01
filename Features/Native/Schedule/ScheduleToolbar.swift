@@ -5,6 +5,8 @@ import AppKit
 
 struct ScheduleToolbar: View {
     @ObservedObject var viewModel: ScheduleViewModel
+    @State private var isSearching = false
+    @FocusState private var searchFieldFocused: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -30,7 +32,7 @@ struct ScheduleToolbar: View {
                         .font(.system(size: 12, weight: .medium))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
-                        .background(Color(NSColor.controlBackgroundColor))
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
                         .cornerRadius(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
@@ -59,7 +61,7 @@ struct ScheduleToolbar: View {
                 }
                 .padding(.horizontal, 2)
                 .padding(.vertical, 2)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -69,15 +71,55 @@ struct ScheduleToolbar: View {
                 // 分段控件：周 / 月 / 年
                 ScheduleSegmentedControl(selection: $viewModel.viewMode)
 
-                // 搜索按钮
-                Button {} label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 13))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
+                if isSearching {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+
+                            TextField("搜索日程", text: $viewModel.searchText)
+                                .textFieldStyle(.plain)
+                                .focused($searchFieldFocused)
+                                .frame(minWidth: 180)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                        )
+
+                        Button {
+                            viewModel.searchText = ""
+                            isSearching = false
+                            searchFieldFocused = false
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 24, height: 24)
+                        }
+                        .buttonStyle(.plain)
+                        .help("清除搜索")
+                    }
+                } else {
+                    Button {
+                        isSearching = true
+                        DispatchQueue.main.async {
+                            searchFieldFocused = true
+                        }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("搜索日程")
                 }
-                .buttonStyle(.plain)
-                .help("搜索日程")
 
                 // 添加日程按钮
                 Button {
@@ -94,7 +136,15 @@ struct ScheduleToolbar: View {
         }
         .padding(.horizontal, 20)
         .frame(height: ScheduleLayout.toolbarHeight)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
+        .onAppear {
+            isSearching = !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        .onChange(of: viewModel.searchText) { _, newValue in
+            if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                isSearching = true
+            }
+        }
     }
 }
 
@@ -116,7 +166,7 @@ struct ScheduleSegmentedControl: View {
                         .padding(.vertical, 5)
                         .background(
                             selection == mode
-                                ? Color(NSColor.controlBackgroundColor)
+                                ? AppSurfaceTokens.cardBackgroundSoft
                                 : Color.clear
                         )
                         .cornerRadius(5)
@@ -125,7 +175,7 @@ struct ScheduleSegmentedControl: View {
             }
         }
         .padding(2)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .background(AppSurfaceTokens.secondarySidebarBackground)
         .cornerRadius(7)
     }
 }

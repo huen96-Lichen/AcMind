@@ -53,7 +53,7 @@ public final class ClipboardViewModel: ObservableObject {
         defer { isLoading = false }
         
         do {
-            let filter = ClipboardFilter(
+            _ = ClipboardFilter(
                 contentType: selectedType,
                 searchQuery: searchQuery.isEmpty ? nil : searchQuery,
                 limit: nil

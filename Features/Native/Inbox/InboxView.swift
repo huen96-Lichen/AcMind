@@ -3,206 +3,300 @@ import AcMindKit
 
 struct InboxView: View {
     @StateObject private var viewModel = InboxViewModel()
-    @State private var searchQuery = ""
-    @State private var selectedType: SourceType?
+    @State private var selectedSidebarItem: String? = "all"
     @State private var selectedItem: SourceItem?
-    
-    private var filteredItems: [SourceType: [SourceItem]] {
-        let items = viewModel.items.filter { item in
-            let matchesSearch = searchQuery.isEmpty ||
-                (item.title?.lowercased().contains(searchQuery.lowercased()) ?? false) ||
-                (item.previewText?.lowercased().contains(searchQuery.lowercased()) ?? false) ||
-                (item.transcript?.lowercased().contains(searchQuery.lowercased()) ?? false)
-            
-            let matchesType = selectedType == nil || item.type == selectedType
-            
-            return matchesSearch && matchesType
-        }
-        
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        
-        return Dictionary(grouping: items) { item in
-            calendar.isDate(item.createdAt, inSameDayAs: today) ? SourceType.text : .audio
-        }
+    @State private var searchQuery = ""
+
+    private var sidebarSections: [SecondarySidebarSection] {
+        [
+            SecondarySidebarSection(
+                id: "source",
+                title: "来源",
+                items: [
+                    SecondarySidebarItem(id: "all", title: "全部", icon: "tray", badge: "\(viewModel.items.count)"),
+                    SecondarySidebarItem(id: "voice", title: "说入法", icon: "mic"),
+                    SecondarySidebarItem(id: "screenshot", title: "截图 / OCR", icon: "camera.viewfinder"),
+                    SecondarySidebarItem(id: "clipboard", title: "剪贴板", icon: "doc.on.clipboard"),
+                    SecondarySidebarItem(id: "agent", title: "Agent 生成", icon: "sparkles")
+                ]
+            ),
+            SecondarySidebarSection(
+                id: "status",
+                title: "状态",
+                items: [
+                    SecondarySidebarItem(id: "pending", title: "待整理", icon: "clock"),
+                    SecondarySidebarItem(id: "refined", title: "已提炼", icon: "checkmark.circle"),
+                    SecondarySidebarItem(id: "archived", title: "已归档", icon: "archivebox"),
+                    SecondarySidebarItem(id: "exported", title: "已导出", icon: "square.and.arrow.up")
+                ]
+            )
+        ]
     }
-    
-    private var allItems: [SourceItem] {
+
+    private var filteredItems: [SourceItem] {
         viewModel.items.filter { item in
             let matchesSearch = searchQuery.isEmpty ||
                 (item.title?.lowercased().contains(searchQuery.lowercased()) ?? false) ||
-                (item.previewText?.lowercased().contains(searchQuery.lowercased()) ?? false) ||
-                (item.transcript?.lowercased().contains(searchQuery.lowercased()) ?? false)
-            
-            let matchesType = selectedType == nil || item.type == selectedType
-            
-            return matchesSearch && matchesType
-        }
-    }
-    
-    private var typeCounts: [SourceType: Int] {
-        Dictionary(grouping: viewModel.items, by: \.type)
-            .mapValues { $0.count }
-    }
-    
-    private var totalSize: String {
-        let totalBytes = viewModel.items.reduce(0) { total, item in
-            if let sizeStr = item.metadata["fileSize"], let bytes = Int(sizeStr) {
-                return total + bytes
+                (item.previewText?.lowercased().contains(searchQuery.lowercased()) ?? false)
+
+            let matchesSource: Bool
+            switch selectedSidebarItem {
+            case "voice": matchesSource = item.type == .audio
+            case "screenshot": matchesSource = item.type == .screenshot
+            case "clipboard": matchesSource = item.type == .text
+            case "agent": matchesSource = false
+            case "pending": matchesSource = item.status == .pending
+            case "refined": matchesSource = item.status == .distilled
+            case "archived": matchesSource = item.status == .archived
+            default: matchesSource = true
             }
-            return total
-        }
-        
-        if totalBytes < 1024 {
-            return "\(totalBytes) B"
-        } else if totalBytes < 1024 * 1024 {
-            return String(format: "%.1f KB", Double(totalBytes) / 1024)
-        } else {
-            return String(format: "%.1f MB", Double(totalBytes) / (1024 * 1024))
+
+            return matchesSearch && matchesSource
         }
     }
-    
+
     var body: some View {
         HSplitView {
-            VStack(spacing: 0) {
-                InboxHeader(
-                    searchQuery: $searchQuery,
-                    selectedType: $selectedType,
-                    counts: typeCounts,
-                    totalCount: viewModel.items.count,
-                    totalSize: totalSize,
-                    onNew: { /* TODO */ }
-                )
-                
-                Divider()
-                
-                if allItems.isEmpty {
-                    emptyState
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            let calendar = Calendar.current
-                            let today = calendar.startOfDay(for: Date())
-                            let todayItems = allItems.filter { calendar.isDate($0.createdAt, inSameDayAs: today) }
-                            
-                            if !todayItems.isEmpty {
-                                SectionHeader(title: "今天", count: todayItems.count)
-                                
-                                ForEach(todayItems) { item in
-                                    InboxItemCard(
-                                        item: item,
-                                        isSelected: selectedItem?.id == item.id,
-                                        onSelect: { selectedItem = item },
-                                        onMore: { /* TODO */ }
-                                    )
-                                }
-                            }
-                            
-                            let otherItems = allItems.filter { !calendar.isDate($0.createdAt, inSameDayAs: today) }
-                            
-                            if !otherItems.isEmpty {
-                                SectionHeader(title: "昨天", count: otherItems.count)
-                                
-                                ForEach(otherItems) { item in
-                                    InboxItemCard(
-                                        item: item,
-                                        isSelected: selectedItem?.id == item.id,
-                                        onSelect: { selectedItem = item },
-                                        onMore: { /* TODO */ }
-                                    )
-                                }
-                            }
-                        }
-                        .padding(12)
-                    }
-                }
-            }
-            
-            InboxDetailPanel(
-                item: selectedItem,
-                onDistill: {
-                    if let item = selectedItem {
-                        Task { await viewModel.distillItem(item) }
-                    }
-                },
-                onDelete: {
-                    if let item = selectedItem {
-                        Task { await viewModel.delete(item: item) }
-                    }
-                }
+            SecondarySidebarWithHeader(
+                title: "收集箱",
+                subtitle: "\(viewModel.items.count) 条内容",
+                sections: sidebarSections,
+                selectedItem: $selectedSidebarItem
             )
+            .frame(width: 220)
+
+            itemList
+
+            if let item = selectedItem {
+                detailPanel(item: item)
+                    .frame(width: 300)
+            }
         }
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
         .onAppear {
             Task { await viewModel.loadItems() }
         }
     }
-    
+
+    private var itemList: some View {
+        VStack(spacing: 0) {
+            searchBar
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+            Divider()
+
+            if filteredItems.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 1) {
+                        ForEach(filteredItems) { item in
+                            InboxItemRow(
+                                item: item,
+                                isSelected: selectedItem?.id == item.id,
+                                onSelect: { selectedItem = item }
+                            )
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+        }
+        .frame(minWidth: 300)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+
+            TextField("搜索收集箱...", text: $searchQuery)
+                .textFieldStyle(.plain)
+
+            if !searchQuery.isEmpty {
+                Button(action: { searchQuery = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "tray")
                 .font(.system(size: 48))
-                .foregroundColor(.secondary.opacity(0.3))
-            
+                .foregroundStyle(.secondary.opacity(0.3))
+
             Text("暂无收集内容")
                 .font(.title3)
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 4) {
-                Text("你可以通过：")
-                    .font(.body)
-                    .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                
-                HStack(spacing: 12) {
-                    Text("- 随身语音")
-                        .font(.caption)
-                        .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                    
-                    Text("- 截图")
-                        .font(.caption)
-                        .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                    
-                    Text("- 快速记录")
-                        .font(.caption)
-                        .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                    
-                    Text("- 剪贴板暂存")
-                        .font(.caption)
-                        .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                }
-                
-                Text("将内容放入收集箱")
-                    .font(.body)
-                    .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-            }
-            
-            Button("添加内容") {
-                // TODO
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 8)
+                .foregroundStyle(.secondary)
+
+            Text("通过语音、截图、剪贴板或 Agent 生成内容")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.top, -100)
+    }
+
+    private func detailPanel(item: SourceItem) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("详情")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button(action: { selectedItem = nil }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    itemHeader(item: item)
+                    itemContent(item: item)
+                    itemActions(item: item)
+                }
+                .padding(16)
+            }
+        }
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+    }
+
+    private func itemHeader(item: SourceItem) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: item.type.iconName)
+                    .foregroundStyle(item.type.color)
+                Text(item.type.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let title = item.title {
+                Text(title)
+                    .font(.headline)
+            }
+
+            Text(item.createdAt.formatted())
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func itemContent(item: SourceItem) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("内容预览")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(item.previewText ?? item.transcript ?? "无预览内容")
+                .font(.body)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackground))
+        }
+    }
+
+    private func itemActions(item: SourceItem) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("操作")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 6) {
+                actionButton(icon: "sparkles", title: "AI 提炼") {
+                    Task { await viewModel.distillItem(item) }
+                }
+                actionButton(icon: "archivebox", title: "归档") {
+                    Task { await viewModel.archive(item: item) }
+                }
+                actionButton(icon: "rectangle.on.rectangle", title: "工作台") {
+                    Task { await viewModel.moveToWorkbench(item: item) }
+                }
+                actionButton(icon: "brain", title: "知识库") {
+                    Task { await viewModel.sendToKnowledgeBase(item: item) }
+                }
+                actionButton(icon: "trash", title: "删除", role: .destructive) {
+                    Task { await viewModel.delete(item: item) }
+                }
+            }
+        }
+    }
+
+    private func actionButton(icon: String, title: String, role: ButtonRole? = nil, action: @escaping () -> Void) -> some View {
+        Button(role: role, action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .frame(width: 16)
+                Text(title)
+                    .font(.system(size: 12))
+                Spacer()
+            }
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackground))
+        }
+        .buttonStyle(.plain)
     }
 }
 
-private struct SectionHeader: View {
-    let title: String
-    let count: Int
-    
+struct InboxItemRow: View {
+    let item: SourceItem
+    let isSelected: Bool
+    let onSelect: () -> Void
+    @State private var isHovered = false
+
     var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-            
-            Text("\(count)")
-                .font(.caption2)
-                .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                Image(systemName: item.type.iconName)
+                    .font(.system(size: 14))
+                    .foregroundStyle(item.type.color)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title ?? item.previewText ?? "未命名")
+                        .font(.system(size: 13))
+                        .lineLimit(1)
+                        .foregroundStyle(isSelected ? .white : .primary)
+
+                    HStack(spacing: 4) {
+                        Text(item.type.displayName)
+                            .font(.system(size: 10))
+                        Text("·")
+                            .font(.system(size: 10))
+                        Text(item.createdAt.formatted(.relative(presentation: .named)))
+                            .font(.system(size: 10))
+                    }
+                    .foregroundStyle(isSelected ? .white.opacity(0.7) : .secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.accentColor : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
+            )
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
     }
 }

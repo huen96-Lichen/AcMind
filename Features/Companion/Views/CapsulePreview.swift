@@ -9,12 +9,12 @@ struct CapsulePreview: View {
             Text("预览效果")
                 .font(.headline)
             
-            // macOS Menu Bar Mockup
+            // macOS 菜单栏示意
             ZStack(alignment: position.alignment) {
-                // Menu Bar Background
+                // 菜单栏背景
                 RoundedRectangle(cornerRadius: 8)
                     .fill(LinearGradient(
-                        gradient: Gradient(colors: [Color(NSColor.controlBackgroundColor), Color(NSColor.windowBackgroundColor)]),
+                        gradient: Gradient(colors: [AppSurfaceTokens.cardBackgroundSoft, AppSurfaceTokens.background]),
                         startPoint: .top,
                         endPoint: .bottom
                     ))
@@ -24,9 +24,9 @@ struct CapsulePreview: View {
                             .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                     )
                 
-                // Capsule
+                // 胶囊示意
                 HStack(spacing: 4) {
-                    // Mock Capsule Buttons
+                    // 示例按钮
                     Circle()
                         .fill(Color.accentColor)
                         .frame(width: 18, height: 18)
@@ -37,7 +37,7 @@ struct CapsulePreview: View {
                         )
                     
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(NSColor.controlBackgroundColor))
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 24, height: 18)
                         .overlay(
                             Image(systemName: "mic")

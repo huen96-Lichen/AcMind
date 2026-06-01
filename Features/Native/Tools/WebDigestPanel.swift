@@ -25,7 +25,7 @@ struct WebDigestPanel: View {
             }
         }
         .frame(width: 760, height: 640)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -89,7 +89,7 @@ struct WebDigestPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -142,7 +142,7 @@ struct WebDigestPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -174,7 +174,7 @@ struct WebDigestPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }

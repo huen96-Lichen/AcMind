@@ -225,7 +225,7 @@ public final class DistillService: DistillServiceProtocol {
             )
         }
         
-        // 降级处理：使用原始内容
+        // 兼容路径：使用原始内容
         return DistilledNote(
             sourceItemId: sourceItem.id,
             title: sourceItem.title ?? "蒸馏结果",

@@ -2,350 +2,404 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
-// MARK: - Companion Voice Panel
-// 随身语音面板 - 连接真实 VoiceService
-
 struct CompanionVoicePanel: View {
-    @StateObject private var viewModel = CompanionVoiceViewModel()
+    @StateObject private var viewModel = CompanionVoicePanelViewModel()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
-            // 头部
             header
 
             Divider()
 
-            // 主内容
-            VStack(spacing: 20) {
-                // 录音控制区
-                recordingControl
-
-                // 状态显示
-                statusDisplay
-
-                // 转写结果
-                if viewModel.transcriptionText.isEmpty == false {
-                    transcriptionResult
-                }
-
-                Spacer()
+            VStack(spacing: 18) {
+                statusChip
+                transcriptCard
+                actionRow
             }
-            .padding(24)
+            .padding(20)
         }
-        .frame(width: 480, height: 560)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 520, height: 300)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(AppSurfaceTokens.background)
+                .shadow(color: .black.opacity(0.18), radius: 24, y: 10)
+        )
+        .padding(12)
+        .onAppear {
+            Task { await viewModel.prepare() }
+        }
+        .onDisappear {
+            Task { await viewModel.cleanupIfNeeded() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionVoiceFinishRequested)) { _ in
+            Task { await viewModel.requestFinish() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .headphoneSingleTap)) { _ in
+            Task { await viewModel.toggleRecording() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .headphoneDoubleTap)) { _ in
+            Task { await viewModel.cancelRecording() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .headphoneLongPressStart)) { _ in
+            Task { await viewModel.startRecording() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .headphoneLongPressEnd)) { _ in
+            Task { await viewModel.requestFinish() }
+        }
     }
 
-    // MARK: - Header
-
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("随身语音")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(viewModel.isProcessing ? Color.blue.opacity(0.14) : Color.red.opacity(0.14))
+                    .frame(width: 34, height: 34)
 
-                Text(viewModel.statusText)
+                Image(systemName: viewModel.isRecording ? "waveform" : "mic.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(viewModel.isProcessing ? .blue : .red)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("说入法")
+                    .font(.headline)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+
+                Text("长按 Fn 开始，说完松开即可整理成可直接使用的文稿")
                     .font(.caption)
-                    .foregroundStyle(viewModel.statusColor)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
 
-            if viewModel.recordingStatus == .recording {
-                Text(viewModel.elapsedTimeFormatted)
-                    .font(.title2.monospacedDigit())
-                    .foregroundStyle(Color.red)
-                    .padding(.trailing, 8)
+            Button {
+                Task { await cancelAndDismiss() }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 28, height: 28)
             }
-
-            Button(action: { viewModel.stopAndDismiss { dismiss() } }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.secondary)
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-        .padding()
-    }
-
-    // MARK: - Recording Control
-
-    private var recordingControl: some View {
-        ZStack {
-            Circle()
-                .fill(viewModel.recordingStatus == .recording ? Color.red.opacity(0.15) : Color.accentColor.opacity(0.1))
-                .frame(width: 100, height: 100)
-
-            if viewModel.recordingStatus == .recording {
-                // 录音中动画 - 脉动红点
+            .buttonStyle(.plain)
+            .background(
                 Circle()
-                    .fill(Color.red)
-                    .frame(width: 40, height: 40)
-                    .scaleEffect(viewModel.isRecording ? 1.1 : 0.9)
-                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: viewModel.isRecording)
-            } else {
-                Button(action: { viewModel.toggleRecording() }) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 36, weight: .medium))
-                        .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(viewModel.recordingStatus == .processing)
-            }
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
         }
-        .onTapGesture {
-            viewModel.toggleRecording()
-        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
     }
 
-    // MARK: - Status Display
+    private var statusChip: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+                .opacity(viewModel.isProcessing ? 1 : 0)
 
-    private var statusDisplay: some View {
-        VStack(spacing: 8) {
-            if viewModel.recordingStatus == .recording {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 8, height: 8)
+            Image(systemName: viewModel.statusIcon)
+                .foregroundStyle(viewModel.statusColor)
 
-                    Text("正在录音...")
-                        .font(.body)
-                        .foregroundStyle(Color.secondary)
+            Text(viewModel.statusText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                    Text(viewModel.elapsedTimeFormatted)
-                        .font(.body.monospacedDigit())
-                        .foregroundStyle(Color.primary)
-                }
-            } else if viewModel.recordingStatus == .processing {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-
-                    Text("正在转写...")
-                        .font(.body)
-                        .foregroundStyle(Color.secondary)
-                }
-            } else if let error = viewModel.errorMessage {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(Color.red)
-                        .font(.caption)
-
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(Color.red)
-                }
-            } else {
-                Text("点击麦克风按钮开始录音")
-                    .font(.body)
-                    .foregroundStyle(Color.secondary)
-            }
+            Spacer()
         }
-        .padding(12)
-        .frame(maxWidth: .infinity)
-        .background(Color.secondary.opacity(0.05))
-        .cornerRadius(10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
     }
 
-    // MARK: - Transcription Result
-
-    private var transcriptionResult: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var transcriptCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "text.bubble")
-                    .foregroundStyle(Color.secondary)
-                    .font(.caption)
-
-                Text("转写结果")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                Text(viewModel.resultTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 
-                Button("复制") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(viewModel.transcriptionText, forType: .string)
-                    ToastManager.shared.show(.success, "已复制到剪贴板")
+                if viewModel.hasResult {
+                    Button("复制") {
+                        viewModel.copyResultToClipboard()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
                 }
-                .font(.caption)
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
             }
 
             ScrollView {
-                Text(viewModel.transcriptionText)
+                Text(viewModel.displayText.isEmpty ? "说完后，这里会显示清洗后的文稿。" : viewModel.displayText)
                     .font(.body)
-                    .textSelection(.enabled)
+                    .foregroundStyle(viewModel.displayText.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
             }
-            .frame(maxHeight: 120)
-            .padding(12)
-            .background(Color.secondary.opacity(0.05))
-            .cornerRadius(10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 124, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+        )
+    }
+
+    private var actionRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                Task { await cancelAndDismiss() }
+            } label: {
+                Text(viewModel.isRecording ? "取消" : "关闭")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                Task { await finishOrDismiss() }
+            } label: {
+                Text(primaryActionTitle)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(primaryActionTint)
+            .disabled(viewModel.isBusy)
+        }
+    }
+
+    private var primaryActionTitle: String {
+        if viewModel.isRecording { return "完成" }
+        if viewModel.hasResult { return "完成" }
+        return "开始"
+    }
+
+    private var primaryActionTint: Color {
+        viewModel.isRecording ? .blue : .accentColor
+    }
+
+    private func finishOrDismiss() async {
+        if viewModel.isRecording {
+            await viewModel.stopAndProcess()
+        } else if viewModel.hasResult {
+            dismiss()
+        } else {
+            await viewModel.startRecording()
+        }
+    }
+
+    private func cancelAndDismiss() async {
+        await viewModel.cancelIfNeeded()
+        dismiss()
     }
 }
 
-// MARK: - View Model
-
 @MainActor
-final class CompanionVoiceViewModel: ObservableObject {
-    @Published var recordingStatus: RecordingStatus = .idle
-    @Published var transcriptionText: String = ""
-    @Published var errorMessage: String?
-    @Published var elapsedTime: TimeInterval = 0
+final class CompanionVoicePanelViewModel: ObservableObject {
     @Published var isRecording = false
+    @Published var isProcessing = false
+    @Published var isBusy = false
+    @Published var statusText = "正在准备说入法..."
+    @Published var displayText = ""
+    @Published var resultTitle = "转写结果"
+    @Published var hasResult = false
+    @Published var errorMessage: String?
 
-    private var voiceService: (any VoiceServiceProtocol)? {
-        ServiceContainer.shared.voiceService
-    }
-    private var timer: Timer?
+    private let settingsViewModel = SettingsViewModel()
+    private let coordinator: SayInputCoordinator?
+    private var didPrepare = false
+    private var isCancelled = false
+    private var pendingFinishRequest = false
 
-    var elapsedTimeFormatted: String {
-        let minutes = Int(elapsedTime) / 60
-        let seconds = Int(elapsedTime) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-
-    var statusText: String {
-        switch recordingStatus {
-        case .idle: return "准备就绪"
-        case .recording: return "录音中"
-        case .processing: return "转写中"
-        case .error: return "出错了"
+    init() {
+        if ServiceContainer.isInitialized() {
+            let container = ServiceContainer.shared
+            self.coordinator = SayInputCoordinator(
+                voiceService: container.voiceService,
+                sourceStore: StorageSayInputSourceItemStore(storage: container.storageService),
+                textInjector: AXTextInjector(),
+                clipboard: SystemSayInputClipboard(),
+                assetStore: container.assetStore
+            )
+        } else {
+            self.coordinator = nil
         }
+    }
+
+    var statusIcon: String {
+        if errorMessage != nil { return "exclamationmark.circle.fill" }
+        if isProcessing { return "ellipsis.circle.fill" }
+        if isRecording { return "waveform.circle.fill" }
+        return hasResult ? "checkmark.circle.fill" : "mic.circle"
     }
 
     var statusColor: Color {
-        switch recordingStatus {
-        case .idle: return Color.secondary
-        case .recording: return Color.red
-        case .processing: return Color.orange
-        case .error: return Color.red
-        }
+        if errorMessage != nil { return .orange }
+        if isProcessing { return .blue }
+        if isRecording { return .red }
+        return hasResult ? .green : .secondary
     }
 
-    func toggleRecording() {
-        if recordingStatus == .recording {
-            stopRecording()
-        } else {
-            startRecording()
-        }
+    var currentConfiguration: SayInputConfiguration {
+        settingsViewModel.currentSayInputConfiguration()
     }
 
-    private func startRecording() {
-        guard let service = voiceService else {
-            errorMessage = "语音服务未就绪"
-            ToastManager.shared.show(.error, "语音服务未就绪")
+    func prepare() async {
+        guard didPrepare == false else { return }
+        didPrepare = true
+        isCancelled = false
+
+        guard coordinator != nil else {
+            errorMessage = "服务尚未初始化完成"
+            statusText = "无法启动说入法"
             return
         }
 
+        statusText = "正在加载设置..."
+        await settingsViewModel.loadSettings()
+        await settingsViewModel.loadCompanionSettings()
+
+        guard isCancelled == false else { return }
+        await startRecording()
+    }
+
+    func startRecording() async {
+        guard let coordinator else { return }
+        guard isCancelled == false, isRecording == false, isBusy == false else { return }
+
+        isBusy = true
         errorMessage = nil
-        transcriptionText = ""
+        hasResult = false
+        displayText = ""
+        resultTitle = "转写结果"
+        statusText = "正在收音..."
 
-        Task {
-            do {
-                try await service.startRecording()
-                recordingStatus = .recording
-                isRecording = true
-                elapsedTime = 0
-                startTimer()
+        // 应用前台应用的感知配置
+        await coordinator.applyAppAwareConfiguration()
 
-                // 同步状态到胶囊（麦克风图标高亮）
-                NotificationCenter.default.post(
-                    name: .companionVoiceRecordingStarted,
-                    object: nil
-                )
-
-                ToastManager.shared.show(.info, "录音已开始")
-            } catch let error as VoiceError {
-                if case .permissionDenied = error {
-                    errorMessage = "需要麦克风权限，请在系统设置中授权"
-                } else {
-                    errorMessage = error.localizedDescription
-                }
-                ToastManager.shared.show(.error, error.localizedDescription)
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-    private func stopRecording() {
-        guard let service = voiceService else { return }
-
-        stopTimer()
-        recordingStatus = .processing
-
-        Task {
-            do {
-                _ = try await service.stopRecording()
-                recordingStatus = .idle
-                isRecording = false
-
-                NotificationCenter.default.post(
-                    name: .companionVoiceRecordingStopped,
-                    object: nil
-                )
-
-                ToastManager.shared.show(.success, "录音已保存")
-                await loadRecentTranscription()
-            } catch {
-                errorMessage = error.localizedDescription
-                recordingStatus = .idle
-                isRecording = false
-                ToastManager.shared.show(.error, error.localizedDescription)
-            }
-        }
-    }
-
-    func stopAndDismiss(onDismiss: @escaping () -> Void) {
-        if recordingStatus == .recording {
-            stopRecording()
-        }
-        onDismiss()
-    }
-
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.elapsedTime += 0.1
-            }
-        }
-    }
-
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    private func loadRecentTranscription() async {
         do {
-            let storage = ServiceContainer.shared.storageService
-            let items = try await storage.listSourceItems(
-                filter: SourceItemFilter(type: SourceType.audio, limit: 1)
-            )
-            if let latest = items.first, let transcript = latest.transcript {
-                transcriptionText = transcript
-                let duration = latest.metadata["duration"].flatMap(Double.init) ?? 0
+            try await coordinator.startRecording()
+            NotificationCenter.default.post(name: .companionVoiceRecordingStarted, object: nil)
+            isRecording = true
+        } catch {
+            errorMessage = error.localizedDescription
+            statusText = "启动失败"
+            NotificationCenter.default.post(name: .companionVoiceCancelled, object: nil)
+        }
+
+        isBusy = false
+
+        if pendingFinishRequest, isRecording {
+            pendingFinishRequest = false
+            await stopAndProcess()
+        }
+    }
+
+    func stopAndProcess() async {
+        guard let coordinator else { return }
+        guard isRecording, isBusy == false else { return }
+
+        isBusy = true
+        isProcessing = true
+        statusText = "正在整理文稿..."
+        NotificationCenter.default.post(name: .companionVoiceRecordingStopped, object: nil)
+        NotificationCenter.default.post(name: .companionVoiceProcessingStarted, object: nil)
+
+        do {
+            let outcome = try await coordinator.stopRecording(configuration: currentConfiguration)
+            hasResult = true
+            isRecording = false
+            isProcessing = false
+            displayText = outcome.polishedText
+
+            switch outcome.deliveryState {
+            case .insertedIntoFocusedField:
+                resultTitle = "已写入当前光标"
+                statusText = "内容已直接写入"
                 NotificationCenter.default.post(
-                    name: .companionSendToAgent,
-                    object: nil,
-                    userInfo: [
-                        "transcription": CompanionVoiceTranscription(
-                            text: transcript,
-                            timestamp: latest.createdAt,
-                            duration: duration
-                        )
-                    ]
+                    name: .companionVoiceProcessingFinished,
+                    object: ["destination": NotchV2VoiceCompletionDestination.focusedField.rawValue]
                 )
-            } else if let preview = items.first?.previewText {
-                transcriptionText = preview
+            case .copiedAndSavedToInbox:
+                resultTitle = "已复制并保存到收集箱"
+                statusText = "已进入收集箱"
+                NotificationCenter.default.post(
+                    name: .companionVoiceProcessingFinished,
+                    object: ["destination": NotchV2VoiceCompletionDestination.inbox.rawValue]
+                )
+            case .copiedToClipboard:
+                resultTitle = "已复制到剪贴板"
+                statusText = "可直接粘贴使用"
+                NotificationCenter.default.post(
+                    name: .companionVoiceProcessingFinished,
+                    object: ["destination": NotchV2VoiceCompletionDestination.clipboard.rawValue]
+                )
+            case .awaitingUserChoice:
+                resultTitle = "已准备好"
+                statusText = "内容已复制，等待你决定下一步"
+                NotificationCenter.default.post(
+                    name: .companionVoiceProcessingFinished,
+                    object: ["destination": NotchV2VoiceCompletionDestination.clipboard.rawValue]
+                )
             }
         } catch {
-            print("⚠️ 加载转写结果失败: \(error)")
+            errorMessage = error.localizedDescription
+            statusText = "处理失败"
+            isProcessing = false
+            isRecording = false
+            NotificationCenter.default.post(name: .companionVoiceCancelled, object: nil)
         }
+
+        isBusy = false
+    }
+
+    func cancelIfNeeded() async {
+        guard let coordinator else { return }
+        guard isCancelled == false else { return }
+        isCancelled = true
+        pendingFinishRequest = false
+
+        if isRecording {
+            do {
+                try await coordinator.cancelRecording()
+                NotificationCenter.default.post(name: .companionVoiceCancelled, object: nil)
+            } catch {
+                // 取消是兜底操作，失败时尽量不打断用户关闭窗口
+            }
+        }
+    }
+
+    func toggleRecording() async {
+        if isRecording {
+            await requestFinish()
+        } else {
+            await startRecording()
+        }
+    }
+
+    func cancelRecording() async {
+        await cancelIfNeeded()
+    }
+
+    func requestFinish() async {
+        if isRecording {
+            await stopAndProcess()
+            return
+        }
+
+        pendingFinishRequest = true
+    }
+
+    func cleanupIfNeeded() async {
+        await cancelIfNeeded()
+    }
+
+    func copyResultToClipboard() {
+        guard displayText.isEmpty == false else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(displayText, forType: .string)
+        statusText = "已复制到剪贴板"
     }
 }

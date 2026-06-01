@@ -31,26 +31,36 @@ public actor PolishService {
         mode: VoicePolishMode,
         providerId: String? = nil,
         model: String? = nil,
-        hotwords: [String] = []
+        hotwords: [String] = [],
+        customSystemPrompt: String? = nil,
+        language: String = "auto"
     ) async throws -> String {
         guard mode != .none else { return text }
         
-        // 构建 prompt
         let systemPrompt: String
-        if hotwords.isEmpty {
+        if let custom = customSystemPrompt, !custom.isEmpty {
+            systemPrompt = custom
+        } else if language != "auto" {
+            if hotwords.isEmpty {
+                systemPrompt = PolishPrompts.systemPrompt(for: mode, language: language)
+            } else {
+                systemPrompt = PolishPrompts.systemPrompt(for: mode, language: language, hotwords: hotwords)
+            }
+        } else if hotwords.isEmpty {
             systemPrompt = PolishPrompts.systemPrompt(for: mode)
         } else {
             systemPrompt = PolishPrompts.systemPrompt(for: mode, hotwords: hotwords)
         }
         
-        let userPrompt = PolishPrompts.userPrompt(for: text)
+        let userPrompt = language != "auto"
+            ? PolishPrompts.userPrompt(for: text, language: language)
+            : PolishPrompts.userPrompt(for: text)
         
         let messages = [
             ChatMessage(role: "system", content: systemPrompt),
             ChatMessage(role: "user", content: userPrompt)
         ]
         
-        // 调用 AI Runtime
         let response: ChatResponse
         if let providerId = providerId {
             response = try await aiRuntime.chat(
@@ -62,8 +72,7 @@ public actor PolishService {
             response = try await aiRuntime.chat(messages: messages)
         }
         
-        // 清理输出
-        return cleanOutput(response.content)
+        return cleanOutput(response.content, language: language)
     }
     
     /// 流式润色
@@ -81,15 +90,30 @@ public actor PolishService {
         providerId: String? = nil,
         model: String? = nil,
         hotwords: [String] = [],
+        customSystemPrompt: String? = nil,
+        language: String = "auto",
         onChunk: @escaping @Sendable (String) async -> Void
     ) async throws -> String {
         guard mode != .none else { return text }
         
-        let systemPrompt = hotwords.isEmpty
-            ? PolishPrompts.systemPrompt(for: mode)
-            : PolishPrompts.systemPrompt(for: mode, hotwords: hotwords)
+        let systemPrompt: String
+        if let custom = customSystemPrompt, !custom.isEmpty {
+            systemPrompt = custom
+        } else if language != "auto" {
+            if hotwords.isEmpty {
+                systemPrompt = PolishPrompts.systemPrompt(for: mode, language: language)
+            } else {
+                systemPrompt = PolishPrompts.systemPrompt(for: mode, language: language, hotwords: hotwords)
+            }
+        } else if hotwords.isEmpty {
+            systemPrompt = PolishPrompts.systemPrompt(for: mode)
+        } else {
+            systemPrompt = PolishPrompts.systemPrompt(for: mode, hotwords: hotwords)
+        }
         
-        let userPrompt = PolishPrompts.userPrompt(for: text)
+        let userPrompt = language != "auto"
+            ? PolishPrompts.userPrompt(for: text, language: language)
+            : PolishPrompts.userPrompt(for: text)
         
         let messages = [
             ChatMessage(role: "system", content: systemPrompt),
@@ -106,23 +130,17 @@ public actor PolishService {
             await onChunk(chunk)
         }
         
-        return cleanOutput(fullContent)
+        return cleanOutput(fullContent, language: language)
     }
     
     // MARK: - Output Cleaning
     
-    /// 清理 LLM 输出
-    private func cleanOutput(_ content: String) -> String {
+    private func cleanOutput(_ content: String, language: String = "auto") -> String {
         var output = content
         
-        // 移除 thinking 标签
         output = stripThinkingBlocks(output)
-        
-        // 移除 markdown 围栏
         output = stripMarkdownFence(output)
-        
-        // 移除开头套话
-        output = stripLeadingBoilerplate(output)
+        output = stripLeadingBoilerplate(output, language: language)
         
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -160,9 +178,8 @@ public actor PolishService {
         return lines.joined(separator: "\n")
     }
     
-    /// 移除开头套话
-    private func stripLeadingBoilerplate(_ text: String) -> String {
-        let prefixes = [
+    private func stripLeadingBoilerplate(_ text: String, language: String = "auto") -> String {
+        let chinesePrefixes = [
             "根据您给的内容",
             "根据您提供的内容",
             "根据你给的内容",
@@ -178,12 +195,30 @@ public actor PolishService {
             "结构化整理如下"
         ]
         
+        let englishPrefixes = [
+            "Based on what you provided",
+            "Based on the content you provided",
+            "Here is the organized version",
+            "Here is the polished version",
+            "Below is the organized content",
+            "Below is the polished content",
+            "Here is the structured version",
+            "I've organized it as follows",
+            "Here's the organized version",
+            "Organized version",
+            "Polished version",
+            "Structured version"
+        ]
+        
         var result = text
+        
+        let prefixes = language.hasPrefix("en")
+            ? englishPrefixes + chinesePrefixes
+            : chinesePrefixes + englishPrefixes
         
         for prefix in prefixes {
             if result.hasPrefix(prefix) {
-                // 找到第一个句号或换行后的位置
-                if let range = "[。：:，,\n]".regularExpressionRange(in: result) {
+                if let range = "[.。：:，,\n]".regularExpressionRange(in: result) {
                     result = String(result[range.upperBound...])
                 } else {
                     result = String(result.dropFirst(prefix.count))

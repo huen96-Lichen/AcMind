@@ -31,7 +31,7 @@ public actor VoiceService: VoiceServiceProtocol {
     private var currentRecordingURL: URL?
     private var status: RecordingStatus = .idle
     private var recordingStartTime: Date?
-    private var statusHandler: ((RecordingStatus) -> Void)?
+    private var statusHandler: (@Sendable (RecordingStatus) -> Void)?
     
     // MARK: - ASR Configuration
     
@@ -91,7 +91,7 @@ public actor VoiceService: VoiceServiceProtocol {
     
     // MARK: - Status Handler
     
-    public func setStatusHandler(_ handler: @escaping (RecordingStatus) -> Void) {
+    public func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) {
         self.statusHandler = handler
     }
     
@@ -203,13 +203,11 @@ public actor VoiceService: VoiceServiceProtocol {
     // MARK: - Transcription
     
     public func transcribe(audioURL: URL) async throws -> String {
-        // 优先使用新的 STTRouter
         if let router = sttRouter {
             let audioFile = AudioFile(url: audioURL)
             return try await router.transcribe(audioFile: audioFile)
         }
         
-        // Fallback 到旧实现
         switch sttProvider {
         case .openAI:
             return try await transcribeWithWhisperAPI(audioURL: audioURL)
@@ -220,7 +218,19 @@ public actor VoiceService: VoiceServiceProtocol {
         }
     }
     
-    /// 流式转写
+    public func transcribe(audioURL: URL, language: String) async throws -> String {
+        guard language != "auto" else {
+            return try await transcribe(audioURL: audioURL)
+        }
+        
+        if let router = sttRouter {
+            let audioFile = AudioFile(url: audioURL)
+            return try await router.transcribe(audioFile: audioFile, language: language)
+        }
+        
+        return try await transcribe(audioURL: audioURL)
+    }
+    
     public func transcribeStream(
         audioURL: URL,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
@@ -238,9 +248,9 @@ public actor VoiceService: VoiceServiceProtocol {
     private func performTranscription(sourceItem: SourceItem, assetFile: AssetFile) async {
         do {
             let audioURL = URL(fileURLWithPath: assetFile.filePath)
-            let transcript = try await transcribe(audioURL: audioURL)
+            let preferredLanguage = (try? await getVoiceSettings())?.preferredLanguage ?? "auto"
+            let transcript = try await transcribe(audioURL: audioURL, language: preferredLanguage)
             
-            // 更新 SourceItem
             var updatedItem = sourceItem
             updatedItem.transcript = transcript
             updatedItem.previewText = transcript.prefix(200).description
@@ -248,11 +258,14 @@ public actor VoiceService: VoiceServiceProtocol {
             
             try await storage.updateSourceItem(updatedItem)
             
-            // 应用润色（如果开启）
             if let settings = try? await getVoiceSettings(),
                settings.autoPolish,
                settings.voicePolishMode != .none {
-                let polished = try await polishTranscript(transcript, mode: settings.voicePolishMode)
+                let polished = try await polishTranscript(
+                    transcript,
+                    mode: settings.voicePolishMode,
+                    language: preferredLanguage
+                )
                 updatedItem.polishedTranscript = polished
                 try await storage.updateSourceItem(updatedItem)
             }
@@ -387,36 +400,93 @@ public actor VoiceService: VoiceServiceProtocol {
     // MARK: - Polish
     
     public func polishTranscript(_ text: String, mode: VoicePolishMode) async throws -> String {
+        try await polishTranscript(text, mode: mode, hotwords: [], customSystemPrompt: nil, contextInfo: nil)
+    }
+    
+    public func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String], customSystemPrompt: String?, contextInfo: String?) async throws -> String {
+        try await polishTranscript(text, mode: mode, hotwords: hotwords, customSystemPrompt: customSystemPrompt, contextInfo: contextInfo, language: "auto")
+    }
+    
+    public func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String], customSystemPrompt: String?, contextInfo: String?, language: String) async throws -> String {
         guard mode != .none else { return text }
         
-        // 优先使用新的 PolishService
-        if let service = polishService {
-            return try await service.polish(text: text, mode: mode)
+        var enhancedSystemPrompt = customSystemPrompt
+        if enhancedSystemPrompt == nil || enhancedSystemPrompt?.isEmpty == true {
+            if language != "auto" {
+                if hotwords.isEmpty {
+                    enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, language: language)
+                } else {
+                    enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, language: language, hotwords: hotwords)
+                }
+            } else if hotwords.isEmpty {
+                enhancedSystemPrompt = nil
+            } else {
+                enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, hotwords: hotwords)
+            }
         }
         
-        // Fallback 到旧实现
+        var enhancedText = text
+        if let context = contextInfo, !context.isEmpty {
+            if language.hasPrefix("en") {
+                enhancedText = "Context information:\n\(context)\n\nText to polish:\n\(text)"
+            } else {
+                enhancedText = "上下文信息：\n\(context)\n\n需要润色的文本：\n\(text)"
+            }
+        }
+        
+        if let service = polishService {
+            return try await service.polish(
+                text: enhancedText,
+                mode: mode,
+                hotwords: hotwords,
+                customSystemPrompt: enhancedSystemPrompt,
+                language: language
+            )
+        }
+        
         guard let aiRuntime = aiRuntime else {
             throw VoiceError.polishFailed("AI Runtime 未初始化")
         }
         
         let prompt: String
-        switch mode {
-        case .light:
-            prompt = "请润色以下文本，使其更通顺：\n\n\(text)"
-        case .structured:
-            prompt = "请将以下文本整理为结构化格式：\n\n\(text)"
-        case .formal:
-            prompt = "请将以下文本改写为正式表达：\n\n\(text)"
-        case .raw:
-            prompt = "请整理以下文本，仅补全标点：\n\n\(text)"
-        case .aiPrompt:
-            prompt = "请将以下文本整理为结构化 AI prompt 格式：\n\n\(text)"
-        case .none:
-            return text
+        if language.hasPrefix("en") {
+            switch mode {
+            case .light:
+                prompt = "Please polish the following text to make it more fluent:\n\n\(text)"
+            case .structured:
+                prompt = "Please organize the following text into a structured format:\n\n\(text)"
+            case .formal:
+                prompt = "Please rewrite the following text in formal expression:\n\n\(text)"
+            case .raw:
+                prompt = "Please organize the following text, only add punctuation:\n\n\(text)"
+            case .aiPrompt:
+                prompt = "Please organize the following text into a structured AI prompt format:\n\n\(text)"
+            case .none:
+                return text
+            }
+        } else {
+            switch mode {
+            case .light:
+                prompt = "请润色以下文本，使其更通顺：\n\n\(text)"
+            case .structured:
+                prompt = "请将以下文本整理为结构化格式：\n\n\(text)"
+            case .formal:
+                prompt = "请将以下文本改写为正式表达：\n\n\(text)"
+            case .raw:
+                prompt = "请整理以下文本，仅补全标点：\n\n\(text)"
+            case .aiPrompt:
+                prompt = "请将以下文本整理为结构化 AI prompt 格式：\n\n\(text)"
+            case .none:
+                return text
+            }
         }
         
+        let systemMessage = language.hasPrefix("en")
+            ? "You are a professional text polishing assistant."
+            : "你是一个专业的文本润色助手。"
+        
         let messages = [
-            ChatMessage(role: "system", content: "你是一个专业的文本润色助手。"),
+            ChatMessage(role: "system", content: systemMessage),
             ChatMessage(role: "user", content: prompt)
         ]
         

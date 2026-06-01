@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var launchWindowController: LaunchWindowController?
     var mainWindowController: MainWindowController?
     var capsuleWindowController: CapsuleWindowController?
+    private var oobeWindowController: OOBEWindowController?
 
     // MARK: - Notch Panel
 
@@ -48,6 +49,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let appState = AppState.shared
     private let musicService = MusicService.shared
+    private var hotCornerManager: HotCornerManager?
+    private var fnKeyMonitor: FnKeyHoldMonitor?
     private var isTerminating = false
 
     // MARK: - Lifecycle
@@ -58,7 +61,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         showLaunchWindow()
         setupStatusBar()
         setupNotifications()
-        setupGlobalShortcuts()
 
         // 初始化服务容器
         Task {
@@ -66,14 +68,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 try await ServiceContainer.setup()
                 await MainActor.run {
                     self.hideLaunchWindow()
-                    self.showMainWindow()
-                    // 显示刘海面板
-                    if self.notchPanelEnabled {
-                        self.showNotchPanel()
-                    }
-                    // 显示胶囊
-                    if self.desktopCapsuleEnabled {
-                        self.showDesktopCapsule()
+                    
+                    // 检查是否需要显示 OOBE
+                    if !UserDefaults.standard.bool(forKey: OOBEWindowController.completionDefaultsKey) {
+                        self.showOOBE()
+                    } else {
+                        self.showMainWindow()
+                        // 启动时只展示一个随身形态，避免大陆与胶囊同时出现
+                        if self.notchPanelEnabled {
+                            self.showNotchPanel()
+                        } else if self.desktopCapsuleEnabled {
+                            self.showDesktopCapsule()
+                        }
+                        self.setupFnKeyMonitor()
+                        self.setupGlobalShortcuts()
+                        self.setupHotCorners()
+                        self.setupHeadphoneMonitor()
                     }
                 }
             } catch {
@@ -89,10 +99,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 清理资源
         Task {
+            await MainActor.run {
+                self.hotCornerManager?.stop()
+                self.hotCornerManager = nil
+            }
             await ServiceContainer.shared.shutdown()
         }
 
         // 停止监听
+        fnKeyMonitor?.stop()
+        fnKeyMonitor = nil
+        Task { await HeadphoneMonitor.shared.disable() }
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -107,11 +124,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showMainWindow() {
         if mainWindowController == nil {
-            mainWindowController = MainWindowController()
+            mainWindowController = MainWindowController(restoreWindowPosition: shouldRestoreWindowPosition)
         }
         NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
-        mainWindowController?.window?.setFrame(AppWindowGeometry.mainFrame, display: true)
+        if shouldRestoreWindowPosition == false {
+            mainWindowController?.window?.setFrame(AppWindowGeometry.mainFrame, display: true)
+        }
         mainWindowController?.window?.makeKeyAndOrderFront(nil)
         mainWindowController?.window?.orderFrontRegardless()
         appState.mainWindowDidOpen()
@@ -131,15 +150,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showCapsuleWindow() {
-        if capsuleWindowController == nil {
-            capsuleWindowController = CapsuleWindowController()
+        // 历史入口统一转到最新的桌面灵动胶囊，避免再弹出旧版窗口
+        showDesktopCapsule()
+    }
+
+    func showVoicePanel() {
+        guard SettingsLocalPreferences.isVoiceInputEnabled() else {
+            appState.showError(.serviceUnavailable("说入法输入已在设置中关闭"))
+            return
         }
-        NSApp.activate(ignoringOtherApps: true)
-        capsuleWindowController?.showWindow(nil)
-        capsuleWindowController?.window?.setFrame(AppWindowGeometry.capsuleFrame, display: true)
-        capsuleWindowController?.window?.makeKeyAndOrderFront(nil)
-        capsuleWindowController?.window?.orderFrontRegardless()
-        appState.capsuleWindowDidOpen()
+
+        showMainWindow()
+        NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
     }
 
     func showLaunchWindow() {
@@ -159,14 +181,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func hideCapsuleWindow() {
-        capsuleWindowController?.close()
-        appState.capsuleWindowDidClose()
+        hideDesktopCapsule()
     }
 
     // MARK: - Notch Panel
 
     func showNotchPanel() {
-        NotchPanel.shared.show()
+        NotchPanel.shared.showCompact()
+    }
+
+    func showNotchPanel(page: NotchV2Page) {
+        NotchPanel.shared.show(page: page)
     }
 
     func hideNotchPanel() {
@@ -192,6 +217,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DesktopCapsulePanel.shared.toggle()
     }
 
+    // MARK: - OOBE
+
+    func showOOBE() {
+        let oobeController = OOBEWindowController(
+            permissionManager: ServiceContainer.shared.permissionManager,
+            settingsService: ServiceContainer.shared.settingsService
+        )
+        oobeWindowController = oobeController
+        oobeController.onFinish = { [weak self] engine, polishMode in
+            // OOBE 完成后显示主界面
+            self?.showMainWindow()
+            if self?.notchPanelEnabled == true {
+                self?.showNotchPanel()
+            } else if self?.desktopCapsuleEnabled == true {
+                self?.showDesktopCapsule()
+            }
+            self?.setupFnKeyMonitor()
+            self?.setupGlobalShortcuts()
+            self?.setupHotCorners()
+            self?.oobeWindowController = nil
+        }
+        oobeController.onClose = { [weak self] in
+            // 如果用户关闭了 OOBE，也显示主界面
+            self?.showMainWindow()
+            if self?.notchPanelEnabled == true {
+                self?.showNotchPanel()
+            } else if self?.desktopCapsuleEnabled == true {
+                self?.showDesktopCapsule()
+            }
+            self?.setupFnKeyMonitor()
+            self?.setupGlobalShortcuts()
+            self?.setupHotCorners()
+            self?.oobeWindowController = nil
+        }
+        oobeController.showWindow()
+    }
+
     // MARK: - Status Bar
 
     private func setupStatusBar() {
@@ -208,7 +270,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         menu.addItem(NSMenuItem(title: "显示主窗口", action: #selector(showMainWindowFromMenu), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "显示胶囊", action: #selector(toggleDesktopCapsuleFromMenu), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "显示灵动胶囊", action: #selector(toggleDesktopCapsuleFromMenu), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
 
         // 快速操作
@@ -242,6 +304,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self,
             selector: #selector(handleCaptureNotification(_:)),
             name: Notification.Name("AcMind.captureScreenshot"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOpenSettingsNotification(_:)),
+            name: Notification.Name("AcMind.openSettings"),
             object: nil
         )
 
@@ -295,6 +364,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: Notification.Name("AcMind.captureCompleted"),
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDeleteSourceItem(_:)),
+            name: .acmindDeleteSourceItem,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleGlobalShortcut(_:)),
+            name: .acmindGlobalShortcutTriggered,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleHotCornersDidChange(_:)),
+            name: .hotCornersDidChange,
+            object: nil
+        )
     }
 
     @objc private func handleAppDidBecomeActive(_ notification: Notification) {
@@ -308,15 +398,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handleNotchNavigate(_ notification: Notification) {
         switch notification.name {
         case .companionShowSchedule:
-            appState.selectSidebarItem(.schedule)
+            showPreferredSurface(for: .schedule)
         case .companionShowInbox:
-            appState.selectSidebarItem(.inbox)
+            showPreferredSurface(for: .inbox)
         case .companionShowAgent:
-            appState.selectSidebarItem(.agent)
+            showPreferredSurface(for: .agent)
         default:
             break
         }
-        showMainWindow()
     }
 
     @objc private func handleCaptureCompleted(_ notification: Notification) {
@@ -325,6 +414,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .companionCaptureSuccess,
             object: notification.object
         )
+
+        Task {
+            await sendCaptureCompletedNotificationIfNeeded(notification)
+        }
+    }
+
+    private func sendCaptureCompletedNotificationIfNeeded(_ notification: Notification) async {
+        guard let captureResult = notification.object as? CaptureResult else {
+            return
+        }
+
+        let settings = SettingsLocalPreferences.loadOrDefault()
+        await AppNotificationService.notifyTaskCompleted(
+            title: "采集已完成",
+            body: captureResult.sourceItem.title ?? "已保存到收集箱",
+            settings: AppNotificationSettings(
+                notificationsEnabled: settings.notificationsEnabled,
+                taskCompletedNotificationsEnabled: settings.taskCompletedNotificationsEnabled
+            )
+        )
+    }
+
+    @objc private func handleDeleteSourceItem(_ notification: Notification) {
+        guard let itemID = notification.object as? String else { return }
+
+        Task {
+            do {
+                try await ServiceContainer.shared.storageService.deleteSourceItem(id: itemID)
+            } catch {
+                await MainActor.run {
+                    appState.showError(.serviceUnavailable("删除收集项"))
+                }
+                print("⚠️ 删除收集项失败: \(error.localizedDescription)")
+            }
+        }
     }
 
     @objc private func handleCaptureNotification(_ notification: Notification) {
@@ -356,16 +480,107 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleVoiceNotification(_ notification: Notification) {
         Task {
-            await performVoiceCapture()
+            await MainActor.run {
+                self.showVoicePanel()
+            }
         }
+    }
+
+    @objc private func handleHotCornersDidChange(_ notification: Notification) {
+        setupHotCorners()
     }
 
     // MARK: - Global Shortcuts
 
+    private func setupHotCorners() {
+        guard let hotCornerStore = ServiceContainer.shared.hotCornerSettingsStore else {
+            hotCornerManager?.stop()
+            hotCornerManager = nil
+            return
+        }
+
+        if hotCornerManager == nil {
+            hotCornerManager = HotCornerManager(actionExecutor: { [weak self] action in
+                self?.performHotCornerAction(action)
+            })
+        }
+
+        Task { [weak self] in
+            let settings = await hotCornerStore.getHotCornerSettings()
+            await MainActor.run {
+                self?.hotCornerManager?.update(settings: settings)
+            }
+        }
+    }
+
     private func setupGlobalShortcuts() {
-        // 注册全局快捷键
-        // 注意：实际实现需要使用 CGEvent.tapCreate 或 MASShortcut 等库
-        // 这里仅作占位，后续实现
+        Task.detached(priority: .utility) {
+            let isReady = await MainActor.run { ServiceContainer.isInitialized() }
+            guard isReady else { return }
+
+            let settingsService = await MainActor.run { ServiceContainer.shared.settingsService }
+            for item in SidebarItem.mainItems {
+                guard let shortcut = item.shortcut else { continue }
+
+                do {
+                    try await settingsService.registerShortcut(shortcut) {
+                        NotificationCenter.default.post(
+                            name: .acmindGlobalShortcutTriggered,
+                            object: item.rawValue
+                        )
+                    }
+                } catch {
+                    print("⚠️ 注册全局快捷键失败: \(item.displayName) - \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func setupFnKeyMonitor() {
+        guard fnKeyMonitor == nil else { return }
+        let monitor = FnKeyHoldMonitor()
+        monitor.onFnPressBegan = { [weak self] in
+            guard SettingsLocalPreferences.isVoiceInputEnabled() else { return }
+            self?.showVoicePanel()
+        }
+        monitor.onFnPressEnded = { [weak self] in
+            guard let self else { return }
+            Task { @MainActor in
+                if self.mainWindowController?.window?.isVisible == true {
+                    NotificationCenter.default.post(name: .companionVoiceFinishRequested, object: nil)
+                }
+            }
+        }
+        monitor.start()
+        fnKeyMonitor = monitor
+    }
+
+    private func setupHeadphoneMonitor() {
+        Task {
+            await HeadphoneMonitor.shared.enable(
+                onSingleTap: { @Sendable in
+                    Task { @MainActor in
+                        NotificationCenter.default.post(name: .headphoneSingleTap, object: nil)
+                    }
+                    return true
+                },
+                onDoubleTap: { @Sendable in
+                    Task { @MainActor in
+                        NotificationCenter.default.post(name: .headphoneDoubleTap, object: nil)
+                    }
+                },
+                onLongPressStart: { @Sendable in
+                    Task { @MainActor in
+                        NotificationCenter.default.post(name: .headphoneLongPressStart, object: nil)
+                    }
+                },
+                onLongPressEnd: { @Sendable in
+                    Task { @MainActor in
+                        NotificationCenter.default.post(name: .headphoneLongPressEnd, object: nil)
+                    }
+                }
+            )
+        }
     }
 
     // MARK: - Actions
@@ -382,15 +597,175 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         toggleDesktopCapsule()
     }
 
+    private func performHotCornerAction(_ action: HotCornerAction) {
+        switch action {
+        case .none:
+            break
+        case let .openApp(bundleIdentifier):
+            openApplication(bundleIdentifier: bundleIdentifier)
+        case let .openURL(urlString):
+            openURL(urlString)
+        case let .toggleFeature(featureIdentifier):
+            toggleFeature(identifier: featureIdentifier)
+        case let .openInternalRoute(routeIdentifier):
+            openInternalRoute(routeIdentifier)
+        case let .showPanel(panelIdentifier):
+            showPanel(identifier: panelIdentifier)
+        }
+    }
+
+    private func openApplication(bundleIdentifier: String) {
+        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            print("⚠️ 未找到应用: \(bundleIdentifier)")
+            return
+        }
+
+        NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+            if let error {
+                print("⚠️ 打开应用失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func openURL(_ urlString: String) {
+        guard let url = URL(string: urlString) else {
+            print("⚠️ 无效 URL: \(urlString)")
+            return
+        }
+
+        NSWorkspace.shared.open(url)
+    }
+
+    private func toggleFeature(identifier: String) {
+        switch identifier {
+        case SidebarItem.dynamicContinent.rawValue:
+            showPreferredSurface(for: .dynamicContinent)
+        case SidebarItem.systemStatus.rawValue:
+            showPreferredSurface(for: .systemStatus)
+        case SidebarItem.voiceEntry.rawValue:
+            showPreferredSurface(for: .voiceEntry)
+        case SidebarItem.agent.rawValue:
+            showPreferredSurface(for: .agent)
+        case SidebarItem.schedule.rawValue:
+            showPreferredSurface(for: .schedule)
+        case "notchPanel":
+            toggleNotchPanel()
+        case "desktopCapsule":
+            toggleDesktopCapsule()
+        case "mainWindow":
+            toggleMainWindow()
+        default:
+            print("⚠️ 未知功能: \(identifier)")
+        }
+    }
+
+    private func openInternalRoute(_ routeIdentifier: String) {
+        if let item = SidebarItem(rawValue: routeIdentifier) {
+            showPreferredSurface(for: item)
+        } else {
+            print("⚠️ 未知内部路由: \(routeIdentifier)")
+        }
+    }
+
+    private func showPanel(identifier: String) {
+        switch identifier {
+        case "notchPanel":
+            showNotchPanel(page: .overview)
+        case "desktopCapsule":
+            showDesktopCapsule()
+        default:
+            openInternalRoute(identifier)
+        }
+    }
+
+    private func showPreferredSurface(for item: SidebarItem) {
+        switch item {
+        case .dynamicContinent:
+            if notchPanelEnabled {
+                showNotchPanel(page: .overview)
+            } else {
+                appState.selectSidebarItem(.dynamicContinent)
+                showMainWindow()
+            }
+        case .agent:
+            if notchPanelEnabled {
+                showNotchPanel(page: .agent)
+            } else {
+                appState.selectSidebarItem(.agent)
+                showMainWindow()
+            }
+        case .schedule:
+            if notchPanelEnabled {
+                showNotchPanel(page: .schedule)
+            } else {
+                appState.selectSidebarItem(.schedule)
+                showMainWindow()
+            }
+        case .systemStatus:
+            if notchPanelEnabled {
+                showNotchPanel(page: .systemStatus)
+            } else {
+                appState.selectSidebarItem(.systemStatus)
+                showMainWindow()
+            }
+        case .voiceEntry:
+            appState.selectSidebarItem(.voiceEntry)
+            showMainWindow()
+        default:
+            appState.selectSidebarItem(item)
+            showMainWindow()
+        }
+    }
+
     @objc private func captureScreenshot() {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            appState.showError(.serviceUnavailable("截图捕获已在设置中关闭"))
+            return
+        }
+
         Task {
             await performCapture(mode: .fullscreen)
         }
     }
 
+    func captureAreaScreenshot() {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            appState.showError(.serviceUnavailable("截图捕获已在设置中关闭"))
+            return
+        }
+
+        Task {
+            await performCapture(mode: .area)
+        }
+    }
+
+    func showQuickNotePanel() {
+        NotificationCenter.default.post(name: .companionShowQuickNote, object: nil)
+    }
+
+    func showAboutPanel() {
+        NSApplication.shared.orderFrontStandardAboutPanel(nil)
+    }
+
+    func toggleMainWindowFullScreen() {
+        guard let window = mainWindowController?.window else { return }
+        window.toggleFullScreen(nil)
+    }
+
     @objc private func showSettings() {
         appState.selectSidebarItem(.settings)
         showMainWindow()
+    }
+
+    @objc private func handleOpenSettingsNotification(_ notification: Notification) {
+        showSettings()
+    }
+
+    @objc private func handleGlobalShortcut(_ notification: Notification) {
+        guard let rawValue = notification.object as? String,
+              let item = SidebarItem(rawValue: rawValue) else { return }
+
+        showPreferredSurface(for: item)
     }
 
     @objc private func quitApp() {
@@ -496,6 +871,65 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+// MARK: - Fn Key Monitor
+
+final class FnKeyHoldMonitor {
+    private var globalMonitor: Any?
+    private var localMonitor: Any?
+    private var isFnPressed = false
+
+    var onFnPressBegan: (() -> Void)?
+    var onFnPressEnded: (() -> Void)?
+
+    func start() {
+        guard globalMonitor == nil, localMonitor == nil else { return }
+
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
+            self?.handle(event)
+        }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
+            self?.handle(event)
+            return event
+        }
+    }
+
+    func stop() {
+        if let globalMonitor {
+            NSEvent.removeMonitor(globalMonitor)
+            self.globalMonitor = nil
+        }
+
+        if let localMonitor {
+            NSEvent.removeMonitor(localMonitor)
+            self.localMonitor = nil
+        }
+
+        isFnPressed = false
+    }
+
+    private func handle(_ event: NSEvent) {
+        guard event.keyCode == 63 else { return }
+
+        let pressed = event.modifierFlags.contains(.function)
+        guard pressed != isFnPressed else { return }
+        isFnPressed = pressed
+
+        if pressed {
+            onFnPressBegan?()
+        } else {
+            onFnPressEnded?()
+        }
+    }
+}
+
+extension Notification.Name {
+    static let companionVoiceFinishRequested = Notification.Name("companion.voice.finishRequested")
+    static let headphoneSingleTap = Notification.Name("headphone.singleTap")
+    static let headphoneDoubleTap = Notification.Name("headphone.doubleTap")
+    static let headphoneLongPressStart = Notification.Name("headphone.longPressStart")
+    static let headphoneLongPressEnd = Notification.Name("headphone.longPressEnd")
+}
+
 // MARK: - Screenshot Preview View
 
 struct ScreenshotPreviewView: View {
@@ -531,7 +965,7 @@ struct ScreenshotPreviewView: View {
                 .keyboardShortcut(.return)
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             
             // 预览区域
             if let image = image {
@@ -556,7 +990,7 @@ struct ScreenshotPreviewView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(NSColor.windowBackgroundColor))
+                .background(AppSurfaceTokens.secondarySidebarBackground)
             }
         }
     }
@@ -577,18 +1011,23 @@ struct ScreenshotPreviewView: View {
 // MARK: - Main Window Controller
 
 class MainWindowController: NSWindowController {
-    convenience init() {
+    convenience init(restoreWindowPosition: Bool) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            contentRect: NSRect(x: 0, y: 0, width: 1320, height: 880),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
         window.title = "AcMind"
-        window.minSize = NSSize(width: 800, height: 600)
+        window.minSize = NSSize(width: 1160, height: 760)
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
         window.collectionBehavior = [.managed, .moveToActiveSpace]
-        window.setFrameAutosaveName("MainWindow")
+        if restoreWindowPosition {
+            window.setFrameAutosaveName("MainWindow")
+        }
 
         // 设置内容视图
         let contentView = ContentView()
@@ -618,6 +1057,12 @@ extension MainWindowController: NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         AppState.shared.mainWindowDidClose()
+    }
+}
+
+private extension AppDelegate {
+    var shouldRestoreWindowPosition: Bool {
+        SettingsLocalPreferences.loadOrDefault().restoreWindowPosition
     }
 }
 
@@ -683,7 +1128,7 @@ class LaunchWindowController: NSWindowController {
 // MARK: - Window Geometry
 
 enum AppWindowGeometry {
-    static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 800)
+    static let mainFrame = NSRect(x: 120, y: 120, width: 1320, height: 880)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
     static let capsuleFrame = NSRect(x: 320, y: 260, width: 400, height: 60)
 }
@@ -692,4 +1137,9 @@ extension CapsuleWindowController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         AppState.shared.capsuleWindowDidClose()
     }
+}
+
+extension Notification.Name {
+    static let acmindDeleteSourceItem = Notification.Name("AcMind.deleteSourceItem")
+    static let acmindGlobalShortcutTriggered = Notification.Name("AcMind.globalShortcutTriggered")
 }

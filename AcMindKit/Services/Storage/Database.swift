@@ -712,10 +712,10 @@ public actor Database {
 
     private func databaseCandidateURLs() -> [URL] {
         let primary = URL(fileURLWithPath: path)
-        let fallback = FileManager.default.temporaryDirectory
+        let compat = FileManager.default.temporaryDirectory
             .appendingPathComponent("AcMind", isDirectory: true)
             .appendingPathComponent("acmind-swift.db")
-        return [primary, fallback]
+        return [primary, compat]
     }
 
     // MARK: - Source Items
@@ -926,6 +926,10 @@ public actor Database {
         try await insertDistilledNote(note)
     }
 
+    public func deleteDistilledNote(id: String) async throws {
+        try db().execute("DELETE FROM distilled_notes WHERE id = ?", arguments: [id])
+    }
+
     public func listDistilledNotes() async throws -> [DistilledNote] {
         try db().query("SELECT * FROM distilled_notes ORDER BY created_at DESC") { row in
             DistilledNoteRecord(row: row).toDistilledNote()
@@ -1029,6 +1033,42 @@ public actor Database {
         try db().execute("DELETE FROM clipboard_items WHERE id = ?", arguments: [id])
     }
 
+    // MARK: - Provider Configs
+
+    public func listProviders() async throws -> [ProviderConfig] {
+        try db().query(
+            """
+            SELECT id, name, provider_type, tier, base_url, api_key_ref, model_id, enabled, capabilities
+            FROM provider_configs
+            ORDER BY updated_at DESC, created_at DESC
+            """
+        ) { row in
+            ProviderConfig(
+                id: row.string("id") ?? UUID().uuidString,
+                name: row.string("name") ?? "",
+                providerType: ProviderType(rawValue: row.string("provider_type") ?? "") ?? .ollama,
+                tier: ProviderTier(rawValue: row.string("tier") ?? "") ?? .localLight,
+                baseURL: row.string("base_url") ?? "",
+                apiKeyRef: row.string("api_key_ref"),
+                modelId: row.string("model_id") ?? "",
+                enabled: row.int("enabled").map { $0 != 0 } ?? true,
+                capabilities: Self.decodeStringArray(row.string("capabilities"))
+            )
+        }
+    }
+
+    public func addProvider(_ config: ProviderConfig) async throws {
+        try await upsertProvider(config)
+    }
+
+    public func updateProvider(_ config: ProviderConfig) async throws {
+        try await upsertProvider(config)
+    }
+
+    public func removeProvider(id: String) async throws {
+        try db().execute("DELETE FROM provider_configs WHERE id = ?", arguments: [id])
+    }
+
     // MARK: - Settings
 
     public func getSetting(key: String) async throws -> String? {
@@ -1065,12 +1105,8 @@ public actor Database {
         return count
     }
 
-    public nonisolated func checkElectronDatabase() -> URL? {
+    public nonisolated func checkLegacyDatabase() -> URL? {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let electronPath = appSupport.appendingPathComponent("AcMind/acmind.db")
-        if FileManager.default.fileExists(atPath: electronPath.path) {
-            return electronPath
-        }
         let legacyPath = appSupport.appendingPathComponent("AcMind/pinmind.db")
         if FileManager.default.fileExists(atPath: legacyPath.path) {
             return legacyPath
@@ -1371,6 +1407,63 @@ public actor Database {
             "SELECT 1 AS exists_flag FROM asset_files WHERE file_path = ? LIMIT 1",
             arguments: [path]
         ) { _ in true } ?? false
+    }
+}
+
+private extension Database {
+    func upsertProvider(_ config: ProviderConfig) async throws {
+        let createdAt = try db().queryOne(
+            "SELECT created_at FROM provider_configs WHERE id = ? LIMIT 1",
+            arguments: [config.id]
+        ) { row in
+            row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+        } ?? Int(Date().timeIntervalSince1970)
+
+        let capabilitiesData = (try? JSONEncoder().encode(config.capabilities)) ?? Data("[]".utf8)
+        let capabilities = String(decoding: capabilitiesData, as: UTF8.self)
+
+        try db().execute(
+            """
+            INSERT INTO provider_configs (
+                id, name, provider_type, tier, base_url, api_key_ref, model_id, enabled, capabilities, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                provider_type = excluded.provider_type,
+                tier = excluded.tier,
+                base_url = excluded.base_url,
+                api_key_ref = excluded.api_key_ref,
+                model_id = excluded.model_id,
+                enabled = excluded.enabled,
+                capabilities = excluded.capabilities,
+                updated_at = excluded.updated_at
+            """,
+            arguments: [
+                config.id,
+                config.name,
+                config.providerType.rawValue,
+                config.tier.rawValue,
+                config.baseURL,
+                config.apiKeyRef,
+                config.modelId,
+                config.enabled ? 1 : 0,
+                capabilities,
+                createdAt,
+                Int(Date().timeIntervalSince1970)
+            ]
+        )
+    }
+
+    static func decodeStringArray(_ raw: String?) -> [String] {
+        guard let raw, raw.isEmpty == false else { return [] }
+        if let data = raw.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            return decoded
+        }
+        return raw
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
     }
 }
 

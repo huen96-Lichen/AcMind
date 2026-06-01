@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import CoreGraphics
 
 // MARK: - RecordingStatus（录音状态）
@@ -61,7 +62,7 @@ public enum RecordingPolishMode: String, Codable, Sendable, Hashable, CaseIterab
 // MARK: - ClipboardItem（剪贴板条目）
 
 /// 剪贴板历史条目
-/// 对齐 Electron clipboard_items 表
+/// 对齐旧版 clipboard_items 表
 public struct ClipboardItem: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var type: ClipboardContentType
@@ -104,6 +105,24 @@ public enum ClipboardContentType: String, Codable, Sendable, Hashable, CaseItera
         case .image: return "图片"
         case .file: return "文件"
         case .url: return "链接"
+        }
+    }
+
+    public var icon: String {
+        switch self {
+        case .text: return "text.quote"
+        case .image: return "photo"
+        case .file: return "doc"
+        case .url: return "link"
+        }
+    }
+
+    public var color: Color {
+        switch self {
+        case .text: return .blue
+        case .image: return .green
+        case .file: return .orange
+        case .url: return .purple
         }
     }
 }
@@ -151,7 +170,7 @@ public enum ScreenshotMode: String, Sendable, Hashable, Equatable {
 // MARK: - ShelfItem（文件架条目）
 
 /// 文件临时架条目
-/// 对齐 Electron shelf_items 表
+/// 对齐旧版 shelf_items 表
 public struct ShelfItem: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourceItemId: String?
@@ -189,7 +208,7 @@ public enum ShelfItemStatus: String, Codable, Sendable, Hashable, CaseIterable {
 // MARK: - Import Types（导入相关）
 
 /// 导入任务
-/// 对齐 Electron import_tasks 表
+/// 对齐旧版 import_tasks 表
 public struct ImportTask: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var sourcePath: String

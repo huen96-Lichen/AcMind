@@ -39,7 +39,7 @@ enum ToolShellRunner {
             process.arguments = arguments
 
             if let environment {
-                var merged = ProcessInfo.processInfo.environment
+                var merged = Foundation.ProcessInfo.processInfo.environment
                 environment.forEach { merged[$0.key] = $0.value }
                 process.environment = merged
             }
@@ -126,7 +126,7 @@ struct DocumentConverterPanel: View {
             }
         }
         .frame(width: 900, height: 760)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -165,7 +165,7 @@ struct DocumentConverterPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -233,7 +233,7 @@ struct DocumentConverterPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -273,7 +273,7 @@ struct DocumentConverterPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -522,7 +522,7 @@ struct OCRPanel: View {
             }
         }
         .frame(width: 900, height: 760)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -561,7 +561,7 @@ struct OCRPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -625,7 +625,7 @@ struct OCRPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -657,7 +657,7 @@ struct OCRPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -790,7 +790,7 @@ struct ImageProcessingPanel: View {
             }
         }
         .frame(width: 920, height: 820)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -829,7 +829,7 @@ struct ImageProcessingPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -889,7 +889,7 @@ struct ImageProcessingPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -955,7 +955,7 @@ struct ImageProcessingPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -993,7 +993,7 @@ struct ImageProcessingPanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -1290,7 +1290,7 @@ struct BatchRenamePanel: View {
             }
         }
         .frame(width: 980, height: 860)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -1329,7 +1329,7 @@ struct BatchRenamePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -1394,7 +1394,7 @@ struct BatchRenamePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -1454,7 +1454,7 @@ struct BatchRenamePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -1488,7 +1488,7 @@ struct BatchRenamePanel: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.controlBackgroundColor))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -1786,7 +1786,6 @@ struct SRTToFCPXMLPanel: View {
 
         """
 
-        var currentIndex = 0
         var inSubtitle = false
         var subtitleNumber = ""
         var startTime = ""

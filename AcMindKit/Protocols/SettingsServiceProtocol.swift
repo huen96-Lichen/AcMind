@@ -1,5 +1,10 @@
 import Foundation
 
+public protocol HotCornerSettingsStore: Sendable {
+    func getHotCornerSettings() async -> HotCornerSettings
+    func updateHotCornerSettings(_ settings: HotCornerSettings) async throws
+}
+
 public protocol SettingsServiceProtocol: Sendable {
     func setup() async throws
     func save() async
@@ -7,6 +12,8 @@ public protocol SettingsServiceProtocol: Sendable {
     // App Settings
     func getSettings() async -> AppSettings
     func updateSettings(_ settings: AppSettings) async throws
+    func getHotCornerSettings() async -> HotCornerSettings
+    func updateHotCornerSettings(_ settings: HotCornerSettings) async throws
 
     // Voice Settings
     func getVoiceSettings() async -> VoiceSettings
@@ -35,8 +42,8 @@ public protocol SettingsServiceProtocol: Sendable {
 
     // Providers
     func listProviders() async throws -> [ProviderConfig]
-    func addProvider(_ config: ProviderConfig) async throws
-    func updateProvider(_ config: ProviderConfig) async throws
+    func addProvider(_ config: ProviderConfig, apiKey: String?) async throws
+    func updateProvider(_ config: ProviderConfig, apiKey: String?) async throws
     func removeProvider(id: String) async throws
     func getAPIKey(for providerId: String) async -> String?
 }

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import AcMindKit
 
@@ -255,25 +256,30 @@ struct InboxItemCard: View {
     @ViewBuilder
     private var contextMenuItems: some View {
         Button("AI 整理") {
-            // TODO: AI 整理 action
+            copySummary()
+            AppState.shared.selectSidebarItem(.agent)
         }
         
         Button("复制内容") {
-            if let text = item.previewText ?? item.transcript {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(text, forType: .string)
-            }
+            copySummary()
         }
         
         Divider()
         
         Button("移动到工作台") {
-            // TODO: move to workspace action
+            AppState.shared.selectSidebarItem(.workbench)
         }
         
         Button("删除") {
-            // TODO: delete action
+            NotificationCenter.default.post(name: .acmindDeleteSourceItem, object: item.id)
         }
+    }
+
+    private func copySummary() {
+        let text = item.previewText ?? item.transcript ?? item.ocrText ?? item.title ?? ""
+        guard text.isEmpty == false else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
     
     private func formatTime(_ date: Date) -> String {
