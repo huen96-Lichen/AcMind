@@ -30,6 +30,7 @@ public final class AppState: ObservableObject, Sendable {
 
     @Published public var sidebarSelection: SidebarItem = .home
     @Published public var sidebarCollapsed = false
+    @Published public var pendingInboxDetailSourceItemID: String?
 
     // MARK: - Window State
 

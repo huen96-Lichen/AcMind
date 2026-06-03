@@ -38,13 +38,13 @@ struct SystemStatusView: View {
 
     private var backgroundLayer: some View {
         ZStack {
-            AppSurfaceTokens.background
+            AppVisualBackdrop()
 
             LinearGradient(
                 colors: [
                     Color.accentColor.opacity(0.08),
                     Color.clear,
-                    AppSurfaceTokens.background
+                    AppSurfaceTokens.background.opacity(0.9)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -57,10 +57,16 @@ struct SystemStatusView: View {
                 .offset(x: -260, y: -220)
 
             Circle()
-                .fill(AppSurfaceTokens.accentPurple.opacity(0.10))
+                .fill(AppSurfaceTokens.accentPrimary.opacity(0.10))
                 .frame(width: 280, height: 280)
                 .blur(radius: 80)
                 .offset(x: 300, y: -140)
+
+            Circle()
+                .fill(AppSurfaceTokens.accentCyan.opacity(0.08))
+                .frame(width: 220, height: 220)
+                .blur(radius: 70)
+                .offset(x: 180, y: 260)
         }
     }
 
@@ -70,7 +76,7 @@ struct SystemStatusView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 10) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                                 .fill(Color.accentColor.opacity(0.12))
                                 .frame(width: 44, height: 44)
                             Image(systemName: "cpu")
@@ -334,7 +340,7 @@ struct SystemStatusView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
 }
 
@@ -351,7 +357,7 @@ private struct SummaryMetricCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                             .fill(tint.opacity(0.14))
                             .frame(width: 28, height: 28)
                         Image(systemName: icon)
@@ -422,7 +428,7 @@ private struct DetailTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
     }
 }
 
@@ -452,7 +458,7 @@ private struct SystemStatusPermissionRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(isWarning ? accent.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
 }
 

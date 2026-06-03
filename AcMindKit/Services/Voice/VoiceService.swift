@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import CoreAudio
 
 // MARK: - Voice Service
 
@@ -32,6 +33,7 @@ public actor VoiceService: VoiceServiceProtocol {
     private var status: RecordingStatus = .idle
     private var recordingStartTime: Date?
     private var statusHandler: (@Sendable (RecordingStatus) -> Void)?
+    private var restoredInputDeviceID: AudioDeviceID?
     
     // MARK: - ASR Configuration
     
@@ -111,39 +113,46 @@ public actor VoiceService: VoiceServiceProtocol {
         guard permissionGranted else {
             throw VoiceError.permissionDenied
         }
-        
-        // 配置音频会话（macOS 版本为空实现）
-        configureAudioSession()
-        
-        // 停止之前的录音
-        if recorder?.isRecording == true {
-            recorder?.stop()
+
+        do {
+            applyPreferredMicrophoneSelectionIfNeeded()
+
+            // 配置音频会话（macOS 版本为空实现）
+            configureAudioSession()
+
+            // 停止之前的录音
+            if recorder?.isRecording == true {
+                recorder?.stop()
+            }
+
+            // 创建录音文件路径
+            let fileName = "recording_\(Date().timeIntervalSince1970).m4a"
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            currentRecordingURL = tempURL
+
+            // 配置录音设置
+            let settings: [String: Any] = [
+                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                AVSampleRateKey: 44100.0,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
+
+            // 创建录音器
+            recorder = try AVAudioRecorder(url: tempURL, settings: settings)
+            recorder?.prepareToRecord()
+
+            // 开始录音
+            guard recorder?.record() == true else {
+                throw VoiceError.recordingFailed("无法开始录音")
+            }
+
+            recordingStartTime = Date()
+            updateStatus(.recording)
+        } catch {
+            restoreDefaultMicrophoneSelectionIfNeeded()
+            throw error
         }
-        
-        // 创建录音文件路径
-        let fileName = "recording_\(Date().timeIntervalSince1970).m4a"
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-        currentRecordingURL = tempURL
-        
-        // 配置录音设置
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44100.0,
-            AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
-        
-        // 创建录音器
-        recorder = try AVAudioRecorder(url: tempURL, settings: settings)
-        recorder?.prepareToRecord()
-        
-        // 开始录音
-        guard recorder?.record() == true else {
-            throw VoiceError.recordingFailed("无法开始录音")
-        }
-        
-        recordingStartTime = Date()
-        updateStatus(.recording)
     }
     
     public func stopRecording() async throws -> String {
@@ -153,6 +162,7 @@ public actor VoiceService: VoiceServiceProtocol {
         
         recorder.stop()
         updateStatus(.processing)
+        restoreDefaultMicrophoneSelectionIfNeeded()
         
         guard let recordingURL = currentRecordingURL else {
             throw VoiceError.noRecordingFile
@@ -207,7 +217,7 @@ public actor VoiceService: VoiceServiceProtocol {
             let audioFile = AudioFile(url: audioURL)
             return try await router.transcribe(audioFile: audioFile)
         }
-        
+
         switch sttProvider {
         case .openAI:
             return try await transcribeWithWhisperAPI(audioURL: audioURL)
@@ -334,67 +344,12 @@ public actor VoiceService: VoiceServiceProtocol {
     }
     
     private func transcribeWithWhisperAPI(audioURL: URL) async throws -> String {
-        guard aiRuntime != nil else {
-            throw VoiceError.asrNotAvailable("AI Runtime 未初始化")
-        }
-        
-        // 读取音频数据
-        let audioData = try Data(contentsOf: audioURL)
-        
-        // 使用 OpenAI Whisper API
-        // 这里简化处理，实际应该通过 AI Provider 调用
-        let apiKey = await SecretStore.shared.getAPIKey(for: "openai")
-        guard let key = apiKey else {
+        guard let apiKey = await SecretStore.shared.getAPIKey(for: "openai") else {
             throw VoiceError.asrNotAvailable("OpenAI API Key 未配置")
         }
-        
-        let url = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        
-        let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        
-        var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
-        body.append(audioData)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        body.append("whisper-1".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
-        body.append("zh".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        
-        request.httpBody = body
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw VoiceError.transcriptionFailed("API 请求失败")
-        }
-        
-        // 解析响应
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let text = json["text"] as? String {
-            return text
-        }
-        
-        throw VoiceError.transcriptionFailed("无法解析响应")
-    }
-    
-    private func transcribeWithSystem(audioURL: URL) async throws -> String {
-        // 使用 Apple SFSpeechRecognizer 系统语音识别
-        let transcriber = AppleSpeechTranscriber()
-        let audioFile = AudioFile(url: audioURL)
-        return try await transcriber.transcribe(audioFile: audioFile)
+
+        let transcriber = OpenAIWhisperTranscriber(apiKey: apiKey)
+        return try await transcriber.transcribe(audioFile: AudioFile(url: audioURL))
     }
     
     // MARK: - Polish
@@ -493,6 +448,138 @@ public actor VoiceService: VoiceServiceProtocol {
         let response = try await aiRuntime.chat(messages: messages)
         return response.content
     }
+
+    public func polishTranscriptStream(
+        _ text: String,
+        mode: VoicePolishMode,
+        hotwords: [String],
+        customSystemPrompt: String?,
+        contextInfo: String?,
+        language: String,
+        onChunk: @escaping @Sendable (String) async -> Void
+    ) async throws -> String {
+        guard mode != .none else {
+            await onChunk(text)
+            return text
+        }
+
+        var enhancedSystemPrompt = customSystemPrompt
+        if enhancedSystemPrompt == nil || enhancedSystemPrompt?.isEmpty == true {
+            if language != "auto" {
+                if hotwords.isEmpty {
+                    enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, language: language)
+                } else {
+                    enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, language: language, hotwords: hotwords)
+                }
+            } else if hotwords.isEmpty {
+                enhancedSystemPrompt = nil
+            } else {
+                enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, hotwords: hotwords)
+            }
+        }
+
+        var enhancedText = text
+        if let context = contextInfo, !context.isEmpty {
+            if language.hasPrefix("en") {
+                enhancedText = "Context information:\n\(context)\n\nText to polish:\n\(text)"
+            } else {
+                enhancedText = "上下文信息：\n\(context)\n\n需要润色的文本：\n\(text)"
+            }
+        }
+
+        guard let service = polishService else {
+            let fallback = try await polishTranscript(
+                enhancedText,
+                mode: mode,
+                hotwords: hotwords,
+                customSystemPrompt: enhancedSystemPrompt,
+                contextInfo: contextInfo,
+                language: language
+            )
+            await onChunk(fallback)
+            return fallback
+        }
+
+        let polished = try await service.polishStream(
+            text: enhancedText,
+            mode: mode,
+            hotwords: hotwords,
+            customSystemPrompt: enhancedSystemPrompt,
+            language: language,
+            onChunk: onChunk
+        )
+
+        return polished
+    }
+
+    // MARK: - Translation
+
+    public func translateTranscript(
+        _ text: String,
+        targetLanguage: String,
+        contextInfo: String?
+    ) async throws -> String {
+        let resolvedTargetLanguage = normalizeTranslationLanguage(targetLanguage)
+        guard let aiRuntime else {
+            throw VoiceError.translationFailed("AI Runtime 未初始化")
+        }
+
+        let systemMessage = translationSystemPrompt(targetLanguage: resolvedTargetLanguage)
+        let userMessage = translationUserPrompt(
+            text: text,
+            targetLanguage: resolvedTargetLanguage,
+            contextInfo: contextInfo
+        )
+
+        let messages = [
+            ChatMessage(role: "system", content: systemMessage),
+            ChatMessage(role: "user", content: userMessage)
+        ]
+
+        let response = try await aiRuntime.chat(messages: messages)
+        return cleanTranslationOutput(response.content)
+    }
+
+    public func translateTranscriptStream(
+        _ text: String,
+        targetLanguage: String,
+        contextInfo: String?,
+        onChunk: @escaping @Sendable (String) async -> Void
+    ) async throws -> String {
+        let resolvedTargetLanguage = normalizeTranslationLanguage(targetLanguage)
+        guard let aiRuntime else {
+            let fallback = try await translateTranscript(
+                text,
+                targetLanguage: resolvedTargetLanguage,
+                contextInfo: contextInfo
+            )
+            await onChunk(fallback)
+            return fallback
+        }
+
+        let systemMessage = translationSystemPrompt(targetLanguage: resolvedTargetLanguage)
+        let userMessage = translationUserPrompt(
+            text: text,
+            targetLanguage: resolvedTargetLanguage,
+            contextInfo: contextInfo
+        )
+
+        let messages = [
+            ChatMessage(role: "system", content: systemMessage),
+            ChatMessage(role: "user", content: userMessage)
+        ]
+
+        var fullContent = ""
+        let stream = aiRuntime.chatStream(messages: messages)
+
+        for try await response in stream {
+            let chunk = response.content
+            fullContent += chunk
+            await onChunk(chunk)
+        }
+
+        return cleanTranslationOutput(fullContent)
+    }
     
     /// 润色并插入到光标位置
     public func polishAndInsert(
@@ -557,6 +644,21 @@ public actor VoiceService: VoiceServiceProtocol {
         // macOS 不需要配置音频会话，iOS 才需要
         // 这里可以保留为空或添加 macOS 特定的音频配置
     }
+
+    private func applyPreferredMicrophoneSelectionIfNeeded() {
+        let selection = VoiceMicrophonePreferenceStore.load()
+        guard selection != VoiceMicrophonePreferenceStore.defaultName else {
+            return
+        }
+
+        restoredInputDeviceID = VoiceMicrophoneDeviceCatalog.applySelection(selection)
+    }
+
+    private func restoreDefaultMicrophoneSelectionIfNeeded() {
+        guard let deviceID = restoredInputDeviceID else { return }
+        VoiceMicrophoneDeviceCatalog.restoreDefaultInputDevice(id: deviceID)
+        restoredInputDeviceID = nil
+    }
     
     private func requestMicrophonePermission() async -> Bool {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
@@ -578,7 +680,116 @@ public actor VoiceService: VoiceServiceProtocol {
         let settingsService = SettingsService(storage: storage)
         return await settingsService.getVoiceSettings()
     }
-    
+
+    private func normalizeTranslationLanguage(_ language: String) -> String {
+        let trimmed = language.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "auto" ? "zh" : trimmed
+    }
+
+    private func translationSystemPrompt(targetLanguage: String) -> String {
+        let isEnglish = targetLanguage.hasPrefix("en")
+        let targetName = translationLanguageDisplayName(targetLanguage, english: isEnglish)
+        if isEnglish {
+            return """
+            You are a professional translation assistant.
+            Translate the provided text into \(targetName).
+            Preserve the original meaning, tone, names, code, URLs, numbers, units, and formatting where sensible.
+            Do not explain your work. Output only the translated text.
+            """
+        }
+
+        return """
+        你是专业翻译助手。
+        请将输入文本翻译成\(targetName)。
+        保留原意、语气、人名、专有名词、代码、URL、数字、单位和合理的格式。
+        不要解释你的处理过程，只输出译文正文。
+        """
+    }
+
+    private func translationUserPrompt(text: String, targetLanguage: String, contextInfo: String?) -> String {
+        let targetName = translationLanguageDisplayName(targetLanguage)
+        let escapedText = text.replacingOccurrences(of: "</raw_text>", with: "<\\/raw_text>")
+
+        if let contextInfo, contextInfo.isEmpty == false {
+            let escapedContext = contextInfo.replacingOccurrences(of: "</context>", with: "<\\/context>")
+            return """
+            请将以下文本翻译成\(targetName)。如果上下文中的术语、对象或指代能帮助翻译，请优先参考上下文，但不要添加原文没有的信息。
+
+            <context>
+            \(escapedContext)
+            </context>
+
+            <raw_text>
+            \(escapedText)
+            </raw_text>
+            """
+        }
+
+        return """
+        请将以下文本翻译成\(targetName)。只输出译文正文，不要添加解释、注释或前后缀。
+
+        <raw_text>
+        \(escapedText)
+        </raw_text>
+        """
+    }
+
+    private func translationLanguageDisplayName(_ language: String, english: Bool = false) -> String {
+        let lower = language.lowercased()
+        if lower.hasPrefix("zh") { return english ? "Chinese" : "中文" }
+        if lower.hasPrefix("en") { return english ? "English" : "英文" }
+        if lower.hasPrefix("ja") { return english ? "Japanese" : "日文" }
+        if lower.hasPrefix("ko") { return english ? "Korean" : "韩文" }
+        if lower.hasPrefix("fr") { return english ? "French" : "法语" }
+        if lower.hasPrefix("de") { return english ? "German" : "德语" }
+        if lower.hasPrefix("es") { return english ? "Spanish" : "西班牙语" }
+        return language
+    }
+
+    private func cleanTranslationOutput(_ content: String) -> String {
+        var output = content
+        output = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        output = stripMarkdownFence(output)
+        output = stripLeadingTranslationBoilerplate(output)
+        return output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func stripMarkdownFence(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard trimmed.hasPrefix("```") && trimmed.hasSuffix("```") else {
+            return text
+        }
+
+        var lines = trimmed.components(separatedBy: .newlines)
+        guard lines.count >= 2 else { return text }
+
+        lines.removeFirst()
+        lines.removeLast()
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func stripLeadingTranslationBoilerplate(_ text: String) -> String {
+        let prefixes = [
+            "以下是翻译结果：",
+            "翻译如下：",
+            "译文如下：",
+            "Here is the translation:",
+            "Translation:",
+            "Translated text:"
+        ]
+
+        var result = text
+        for prefix in prefixes {
+            if result.hasPrefix(prefix) {
+                result = String(result.dropFirst(prefix.count))
+                break
+            }
+        }
+        return result
+    }
+
     private func formatDate() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MM-dd HH:mm"
@@ -602,6 +813,7 @@ public enum VoiceError: Error, LocalizedError {
     case asrNotAvailable(String)
     case transcriptionFailed(String)
     case polishFailed(String)
+    case translationFailed(String)
     case saveFailed(Error)
     
     public var errorDescription: String? {
@@ -620,6 +832,8 @@ public enum VoiceError: Error, LocalizedError {
             return "转写失败: \(message)"
         case .polishFailed(let message):
             return "润色失败: \(message)"
+        case .translationFailed(let message):
+            return "翻译失败: \(message)"
         case .saveFailed(let error):
             return "保存失败: \(error.localizedDescription)"
         }
@@ -634,35 +848,5 @@ public enum VoiceError: Error, LocalizedError {
         default:
             return nil
         }
-    }
-}
-
-// MARK: - Extensions
-
-extension AssetStore {
-    func saveAudio(data: Data, fileName: String) async throws -> AssetFile {
-        // 实现音频保存逻辑
-        // 这里简化处理，实际应该保存到正确的目录
-        let assetDir = getAssetDirectory()
-        let fileURL = assetDir.appendingPathComponent(fileName)
-        try data.write(to: fileURL)
-        
-        return AssetFile(
-            id: UUID().uuidString,
-            sourceItemId: nil,
-            fileName: fileName,
-            filePath: fileURL.path,
-            mimeType: "audio/m4a",
-            fileSize: data.count,
-            kind: .audio,
-            createdAt: Date()
-        )
-    }
-    
-    private func getAssetDirectory() -> URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let assetDir = appSupport.appendingPathComponent("AcMind/Assets", isDirectory: true)
-        try? FileManager.default.createDirectory(at: assetDir, withIntermediateDirectories: true)
-        return assetDir
     }
 }

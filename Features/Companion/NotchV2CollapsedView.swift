@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct NotchV2CollapsedView: View {
     @ObservedObject var viewModel: NotchV2ViewModel
@@ -7,7 +8,7 @@ struct NotchV2CollapsedView: View {
         ZStack {
             NotchShape(topCornerRadius: 8, bottomCornerRadius: NotchV2DesignTokens.islandBottomRadius)
                 .fill(NotchV2DesignTokens.islandBackground)
-                .shadow(color: .black.opacity(0.24), radius: 8, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.18), radius: 6, x: 0, y: 2)
 
             if viewModel.hasVoiceOverride {
                 SayInputWaveformHalo(
@@ -20,60 +21,81 @@ struct NotchV2CollapsedView: View {
                 .allowsHitTesting(false)
             }
 
-            HStack(spacing: 10) {
-                Text("灵动大陆")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
-
-                Rectangle()
-                    .fill(NotchV2DesignTokens.separator.opacity(0.55))
-                    .frame(width: 1, height: 10)
-
-                ViewThatFits(in: .horizontal) {
-                    collapsedDetails
-                    collapsedTitleOnly
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                if viewModel.playbackState.isPlaying && !viewModel.hasVoiceOverride {
+                    musicCollapsedLayout
+                } else {
                     if viewModel.displaySettings.showCollapsedStatusDots {
                         NotchV2StatusDot(color: collapsedAccentDotColor)
-                        NotchV2StatusDot(color: collapsedSecondaryDotColor)
                     }
-                    Button(action: { viewModel.toggleExpansion() }) {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(NotchV2DesignTokens.primaryText)
-                            .frame(width: 18, height: 18)
-                            .background(
-                                Capsule().fill(NotchV2DesignTokens.cardBackgroundStrong)
-                            )
+
+                    ViewThatFits(in: .horizontal) {
+                        collapsedDetails
+                        collapsedTitleOnly
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                Button(action: { viewModel.toggleExpansion() }) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .frame(width: 16, height: 16)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.9))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(NotchV2DesignTokens.panelBorder, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 10)
         }
         .frame(width: viewModel.collapsedSize.width, height: viewModel.collapsedSize.height)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.toggleExpansion()
+        }
         .clipped()
-        .overlay(
-            NotchShape(topCornerRadius: 8, bottomCornerRadius: NotchV2DesignTokens.islandBottomRadius)
-                .stroke(NotchV2DesignTokens.separator.opacity(0.7), lineWidth: 1)
-        )
+    }
+
+    private var musicCollapsedLayout: some View {
+        HStack(spacing: 6) {
+            CollapsedArtworkView(artworkData: viewModel.playbackState.artwork)
+                .frame(
+                    width: NotchV2DesignTokens.collapsedArtworkSize,
+                    height: NotchV2DesignTokens.collapsedArtworkSize
+                )
+
+            MarqueeText(
+                .constant(viewModel.playbackState.title),
+                font: NotchV2DesignTokens.Typography.body,
+                textColor: NotchV2DesignTokens.primaryText,
+                minDuration: 2.0,
+                frameWidth: 100
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            CollapsedMiniWaveform(accent: NotchV2DesignTokens.accentGreen)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private var collapsedDetails: some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(collapsedTitle)
-                .font(.system(size: 10, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.body)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
 
             if viewModel.displaySettings.showCollapsedSubtitle, let subtitle = collapsedSubtitle, subtitle.isEmpty == false {
                 Text(subtitle)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(subtitleAccentColor)
+                    .font(NotchV2DesignTokens.Typography.footnote)
+                    .foregroundStyle(subtitleAccentColor.opacity(0.95))
                     .lineLimit(1)
             }
         }
@@ -81,7 +103,7 @@ struct NotchV2CollapsedView: View {
 
     private var collapsedTitleOnly: some View {
         Text(collapsedTitle)
-            .font(.system(size: 10, weight: .semibold))
+            .font(NotchV2DesignTokens.Typography.body)
             .foregroundStyle(NotchV2DesignTokens.primaryText)
             .lineLimit(1)
     }
@@ -110,22 +132,74 @@ struct NotchV2CollapsedView: View {
         return viewModel.collapsedRuntimeSurface.accentColor
     }
 
-    private var collapsedSecondaryDotColor: Color {
-        if viewModel.hasVoiceOverride {
-            return viewModel.voiceDisplayAccent.opacity(0.42)
-        }
+}
 
-        return viewModel.collapsedRuntimeSurface.accentColor.opacity(0.45)
+private struct CollapsedArtworkView: View {
+    let artworkData: Data?
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.collapsedArtworkRadius, style: .continuous)
+                .fill(NotchV2DesignTokens.accentBlue)
+
+            if let artworkData, let image = NSImage(data: artworkData) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(RoundedRectangle(cornerRadius: NotchV2DesignTokens.collapsedArtworkRadius, style: .continuous))
+            } else {
+                Image(systemName: "music.note")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: NotchV2DesignTokens.collapsedArtworkRadius, style: .continuous))
+    }
+}
+
+private struct CollapsedMiniWaveform: View {
+    let accent: Color
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let time = context.date.timeIntervalSinceReferenceDate
+
+            HStack(alignment: .center, spacing: 1.2) {
+                ForEach(0..<5, id: \.self) { index in
+                    Capsule(style: .continuous)
+                        .fill(accent)
+                        .frame(width: 2, height: barHeight(for: index, time: time))
+                        .opacity(barOpacity(for: index, time: time))
+                }
+            }
+            .frame(height: 10)
+        }
+    }
+
+    private func barHeight(for index: Int, time: TimeInterval) -> CGFloat {
+        let base: CGFloat = 2.5
+        let amplitude: CGFloat = 4.5
+        let phase = time * 6.0 + Double(index) * 0.62
+        let sample = CGFloat((sin(phase) + 1.0) / 2.0)
+        return base + amplitude * sample
+    }
+
+    private func barOpacity(for index: Int, time: TimeInterval) -> Double {
+        let phase = time * 5.0 + Double(index) * 0.35
+        return 0.72 + 0.22 * ((sin(phase) + 1.0) / 2.0)
     }
 }
 
 private struct NotchV2StatusDot: View {
     let color: Color
+    @State private var isPulsing = false
 
     var body: some View {
         Circle()
             .fill(color)
             .frame(width: 5, height: 5)
-            .shadow(color: color.opacity(0.22), radius: 2, x: 0, y: 0)
+            .shadow(color: color.opacity(isPulsing ? 0.5 : 0.15), radius: isPulsing ? 4 : 2, x: 0, y: 0)
+            .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: isPulsing)
+            .onAppear { isPulsing = true }
     }
 }

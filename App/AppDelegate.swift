@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import AcMindKit
+import struct AcMindKit.KeyboardShortcut
 
 // MARK: - App Delegate
 
@@ -51,6 +52,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let musicService = MusicService.shared
     private var hotCornerManager: HotCornerManager?
     private var fnKeyMonitor: FnKeyHoldMonitor?
+    private var registeredGlobalShortcuts: [KeyboardShortcut] = []
+    private var registeredCompanionShortcuts: [AcMindKeyboardShortcut] = []
+    private var isCompanionRuntimeEnabled = true
     private var isTerminating = false
 
     // MARK: - Lifecycle
@@ -80,10 +84,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         } else if self.desktopCapsuleEnabled {
                             self.showDesktopCapsule()
                         }
+                        self.setupCompanionRuntime()
                         self.setupFnKeyMonitor()
                         self.setupGlobalShortcuts()
                         self.setupHotCorners()
-                        self.setupHeadphoneMonitor()
                     }
                 }
             } catch {
@@ -109,7 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 停止监听
         fnKeyMonitor?.stop()
         fnKeyMonitor = nil
-        Task { await HeadphoneMonitor.shared.disable() }
+        Task { HeadphoneMonitor.shared.disable() }
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -138,6 +142,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func hideMainWindow() {
         mainWindowController?.close()
+        mainWindowController = nil
         appState.mainWindowDidClose()
     }
 
@@ -155,6 +160,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showVoicePanel() {
+        guard isCompanionRuntimeEnabled else {
+            return
+        }
         guard SettingsLocalPreferences.isVoiceInputEnabled() else {
             appState.showError(.serviceUnavailable("说入法输入已在设置中关闭"))
             return
@@ -233,6 +241,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else if self?.desktopCapsuleEnabled == true {
                 self?.showDesktopCapsule()
             }
+            self?.setupCompanionRuntime()
             self?.setupFnKeyMonitor()
             self?.setupGlobalShortcuts()
             self?.setupHotCorners()
@@ -246,6 +255,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else if self?.desktopCapsuleEnabled == true {
                 self?.showDesktopCapsule()
             }
+            self?.setupCompanionRuntime()
             self?.setupFnKeyMonitor()
             self?.setupGlobalShortcuts()
             self?.setupHotCorners()
@@ -311,6 +321,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self,
             selector: #selector(handleOpenSettingsNotification(_:)),
             name: Notification.Name("AcMind.openSettings"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOpenHomeNotification(_:)),
+            name: Notification.Name("AcMind.openHome"),
             object: nil
         )
 
@@ -385,6 +402,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .hotCornersDidChange,
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSettingsDidChange(_:)),
+            name: .settingsDidChange,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCompanionConfigurationDidChange(_:)),
+            name: .companionConfigurationDidChange,
+            object: nil
+        )
     }
 
     @objc private func handleAppDidBecomeActive(_ notification: Notification) {
@@ -415,6 +446,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: notification.object
         )
 
+        if let captureResult = notification.object as? CaptureResult {
+            let settings = SettingsLocalPreferences.loadOrDefault()
+            if settings.companionCaptureOpenDetailAfterCapture {
+                Task { @MainActor in
+                    self.appState.pendingInboxDetailSourceItemID = captureResult.sourceItem.id
+                    self.showPreferredSurface(for: .inbox)
+                }
+            }
+        }
+
         Task {
             await sendCaptureCompletedNotificationIfNeeded(notification)
         }
@@ -426,6 +467,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let settings = SettingsLocalPreferences.loadOrDefault()
+        guard settings.companionCaptureShowNotification else { return }
         await AppNotificationService.notifyTaskCompleted(
             title: "采集已完成",
             body: captureResult.sourceItem.title ?? "已保存到收集箱",
@@ -490,6 +532,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotCorners()
     }
 
+    @objc private func handleCompanionShortcutConfigChanged(_ notification: Notification) {
+        setupCompanionShortcuts()
+    }
+
+    @objc private func handleSettingsDidChange(_ notification: Notification) {
+        setupGlobalShortcuts()
+    }
+
+    @objc private func handleCompanionConfigurationDidChange(_ notification: Notification) {
+        setupCompanionRuntime()
+    }
+
     // MARK: - Global Shortcuts
 
     private func setupHotCorners() {
@@ -514,32 +568,156 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupGlobalShortcuts() {
-        Task.detached(priority: .utility) {
-            let isReady = await MainActor.run { ServiceContainer.isInitialized() }
-            guard isReady else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            await self.refreshGlobalShortcuts()
+        }
+    }
 
-            let settingsService = await MainActor.run { ServiceContainer.shared.settingsService }
-            for item in SidebarItem.mainItems {
-                guard let shortcut = item.shortcut else { continue }
+    private func refreshGlobalShortcuts() async {
+        let isReady = await MainActor.run { ServiceContainer.isInitialized() }
+        guard isReady else { return }
 
-                do {
-                    try await settingsService.registerShortcut(shortcut) {
-                        NotificationCenter.default.post(
-                            name: .acmindGlobalShortcutTriggered,
-                            object: item.rawValue
-                        )
-                    }
-                } catch {
-                    print("⚠️ 注册全局快捷键失败: \(item.displayName) - \(error.localizedDescription)")
+        let settingsService = await MainActor.run { ServiceContainer.shared.settingsService }
+
+        for shortcut in registeredGlobalShortcuts {
+            try? await settingsService.unregisterShortcut(shortcut)
+        }
+        registeredGlobalShortcuts.removeAll()
+
+        for item in SidebarItem.mainItems {
+            guard let shortcut = item.shortcut else { continue }
+
+            do {
+                try await settingsService.registerShortcut(shortcut) {
+                    NotificationCenter.default.post(
+                        name: .acmindGlobalShortcutTriggered,
+                        object: item.rawValue
+                    )
                 }
+                registeredGlobalShortcuts.append(shortcut)
+            } catch {
+                print("⚠️ 注册全局快捷键失败: \(item.displayName) - \(error.localizedDescription)")
+            }
+        }
+
+        let appSettings = await settingsService.getSettings()
+        if let hotkeyString = appSettings.captureScreenshotHotkey?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !hotkeyString.isEmpty,
+           let shortcut = KeyboardShortcut(displayString: hotkeyString) {
+            do {
+                try await settingsService.registerShortcut(shortcut) { [weak self] in
+                    Task { @MainActor [weak self] in
+                        self?.captureScreenshot()
+                    }
+                }
+                registeredGlobalShortcuts.append(shortcut)
+            } catch {
+                print("⚠️ 注册截图热键失败: \(hotkeyString) - \(error.localizedDescription)")
             }
         }
     }
 
+    private func setupCompanionShortcuts() {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.refreshCompanionShortcuts()
+        }
+    }
+
+    private func setupCompanionRuntime() {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.refreshCompanionRuntime()
+        }
+    }
+
+    private func refreshCompanionRuntime() async {
+        guard ServiceContainer.isInitialized() else { return }
+
+        let storageService = ServiceContainer.shared.storageService
+        let configuration = await CompanionConfigurationStore.load(from: storageService)
+        isCompanionRuntimeEnabled = configuration.companionEnabled
+
+        await refreshCompanionShortcuts()
+        setupFnKeyMonitor()
+        setupHeadphoneMonitor()
+    }
+
+    private func refreshCompanionShortcuts() async {
+        guard ServiceContainer.isInitialized() else { return }
+
+        let storageService = ServiceContainer.shared.storageService
+        let settingsService = ServiceContainer.shared.settingsService
+
+        for shortcut in registeredCompanionShortcuts {
+            try? await settingsService.unregisterShortcut(shortcut)
+        }
+        registeredCompanionShortcuts.removeAll()
+
+        guard isCompanionRuntimeEnabled else { return }
+
+        let shortcuts = await loadCompanionShortcuts(from: storageService)
+
+        for shortcutConfig in shortcuts where shortcutConfig.isEnabled {
+            guard let shortcut = AcMindKeyboardShortcut(displayString: shortcutConfig.shortcut) else {
+                continue
+            }
+
+            do {
+                try await settingsService.registerShortcut(shortcut) { [weak self] in
+                    Task { @MainActor [weak self] in
+                        self?.triggerCompanionShortcut(action: shortcutConfig.action)
+                    }
+                }
+                registeredCompanionShortcuts.append(shortcut)
+            } catch {
+                print("⚠️ 注册随身快捷键失败: \(shortcutConfig.action) - \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func loadCompanionShortcuts(from storageService: StorageServiceProtocol) async -> [CompanionShortcut] {
+        guard let raw = try? await storageService.getSetting(key: "companion.shortcuts.v1"),
+              let data = raw.data(using: .utf8),
+              let shortcuts = try? JSONDecoder().decode([CompanionShortcut].self, from: data) else {
+            return CompanionShortcut.defaultShortcuts
+        }
+        return shortcuts
+    }
+
+    private func triggerCompanionShortcut(action: String) {
+        guard isCompanionRuntimeEnabled else {
+            return
+        }
+        switch action {
+        case "说入法":
+            showVoicePanel()
+        case "快速收集":
+            NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+        case "截图捕获":
+            NotificationCenter.default.post(name: Notification.Name("AcMind.captureScreenshot"), object: nil)
+        case "打开 Agent":
+            appState.selectSidebarItem(.agent)
+            showMainWindow()
+        case "今日日程":
+            appState.selectSidebarItem(.schedule)
+            showMainWindow()
+        default:
+            break
+        }
+    }
+
     private func setupFnKeyMonitor() {
+        guard isCompanionRuntimeEnabled else {
+            fnKeyMonitor?.stop()
+            fnKeyMonitor = nil
+            return
+        }
         guard fnKeyMonitor == nil else { return }
         let monitor = FnKeyHoldMonitor()
         monitor.onFnPressBegan = { [weak self] in
+            guard self?.isCompanionRuntimeEnabled == true else { return }
             guard SettingsLocalPreferences.isVoiceInputEnabled() else { return }
             self?.showVoicePanel()
         }
@@ -556,26 +734,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupHeadphoneMonitor() {
+        guard isCompanionRuntimeEnabled else {
+            HeadphoneMonitor.shared.disable()
+            return
+        }
         Task {
-            await HeadphoneMonitor.shared.enable(
+            HeadphoneMonitor.shared.enable(
                 onSingleTap: { @Sendable in
                     Task { @MainActor in
+                        guard self.isCompanionRuntimeEnabled else { return }
                         NotificationCenter.default.post(name: .headphoneSingleTap, object: nil)
                     }
                     return true
                 },
                 onDoubleTap: { @Sendable in
                     Task { @MainActor in
+                        guard self.isCompanionRuntimeEnabled else { return }
                         NotificationCenter.default.post(name: .headphoneDoubleTap, object: nil)
                     }
                 },
                 onLongPressStart: { @Sendable in
                     Task { @MainActor in
+                        guard self.isCompanionRuntimeEnabled else { return }
                         NotificationCenter.default.post(name: .headphoneLongPressStart, object: nil)
                     }
                 },
                 onLongPressEnd: { @Sendable in
                     Task { @MainActor in
+                        guard self.isCompanionRuntimeEnabled else { return }
                         NotificationCenter.default.post(name: .headphoneLongPressEnd, object: nil)
                     }
                 }
@@ -757,6 +943,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         showMainWindow()
     }
 
+    @objc private func handleOpenHomeNotification(_ notification: Notification) {
+        appState.selectSidebarItem(.home)
+        showMainWindow()
+    }
+
     @objc private func handleOpenSettingsNotification(_ notification: Notification) {
         showSettings()
     }
@@ -923,7 +1114,6 @@ final class FnKeyHoldMonitor {
 }
 
 extension Notification.Name {
-    static let companionVoiceFinishRequested = Notification.Name("companion.voice.finishRequested")
     static let headphoneSingleTap = Notification.Name("headphone.singleTap")
     static let headphoneDoubleTap = Notification.Name("headphone.doubleTap")
     static let headphoneLongPressStart = Notification.Name("headphone.longPressStart")

@@ -96,6 +96,7 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
     public var injectionStrategy: String
     public var enableCloudSync: Bool
     public var preferredLanguage: String
+    public var translationLanguage: String
 
     public init(
         defaultProvider: String = "whisper",
@@ -112,7 +113,8 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
         enablePunctuationAppend: Bool = false,
         injectionStrategy: String = "postToPid",
         enableCloudSync: Bool = false,
-        preferredLanguage: String = "auto"
+        preferredLanguage: String = "auto",
+        translationLanguage: String = "zh"
     ) {
         self.defaultProvider = defaultProvider
         self.defaultLanguage = defaultLanguage
@@ -129,6 +131,7 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
         self.injectionStrategy = injectionStrategy
         self.enableCloudSync = enableCloudSync
         self.preferredLanguage = preferredLanguage
+        self.translationLanguage = translationLanguage
     }
 }
 
@@ -177,7 +180,8 @@ public extension VoiceSettings {
             triggerMode: triggerMode,
             silenceTimeout: silenceTimeout,
             enableSilenceDetection: enableSilenceDetection,
-            preferredLanguage: preferredLanguage
+            preferredLanguage: preferredLanguage,
+            translationLanguage: translationLanguage
         )
     }
 }
@@ -243,6 +247,37 @@ public struct KeyboardShortcut: Codable, Sendable, Hashable, Equatable {
     }
 }
 
+public extension KeyboardShortcut {
+    /// Parse a user-facing shortcut string such as `⌥ C` or `⌘⇧4`.
+    /// Returns nil for unsupported inputs like `Fn`.
+    init?(displayString rawValue: String) {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return nil }
+
+        let collapsed = trimmed.replacingOccurrences(of: " ", with: "")
+        guard collapsed.caseInsensitiveCompare("fn") != .orderedSame else { return nil }
+
+        var remainder = collapsed
+        var modifiers: [ModifierKey] = []
+        let modifierSymbols: [String: ModifierKey] = [
+            "⌘": .command,
+            "⌥": .option,
+            "⌃": .control,
+            "⇧": .shift
+        ]
+
+        while let first = remainder.first, let modifier = modifierSymbols[String(first)] {
+            if modifiers.contains(modifier) == false {
+                modifiers.append(modifier)
+            }
+            remainder.removeFirst()
+        }
+
+        guard remainder.isEmpty == false else { return nil }
+        self.init(key: remainder, modifiers: modifiers)
+    }
+}
+
 public enum ModifierKey: String, Codable, Sendable, Hashable, CaseIterable {
     case command
     case option
@@ -274,4 +309,8 @@ public extension SystemPermission {
         case .speechRecognition: return .speechRecognition
         }
     }
+}
+
+public extension Notification.Name {
+    static let settingsDidChange = Notification.Name("AcMind.settingsDidChange")
 }

@@ -17,13 +17,13 @@ enum DynamicContinentLayoutMetrics {
     static let topBarHorizontalPadding: CGFloat = 56
     static let centerAvoidWidth: CGFloat = NotchV2DesignTokens.notchSafeZoneWidth
     static let centerAvoidHeight: CGFloat = NotchV2DesignTokens.notchSafeZoneHeight
-    static let pageHorizontalPadding: CGFloat = 20
+    static let pageHorizontalPadding: CGFloat = 22
     static let pageBottomPadding: CGFloat = 16
-    static let columnGap: CGFloat = 12
-    static let rowGap: CGFloat = 12
-    static let leftColumnWidth: CGFloat = 216
-    static let centerColumnWidth: CGFloat = 380
-    static let rightColumnWidth: CGFloat = 240
+    static let columnGap: CGFloat = 14
+    static let rowGap: CGFloat = 14
+    static let leftColumnWidth: CGFloat = 180
+    static let centerColumnWidth: CGFloat = 300
+    static let rightColumnWidth: CGFloat = 200
     static let cardCornerRadius: CGFloat = NotchV2DesignTokens.cardRadius
     static let containerCornerRadius: CGFloat = NotchV2DesignTokens.largeRadius
 }
@@ -54,7 +54,7 @@ struct DynamicContinentTemplateV2: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        let containerShape = NotchShape(topCornerRadius: 20, bottomCornerRadius: DynamicContinentLayoutMetrics.containerCornerRadius)
+        let containerShape = NotchShape(topCornerRadius: 14, bottomCornerRadius: DynamicContinentLayoutMetrics.containerCornerRadius)
 
         VStack(spacing: 0) {
             DynamicContinentTopBar(viewModel: viewModel)
@@ -90,11 +90,7 @@ struct DynamicContinentTemplateV2: View {
         .background(
             containerShape
                 .fill(DynamicContinentDesignTokens.containerBackground)
-                .shadow(color: .black.opacity(0.55), radius: 28, x: 0, y: 16)
-        )
-        .overlay(
-            containerShape
-                .stroke(DynamicContinentDesignTokens.cardStroke, lineWidth: 1)
+                .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 8)
         )
         .clipShape(containerShape)
     }

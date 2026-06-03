@@ -14,7 +14,7 @@ import WhisperKit
 /// 支持: 99 种语言，自动检测，流式逐窗口输出
 ///
 /// 免费: 完全免费，开源 Apache 2.0
-public final class WhisperKitTranscriber: Transcriber, RecordingPrewarmingTranscriber {
+public final class WhisperKitTranscriber: Transcriber, RecordingPrewarmingTranscriber, @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -151,11 +151,7 @@ public final class WhisperKitTranscriber: Transcriber, RecordingPrewarmingTransc
     }
 
     public func cancelPreparedRecording() async {
-        pipelineLock.lock()
-        pipelineLoadTask?.cancel()
-        pipelineLoadTask = nil
-        pipeline = nil
-        pipelineLock.unlock()
+        resetPreparedRecordingState()
     }
 
     /// 带进度回调的预热
@@ -244,6 +240,14 @@ public final class WhisperKitTranscriber: Transcriber, RecordingPrewarmingTransc
     private func clearPipelineLoadTask() {
         pipelineLock.lock()
         pipelineLoadTask = nil
+        pipelineLock.unlock()
+    }
+
+    private func resetPreparedRecordingState() {
+        pipelineLock.lock()
+        pipelineLoadTask?.cancel()
+        pipelineLoadTask = nil
+        pipeline = nil
         pipelineLock.unlock()
     }
 

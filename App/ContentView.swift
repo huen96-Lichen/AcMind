@@ -25,7 +25,7 @@ struct ContentView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .navigationSplitViewColumnWidth(min: 292, ideal: 320, max: 380)
-        .background(AppSurfaceTokens.background.ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
         .sheet(isPresented: $showVoicePanel) {
             CompanionVoicePanel()
         }
@@ -233,7 +233,7 @@ struct MainContent: View {
                     .navigationTitle("收集箱")
             case .clipboard:
                 ClipboardView()
-                    .navigationTitle("剪贴板 & 手机响")
+                    .navigationTitle("剪贴板 & 手机同步")
             case .schedule:
                 ScheduleDashboardView()
                     .navigationTitle("日程")
@@ -250,7 +250,7 @@ struct MainContent: View {
                 VoiceEntryView()
                     .navigationTitle("说入法设置")
             case .settings:
-                SettingsSuiteView()
+                SettingsView()
                     .navigationTitle("设置")
             }
         }

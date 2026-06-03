@@ -18,17 +18,19 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     private let taskQueue: TaskQueue
     private let storage: StorageServiceProtocol
     private let settingsDefaults: UserDefaults
+    private let modelRouter: AgentModelRouterProtocol?
     
     // MARK: - Initialization
     
-    public convenience init(storage: StorageServiceProtocol? = nil) {
-        self.init(storage: storage, settingsDefaults: .standard)
+    public convenience init(storage: StorageServiceProtocol? = nil, modelRouter: AgentModelRouterProtocol? = nil) {
+        self.init(storage: storage, settingsDefaults: .standard, modelRouter: modelRouter)
     }
 
-    public init(storage: StorageServiceProtocol? = nil, settingsDefaults: UserDefaults = .standard) {
+    public init(storage: StorageServiceProtocol? = nil, settingsDefaults: UserDefaults = .standard, modelRouter: AgentModelRouterProtocol? = nil) {
         self.storage = storage ?? StorageService()
         self.taskQueue = TaskQueue(maxConcurrent: 2)
         self.settingsDefaults = settingsDefaults
+        self.modelRouter = modelRouter
     }
     
     // MARK: - Provider Management
@@ -143,12 +145,40 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         guard let provider = providers[providerId] else {
             throw AIError.providerNotFound(providerId)
         }
-        
-        let config = ChatConfig(
-            model: model ?? configs.first(where: { $0.id == providerId })?.modelId
-        )
-        
-        return try await provider.chat(messages: messages, config: config)
+
+        let modelId = model ?? configs.first(where: { $0.id == providerId })?.modelId ?? ""
+        let config = ChatConfig(model: modelId.isEmpty ? nil : modelId)
+
+        let startTime = Date()
+        do {
+            let response = try await provider.chat(messages: messages, config: config)
+            let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
+            let promptTokens = response.usage?.promptTokens ?? response.promptTokens ?? 0
+            let completionTokens = response.usage?.completionTokens ?? response.completionTokens ?? 0
+            await recordModelUsage(
+                providerId: providerId,
+                modelId: response.model ?? modelId,
+                taskType: .simpleChat,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                latencyMs: response.latencyMs ?? elapsed,
+                success: true
+            )
+            return response
+        } catch {
+            let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
+            await recordModelUsage(
+                providerId: providerId,
+                modelId: modelId,
+                taskType: .simpleChat,
+                promptTokens: 0,
+                completionTokens: 0,
+                latencyMs: elapsed,
+                success: false,
+                errorMessage: error.localizedDescription
+            )
+            throw error
+        }
     }
     
     public func chatStream(messages: [ChatMessage]) -> AsyncThrowingStream<ChatResponse, Error> {
@@ -185,18 +215,42 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
               let provider = providers[providerId] else {
             throw AIError.noProvider
         }
-        
-        let config = ChatConfig(
-            model: configs.first(where: { $0.id == providerId })?.modelId
-        )
-        
-        // 构建蒸馏 prompt
+
+        let modelId = configs.first(where: { $0.id == providerId })?.modelId ?? ""
+        let config = ChatConfig(model: modelId.isEmpty ? nil : modelId)
+
         let messages = buildDistillationMessages(sourceItem: sourceItem)
-        
-        let response = try await provider.chat(messages: messages, config: config)
-        
-        // 解析蒸馏结果
-        return parseDistillationResult(content: response.content, sourceItem: sourceItem)
+
+        let startTime = Date()
+        do {
+            let response = try await provider.chat(messages: messages, config: config)
+            let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
+            let promptTokens = response.usage?.promptTokens ?? response.promptTokens ?? 0
+            let completionTokens = response.usage?.completionTokens ?? response.completionTokens ?? 0
+            await recordModelUsage(
+                providerId: providerId,
+                modelId: response.model ?? modelId,
+                taskType: .textSummarize,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                latencyMs: response.latencyMs ?? elapsed,
+                success: true
+            )
+            return parseDistillationResult(content: response.content, sourceItem: sourceItem)
+        } catch {
+            let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
+            await recordModelUsage(
+                providerId: providerId,
+                modelId: modelId,
+                taskType: .textSummarize,
+                promptTokens: 0,
+                completionTokens: 0,
+                latencyMs: elapsed,
+                success: false,
+                errorMessage: error.localizedDescription
+            )
+            throw error
+        }
     }
     
     public func runDistillation(sourceItemIds: [String]) async throws -> DistilledNote {
@@ -339,7 +393,36 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     }
     
     // MARK: - Private
-    
+
+    private func recordModelUsage(
+        providerId: String,
+        modelId: String,
+        taskType: ModelRoute.TaskType,
+        promptTokens: Int,
+        completionTokens: Int,
+        latencyMs: Int,
+        success: Bool,
+        errorMessage: String? = nil
+    ) async {
+        guard let router = modelRouter else { return }
+        let pricing = await router.getPricing(for: modelId)
+        let (costUSD, costCNY) = pricing?.calculateCost(promptTokens: promptTokens, completionTokens: completionTokens) ?? (0, 0)
+        let usage = ModelUsage(
+            taskType: taskType,
+            providerId: providerId,
+            modelId: modelId,
+            promptTokens: promptTokens,
+            completionTokens: completionTokens,
+            totalTokens: promptTokens + completionTokens,
+            costUSD: costUSD,
+            costCNY: costCNY,
+            latencyMs: latencyMs,
+            success: success,
+            errorMessage: errorMessage
+        )
+        await router.recordUsage(usage)
+    }
+
     private func initProvider(_ config: ProviderConfig) async throws {
         let resolvedBaseURL = config.baseURL.isEmpty ? config.providerType.defaultBaseURL : config.baseURL
         switch config.providerType {

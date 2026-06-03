@@ -6,18 +6,17 @@ import AcMindKit
 
 struct CompanionView: View {
     @StateObject private var viewModel = SettingsViewModel()
-    @State private var isGlobalEnabled = true
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Header
-                CompanionSettingsHeader(isEnabled: $isGlobalEnabled)
+                CompanionSettingsHeader(isEnabled: $viewModel.companionEnabled)
                 
                 // Capsule Card
                 CapsuleSettingsCard(
                     isEnabled: $viewModel.companionCapsuleEnabled,
-                    isGlobalEnabled: isGlobalEnabled,
+                    isGlobalEnabled: viewModel.companionEnabled,
                     position: $viewModel.companionCapsulePosition,
                     isExpanded: $viewModel.companionCapsuleExpanded
                 )
@@ -25,7 +24,7 @@ struct CompanionView: View {
                 // Voice Card
                 VoiceSettingsCard(
                     isEnabled: $viewModel.companionVoiceEnabled,
-                    isGlobalEnabled: isGlobalEnabled,
+                    isGlobalEnabled: viewModel.companionEnabled,
                     outputMode: $viewModel.companionVoiceOutputMode,
                     saveToInbox: $viewModel.companionVoiceSaveToInbox
                 )
@@ -33,7 +32,7 @@ struct CompanionView: View {
                 // Shortcuts Card
                 ShortcutSettingsCard(
                     isEnabled: $viewModel.companionShortcutsEnabled,
-                    isGlobalEnabled: isGlobalEnabled,
+                    isGlobalEnabled: viewModel.companionEnabled,
                     shortcuts: viewModel.companionShortcuts,
                     voiceEnabled: viewModel.companionVoiceEnabled,
                     captureEnabled: viewModel.companionCaptureEnabled
@@ -42,8 +41,7 @@ struct CompanionView: View {
                 // Capture Card
                 CaptureSettingsCard(
                     isEnabled: $viewModel.companionCaptureEnabled,
-                    isGlobalEnabled: isGlobalEnabled,
-                    autoSaveToInbox: $viewModel.companionCaptureAutoSaveToInbox,
+                    isGlobalEnabled: viewModel.companionEnabled,
                     textCaptureEnabled: $viewModel.companionCaptureTextEnabled,
                     linkCaptureEnabled: $viewModel.companionCaptureLinkEnabled,
                     saveDestinationIndex: $viewModel.companionCaptureSaveDestinationIndex
@@ -65,14 +63,7 @@ struct CompanionView: View {
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
         }
-        .onChange(of: isGlobalEnabled) { _, newValue in
-            if newValue {
-                // Save when enabling
-                Task {
-                    await viewModel.saveCompanionSettings()
-                }
-            }
-        }
+        .onChange(of: viewModel.companionEnabled) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCapsuleEnabled) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCapsuleShowOnLaunch) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCapsulePosition) { _, _ in persistCompanionSettings() }
@@ -83,7 +74,6 @@ struct CompanionView: View {
         .onChange(of: viewModel.companionShortcutsEnabled) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionShortcuts) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCaptureEnabled) { _, _ in persistCompanionSettings() }
-        .onChange(of: viewModel.companionCaptureAutoSaveToInbox) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCaptureTextEnabled) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCaptureLinkEnabled) { _, _ in persistCompanionSettings() }
         .onChange(of: viewModel.companionCaptureSaveDestinationIndex) { _, _ in persistCompanionSettings() }
@@ -122,10 +112,11 @@ struct CompanionView: View {
                 )
             }
         }
-        .opacity(isGlobalEnabled ? 1.0 : 0.55)
+        .opacity(viewModel.companionEnabled ? 1.0 : 0.55)
     }
 
     private func persistCompanionSettings() {
+        guard viewModel.isApplyingCompanionSettings == false else { return }
         Task {
             await viewModel.saveCompanionSettings()
         }

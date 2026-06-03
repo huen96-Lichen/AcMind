@@ -10,11 +10,11 @@ import AppKit
 /// 2. ProviderConfig 的 CRUD（SQLite + Keychain 存储 API Key）
 /// 3. 权限管理（委托给 PermissionManager）
 /// 4. 快捷键管理（委托给 HotkeyManager）
-public actor SettingsService: SettingsServiceProtocol {
+public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
     // MARK: - Dependencies
 
     private let storage: StorageServiceProtocol
-    private let permissionManager: PermissionManager
+    private let permissionManager: PermissionManager?
     private let hotkeyManager: HotkeyManager
 
     // MARK: - Cache
@@ -33,8 +33,8 @@ public actor SettingsService: SettingsServiceProtocol {
     ) {
         self.storage = storage ?? StorageService()
         // PermissionManager 必须从 @MainActor 上下文注入
-        // 兼容路径下创建一个空壳（实际使用时 ServiceContainer 会注入正确实例）
-        self.permissionManager = permissionManager!
+        // 兼容路径下允许为 nil（实际使用时 ServiceContainer 会注入正确实例）
+        self.permissionManager = permissionManager
         self.hotkeyManager = hotkeyManager ?? HotkeyManager()
     }
 
@@ -76,6 +76,9 @@ public actor SettingsService: SettingsServiceProtocol {
     public func updateSettings(_ settings: AppSettings) async throws {
         settingsCache = settings
         try await saveSettingsToStorage(settings)
+        await MainActor.run {
+            NotificationCenter.default.post(name: .settingsDidChange, object: nil)
+        }
     }
 
     public func getHotCornerSettings() async -> HotCornerSettings {
@@ -193,6 +196,7 @@ public actor SettingsService: SettingsServiceProtocol {
         let saveToInbox = (try? await storage.getSetting(key: "voice.saveToInbox")) != "false" // 默认 true
         let allowContinuation = (try? await storage.getSetting(key: "voice.allowContinuation")) != "false" // 默认 true
         let continuationWindow = (try? await storage.getSetting(key: "voice.continuationWindow")).flatMap(Double.init) ?? 12.0
+        let translationLanguage = (try? await storage.getSetting(key: "voice.translationLanguage")) ?? "zh"
 
         let settings = VoiceSettings(
             defaultProvider: provider,
@@ -205,7 +209,8 @@ public actor SettingsService: SettingsServiceProtocol {
             outputMode: outputMode,
             saveToInbox: saveToInbox,
             allowContinuation: allowContinuation,
-            continuationWindow: continuationWindow
+            continuationWindow: continuationWindow,
+            translationLanguage: translationLanguage
         )
         voiceSettingsCache = settings
         return settings
@@ -223,6 +228,7 @@ public actor SettingsService: SettingsServiceProtocol {
         try await storage.setSetting(key: "voice.saveToInbox", value: settings.saveToInbox ? "true" : "false")
         try await storage.setSetting(key: "voice.allowContinuation", value: settings.allowContinuation ? "true" : "false")
         try await storage.setSetting(key: "voice.continuationWindow", value: String(settings.continuationWindow))
+        try await storage.setSetting(key: "voice.translationLanguage", value: settings.translationLanguage)
     }
     
     private func loadSayInputTriggerMode() async throws -> SayInputTriggerMode {
@@ -425,6 +431,7 @@ public actor SettingsService: SettingsServiceProtocol {
     // MARK: - Permissions (delegated to PermissionManager)
 
     public func checkPermission(_ permission: SystemPermission) async -> PermissionStatus {
+        guard let permissionManager else { return .notDetermined }
         let kind = permission.toAppPermissionKind
         await permissionManager.refresh(kind)
         let status = await permissionManager.statuses[kind] ?? .unknown
@@ -432,6 +439,7 @@ public actor SettingsService: SettingsServiceProtocol {
     }
 
     public func requestPermission(_ permission: SystemPermission) async throws {
+        guard let permissionManager else { throw PermissionError.denied(permission) }
         let kind = permission.toAppPermissionKind
         await permissionManager.request(kind)
         let status = await permissionManager.statuses[kind] ?? .unknown
@@ -448,15 +456,18 @@ public actor SettingsService: SettingsServiceProtocol {
     }
 
     public func openSystemPreferences(for permission: SystemPermission) async {
+        guard let permissionManager else { return }
         await permissionManager.openSettingsFor(permission.toAppPermissionKind)
     }
 
     public func checkPermissionKind(_ kind: AppPermissionKind) async -> AppPermissionStatus {
+        guard let permissionManager else { return .unknown }
         await permissionManager.refresh(kind)
         return await permissionManager.statuses[kind] ?? .unknown
     }
 
     public func requestPermissionKind(_ kind: AppPermissionKind) async {
+        guard let permissionManager else { return }
         await permissionManager.request(kind)
     }
 
@@ -479,7 +490,7 @@ public actor SettingsService: SettingsServiceProtocol {
 
     // MARK: - Shortcuts (delegated to HotkeyManager)
 
-    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {
+    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws {
         try await hotkeyManager.registerShortcut(shortcut, action: action)
     }
 

@@ -36,6 +36,12 @@ struct CompanionCapturePanel: View {
         }
         .frame(width: 480, height: 580)
         .background(AppSurfaceTokens.background)
+        .onChange(of: viewModel.openDetailAfterCapture) { _, _ in
+            viewModel.saveCapturePreferences()
+        }
+        .onChange(of: viewModel.showCaptureNotification) { _, _ in
+            viewModel.saveCapturePreferences()
+        }
     }
 
     // MARK: - Header
@@ -75,6 +81,7 @@ struct CompanionCapturePanel: View {
                 ForEach(CompanionCaptureType.allCases) { type in
                     CaptureTypeCard(
                         type: type,
+                        isEnabled: viewModel.isCaptureTypeEnabled(type),
                         action: { viewModel.performCapture(type: type) }
                     )
                 }
@@ -124,8 +131,25 @@ struct CompanionCapturePanel: View {
                 .font(.headline)
 
             VStack(spacing: 12) {
-                Toggle("自动保存到收集箱", isOn: $viewModel.autoSaveToInbox)
-                    .toggleStyle(.switch)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("自动保存到收集箱")
+                            .font(.body)
+
+                        Spacer()
+
+                        Text("始终开启")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.12))
+                            .cornerRadius(4)
+                    }
+
+                    Text("当前所有捕获结果都会自动写入收集箱，这里仅作为状态说明。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Toggle("捕获后打开详情", isOn: $viewModel.openDetailAfterCapture)
                     .toggleStyle(.switch)
@@ -144,6 +168,7 @@ struct CompanionCapturePanel: View {
 
 struct CaptureTypeCard: View {
     let type: CompanionCaptureType
+    let isEnabled: Bool
     let action: () -> Void
     @State private var isHovered = false
 
@@ -177,18 +202,21 @@ struct CaptureTypeCard: View {
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(isHovered ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+                    .stroke(isHovered && isEnabled ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(!isEnabled)
         .onHover { hovering in
             isHovered = hovering
         }
+        .opacity(isEnabled ? 1.0 : 0.45)
     }
 
     private func descriptionForType(_ type: CompanionCaptureType) -> String {
         switch type {
         case .screenshot: return "⌥ S"
+        case .scrollScreenshot: return "滚动拼接"
         case .clipboard: return "⌥ C"
         case .selectedText: return "自动检测"
         case .webpage: return "浏览器中"
@@ -263,6 +291,7 @@ struct RecentCaptureRow: View {
     private func iconForType(_ type: CompanionCaptureType) -> String {
         switch type {
         case .screenshot: return "camera.viewfinder"
+        case .scrollScreenshot: return "scroll"
         case .clipboard: return "doc.on.clipboard"
         case .selectedText: return "text.quote"
         case .webpage: return "globe"
@@ -272,6 +301,7 @@ struct RecentCaptureRow: View {
     private func colorForType(_ type: CompanionCaptureType) -> Color {
         switch type {
         case .screenshot: return .blue
+        case .scrollScreenshot: return .indigo
         case .clipboard: return .green
         case .selectedText: return .orange
         case .webpage: return .purple
@@ -330,11 +360,15 @@ class CompanionCaptureViewModel: ObservableObject {
 
     private let captureService: CaptureServiceProtocol
     private let storage: StorageServiceProtocol
+    nonisolated(unsafe) private var companionConfigurationObserver: NSObjectProtocol?
 
     @Published var recentCaptures: [CaptureRecord] = []
     @Published var autoSaveToInbox = true
     @Published var openDetailAfterCapture = false
     @Published var showCaptureNotification = true
+    @Published var textCaptureEnabled = true
+    @Published var linkCaptureEnabled = true
+    @Published var captureSaveDestinationIndex = CompanionCaptureSaveDestination.inbox.rawValue
 
     init(
         captureService: CaptureServiceProtocol = CaptureService(),
@@ -343,6 +377,74 @@ class CompanionCaptureViewModel: ObservableObject {
         self.captureService = captureService
         self.storage = storage
         loadRecentCaptures()
+        loadCapturePreferences()
+        loadCompanionCaptureConfiguration()
+        companionConfigurationObserver = NotificationCenter.default.addObserver(
+            forName: .companionConfigurationDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.loadCompanionCaptureConfiguration()
+            }
+        }
+    }
+
+    deinit {
+        if let companionConfigurationObserver {
+            NotificationCenter.default.removeObserver(companionConfigurationObserver)
+        }
+    }
+
+    private func loadCapturePreferences() {
+        let preferences = SettingsLocalPreferences.loadOrDefault()
+        autoSaveToInbox = preferences.companionCaptureAutoSaveToInbox
+        openDetailAfterCapture = preferences.companionCaptureOpenDetailAfterCapture
+        showCaptureNotification = preferences.companionCaptureShowNotification
+    }
+
+    func saveCapturePreferences() {
+        let current = SettingsLocalPreferences.loadOrDefault()
+        let preferences = SettingsLocalPreferences(
+            autoBackupEnabled: current.autoBackupEnabled,
+            lastAutoBackupAt: current.lastAutoBackupAt,
+            restoreWindowPosition: current.restoreWindowPosition,
+            notificationsEnabled: current.notificationsEnabled,
+            taskCompletedNotificationsEnabled: current.taskCompletedNotificationsEnabled,
+            updateAvailableNotificationsEnabled: current.updateAvailableNotificationsEnabled,
+            captureOnlyWhenAppActive: current.captureOnlyWhenAppActive,
+            captureScreenshotEnabled: current.captureScreenshotEnabled,
+            companionCaptureAutoSaveToInbox: autoSaveToInbox,
+            companionCaptureOpenDetailAfterCapture: openDetailAfterCapture,
+            companionCaptureShowNotification: showCaptureNotification,
+            voiceInputEnabled: current.voiceInputEnabled,
+            localFirstMode: current.localFirstMode,
+            sensitiveContentNotUpload: current.sensitiveContentNotUpload,
+            apiKeyUsesKeychain: current.apiKeyUsesKeychain,
+            aiCallLogEnabled: current.aiCallLogEnabled,
+            errorLogEnabled: current.errorLogEnabled
+        )
+        preferences.save()
+    }
+
+    private func loadCompanionCaptureConfiguration() {
+        Task {
+            let configuration = await CompanionConfigurationStore.load(from: storage)
+            textCaptureEnabled = configuration.captureTextEnabled
+            linkCaptureEnabled = configuration.captureLinkEnabled
+            captureSaveDestinationIndex = configuration.captureSaveDestinationIndex
+        }
+    }
+
+    func isCaptureTypeEnabled(_ type: CompanionCaptureType) -> Bool {
+        switch type {
+        case .screenshot, .scrollScreenshot, .clipboard:
+            return true
+        case .selectedText:
+            return textCaptureEnabled
+        case .webpage:
+            return linkCaptureEnabled
+        }
     }
 
     // MARK: - Data Loading
@@ -359,7 +461,7 @@ class CompanionCaptureViewModel: ObservableObject {
                     .prefix(10)
                     .map { item in
                         CaptureRecord(
-                            type: mapSourceTypeToCaptureType(item.type),
+                            type: mapSourceItemToCaptureType(item),
                             title: item.title ?? "未命名捕获",
                             timestamp: item.createdAt,
                             status: mapStatusToCaptureStatus(item.status)
@@ -371,9 +473,15 @@ class CompanionCaptureViewModel: ObservableObject {
         }
     }
 
-    /// 将 SourceType 映射到 CompanionCaptureType
-    private func mapSourceTypeToCaptureType(_ type: SourceType) -> CompanionCaptureType {
-        switch type {
+    /// 将 SourceItem 映射到 CompanionCaptureType
+    private func mapSourceItemToCaptureType(_ item: SourceItem) -> CompanionCaptureType {
+        if item.type == .screenshot,
+           let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines),
+           title.contains("滚动截图") {
+            return .scrollScreenshot
+        }
+
+        switch item.type {
         case .screenshot: return .screenshot
         case .webpage: return .webpage
         case .text: return .selectedText
@@ -403,10 +511,27 @@ class CompanionCaptureViewModel: ObservableObject {
                     return
                 }
 
+                if type == .scrollScreenshot, !SettingsLocalPreferences.isCaptureScreenshotEnabled() {
+                    ToastManager.shared.show(.warning, "滚动截图已在设置中关闭")
+                    return
+                }
+
+                if type == .selectedText, !textCaptureEnabled {
+                    ToastManager.shared.show(.warning, "文本快速收集已在设置中关闭")
+                    return
+                }
+
+                if type == .webpage, !linkCaptureEnabled {
+                    ToastManager.shared.show(.warning, "链接快速收集已在设置中关闭")
+                    return
+                }
+
                 let result: CaptureResult
                 switch type {
                 case .screenshot:
                     result = try await captureService.captureScreenshot(mode: .fullscreen)
+                case .scrollScreenshot:
+                    result = try await captureService.captureScrollingScreenshot()
                 case .clipboard:
                     guard let clipboardResult = try await captureService.captureFromClipboard() else {
                         print("⚠️ 剪贴板为空")
@@ -429,6 +554,8 @@ class CompanionCaptureViewModel: ObservableObject {
                     result = try await captureService.captureFromWebpage(url: url)
                 }
                 _ = result
+
+                await handleCaptureCompletion(result: result, type: type)
 
                 // 刷新列表
                 loadRecentCaptures()
@@ -453,6 +580,101 @@ class CompanionCaptureViewModel: ObservableObject {
         let text = "\(capture.title)\n\(formatDate(capture.timestamp))"
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    private func handleCaptureCompletion(result: CaptureResult, type: CompanionCaptureType) async {
+        let destination = CompanionCaptureSaveDestination(rawValue: captureSaveDestinationIndex) ?? .inbox
+
+        switch destination {
+        case .inbox:
+            if openDetailAfterCapture {
+                NotificationCenter.default.post(name: .companionShowInbox, object: nil)
+            }
+            if showCaptureNotification {
+                ToastManager.shared.show(.success, completionToastMessage(for: result, destination: .inbox))
+            }
+        case .clipboard:
+            copyCaptureResultSummary(result)
+            if showCaptureNotification {
+                ToastManager.shared.show(.success, completionToastMessage(for: result, destination: .clipboard))
+            }
+        case .ask:
+            let choice = await presentCaptureDestinationChoice(for: result, type: type)
+            switch choice {
+            case .inbox:
+                if openDetailAfterCapture {
+                    NotificationCenter.default.post(name: .companionShowInbox, object: nil)
+                }
+                if showCaptureNotification {
+                    ToastManager.shared.show(.success, completionToastMessage(for: result, destination: .inbox))
+                }
+            case .clipboard:
+                copyCaptureResultSummary(result)
+                if showCaptureNotification {
+                    ToastManager.shared.show(.success, completionToastMessage(for: result, destination: .clipboard))
+                }
+            case .some(.ask):
+                break
+            case .none:
+                if showCaptureNotification {
+                    ToastManager.shared.show(.info, "已取消后续操作")
+                }
+            }
+        }
+    }
+
+    private func completionToastMessage(for result: CaptureResult, destination: CompanionCaptureSaveDestination) -> String {
+        let title = result.sourceItem.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch destination {
+        case .inbox:
+            if let title, !title.isEmpty {
+                return "已保存到收集箱: \(title)"
+            }
+            return "已保存到收集箱"
+        case .clipboard:
+            if let title, !title.isEmpty {
+                return "已复制到剪贴板: \(title)"
+            }
+            return "已复制到剪贴板"
+        case .ask:
+            return "已完成"
+        }
+    }
+
+    private func copyCaptureResultSummary(_ result: CaptureResult) {
+        let summary = result.sourceItem.polishedTranscript
+            ?? result.sourceItem.transcript
+            ?? result.sourceItem.previewText
+            ?? result.sourceItem.title
+            ?? "已捕获内容"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(summary, forType: .string)
+    }
+
+    private func presentCaptureDestinationChoice(for result: CaptureResult, type: CompanionCaptureType) async -> CompanionCaptureSaveDestination? {
+        await MainActor.run {
+            let alert = NSAlert()
+            alert.messageText = "捕获已完成"
+            let title = result.sourceItem.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let contentName = type.displayName
+            if let title, !title.isEmpty {
+                alert.informativeText = "“\(title)” (\(contentName)) 的结果要接下来怎么处理？"
+            } else {
+                alert.informativeText = "这次 \(contentName) 的结果要接下来怎么处理？"
+            }
+            alert.addButton(withTitle: "保存到收集箱")
+            alert.addButton(withTitle: "复制到剪贴板")
+            alert.addButton(withTitle: "取消")
+
+            switch alert.runModal() {
+            case .alertFirstButtonReturn:
+                return .inbox
+            case .alertSecondButtonReturn:
+                return .clipboard
+            default:
+                return nil
+            }
+        }
     }
 
     func deleteCapture(id: UUID) {
@@ -499,10 +721,4 @@ class CompanionCaptureViewModel: ObservableObject {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-}
-
-// MARK: - Notifications
-
-extension Notification.Name {
-    static let companionCaptureCompleted = Notification.Name("companion.captureCompleted")
 }

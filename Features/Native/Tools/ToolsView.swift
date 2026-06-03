@@ -25,48 +25,73 @@ struct ToolsView: View {
         }) { route in
             toolSheet(for: route)
         }
-        .background(AppSurfaceTokens.background)
+        .background(AppVisualBackdrop())
     }
 
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("工具台")
-                    .font(.title2)
-                    .fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("工具台")
+                        .font(.title2)
+                        .fontWeight(.semibold)
 
-                Text("Markdown、OCR、文档转换和批量处理")
-                    .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    Text("Markdown、OCR、文档转换和批量处理")
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .font(.caption)
+
+                    TextField("搜索工具...", text: $viewModel.searchQuery)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                        .frame(width: 240)
+
+                    Text("⌘K")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppSurfaceTokens.cardBackgroundSoft)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator, lineWidth: 1)
+                )
             }
 
-            Spacer()
-
-            // 搜索
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .font(.caption)
-
-                TextField("搜索工具...", text: $viewModel.searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.caption)
-                    .frame(width: 240)
-
-                Text("⌘K")
-                    .font(.caption2)
-                    .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12)], spacing: 12) {
+                AppSurfaceMetricTile(
+                    title: "工具总数",
+                    value: "\(viewModel.filteredTools.count)",
+                    subtitle: "当前筛选结果",
+                    icon: "square.grid.2x2",
+                    tint: AppSurfaceTokens.accentBlue
+                )
+                AppSurfaceMetricTile(
+                    title: "最近使用",
+                    value: "\(viewModel.recentTools.count)",
+                    subtitle: viewModel.canRestoreRecentTools ? "可恢复" : "已同步",
+                    icon: "clock",
+                    tint: AppSurfaceTokens.secondaryText
+                )
+                AppSurfaceMetricTile(
+                    title: "当前分类",
+                    value: viewModel.selectedCategory.displayName,
+                    subtitle: "工具路由入口",
+                    icon: "line.3.horizontal.decrease.circle",
+                    tint: AppSurfaceTokens.accentBlue
+                )
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(AppSurfaceTokens.separator, lineWidth: 1)
-            )
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
@@ -89,14 +114,12 @@ struct ToolsView: View {
                         .font(.caption)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(viewModel.selectedCategory == category ? category.color.opacity(0.12) : Color.clear)
-                        .foregroundStyle(viewModel.selectedCategory == category ? category.color : Color.secondary)
+                        .background(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.12) : Color.clear)
+                        .foregroundStyle(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue : Color.secondary)
                         .cornerRadius(999)
                         .overlay(
-                            viewModel.selectedCategory == category ?
                             RoundedRectangle(cornerRadius: 999)
-                                .stroke(category.color.opacity(0.3), lineWidth: 1) :
-                            nil
+                                .stroke(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.28) : AppSurfaceTokens.separator, lineWidth: 1)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -105,7 +128,7 @@ struct ToolsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.secondarySidebarBackground.opacity(0.88))
     }
 
     // MARK: - Tools Grid
@@ -209,12 +232,12 @@ struct ToolCard: View {
                 // 图标
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(tool.category.color.opacity(0.1))
+                        .fill(AppSurfaceTokens.accentBlue.opacity(0.10))
                         .frame(width: 48, height: 48)
 
                     Image(systemName: tool.icon)
                         .font(.system(size: 22))
-                        .foregroundStyle(tool.category.color)
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
                 }
 
                 // 内容
@@ -267,19 +290,19 @@ struct ToolCard: View {
             }
             .padding(14)
             .frame(height: 96)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(AppSurfaceTokens.cardBackgroundSoft)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(
-                                isPressed ? Color.accentColor.opacity(0.4) :
-                                isHovered ? tool.category.color.opacity(0.25) :
-                                Color(NSColor.separatorColor),
-                                lineWidth: 1
-                            )
+                        .background(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                                        .stroke(
+                                            isPressed ? AppSurfaceTokens.accentBlue.opacity(0.32) :
+                                            isHovered ? AppSurfaceTokens.accentBlue.opacity(0.18) :
+                                            AppSurfaceTokens.separator,
+                                            lineWidth: 1
+                                        )
+                                )
                     )
-            )
             .shadow(
                 color: isHovered ? Color.black.opacity(0.06) : Color.clear,
                 radius: isHovered ? 8 : 0,
@@ -371,21 +394,14 @@ struct RecentToolsSection: View {
                     }
                 }
             } else {
-                // 空状态
-                HStack {
-                    Image(systemName: "clock")
-                        .foregroundStyle(Color.secondary)
-                        .font(.caption)
-                    
-                    Text("暂无最近使用工具")
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
-
-                    Spacer()
-                }
-                .padding(20)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(12)
+                AppSurfaceEmptyState(
+                    icon: "clock",
+                    title: "暂无最近使用工具",
+                    message: "开始使用任一工具后，这里会沉淀成你的快捷历史。",
+                    actionTitle: canRestoreRecentTools ? "恢复记录" : nil,
+                    tint: AppSurfaceTokens.accentBlue,
+                    action: canRestoreRecentTools ? onRestore : nil
+                )
             }
         }
     }
@@ -403,13 +419,13 @@ struct RecentToolCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 // 图标
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                         .fill(tool.category.color.opacity(0.1))
                         .frame(width: 40, height: 40)
 
                     Image(systemName: tool.icon)
                         .font(.system(size: 18))
-                        .foregroundStyle(tool.category.color)
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
                 }
 
                 // 名称
@@ -425,14 +441,14 @@ struct RecentToolCard: View {
                     .foregroundStyle(Color.secondary)
             }
             .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(AppSurfaceTokens.cardBackgroundSoft)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isHovered ? tool.category.color.opacity(0.25) : Color(NSColor.separatorColor), lineWidth: 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                                        .stroke(isHovered ? AppSurfaceTokens.accentBlue.opacity(0.22) : AppSurfaceTokens.separator, lineWidth: 1)
+                                )
                     )
-            )
             .shadow(
                 color: isHovered ? Color.black.opacity(0.05) : Color.clear,
                 radius: isHovered ? 6 : 0,
@@ -456,14 +472,14 @@ struct ToolTag: Hashable {
     let color: Color
 
     static let text = ToolTag(id: "text", displayName: "文本", color: .blue)
-    static let image = ToolTag(id: "image", displayName: "图片", color: .purple)
-    static let download = ToolTag(id: "download", displayName: "下载", color: .green)
-    static let ai = ToolTag(id: "ai", displayName: "AI", color: .pink)
+    static let image = ToolTag(id: "image", displayName: "图片", color: .gray)
+    static let download = ToolTag(id: "download", displayName: "下载", color: .blue)
+    static let ai = ToolTag(id: "ai", displayName: "AI", color: .blue)
     static let dev = ToolTag(id: "dev", displayName: "开发", color: .gray)
-    static let document = ToolTag(id: "document", displayName: "文档", color: .orange)
-    static let local = ToolTag(id: "local", displayName: "本地", color: .teal)
-    static let new = ToolTag(id: "new", displayName: "NEW", color: .green)
-    static let beta = ToolTag(id: "beta", displayName: "Beta", color: .orange)
+    static let document = ToolTag(id: "document", displayName: "文档", color: .blue)
+    static let local = ToolTag(id: "local", displayName: "本地", color: .gray)
+    static let new = ToolTag(id: "new", displayName: "NEW", color: .blue)
+    static let beta = ToolTag(id: "beta", displayName: "Beta", color: .gray)
 }
 
 struct Tool: Identifiable {
@@ -575,11 +591,11 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         switch self {
         case .all: return .gray
         case .text: return .blue
-        case .conversion: return .indigo
-        case .download: return .green
-        case .ai: return .pink
+        case .conversion: return .gray
+        case .download: return .blue
+        case .ai: return .blue
         case .developer: return .gray
-        case .utility: return .orange
+        case .utility: return .gray
         }
     }
 }
@@ -754,8 +770,7 @@ class ToolsViewModel: ObservableObject {
 
 // MARK: - Tool Registry
 
-/// 工具注册表 — 集中管理所有可用工具
-/// 当前使用内置清单，后续可切到 JSON/Plist 配置并支持插件发现
+/// 工具注册表 - 集中管理当前可用的内置工具
 enum ToolRegistry {
     static var defaultTools: [Tool] {
         [

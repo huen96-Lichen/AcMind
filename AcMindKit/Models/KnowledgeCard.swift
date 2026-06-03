@@ -216,6 +216,62 @@ public struct VaultSearchResult: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Knowledge Graph
+
+public struct KnowledgeGraph: Sendable, Equatable {
+    public let nodes: [KnowledgeGraphNode]
+    public let edges: [KnowledgeGraphEdge]
+
+    public init(nodes: [KnowledgeGraphNode] = [], edges: [KnowledgeGraphEdge] = []) {
+        self.nodes = nodes
+        self.edges = edges
+    }
+}
+
+public struct KnowledgeGraphNode: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let title: String
+    public let category: String?
+    public let tags: [String]
+    public let valueScore: Double?
+
+    public init(
+        id: String,
+        title: String,
+        category: String? = nil,
+        tags: [String] = [],
+        valueScore: Double? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.category = category
+        self.tags = tags
+        self.valueScore = valueScore
+    }
+}
+
+public struct KnowledgeGraphEdge: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let sourceId: String
+    public let targetId: String
+    public let relationType: String
+    public let confidence: Double?
+
+    public init(
+        id: String,
+        sourceId: String,
+        targetId: String,
+        relationType: String,
+        confidence: Double? = nil
+    ) {
+        self.id = id
+        self.sourceId = sourceId
+        self.targetId = targetId
+        self.relationType = relationType
+        self.confidence = confidence
+    }
+}
+
 // MARK: - Knowledge Stats
 
 public struct KnowledgeStats: Sendable, Equatable {

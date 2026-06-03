@@ -61,6 +61,21 @@ final class SettingsServiceVaultConfigTests: XCTestCase {
         XCTAssertFalse(loaded.autoFrontmatter)
     }
 
+    func testUpdateSettingsPostsSettingsDidChangeNotification() async throws {
+        let storage = SettingsStorageStub()
+        let permissionManager = PermissionManager()
+        let service = SettingsService(storage: storage, permissionManager: permissionManager)
+
+        let expectation = expectation(forNotification: .settingsDidChange, object: nil, handler: nil)
+
+        var settings = AppSettings()
+        settings.captureScreenshotHotkey = "⌘⇧5"
+
+        try await service.updateSettings(settings)
+
+        await fulfillment(of: [expectation], timeout: 1.0)
+    }
+
     func testVaultFrontmatterTemplateRoundTripThroughStorage() async throws {
         let storage = SettingsStorageStub()
         let permissionManager = PermissionManager()
@@ -188,6 +203,11 @@ private final class SettingsStorageStub: StorageServiceProtocol, @unchecked Send
         settings[key]
     }
 
+    func insertScheduleEvent(_ event: ScheduleEvent) async throws {}
+    func updateScheduleEvent(_ event: ScheduleEvent) async throws {}
+    func deleteScheduleEvent(id: String) async throws {}
+    func listScheduleEvents() async throws -> [ScheduleEvent] { [] }
+    func getScheduleEvent(id: String) async throws -> ScheduleEvent? { nil }
     func setSetting(key: String, value: String) async throws {
         settings[key] = value
     }

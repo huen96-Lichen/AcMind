@@ -24,41 +24,6 @@ public enum RecordingStatus: String, Codable, Sendable, Hashable, CaseIterable {
     }
 }
 
-// MARK: - RecordingPolishMode（录音润色模式）
-
-public enum RecordingPolishMode: String, Codable, Sendable, Hashable, CaseIterable {
-    case none
-    case raw
-    case light
-    case structured
-    case formal
-
-    public static var allCases: [RecordingPolishMode] {
-        [.none, .raw, .light, .structured, .formal]
-    }
-
-    public var displayName: String {
-        switch self {
-        case .none: return "不润色"
-        case .raw: return "原文整理"
-        case .light: return "轻度润色"
-        case .structured: return "结构化整理"
-        case .formal: return "正式表达"
-        }
-    }
-    
-    /// 转换到语音润色层使用的 VoicePolishMode
-    public var toVoicePolishMode: VoicePolishMode {
-        switch self {
-        case .none: return .none
-        case .raw: return .raw
-        case .light: return .light
-        case .structured: return .structured
-        case .formal: return .formal
-        }
-    }
-}
-
 // MARK: - ClipboardItem（剪贴板条目）
 
 /// 剪贴板历史条目
@@ -167,75 +132,4 @@ public enum ScreenshotMode: String, Sendable, Hashable, Equatable {
     }
 }
 
-// MARK: - ShelfItem（文件架条目）
 
-/// 文件临时架条目
-/// 对齐旧版 shelf_items 表
-public struct ShelfItem: Codable, Sendable, Identifiable, Equatable {
-    public let id: String
-    public var sourceItemId: String?
-    public var filePath: String?
-    public var label: String?
-    public var status: ShelfItemStatus
-    public let createdAt: Date
-
-    public init(
-        id: String = UUID().uuidString,
-        sourceItemId: String? = nil,
-        filePath: String? = nil,
-        label: String? = nil,
-        status: ShelfItemStatus = .pending,
-        createdAt: Date = Date()
-    ) {
-        self.id = id
-        self.sourceItemId = sourceItemId
-        self.filePath = filePath
-        self.label = label
-        self.status = status
-        self.createdAt = createdAt
-    }
-}
-
-public enum ShelfItemStatus: String, Codable, Sendable, Hashable, CaseIterable {
-    case pending
-    case processing
-    case completed
-    case failed
-
-    public static var allCases: [ShelfItemStatus] { [.pending, .processing, .completed, .failed] }
-}
-
-// MARK: - Import Types（导入相关）
-
-/// 导入任务
-/// 对齐旧版 import_tasks 表
-public struct ImportTask: Codable, Sendable, Identifiable, Equatable {
-    public let id: String
-    public var sourcePath: String
-    public var status: ProcessJobStatus
-    public var importedCount: Int
-    public var errorCount: Int
-    public var error: String?
-    public let createdAt: Date
-    public var finishedAt: Date?
-
-    public init(
-        id: String = UUID().uuidString,
-        sourcePath: String,
-        status: ProcessJobStatus = .queued,
-        importedCount: Int = 0,
-        errorCount: Int = 0,
-        error: String? = nil,
-        createdAt: Date = Date(),
-        finishedAt: Date? = nil
-    ) {
-        self.id = id
-        self.sourcePath = sourcePath
-        self.status = status
-        self.importedCount = importedCount
-        self.errorCount = errorCount
-        self.error = error
-        self.createdAt = createdAt
-        self.finishedAt = finishedAt
-    }
-}

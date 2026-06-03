@@ -62,7 +62,7 @@ struct SettingsView: View {
                 }
                 .padding(8)
                 .background(Color.secondary.opacity(0.1))
-                .cornerRadius(8)
+                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                 .padding(12)
 
                 Divider()
@@ -72,7 +72,7 @@ struct SettingsView: View {
                     ForEach(SettingsCategory.allCases) { category in
                         HStack(spacing: 12) {
                             Image(systemName: category.icon)
-                                .foregroundStyle(Color(NSColor.systemBlue))
+                                .foregroundStyle(AppSurfaceTokens.accentBlue)
                             Text(category.displayName)
                         }
                         .tag(category)
@@ -201,9 +201,9 @@ struct ShortcutRecorderSheet: View {
             ShortcutCaptureField(shortcut: $shortcut)
                 .frame(height: 120)
                 .background(Color.secondary.opacity(0.06))
-                .cornerRadius(12)
+                .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
                         .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
                 )
 
@@ -347,7 +347,7 @@ struct SettingsCard<Content: View>: View {
         }
         .padding(16)
         .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(12)
+        .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
@@ -387,14 +387,10 @@ struct GeneralSettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("启用通知", isOn: $viewModel.notificationsEnabled)
                     Toggle("任务完成时通知", isOn: $viewModel.taskCompletedNotificationsEnabled)
-                    HStack {
-                        Toggle("更新可用时通知", isOn: $viewModel.updateAvailableNotificationsEnabled)
-                            .disabled(true)
-                        Spacer()
-                    }
-                    Text("当前仅保留偏好，不会触发实际更新检查。")
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    SettingsInfoRow(
+                        label: "更新可用时通知",
+                        value: "纯偏好，当前未接入自动更新检查"
+                    )
                 }
             }
 
@@ -529,7 +525,7 @@ struct CompanionSettingsPage: View {
 
             SettingsCard(title: "随身捕获", description: "快速收集内容到 AcMind") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("截图到收集箱", isOn: $viewModel.autoCaptureClipboard)
+                    Toggle("自动剪贴板采集", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("文本快速收集", isOn: $viewModel.companionCaptureTextEnabled)
                     Toggle("链接快速收集", isOn: $viewModel.companionCaptureLinkEnabled)
                 }
@@ -682,37 +678,29 @@ struct DataKnowledgeSettingsPage: View {
         VStack(alignment: .leading, spacing: 24) {
             SettingsCard(title: "数据存储", description: "配置本地数据和附件存储位置") {
                 VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("本地数据库位置")
-                            Text("只读")
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.12))
-                                .cornerRadius(4)
+                    SettingsPathRow(
+                        title: "本地数据库位置",
+                        path: viewModel.databaseDirectoryPath,
+                        note: "数据库目录不可直接编辑，但可以复制或在 Finder 中查看。",
+                        onCopy: {
+                            copyToPasteboard(viewModel.databaseDirectoryPath)
+                        },
+                        onReveal: {
+                            revealPathInFinder(viewModel.databaseDirectoryPath)
                         }
-                            .font(.subheadline)
-                        TextField("", text: .constant(viewModel.databaseDirectoryPath))
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(true)
-                    }
+                    )
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("附件存储位置")
-                            Text("只读")
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.12))
-                                .cornerRadius(4)
+                    SettingsPathRow(
+                        title: "附件存储位置",
+                        path: viewModel.assetsDirectoryPath,
+                        note: "附件目录保存截图、文件和导出内容，可以快速定位。",
+                        onCopy: {
+                            copyToPasteboard(viewModel.assetsDirectoryPath)
+                        },
+                        onReveal: {
+                            revealPathInFinder(viewModel.assetsDirectoryPath)
                         }
-                            .font(.subheadline)
-                        TextField("", text: .constant(viewModel.assetsDirectoryPath))
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(true)
-                    }
+                    )
                 }
             }
 
@@ -784,7 +772,7 @@ struct DataKnowledgeSettingsPage: View {
                             .frame(minHeight: 120)
                             .padding(8)
                             .background(Color.secondary.opacity(0.08))
-                            .cornerRadius(8)
+                            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
                 }
             }
@@ -806,6 +794,11 @@ struct DataKnowledgeSettingsPage: View {
                         .buttonStyle(.bordered)
 
                     Toggle("自动备份（每周）", isOn: $viewModel.autoBackupEnabled)
+
+                    SettingsInfoRow(
+                        label: "上次备份",
+                        value: viewModel.lastBackupAtText
+                    )
                 }
             }
 
@@ -832,6 +825,7 @@ struct DataKnowledgeSettingsPage: View {
 
 struct CaptureInputSettingsPage: View {
     @ObservedObject var viewModel: SettingsViewModel
+    @State private var cloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "com.acmind.cloudSync.enabled")
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -847,34 +841,31 @@ struct CaptureInputSettingsPage: View {
                     Toggle("启用截图捕获", isOn: $viewModel.captureScreenshotEnabled)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("滚动截图")
-                            .font(.subheadline)
-
-                        Toggle("启用自动滚动", isOn: $viewModel.scrollCaptureAutoScroll)
-
-                        if viewModel.scrollCaptureAutoScroll {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("滚动速度")
-                                        .font(.caption)
-                                    Slider(value: $viewModel.scrollCaptureSpeed, in: 1...4, step: 1)
-                                    Text("\(Int(viewModel.scrollCaptureSpeed))")
-                                        .font(.caption)
-                                        .frame(width: 20)
-                                }
-
-                                HStack {
-                                    Text("最大高度")
-                                        .font(.caption)
-                                    TextField("30000", value: $viewModel.scrollCaptureMaxHeight, format: .number)
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 80)
-                                    Text("像素")
-                                        .font(.caption)
-                                }
-                            }
-                            .padding(.leading, 8)
+                        HStack {
+                            Text("截图打码")
+                                .font(.subheadline)
+                            Text("即将推出")
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.orange.opacity(0.2))
+                                .foregroundStyle(.orange)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
+
+                        SettingsInfoRow(
+                            label: "自动打码敏感内容",
+                            value: "功能开发中，当前仅保留设置位"
+                        )
+
+                        SettingsInfoRow(
+                            label: "打码模式",
+                            value: "功能开发中，暂不生效"
+                        )
+
+                        Text("截图会先在本地识别敏感内容，再按当前打码模式处理后保存。当前页面仅用于说明，尚未接通实际控制。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -914,40 +905,12 @@ struct CaptureInputSettingsPage: View {
 
             SettingsCard(title: "隐私保护", description: "配置截图隐私打码") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("截图时自动打码人脸", isOn: $viewModel.autoRedactFaces)
-                    Toggle("截图时自动检测 PII", isOn: $viewModel.autoDetectPII)
-
-                    if viewModel.autoDetectPII {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("PII 类型")
-                                .font(.subheadline)
-
-                            ForEach(RedactionType.allCases, id: \.self) { type in
-                                Toggle(type.displayName, isOn: Binding(
-                                    get: { viewModel.enabledRedactionTypes.contains(type) },
-                                    set: { enabled in
-                                        if enabled {
-                                            viewModel.enabledRedactionTypes.insert(type)
-                                        } else {
-                                            viewModel.enabledRedactionTypes.remove(type)
-                                        }
-                                    }
-                                ))
-                            }
-                        }
-                        .padding(.leading, 8)
-                    }
-
-                    HStack {
-                        Text("打码方式")
-                            .font(.subheadline)
-                        Picker("", selection: $viewModel.censorMode) {
-                            ForEach(CensorMode.allCases, id: \.self) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .labelsHidden()
-                    }
+                    Text("截图自动打码人脸、PII 检测和打码模式已经接入截图保存流程。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("当前为草稿阶段，功能持续完善中。")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
             }
 
@@ -982,7 +945,7 @@ struct CaptureInputSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "语言", description: "配置语音识别的首选语言") {
+            SettingsCard(title: "语言", description: "配置语音识别与翻译目标语言") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("首选语言")
                         .font(.subheadline)
@@ -995,10 +958,30 @@ struct CaptureInputSettingsPage: View {
                     }
                     .labelsHidden()
                 }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("翻译目标")
+                        .font(.subheadline)
+
+                    Picker("", selection: $viewModel.translationLanguage) {
+                        Text("中文").tag("zh")
+                        Text("英文").tag("en")
+                        Text("日文").tag("ja")
+                        Text("韩文").tag("ko")
+                    }
+                    .labelsHidden()
+                }
             }
 
             SettingsCard(title: "云端同步", description: "配置数据云端同步") {
-                Toggle("启用云端同步", isOn: $viewModel.enableCloudSync)
+                Toggle("启用云端同步", isOn: $cloudSyncEnabled)
+                    .onChange(of: cloudSyncEnabled) { newValue in
+                        Task {
+                            UserDefaults.standard.set(newValue, forKey: "com.acmind.cloudSync.enabled")
+                        }
+                    }
+                Text(cloudSyncEnabled ? "已开启：数据将通过 iCloud 同步" : "已关闭：数据仅保存在本地")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             saveButton
@@ -1166,7 +1149,7 @@ struct AboutSettingsPage: View {
                         Image(systemName: "brain.head.profile")
                             .resizable()
                             .frame(width: 64, height: 64)
-                            .foregroundStyle(Color(NSColor.systemBlue))
+                            .foregroundStyle(AppSurfaceTokens.accentBlue)
                         VStack(alignment: .leading, spacing: 4) {
                             Text("AcMind")
                                 .font(.title)
@@ -1183,10 +1166,13 @@ struct AboutSettingsPage: View {
                     Divider()
 
                     HStack(spacing: 16) {
-                        Button("检查更新") {
-                            viewModel.openReleasesPage()
+                        Button(viewModel.isCheckingForUpdates ? "检查中..." : "检查更新") {
+                            Task {
+                                await viewModel.checkForUpdates()
+                            }
                         }
                             .buttonStyle(.bordered)
+                            .disabled(viewModel.isCheckingForUpdates)
                         Button("帮助与反馈") {
                             viewModel.openFeedbackPage()
                         }
@@ -1217,9 +1203,9 @@ struct AboutSettingsPage: View {
 
             SettingsCard(title: "支持", description: "获取帮助和支持") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Link("官方文档", destination: URL(string: "https://docs.acmind.app")!)
-                    Link("常见问题", destination: URL(string: "https://docs.acmind.app/faq")!)
-                    Link("联系支持", destination: URL(string: "mailto:support@acmind.app")!)
+                    Link("官方文档", destination: URL(string: "https://github.com/huen96-Lichen/AcMind")!)
+                    Link("常见问题", destination: URL(string: "https://github.com/huen96-Lichen/AcMind/issues")!)
+                    Link("联系支持", destination: URL(string: "https://github.com/huen96-Lichen/AcMind/issues/new")!)
                 }
             }
         }
@@ -1283,7 +1269,7 @@ struct PositionButton: View {
         Button(title, action: action)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isSelected ? Color(NSColor.systemBlue) : Color.secondary.opacity(0.1))
+            .background(isSelected ? AppSurfaceTokens.accentBlue : Color.secondary.opacity(0.1))
             .foregroundColor(isSelected ? .white : .primary)
             .cornerRadius(6)
             .font(.caption)
@@ -1311,9 +1297,9 @@ struct StrategyButton: View {
                     .foregroundStyle(Color.secondary)
             }
             .padding(12)
-            .background(selected ? Color(NSColor.systemBlue).opacity(0.1) : Color.secondary.opacity(0.05))
-            .foregroundStyle(selected ? Color(NSColor.systemBlue) : Color.primary)
-            .cornerRadius(8)
+            .background(selected ? AppSurfaceTokens.accentBlue.opacity(0.1) : Color.secondary.opacity(0.05))
+            .foregroundStyle(selected ? AppSurfaceTokens.accentBlue : Color.primary)
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             .frame(width: 90)
         }
         .buttonStyle(.plain)
@@ -1372,7 +1358,7 @@ struct ProviderCard: View {
         }
         .padding(12)
         .background(Color.secondary.opacity(0.05))
-        .cornerRadius(8)
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
     }
 }
 
@@ -1395,7 +1381,7 @@ struct StatBox: View {
         }
         .padding(12)
         .background(Color.secondary.opacity(0.05))
-        .cornerRadius(8)
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
         .frame(maxWidth: .infinity)
     }
 }
@@ -1412,6 +1398,46 @@ struct SettingsInfoRow: View {
             Spacer()
             Text(value)
                 .font(.caption)
+        }
+    }
+}
+
+struct SettingsPathRow: View {
+    let title: String
+    let path: String
+    let note: String
+    let onCopy: () -> Void
+    let onReveal: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.subheadline)
+                Spacer()
+                Button("复制") {
+                    onCopy()
+                }
+                .buttonStyle(.borderless)
+
+                Button("显示") {
+                    onReveal()
+                }
+                .buttonStyle(.borderless)
+            }
+
+            Text(path)
+                .font(.caption)
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(Color.secondary.opacity(0.08))
+                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+
+            Text(note)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }
@@ -1465,6 +1491,16 @@ struct PermissionRow: View {
             }
         }
     }
+}
+
+private func copyToPasteboard(_ value: String) {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(value, forType: .string)
+}
+
+private func revealPathInFinder(_ path: String) {
+    let url = URL(fileURLWithPath: path)
+    NSWorkspace.shared.activateFileViewerSelecting([url])
 }
 
 struct StatusBadge: View {

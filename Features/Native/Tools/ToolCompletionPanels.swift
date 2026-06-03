@@ -154,6 +154,13 @@ struct BatchDownloadPanel: View {
                 Spacer()
 
                 Button {
+                    viewModel.openOutputFolder()
+                } label: {
+                    Label("打开目录", systemImage: "folder")
+                }
+                .buttonStyle(.bordered)
+
+                Button {
                     viewModel.pickOutputFolder()
                 } label: {
                     Label("选择目录", systemImage: "folder")
@@ -229,6 +236,14 @@ struct BatchDownloadPanel: View {
                                 }
 
                                 Spacer()
+
+                                Button {
+                                    viewModel.openDownloadedFile(item)
+                                } label: {
+                                    Label("打开文件", systemImage: "arrow.up.right.square")
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(item.isDownloaded == false)
                             }
                             .padding(10)
                             .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -329,6 +344,15 @@ final class BatchDownloadViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(summary, forType: .string)
         ToastManager.shared.show(.success, "摘要已复制")
+    }
+
+    func openOutputFolder() {
+        NSWorkspace.shared.activateFileViewerSelecting([outputFolder])
+    }
+
+    func openDownloadedFile(_ item: BatchDownloadResultItem) {
+        guard item.isDownloaded else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([item.destinationURL])
     }
 
     private func normalizeURL(_ rawValue: String) -> URL? {
@@ -533,6 +557,13 @@ struct VideoDownloadPanel: View {
                 Spacer()
 
                 Button {
+                    viewModel.openOutputFolder()
+                } label: {
+                    Label("打开目录", systemImage: "folder")
+                }
+                .buttonStyle(.bordered)
+
+                Button {
                     viewModel.pickOutputFolder()
                 } label: {
                     Label("选择目录", systemImage: "folder")
@@ -605,7 +636,15 @@ struct VideoDownloadPanel: View {
                                         .foregroundStyle(.secondary)
                                         .textSelection(.enabled)
                                 }
+
                                 Spacer()
+
+                                Button {
+                                    viewModel.openResultFile(item.destinationURL)
+                                } label: {
+                                    Image(systemName: "arrow.up.right.square")
+                                }
+                                .buttonStyle(.borderless)
                             }
                             .padding(10)
                             .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -745,6 +784,14 @@ final class VideoDownloadViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(latest.destinationURL.path, forType: .string)
         ToastManager.shared.show(.success, "文件路径已复制")
+    }
+
+    func openOutputFolder() {
+        NSWorkspace.shared.activateFileViewerSelecting([outputFolder])
+    }
+
+    func openResultFile(_ url: URL) {
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     private func normalizeURL(_ rawValue: String) -> URL? {
@@ -1217,6 +1264,22 @@ struct APITestPanel: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.saveOutput()
+                } label: {
+                    Label("保存结果", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.openSavedOutput()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             TextEditor(text: $viewModel.outputText)
@@ -1237,6 +1300,7 @@ final class APITestViewModel: ObservableObject {
     @Published var outputText = ""
     @Published var statusText = "等待加载 Provider"
     @Published var isRunning = false
+    @Published var lastSavedURL: URL?
 
     var selectedProvider: ProviderConfig? {
         providers.first(where: { $0.id == selectedProviderId })
@@ -1252,6 +1316,7 @@ final class APITestViewModel: ObservableObject {
         guard let providerId = selectedProviderId else { return }
         isRunning = true
         outputText = ""
+        lastSavedURL = nil
         statusText = "正在做健康检查..."
         do {
             let ok = try await ServiceContainer.shared.aiRuntime.healthCheck(providerId: providerId)
@@ -1268,6 +1333,7 @@ final class APITestViewModel: ObservableObject {
         guard let providerId = selectedProviderId else { return }
         isRunning = true
         outputText = ""
+        lastSavedURL = nil
         statusText = "正在拉取模型列表..."
         do {
             let models = try await ServiceContainer.shared.aiRuntime.listModels(providerId: providerId)
@@ -1284,6 +1350,7 @@ final class APITestViewModel: ObservableObject {
         guard let providerId = selectedProviderId else { return }
         isRunning = true
         outputText = ""
+        lastSavedURL = nil
         statusText = "正在发送测试对话..."
         do {
             let modelId = selectedProvider?.modelId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1306,5 +1373,29 @@ final class APITestViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
         ToastManager.shared.show(.success, "结果已复制")
+    }
+
+    func saveOutput() {
+        guard outputText.isEmpty == false else { return }
+
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.plainText]
+        savePanel.nameFieldStringValue = "api-test-result.txt"
+        savePanel.canCreateDirectories = true
+
+        if savePanel.runModal() == .OK, let url = savePanel.url {
+            do {
+                try outputText.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
+                ToastManager.shared.show(.success, "结果已保存")
+            } catch {
+                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }

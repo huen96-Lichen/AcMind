@@ -94,6 +94,68 @@ final class ScheduleViewModelSearchTests: XCTestCase {
         XCTAssertTrue(viewModel.hasEvents(on: date))
     }
 
+    func testMonthViewCalendarDaysForDifferentMonthLengths() {
+        let cal = Calendar.current
+
+        let feb2026 = makeDate(year: 2026, month: 2, day: 1, hour: 0, minute: 0)
+        let febInterval = cal.dateInterval(of: .month, for: feb2026)!
+        let febDays = cal.dateComponents([.day], from: febInterval.start, to: febInterval.end).day!
+        XCTAssertEqual(febDays, 28)
+
+        let feb2024 = makeDate(year: 2024, month: 2, day: 1, hour: 0, minute: 0)
+        let feb2024Interval = cal.dateInterval(of: .month, for: feb2024)!
+        let feb2024Days = cal.dateComponents([.day], from: feb2024Interval.start, to: feb2024Interval.end).day!
+        XCTAssertEqual(feb2024Days, 29)
+
+        let apr2026 = makeDate(year: 2026, month: 4, day: 1, hour: 0, minute: 0)
+        let aprInterval = cal.dateInterval(of: .month, for: apr2026)!
+        let aprDays = cal.dateComponents([.day], from: aprInterval.start, to: aprInterval.end).day!
+        XCTAssertEqual(aprDays, 30)
+
+        let may2026 = makeDate(year: 2026, month: 5, day: 1, hour: 0, minute: 0)
+        let mayInterval = cal.dateInterval(of: .month, for: may2026)!
+        let mayDays = cal.dateComponents([.day], from: mayInterval.start, to: mayInterval.end).day!
+        XCTAssertEqual(mayDays, 31)
+    }
+
+    func testMonthViewEventsMarkedCorrectly() {
+        let viewModel = ScheduleViewModel(shouldLoadEvents: false)
+        let june1 = makeDate(year: 2026, month: 6, day: 1, hour: 10, minute: 0)
+        let june15 = makeDate(year: 2026, month: 6, day: 15, hour: 14, minute: 0)
+
+        viewModel.selectedDate = june1
+        viewModel.events = [
+            ScheduleEvent(
+                id: "evt-1",
+                title: "会议",
+                categoryId: "work",
+                startAt: june1,
+                endAt: june1.addingTimeInterval(3600),
+                isAllDay: false,
+                status: .todo,
+                priority: .medium,
+                tag: nil
+            ),
+            ScheduleEvent(
+                id: "evt-2",
+                title: "聚餐",
+                categoryId: "life",
+                startAt: june15,
+                endAt: june15.addingTimeInterval(7200),
+                isAllDay: false,
+                status: .todo,
+                priority: .medium,
+                tag: nil
+            )
+        ]
+
+        XCTAssertTrue(viewModel.hasEvents(on: june1))
+        XCTAssertTrue(viewModel.hasEvents(on: june15))
+
+        let june10 = makeDate(year: 2026, month: 6, day: 10, hour: 10, minute: 0)
+        XCTAssertFalse(viewModel.hasEvents(on: june10))
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, hour: Int, minute: Int) -> Date {
         var components = DateComponents()
         components.year = year

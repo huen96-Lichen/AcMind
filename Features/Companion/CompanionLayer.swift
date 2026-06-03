@@ -131,13 +131,6 @@ class CompanionLayerViewModel: ObservableObject {
     }
 }
 
-// MARK: - Notifications
-
-extension Notification.Name {
-    static let companionShowShortcuts = Notification.Name("companion.showShortcuts")
-    static let companionClosePanel = Notification.Name("companion.closePanel")
-}
-
 // MARK: - Companion Layer Container
 // 用于在主窗口中显示随身
 

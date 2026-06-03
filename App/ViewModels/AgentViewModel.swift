@@ -1,6 +1,14 @@
 import Foundation
 import AcMindKit
 
+enum AgentMode: String, Hashable {
+    case normal
+    case task
+    case quickAsk
+    case toolCall
+    case automation
+}
+
 @MainActor
 class AgentViewModel: ObservableObject {
     struct ModelOption: Identifiable, Equatable {
@@ -19,11 +27,23 @@ class AgentViewModel: ObservableObject {
     @Published var availableModelOptions: [ModelOption] = []
     @Published var projectContextItems: [SecondarySidebarItem] = []
     @Published var selectedModelLabel: String = "未配置模型"
+    @Published var selectedModelOption: ModelOption?
     @Published var distilledNote: DistilledNote?
+    @Published var quickAskQuestion: String = ""
+    @Published var quickAskAnswer: String?
+    @Published var quickAskHistory: [ChatSession] = []
+    @Published var quickAskMessages: [ChatMessage] = []
+    @Published var selectedQuickAskSessionId: String?
+    @Published var toolCallResult: String?
     @Published var isLoading: Bool = false
     @Published var isSaved: Bool = false
     @Published var errorMessage: String?
     @Published var showError: Bool = false
+
+    @Published var selectedMode: AgentMode = .normal
+    @Published var agentTasks: [AgentTask] = []
+    @Published var taskStatusFilter: AgentTaskStatus?
+    @Published var currentTask: AgentTask?
 
     // MARK: - Voice
     @Published var recordingStatus: RecordingStatus = .idle
@@ -34,6 +54,11 @@ class AgentViewModel: ObservableObject {
     private let aiRuntime: AIRuntimeProtocol
     private let voiceService: VoiceServiceProtocol
     private let distillService: DistillServiceProtocol
+    private let quickAskService: AgentQuickAskService
+    private let agentToolRouter: AgentToolRouterProtocol
+    private let agentMemoryService: AgentMemoryServiceProtocol
+    private let agentSkillService: AgentSkillServiceProtocol
+    private let agentTaskBoardService: AgentTaskBoardServiceProtocol
 
     private var recordingTimer: Timer?
 
@@ -47,8 +72,12 @@ class AgentViewModel: ObservableObject {
         self.aiRuntime = aiRuntime ?? container?.aiRuntime ?? AIRuntimeService()
         self.voiceService = voiceService ?? container?.voiceService ?? VoiceService()
         self.distillService = container?.distillService ?? DistillService()
+        self.agentMemoryService = container?.agentMemoryService ?? AgentMemoryService(storage: self.storage)
+        self.agentSkillService = container?.agentSkillService ?? AgentSkillService(storage: self.storage)
+        self.agentTaskBoardService = container?.agentTaskBoardService ?? AgentTaskBoardService(storage: self.storage)
+        self.quickAskService = AgentQuickAskService(aiRuntime: self.aiRuntime, storage: self.storage)
+        self.agentToolRouter = AgentToolRouter(storage: self.storage, voiceService: self.voiceService, aiRuntime: self.aiRuntime)
 
-        // 设置状态回调
         Task {
             await setupVoiceStatusHandler()
         }
@@ -80,7 +109,38 @@ class AgentViewModel: ObservableObject {
         async let recentTask = loadRecentItems()
         async let modelTask = loadAvailableModelOptions()
         async let projectTask = loadProjectContextItems()
-        _ = await (recentTask, modelTask, projectTask)
+        async let historyTask = loadQuickAskHistory()
+        _ = await (recentTask, modelTask, projectTask, historyTask)
+    }
+
+    func loadQuickAskHistory() async {
+        do {
+            let sessions = try await storage.listChatSessions(status: nil)
+            quickAskHistory = sessions
+                .filter { $0.metadata["kind"] == "quickAsk" }
+                .prefix(5)
+                .map { $0 }
+
+            if let selectedQuickAskSessionId,
+               quickAskHistory.contains(where: { $0.id == selectedQuickAskSessionId }) {
+                try await loadQuickAskMessages(sessionId: selectedQuickAskSessionId)
+            } else if let latest = quickAskHistory.first {
+                selectedQuickAskSessionId = latest.id
+                try await loadQuickAskMessages(sessionId: latest.id)
+            }
+        } catch {
+            print("Failed to load quick ask history: \(error)")
+        }
+    }
+
+    func selectQuickAskHistory(_ session: ChatSession) async {
+        selectedQuickAskSessionId = session.id
+        do {
+            try await loadQuickAskMessages(sessionId: session.id)
+        } catch {
+            errorMessage = "加载 Quick Ask 历史失败: \(error.localizedDescription)"
+            showError = true
+        }
     }
 
     func loadAvailableModelOptions() async {
@@ -97,12 +157,19 @@ class AgentViewModel: ObservableObject {
             ModelOption(providerId: "unconfigured", providerName: "AI", modelName: "未配置模型")
         ] : options
 
-        if selectedModelLabel == "未配置模型" || !availableModelOptions.contains(where: { $0.displayName == selectedModelLabel }) {
+        if let selectedModelOption,
+           availableModelOptions.contains(where: {
+               $0.providerId == selectedModelOption.providerId && $0.modelName == selectedModelOption.modelName
+           }) {
+            selectedModelLabel = selectedModelOption.displayName
+        } else {
+            selectedModelOption = availableModelOptions.first
             selectedModelLabel = availableModelOptions.first?.displayName ?? "未配置模型"
         }
     }
 
     func selectModel(_ option: ModelOption) {
+        selectedModelOption = option
         selectedModelLabel = option.displayName
     }
 
@@ -161,11 +228,30 @@ class AgentViewModel: ObservableObject {
     func clear() {
         inputText = ""
         distilledNote = nil
+        toolCallResult = nil
+        currentTask = nil
     }
 
     func clearError() {
         errorMessage = nil
         showError = false
+    }
+
+    func loadAgentTasks(filter: AgentTaskStatus? = nil) async {
+        do {
+            let taskFilter: TaskFilter? = filter.map { TaskFilter(statuses: [$0]) }
+            agentTasks = try await agentTaskBoardService.listTasks(filter: taskFilter)
+        } catch {
+            errorMessage = "加载任务失败: \(error.localizedDescription)"
+            showError = true
+        }
+    }
+
+    func filterAgentTasks(by status: AgentTaskStatus?) {
+        taskStatusFilter = status
+        Task {
+            await loadAgentTasks(filter: status)
+        }
     }
 
     func distill() async {
@@ -174,13 +260,52 @@ class AgentViewModel: ObservableObject {
 
         isLoading = true
         distilledNote = nil
+        currentTask = nil
+
+        var task: AgentTask?
+        if selectedMode == .task {
+            task = AgentTask(
+                title: String(text.prefix(50)),
+                description: text,
+                status: .running
+            )
+            if let createdTaskInput = task {
+                do {
+                    let created = try await agentTaskBoardService.createTask(createdTaskInput)
+                    currentTask = created
+                    task = created
+                } catch {
+                    errorMessage = "创建任务失败: \(error.localizedDescription)"
+                    showError = true
+                    isLoading = false
+                    return
+                }
+            }
+        }
+
+        var contextPrefix = ""
+        do {
+            let memoryContext = try await agentMemoryService.getMemoryContext(types: nil, query: text)
+            if !memoryContext.isEmpty {
+                contextPrefix = memoryContext.toPromptString()
+            }
+        } catch {
+            print("获取记忆上下文失败: \(error)")
+        }
+
+        let enrichedText: String
+        if contextPrefix.isEmpty {
+            enrichedText = text
+        } else {
+            enrichedText = "[参考记忆]\n\(contextPrefix)\n\n[用户输入]\n\(text)"
+        }
 
         let item = SourceItem(
             type: .text,
             source: .manual,
             status: .distilling,
             title: String(text.prefix(50)),
-            previewText: text
+            previewText: enrichedText
         )
 
         do {
@@ -200,10 +325,86 @@ class AgentViewModel: ObservableObject {
             )
             try await storage.updateSourceItem(updatedItem)
 
+            if let task {
+                try? await agentTaskBoardService.completeTask(id: task.id)
+                currentTask?.status = .completed
+            }
+
             inputText = ""
             await loadRecentItems()
         } catch {
             errorMessage = "AI 整理失败: \(error.localizedDescription)"
+            showError = true
+
+            if let task {
+                try? await agentTaskBoardService.failTask(id: task.id, error: error.localizedDescription)
+                currentTask?.status = .failed
+                currentTask?.errorMessage = error.localizedDescription
+            }
+        }
+
+        isLoading = false
+    }
+
+    func quickAsk() async {
+        let question = quickAskQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty else { return }
+
+        isLoading = true
+        quickAskAnswer = nil
+
+        do {
+            let response = try await quickAskService.ask(
+                question: question,
+                providerId: selectedModelOption?.providerId == "unconfigured" ? nil : selectedModelOption?.providerId,
+                model: selectedModelOption?.modelName.isEmpty == true ? nil : selectedModelOption?.modelName
+            )
+
+            quickAskAnswer = response.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            quickAskQuestion = ""
+            await loadQuickAskHistory()
+        } catch {
+            errorMessage = "Quick Ask 失败: \(error.localizedDescription)"
+            showError = true
+        }
+
+        isLoading = false
+    }
+
+    private func loadQuickAskMessages(sessionId: String) async throws {
+        let messages = try await storage.listChatMessages(sessionId: sessionId)
+        quickAskMessages = messages
+    }
+
+    func runToolAction(
+        toolType: AgentToolType,
+        action: String,
+        parameters: [String: String] = [:],
+        context: [String: String] = [:]
+    ) async {
+        isLoading = true
+        toolCallResult = nil
+
+        do {
+            let result = try await agentToolRouter.routeTool(
+                request: AgentToolRequest(
+                    toolType: toolType,
+                    action: action,
+                    parameters: parameters,
+                    context: context
+                )
+            )
+
+            var outputParts: [String] = []
+            if let output = result.output, output.isEmpty == false {
+                outputParts.append(output)
+            }
+            if let errorMessage = result.errorMessage, errorMessage.isEmpty == false {
+                outputParts.append(errorMessage)
+            }
+            toolCallResult = outputParts.isEmpty ? (result.success ? "执行完成" : "执行失败") : outputParts.joined(separator: "\n")
+        } catch {
+            errorMessage = "工具调用失败: \(error.localizedDescription)"
             showError = true
         }
 

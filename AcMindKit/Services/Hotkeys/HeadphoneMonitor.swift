@@ -214,8 +214,7 @@ public final class HeadphoneMonitor {
             guard isAuxMouseInterceptEnabled() else {
                 return Unmanaged.passUnretained(event)
             }
-            let handled = onAuxMouseButton()
-            return handled ? nil : Unmanaged.passUnretained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         // 只处理 AUX 控制按钮中的 PLAY 键
@@ -255,11 +254,6 @@ public final class HeadphoneMonitor {
             handlePlayKeyUp()
         }
         return nil
-    }
-    
-    private func onAuxMouseButton() -> Bool {
-        // 辅助鼠标按钮处理
-        return false
     }
     
     private func handlePlayKeyDown(originalCopy: CGEvent?) {

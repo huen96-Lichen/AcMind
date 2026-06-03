@@ -15,6 +15,10 @@ public struct ServiceConfiguration {
     var voiceService: VoiceServiceProtocol?
     var settingsService: SettingsServiceProtocol?
     var assetStore: AssetStore?
+    var scheduleService: ScheduleServiceProtocol?
+    var agentMemoryService: AgentMemoryServiceProtocol?
+    var agentSkillService: AgentSkillServiceProtocol?
+    var agentTaskBoardService: AgentTaskBoardServiceProtocol?
 
     public init(
         storageService: StorageServiceProtocol? = nil,
@@ -26,7 +30,11 @@ public struct ServiceConfiguration {
         knowledgeService: KnowledgeServiceProtocol? = nil,
         voiceService: VoiceServiceProtocol? = nil,
         settingsService: SettingsServiceProtocol? = nil,
-        assetStore: AssetStore? = nil
+        assetStore: AssetStore? = nil,
+        scheduleService: ScheduleServiceProtocol? = nil,
+        agentMemoryService: AgentMemoryServiceProtocol? = nil,
+        agentSkillService: AgentSkillServiceProtocol? = nil,
+        agentTaskBoardService: AgentTaskBoardServiceProtocol? = nil
     ) {
         self.storageService = storageService
         self.captureService = captureService
@@ -38,6 +46,10 @@ public struct ServiceConfiguration {
         self.voiceService = voiceService
         self.settingsService = settingsService
         self.assetStore = assetStore
+        self.scheduleService = scheduleService
+        self.agentMemoryService = agentMemoryService
+        self.agentSkillService = agentSkillService
+        self.agentTaskBoardService = agentTaskBoardService
     }
 
     /// 空配置，用于完全自定义注入
@@ -115,6 +127,10 @@ public final class ServiceContainer: ObservableObject, Sendable {
     public let voiceService: VoiceServiceProtocol
     public let settingsService: SettingsServiceProtocol
     public let assetStore: AssetStore
+    public let scheduleService: ScheduleServiceProtocol
+    public let agentMemoryService: AgentMemoryServiceProtocol
+    public let agentSkillService: AgentSkillServiceProtocol
+    public let agentTaskBoardService: AgentTaskBoardServiceProtocol
 
     public var hotCornerSettingsStore: HotCornerSettingsStore? {
         settingsService as? HotCornerSettingsStore
@@ -146,7 +162,8 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
         // 阶段 3: AI 运行时（依赖设置服务获取 Provider 配置）
         self.aiRuntime = configuration.aiRuntime ?? AIRuntimeService(
-            storage: storageService
+            storage: storageService,
+            modelRouter: AgentModelRouter()
         )
 
         // 阶段 4: 语音服务（依赖 AI 运行时、存储层、AssetStore、权限管理器）
@@ -181,6 +198,14 @@ public final class ServiceContainer: ObservableObject, Sendable {
         self.knowledgeService = configuration.knowledgeService ?? KnowledgeService(
             storage: storageService
         )
+
+        // 阶段 7: 日程服务（依赖存储层）
+        self.scheduleService = configuration.scheduleService ?? ScheduleService(storage: storageService)
+
+        // 阶段 8: Agent 子服务（依赖存储层）
+        self.agentMemoryService = configuration.agentMemoryService ?? AgentMemoryService(storage: storageService)
+        self.agentSkillService = configuration.agentSkillService ?? AgentSkillService(storage: storageService)
+        self.agentTaskBoardService = configuration.agentTaskBoardService ?? AgentTaskBoardService(storage: storageService)
     }
 
     // MARK: - Setup
@@ -253,6 +278,12 @@ public final class ServiceContainer: ObservableObject, Sendable {
                 // 阶段 6: UI（标记完成）
                 await transition(to: .ui) {
                     // UI 初始化在 SwiftUI 层完成
+                    if let schedule = scheduleService as? ScheduleService {
+                        try? await schedule.setup()
+                    }
+                    if let skillService = agentSkillService as? AgentSkillService {
+                        try? await skillService.initializeBuiltinSkills()
+                    }
                 }
 
                 await MainActor.run {
@@ -353,6 +384,10 @@ public final class ServiceContainer: ObservableObject, Sendable {
         if distillService is DistillService { issues.append("✓ DistillService") }
         if exportService is ExportService { issues.append("✓ ExportService") }
         if knowledgeService is KnowledgeService { issues.append("✓ KnowledgeService") }
+        if scheduleService is ScheduleService { issues.append("✓ ScheduleService") }
+        if agentMemoryService is AgentMemoryService { issues.append("✓ AgentMemoryService") }
+        if agentSkillService is AgentSkillService { issues.append("✓ AgentSkillService") }
+        if agentTaskBoardService is AgentTaskBoardService { issues.append("✓ AgentTaskBoardService") }
         issues.append("✓ VoiceService")
 
         return issues
@@ -383,9 +418,14 @@ public enum ServiceContainerError: Error, LocalizedError {
 extension ServiceContainer {
     /// 创建用于 SwiftUI Preview 的容器
     public static func preview() -> ServiceContainer {
+        let storage = StorageService()
         let config = ServiceConfiguration(
-            storageService: StorageService(),
-            settingsService: PreviewSettingsService()
+            storageService: storage,
+            settingsService: PreviewSettingsService(),
+            scheduleService: ScheduleService(storage: storage),
+            agentMemoryService: PreviewAgentMemoryService(),
+            agentSkillService: PreviewAgentSkillService(),
+            agentTaskBoardService: PreviewAgentTaskBoardService()
         )
         // 注意：Preview 容器不调用 setup，避免副作用
         return ServiceContainer(configuration: config)
@@ -412,7 +452,7 @@ private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked 
     func openSystemPreferences(for permission: SystemPermission) async {}
     func checkPermissionKind(_ kind: AppPermissionKind) async -> AppPermissionStatus { .notDetermined }
     func requestPermissionKind(_ kind: AppPermissionKind) async {}
-    func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {}
+    func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws {}
     func unregisterShortcut(_ shortcut: KeyboardShortcut) async throws {}
     func getRegisteredShortcuts() async -> [KeyboardShortcut] { [] }
     func unregisterAllShortcuts() async {}
@@ -421,4 +461,41 @@ private final class PreviewSettingsService: SettingsServiceProtocol, @unchecked 
     func updateProvider(_ config: ProviderConfig, apiKey: String?) async throws {}
     func removeProvider(id: String) async throws {}
     func getAPIKey(for providerId: String) async -> String? { nil }
+}
+
+private final class PreviewAgentMemoryService: AgentMemoryServiceProtocol, @unchecked Sendable {
+    func saveMemory(_ memory: AgentMemory) async throws {}
+    func getMemory(id: String) async throws -> AgentMemory? { nil }
+    func listMemories(filter: MemoryFilter?) async throws -> [AgentMemory] { [] }
+    func updateMemory(_ memory: AgentMemory) async throws {}
+    func deleteMemory(id: String) async throws {}
+    func getMemoryContext(types: [MemoryType]?, query: String?) async throws -> MemoryContext { MemoryContext() }
+    func recordAccess(memoryId: String) async throws {}
+}
+
+private final class PreviewAgentSkillService: AgentSkillServiceProtocol, @unchecked Sendable {
+    func saveSkill(_ skill: AgentSkill) async throws {}
+    func getSkill(id: String) async throws -> AgentSkill? { nil }
+    func listSkills(filter: SkillFilter?) async throws -> [AgentSkill] { [] }
+    func updateSkill(_ skill: AgentSkill) async throws {}
+    func deleteSkill(id: String) async throws {}
+    func getSkillContext(taskDescription: String?) async throws -> SkillContext { SkillContext() }
+    func incrementUseCount(skillId: String) async throws {}
+    func incrementViewCount(skillId: String) async throws {}
+    func initializeBuiltinSkills() async throws {}
+}
+
+private final class PreviewAgentTaskBoardService: AgentTaskBoardServiceProtocol, @unchecked Sendable {
+    func createTask(_ task: AgentTask) async throws -> AgentTask { task }
+    func getTask(id: String) async throws -> AgentTask? { nil }
+    func listTasks(filter: TaskFilter?) async throws -> [AgentTask] { [] }
+    func updateTask(_ task: AgentTask) async throws {}
+    func deleteTask(id: String) async throws {}
+    func startTask(id: String) async throws {}
+    func completeTask(id: String) async throws {}
+    func failTask(id: String, error: String) async throws {}
+    func retryTask(id: String) async throws {}
+    func addStep(taskId: String, step: TaskStep) async throws {}
+    func updateStep(taskId: String, step: TaskStep) async throws {}
+    func archiveTask(id: String) async throws {}
 }

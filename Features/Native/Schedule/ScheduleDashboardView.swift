@@ -154,7 +154,7 @@ struct ScheduleDashboardView: View {
                     .font(.system(size: 12, weight: .medium))
             }
             .buttonStyle(.borderedProminent)
-            .tint(AppSurfaceTokens.accentPurple)
+            .tint(AppSurfaceTokens.accentPrimary)
 
             Button {
                 viewModel.goToNext()
@@ -230,7 +230,7 @@ struct ScheduleDashboardView: View {
                         HStack(spacing: 12) {
                             Text(event.startAt, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute())
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(AppSurfaceTokens.accentPurple)
+                                .foregroundStyle(AppSurfaceTokens.accentPrimary)
                                 .frame(width: 48, alignment: .leading)
 
                             RoundedRectangle(cornerRadius: 2)
@@ -273,29 +273,69 @@ struct ScheduleDashboardView: View {
             Text("时间线")
                 .font(.system(size: 15, weight: .semibold))
 
-            ForEach([9, 11, 14, 16, 19], id: \.self) { hour in
+            let cal = Calendar.current
+            let hours = timelineHours
+
+            ForEach(hours, id: \.self) { hour in
+                let hourEvents = viewModel.todayEvents.filter {
+                    cal.component(.hour, from: $0.startAt) == hour && $0.status != .cancelled
+                }
+
                 HStack(spacing: 12) {
                     Text(String(format: "%02d:00", hour))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                         .frame(width: 48, alignment: .leading)
 
-                    RoundedRectangle(cornerRadius: 8)
+                    if hourEvents.isEmpty {
+                        RoundedRectangle(cornerRadius: 8)
                             .fill(AppSurfaceTokens.cardBackgroundSoft)
-                        .frame(height: 36)
-                        .overlay(
-                            Text("双击添加任务")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        )
-                        .onTapGesture(count: 2) {
-                            viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
+                            .frame(height: 36)
+                            .overlay(
+                                Text("双击添加任务")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            )
+                            .onTapGesture(count: 2) {
+                                viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
+                            }
+                    } else {
+                        VStack(spacing: 4) {
+                            ForEach(hourEvents) { event in
+                                HStack {
+                                    Circle()
+                                        .fill(viewModel.categoryColor(for: event.categoryId))
+                                        .frame(width: 6, height: 6)
+                                    Text(event.title)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .lineLimit(1)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(viewModel.categoryColor(for: event.categoryId).opacity(0.12))
+                                )
+                            }
                         }
+                    }
                 }
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private var timelineHours: [Int] {
+        let cal = Calendar.current
+        let eventHours = viewModel.todayEvents
+            .filter { $0.status != .cancelled }
+            .map { cal.component(.hour, from: $0.startAt) }
+        let uniqueHours = Set(eventHours)
+        let defaultHours: Set<Int> = [9, 12, 15, 18]
+        let allHours = uniqueHours.union(defaultHours)
+        return allHours.sorted()
     }
 
     private var nextEventCard: some View {
@@ -412,21 +452,47 @@ struct ScheduleDashboardView: View {
             Text("月视图")
                 .font(.system(size: 15, weight: .semibold))
 
-            let days = Array(1...30)
+            let cal = Calendar.current
+            let monthInterval = cal.dateInterval(of: .month, for: viewModel.selectedDate)!
+            let daysInMonth = cal.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day!
+            let firstWeekday = cal.component(.weekday, from: monthInterval.start)
+            let leadingBlanks = (firstWeekday - cal.firstWeekday + 7) % 7
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
-                ForEach(days, id: \.self) { day in
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(day % 5 == 0 ? AppSurfaceTokens.accentPurple.opacity(0.85) : AppSurfaceTokens.cardBackgroundSoft)
-                        .frame(height: 42)
-                        .overlay(
-                            Text("\(day)")
-                                .font(.system(size: 12, weight: .semibold))
-                        )
+                ForEach(0..<(leadingBlanks + daysInMonth), id: \.self) { index in
+                    if index < leadingBlanks {
+                        Color.clear.frame(height: 42)
+                    } else {
+                        let day = index - leadingBlanks + 1
+                        let date = cal.date(byAdding: .day, value: day - 1, to: monthInterval.start)!
+                        let isSelected = cal.isDate(date, inSameDayAs: viewModel.selectedDate)
+                        let hasEvent = viewModel.hasEvents(on: date)
+                        let isToday = cal.isDateInToday(date)
+
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isSelected ? AppSurfaceTokens.accentPrimary.opacity(0.85) : AppSurfaceTokens.cardBackgroundSoft)
+                            .frame(height: 42)
+                            .overlay(
+                                VStack(spacing: 2) {
+                                    Text("\(day)")
+                                        .font(.system(size: 12, weight: isToday ? .bold : .semibold))
+                                        .foregroundStyle(isSelected ? .white : .primary)
+                                    if hasEvent {
+                                        Circle()
+                                            .fill(isSelected ? .white.opacity(0.8) : AppSurfaceTokens.accentOrange)
+                                            .frame(width: 4, height: 4)
+                                    }
+                                }
+                            )
+                            .onTapGesture {
+                                viewModel.selectDate(date)
+                            }
+                    }
                 }
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var monthEventsCard: some View {
@@ -469,13 +535,13 @@ struct ScheduleDashboardView: View {
         case 0:
             return AppSurfaceTokens.cardBackgroundSoft
         case 1..<25:
-            return AppSurfaceTokens.accentPurple.opacity(0.25)
+            return AppSurfaceTokens.accentPrimary.opacity(0.25)
         case 25..<50:
-            return AppSurfaceTokens.accentPurple.opacity(0.45)
+            return AppSurfaceTokens.accentPrimary.opacity(0.45)
         case 50..<75:
-            return AppSurfaceTokens.accentPurple.opacity(0.7)
+            return AppSurfaceTokens.accentPrimary.opacity(0.7)
         default:
-            return AppSurfaceTokens.accentPurple
+            return AppSurfaceTokens.accentPrimary
         }
     }
 
@@ -528,7 +594,7 @@ private struct ScheduleEventEditorSheet: View {
                 }
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .buttonStyle(.borderedProminent)
-                .tint(AppSurfaceTokens.accentPurple)
+                .tint(AppSurfaceTokens.accentPrimary)
             }
             .padding(20)
             .background(AppSurfaceTokens.secondarySidebarBackground)

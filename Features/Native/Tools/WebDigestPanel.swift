@@ -155,6 +155,14 @@ struct WebDigestPanel: View {
                 Spacer()
 
                 Button {
+                    viewModel.openSavedMarkdown()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
+
+                Button {
                     viewModel.saveMarkdown()
                 } label: {
                     Label("保存为 .md", systemImage: "square.and.arrow.down")
@@ -186,6 +194,7 @@ final class WebDigestViewModel: ObservableObject {
     @Published var statusText = "等待输入 URL"
     @Published var errorMessage: String?
     @Published var isGenerating = false
+    @Published var lastSavedURL: URL?
 
     private let runner: ProcessCommandRunning
 
@@ -199,6 +208,7 @@ final class WebDigestViewModel: ObservableObject {
         statusText = "等待输入 URL"
         errorMessage = nil
         isGenerating = false
+        lastSavedURL = nil
     }
 
     func generateMarkdown() {
@@ -271,11 +281,17 @@ final class WebDigestViewModel: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try markdown.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
                 ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
             } catch {
                 ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
             }
         }
+    }
+
+    func openSavedMarkdown() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 
     private func normalizeURL(_ rawValue: String) -> URL? {

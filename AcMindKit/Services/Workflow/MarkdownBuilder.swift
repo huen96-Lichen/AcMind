@@ -240,10 +240,219 @@ public struct MarkdownBuilder {
     }
 }
 
+// MARK: - TOC Support
+
+extension MarkdownBuilder {
+
+    public func buildTOC(from markdown: String) -> String {
+        let sourceLines = markdown.components(separatedBy: .newlines)
+        var tocEntries: [(level: Int, title: String)] = []
+
+        for line in sourceLines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("#") else { continue }
+
+            var level = 0
+            for char in trimmed {
+                if char == "#" { level += 1 } else { break }
+            }
+            guard level > 0, level <= 6 else { continue }
+
+            let title = trimmed.drop(while: { $0 == "#" })
+                .trimmingCharacters(in: .whitespaces)
+            guard !title.isEmpty else { continue }
+
+            tocEntries.append((level: level, title: title))
+        }
+
+        guard !tocEntries.isEmpty else { return "" }
+
+        var outputLines: [String] = ["## 目录", ""]
+        for entry in tocEntries {
+            let indent = String(repeating: "  ", count: entry.level - 1)
+            let anchor = entry.title.lowercased()
+                .replacingOccurrences(of: " ", with: "-")
+                .replacingOccurrences(of: "[^a-z0-9\\p{Han}\\-]", with: "", options: .regularExpression)
+            outputLines.append("\(indent)- [\(entry.title)](#\(anchor))")
+        }
+
+        return outputLines.joined(separator: "\n")
+    }
+}
+
+// MARK: - Code Block Enhancement
+
+extension MarkdownBuilder {
+
+    public func enhanceCodeBlocks(in markdown: String) -> String {
+        let pattern = "```\\s*\\n([\\s\\S]*?)```"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return markdown
+        }
+
+        let nsString = markdown as NSString
+        let results = regex.matches(in: markdown, range: NSRange(location: 0, length: nsString.length))
+
+        var enhanced = markdown
+        for result in results.reversed() {
+            let codeBlock = nsString.substring(with: result.range)
+            let codeContent = codeBlock
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let language = detectLanguage(codeContent)
+            let enhancedBlock = "```\(language)\n\(codeContent)\n```"
+            enhanced = (enhanced as NSString).replacingCharacters(in: result.range, with: enhancedBlock)
+        }
+
+        return enhanced
+    }
+
+    private func detectLanguage(_ code: String) -> String {
+        let patterns: [(String, String)] = [
+            ("func ", "swift"),
+            ("import ", "swift"),
+            ("class ", "swift"),
+            ("struct ", "swift"),
+            ("def ", "python"),
+            ("import ", "python"),
+            ("from ", "python"),
+            ("function ", "javascript"),
+            ("const ", "javascript"),
+            ("let ", "javascript"),
+            ("var ", "javascript"),
+            ("console.log", "javascript"),
+            ("public class", "java"),
+            ("public static", "java"),
+            ("fn ", "rust"),
+            ("let mut", "rust"),
+            ("use ", "rust"),
+            ("package ", "go"),
+            ("func ", "go"),
+            ("fmt.", "go"),
+            ("SELECT ", "sql"),
+            ("INSERT ", "sql"),
+            ("UPDATE ", "sql"),
+            ("DELETE ", "sql"),
+            ("CREATE TABLE", "sql"),
+            ("<html", "html"),
+            ("<div", "html"),
+            ("<span", "html"),
+            (".class ", "css"),
+            ("#id ", "css"),
+            ("@media", "css"),
+            ("#!/bin/bash", "bash"),
+            ("#!/bin/sh", "bash"),
+            ("echo ", "bash"),
+        ]
+
+        let lowered = code.lowercased()
+        for (pattern, lang) in patterns {
+            if lowered.contains(pattern.lowercased()) {
+                return lang
+            }
+        }
+        return ""
+    }
+}
+
+// MARK: - Template System
+
+public struct MarkdownTemplate: Codable, Sendable, Identifiable, Equatable {
+    public let id: String
+    public let name: String
+    public let description: String?
+    public let contentPattern: String
+    public let frontmatterDefaults: [String: String]
+
+    public init(
+        id: String = UUID().uuidString,
+        name: String,
+        description: String? = nil,
+        contentPattern: String,
+        frontmatterDefaults: [String: String] = [:]
+    ) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.contentPattern = contentPattern
+        self.frontmatterDefaults = frontmatterDefaults
+    }
+}
+
+extension MarkdownBuilder {
+
+    private static let builtInTemplates: [MarkdownTemplate] = [
+        MarkdownTemplate(
+            id: "default",
+            name: "默认笔记",
+            description: "标准笔记模板",
+            contentPattern: "# {{title}}\n\n{{content}}",
+            frontmatterDefaults: ["type": "note"]
+        ),
+        MarkdownTemplate(
+            id: "meeting",
+            name: "会议记录",
+            description: "会议记录模板",
+            contentPattern: "# {{title}}\n\n## 参会人员\n\n- \n\n## 议程\n\n1. \n\n## 决议\n\n- \n\n## 待办\n\n- [ ] ",
+            frontmatterDefaults: ["type": "meeting", "status": "draft"]
+        ),
+        MarkdownTemplate(
+            id: "research",
+            name: "研究笔记",
+            description: "研究笔记模板",
+            contentPattern: "# {{title}}\n\n## 摘要\n\n{{summary}}\n\n## 关键发现\n\n- \n\n## 参考资料\n\n- ",
+            frontmatterDefaults: ["type": "research"]
+        ),
+        MarkdownTemplate(
+            id: "daily",
+            name: "每日记录",
+            description: "每日记录模板",
+            contentPattern: "# {{title}}\n\n## 今日完成\n\n- \n\n## 明日计划\n\n- \n\n## 备注\n\n",
+            frontmatterDefaults: ["type": "daily"]
+        )
+    ]
+
+    public func listTemplates() -> [MarkdownTemplate] {
+        Self.builtInTemplates
+    }
+
+    public func applyTemplate(_ template: MarkdownTemplate, to note: DistilledNote) -> String {
+        var content = template.contentPattern
+
+        content = content.replacingOccurrences(of: "{{title}}", with: note.title ?? "未命名")
+        content = content.replacingOccurrences(of: "{{summary}}", with: note.summary ?? "")
+        content = content.replacingOccurrences(of: "{{content}}", with: note.contentMarkdown ?? "")
+        content = content.replacingOccurrences(of: "{{category}}", with: note.category ?? "")
+        content = content.replacingOccurrences(of: "{{tags}}", with: note.tags.joined(separator: ", "))
+        content = content.replacingOccurrences(of: "{{date}}", with: formatDate(note.createdAt))
+
+        var frontmatter = template.frontmatterDefaults
+        frontmatter["title"] = note.title ?? ""
+        frontmatter["created"] = ISO8601DateFormatter().string(from: note.createdAt)
+        if !note.tags.isEmpty {
+            frontmatter["tags"] = note.tags.joined(separator: ", ")
+        }
+
+        var lines = ["---"]
+        for (key, value) in frontmatter.sorted(by: { $0.key < $1.key }) {
+            if value.contains(":") || value.contains("#") || value.contains("\"") {
+                lines.append("\(key): \"\(value.replacingOccurrences(of: "\"", with: "\\\""))\"")
+            } else {
+                lines.append("\(key): \(value)")
+            }
+        }
+        lines.append("---")
+        lines.append("")
+
+        return lines.joined(separator: "\n") + content
+    }
+}
+
 // MARK: - Preview
 
 extension MarkdownBuilder {
-    
+
     public func preview(note: DistilledNote, maxLength: Int = 500) -> String {
         let fullMarkdown = build(note: note)
         if fullMarkdown.count <= maxLength {

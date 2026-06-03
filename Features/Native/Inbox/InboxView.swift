@@ -2,6 +2,7 @@ import SwiftUI
 import AcMindKit
 
 struct InboxView: View {
+    @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = InboxViewModel()
     @State private var selectedSidebarItem: String? = "all"
     @State private var selectedItem: SourceItem?
@@ -44,7 +45,7 @@ struct InboxView: View {
             case "voice": matchesSource = item.type == .audio
             case "screenshot": matchesSource = item.type == .screenshot
             case "clipboard": matchesSource = item.type == .text
-            case "agent": matchesSource = false
+            case "agent": matchesSource = item.isAgentGenerated
             case "pending": matchesSource = item.status == .pending
             case "refined": matchesSource = item.status == .distilled
             case "archived": matchesSource = item.status == .archived
@@ -72,9 +73,18 @@ struct InboxView: View {
                     .frame(width: 300)
             }
         }
-        .background(AppSurfaceTokens.background)
+        .background(AppVisualBackdrop())
         .onAppear {
-            Task { await viewModel.loadItems() }
+            Task {
+                await viewModel.loadItems()
+                await focusPendingCaptureDetailIfNeeded()
+            }
+        }
+        .onChange(of: appState.pendingInboxDetailSourceItemID) { _, _ in
+            Task {
+                await viewModel.loadItems()
+                await focusPendingCaptureDetailIfNeeded()
+            }
         }
     }
 
@@ -130,20 +140,12 @@ struct InboxView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "tray")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary.opacity(0.3))
-
-            Text("暂无收集内容")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-
-            Text("通过语音、截图、剪贴板或 Agent 生成内容")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        AppSurfaceEmptyState(
+            icon: "tray",
+            title: "暂无收集内容",
+            message: "通过语音、截图、剪贴板或 Agent 生成内容后，会先进入这里等待整理。",
+            tint: AppSurfaceTokens.accentBlue
+        )
     }
 
     private func detailPanel(item: SourceItem) -> some View {
@@ -173,7 +175,7 @@ struct InboxView: View {
                 .padding(16)
             }
         }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 
     private func itemHeader(item: SourceItem) -> some View {
@@ -195,6 +197,11 @@ struct InboxView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.7))
+        )
     }
 
     private func itemContent(item: SourceItem) -> some View {
@@ -207,7 +214,7 @@ struct InboxView: View {
                 .font(.body)
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackground))
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(AppSurfaceTokens.cardBackground))
         }
     }
 
@@ -251,6 +258,21 @@ struct InboxView: View {
             .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackground))
         }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+    }
+
+    @MainActor
+    private func focusPendingCaptureDetailIfNeeded() async {
+        guard let pendingItemID = appState.pendingInboxDetailSourceItemID else { return }
+
+        if let item = viewModel.items.first(where: { $0.id == pendingItemID }) {
+            selectedSidebarItem = "all"
+            selectedItem = item
+            appState.pendingInboxDetailSourceItemID = nil
+        }
     }
 }
 

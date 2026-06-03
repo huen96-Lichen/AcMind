@@ -195,10 +195,12 @@ enum NotchRuntimeSurfaceDispatcher {
         let subtitle: String
         if let transcription = context.lastTranscription?.text, transcription.isEmpty == false {
             subtitle = "最近转写已记录"
+        } else if context.voiceSurfaceState.isActive {
+            subtitle = context.voiceSurfaceState.displaySubtitle ?? "等待输入"
         } else if context.selectedPage == .agent {
             subtitle = "执行中心已展开"
         } else {
-            subtitle = "当前状态 · \(context.status.displayName)"
+            subtitle = "准备接收新的输入"
         }
         return NotchRuntimeSurface(
             kind: .agent,

@@ -8,6 +8,7 @@ public enum SayInputOutputMode: String, Codable, Sendable, CaseIterable, Identif
     case copyToClipboard = "copyToClipboard"
     case autoPaste = "autoPaste"
     case ask = "ask"
+    case translate = "translate"
 
     public var id: String { rawValue }
 
@@ -16,6 +17,7 @@ public enum SayInputOutputMode: String, Codable, Sendable, CaseIterable, Identif
         case .copyToClipboard: return "复制到剪贴板"
         case .autoPaste: return "自动粘贴"
         case .ask: return "询问"
+        case .translate: return "翻译"
         }
     }
 }
@@ -61,6 +63,7 @@ public struct SayInputConfiguration: Sendable, Equatable {
     public var silenceTimeout: TimeInterval
     public var enableSilenceDetection: Bool
     public var preferredLanguage: String
+    public var translationLanguage: String
 
     public init(
         autoPolish: Bool = true,
@@ -74,7 +77,8 @@ public struct SayInputConfiguration: Sendable, Equatable {
         triggerMode: SayInputTriggerMode = .hold,
         silenceTimeout: TimeInterval = 3.0,
         enableSilenceDetection: Bool = false,
-        preferredLanguage: String = "auto"
+        preferredLanguage: String = "auto",
+        translationLanguage: String = "zh"
     ) {
         self.autoPolish = autoPolish
         self.polishMode = polishMode
@@ -88,6 +92,7 @@ public struct SayInputConfiguration: Sendable, Equatable {
         self.silenceTimeout = silenceTimeout
         self.enableSilenceDetection = enableSilenceDetection
         self.preferredLanguage = preferredLanguage
+        self.translationLanguage = translationLanguage
     }
 }
 
@@ -274,7 +279,8 @@ public actor SayInputCoordinator {
     }
 
     public func stopRecording(
-        configuration: SayInputConfiguration
+        configuration: SayInputConfiguration,
+        onPolishChunk: (@Sendable (String) async -> Void)? = nil
     ) async throws -> SayInputOutcome {
         // 停止所有监听服务
         await SilenceDetectionService.shared.stopMonitoring()
@@ -286,7 +292,8 @@ public actor SayInputCoordinator {
         currentConfiguration = configuration
         return try await processCapturedVoice(
             sourceItemId: sourceItemId,
-            configuration: configuration
+            configuration: configuration,
+            onPolishChunk: onPolishChunk
         )
     }
 
@@ -428,7 +435,8 @@ public actor SayInputCoordinator {
 
     public func processCapturedVoice(
         sourceItemId: String,
-        configuration: SayInputConfiguration
+        configuration: SayInputConfiguration,
+        onPolishChunk: (@Sendable (String) async -> Void)? = nil
     ) async throws -> SayInputOutcome {
         let contextTask = ContextCaptureService.shared.captureContextNonBlocking()
         
@@ -454,16 +462,54 @@ public actor SayInputCoordinator {
 
         let polishedText: String
         if configuration.autoPolish, configuration.polishMode != .none {
-            polishedText = try await voiceService.polishTranscript(
-                textWithPunctuation,
-                mode: configuration.polishMode,
-                hotwords: hotwords,
-                customSystemPrompt: customPrompt,
-                contextInfo: contextInfo,
-                language: configuration.preferredLanguage
-            )
+            if let onPolishChunk {
+                let streamedText = StreamedTextBuffer()
+                polishedText = try await voiceService.polishTranscriptStream(
+                    textWithPunctuation,
+                    mode: configuration.polishMode,
+                    hotwords: hotwords,
+                    customSystemPrompt: customPrompt,
+                    contextInfo: contextInfo,
+                    language: configuration.preferredLanguage
+                ) { chunk in
+                    let fullText = await streamedText.append(chunk)
+                    await onPolishChunk(fullText)
+                }
+            } else {
+                polishedText = try await voiceService.polishTranscript(
+                    textWithPunctuation,
+                    mode: configuration.polishMode,
+                    hotwords: hotwords,
+                    customSystemPrompt: customPrompt,
+                    contextInfo: contextInfo,
+                    language: configuration.preferredLanguage
+                )
+            }
         } else {
             polishedText = textWithPunctuation
+        }
+
+        let outputText: String
+        if configuration.outputMode == .translate {
+            if let onPolishChunk {
+                let streamedText = StreamedTextBuffer()
+                outputText = try await voiceService.translateTranscriptStream(
+                    polishedText,
+                    targetLanguage: configuration.translationLanguage,
+                    contextInfo: contextInfo
+                ) { chunk in
+                    let fullText = await streamedText.append(chunk)
+                    await onPolishChunk(fullText)
+                }
+            } else {
+                outputText = try await voiceService.translateTranscript(
+                    polishedText,
+                    targetLanguage: configuration.translationLanguage,
+                    contextInfo: contextInfo
+                )
+            }
+        } else {
+            outputText = polishedText
         }
 
         let snapshot = await textInjector.getSelectionSnapshot()
@@ -473,16 +519,16 @@ public actor SayInputCoordinator {
         if snapshot.isFocusedTarget {
             do {
                 if snapshot.canReplaceSelection {
-                    try textInjector.replaceSelection(text: polishedText)
+                    try textInjector.replaceSelection(text: outputText)
                 } else {
-                    try textInjector.insert(text: polishedText)
+                    try textInjector.insert(text: outputText)
                 }
                 deliveryState = .insertedIntoFocusedField
-                lastClipboardText = polishedText
+                lastClipboardText = outputText
                 lastClipboardDeliveryAt = now
             } catch {
                 let deliveredText = mergeWithContinuationIfNeeded(
-                    polishedText,
+                    outputText,
                     now: now,
                     allowContinuation: configuration.allowContinuation,
                     continuationWindow: configuration.continuationWindow
@@ -494,7 +540,7 @@ public actor SayInputCoordinator {
             }
         } else {
             let deliveredText = mergeWithContinuationIfNeeded(
-                polishedText,
+                outputText,
                 now: now,
                 allowContinuation: configuration.allowContinuation,
                 continuationWindow: configuration.continuationWindow
@@ -503,7 +549,7 @@ public actor SayInputCoordinator {
             case .ask:
                 clipboard.setString(deliveredText)
                 deliveryState = .awaitingUserChoice
-            case .copyToClipboard, .autoPaste:
+            case .copyToClipboard, .autoPaste, .translate:
                 clipboard.setString(deliveredText)
                 deliveryState = configuration.saveToInbox ? .copiedAndSavedToInbox : .copiedToClipboard
             }
@@ -514,8 +560,8 @@ public actor SayInputCoordinator {
         if configuration.saveToInbox {
             var updated = sourceItem
             updated.transcript = textWithPunctuation
-            updated.polishedTranscript = polishedText
-            updated.previewText = polishedText.prefix(200).description
+            updated.polishedTranscript = outputText
+            updated.previewText = outputText.prefix(200).description
             updated.status = .parsed
             try await sourceStore.updateSourceItem(updated)
         }
@@ -523,7 +569,7 @@ public actor SayInputCoordinator {
         return SayInputOutcome(
             sourceItemId: sourceItemId,
             rawText: textWithPunctuation,
-            polishedText: polishedText,
+            polishedText: outputText,
             deliveryState: deliveryState,
             focusedTarget: snapshot.isFocusedTarget
         )
@@ -593,5 +639,14 @@ public actor SayInputCoordinator {
         }
 
         return lastClipboardText + "\n" + text
+    }
+}
+
+private actor StreamedTextBuffer {
+    private var text = ""
+
+    func append(_ chunk: String) -> String {
+        text += chunk
+        return text
     }
 }

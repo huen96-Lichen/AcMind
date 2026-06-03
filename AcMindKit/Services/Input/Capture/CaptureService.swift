@@ -21,17 +21,20 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     private let storage: StorageServiceProtocol
     private let assetStore: AssetStore
     private var voiceService: (any VoiceServiceProtocol)?
+    private let screenshotRedactor: any ScreenshotRedacting
     
     // MARK: - Initialization
     
     public init(
         storage: StorageServiceProtocol? = nil,
         assetStore: AssetStore? = nil,
-        voiceService: (any VoiceServiceProtocol)? = nil
+        voiceService: (any VoiceServiceProtocol)? = nil,
+        screenshotRedactor: (any ScreenshotRedacting)? = nil
     ) {
         self.storage = storage ?? StorageService()
         self.assetStore = assetStore ?? AssetStore()
         self.voiceService = voiceService
+        self.screenshotRedactor = screenshotRedactor ?? AutoRedactorService.shared
     }
     
     /// 设置语音服务（延迟注入）
@@ -42,6 +45,11 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     // MARK: - Screenshot Capture
     
     public func captureScreenshot(mode: ScreenshotMode) async throws -> CaptureResult {
+        let preferences = SettingsLocalPreferences.loadOrDefault()
+        guard preferences.captureScreenshotEnabled else {
+            throw CaptureError.serviceUnavailable("截图捕获已在设置中关闭")
+        }
+
         // 请求屏幕录制权限
         let hasPermission = await requestScreenCapturePermission()
         guard hasPermission else {
@@ -57,10 +65,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         case .window:
             image = try await captureWindow()
         }
+
+        let preparedImage = await prepareCapturedScreenshot(image, preferences: preferences)
         
         // 保存图片到 AssetStore
         let assetFile = try await assetStore.saveImage(
-            image,
+            preparedImage,
             fileName: "screenshot_\(Date().timeIntervalSince1970).png"
         )
         
@@ -86,6 +96,34 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             }
         }
         
+        return CaptureResult(sourceItem: sourceItem, assetFiles: [assetFile])
+    }
+
+    public func captureScrollingScreenshot() async throws -> CaptureResult {
+        let preferences = SettingsLocalPreferences.loadOrDefault()
+        guard preferences.captureScreenshotEnabled else {
+            throw CaptureError.serviceUnavailable("截图捕获已在设置中关闭")
+        }
+
+        let image = try await captureVisibleScrollScreenshot()
+        let preparedImage = await prepareCapturedScreenshot(image, preferences: preferences)
+
+        let assetFile = try await assetStore.saveImage(
+            preparedImage,
+            fileName: "scrollshot_\(Date().timeIntervalSince1970).png"
+        )
+
+        let sourceItem = SourceItem(
+            type: .screenshot,
+            source: .screenshot,
+            status: .captured,
+            title: "滚动截图 \(formatDate())",
+            previewText: "滚动截图 \(formatDate())",
+            assetFileIds: [assetFile.id]
+        )
+
+        try await storage.insertSourceItem(sourceItem)
+
         return CaptureResult(sourceItem: sourceItem, assetFiles: [assetFile])
     }
     
@@ -155,6 +193,36 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             cgImage: cgImage,
             size: NSSize(width: cgImage.width, height: cgImage.height)
         )
+    }
+
+    func prepareCapturedScreenshot(_ image: NSImage, preferences: SettingsLocalPreferences) async -> NSImage {
+        guard preferences.captureAutoRedactionEnabled else {
+            return image
+        }
+
+        return await screenshotRedactor.redact(image, mode: preferences.captureCensorMode)
+    }
+
+    private func captureVisibleScrollScreenshot() async throws -> NSImage {
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            throw CaptureError.captureFailed("无法获取屏幕")
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let previousSessionDone = ScrollCaptureService.shared.onSessionDone
+            ScrollCaptureService.shared.onSessionDone = { image in
+                ScrollCaptureService.shared.onSessionDone = previousSessionDone
+                if let image {
+                    continuation.resume(returning: image)
+                } else {
+                    continuation.resume(throwing: CaptureError.captureFailed("滚动截图失败"))
+                }
+            }
+
+            Task { @MainActor in
+                await ScrollCaptureService.shared.startCapture(captureRect: screen.visibleFrame, screen: screen)
+            }
+        }
     }
 
     private func captureScreenshotImage(
@@ -418,29 +486,30 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         
         // 开始录音
         try await voiceService.startRecording()
-        
-        // 等待录音完成（这里简化处理，实际应该通过 UI 触发停止）
-        // 调用者应该先调用 startRecording，然后稍后调用 stopRecording
-        // 这里我们提供一个便捷方法：录音 5 秒后自动停止
-        try await Task.sleep(nanoseconds: 5_000_000_000)
-        
-        // 停止录音并获取 SourceItem ID
-        let sourceItemId = try await voiceService.stopRecording()
-        
-        // 获取完整的 SourceItem
-        guard let sourceItem = try await storage.getSourceItem(id: sourceItemId) else {
-            throw CaptureError.captureFailed("语音记录保存失败")
-        }
-        
-        // 获取关联的 AssetFile
-        var assetFiles: [AssetFile] = []
-        if let assetId = sourceItem.assetFileIds.first {
-            if let asset = try? await assetStore.getAsset(id: assetId) {
+
+        do {
+            await waitForVoiceFinishRequest()
+
+            // 停止录音并获取 SourceItem ID
+            let sourceItemId = try await voiceService.stopRecording()
+
+            // 获取完整的 SourceItem
+            guard let sourceItem = try await storage.getSourceItem(id: sourceItemId) else {
+                throw CaptureError.captureFailed("语音记录保存失败")
+            }
+
+            // 获取关联的 AssetFile
+            var assetFiles: [AssetFile] = []
+            if let assetId = sourceItem.assetFileIds.first,
+               let asset = try? await assetStore.getAsset(id: assetId) {
                 assetFiles.append(asset)
             }
+
+            return CaptureResult(sourceItem: sourceItem, assetFiles: assetFiles)
+        } catch {
+            _ = try? await voiceService.stopRecording()
+            throw error
         }
-        
-        return CaptureResult(sourceItem: sourceItem, assetFiles: assetFiles)
     }
     
     /// 从现有音频文件进行语音识别采集
@@ -552,6 +621,12 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         return formatter.string(from: Date())
+    }
+
+    private func waitForVoiceFinishRequest() async {
+        for await _ in NotificationCenter.default.notifications(named: .companionVoiceFinishRequested) {
+            break
+        }
     }
 }
 

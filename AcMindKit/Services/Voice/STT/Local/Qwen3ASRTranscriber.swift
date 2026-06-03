@@ -17,7 +17,7 @@ import Foundation
 /// 免费: 完全免费，Qwen3-ASR 开源模型
 /// 来源: ModelScope (zengshuishui/Qwen3-ASR-onnx)
 ///
-/// 注意: Qwen3-ASR 本身不支持流式，此处通过分段转写模拟流式效果
+/// 注意: Qwen3-ASR 不支持真正的实时流式，这里用起始状态 + 最终结果的分段行为呈现。
 public final class Qwen3ASRTranscriber: Transcriber, RecordingPrewarmingTranscriber {
 
     // MARK: - Properties
@@ -51,16 +51,14 @@ public final class Qwen3ASRTranscriber: Transcriber, RecordingPrewarmingTranscri
         try await decoder.decode(audioFile: audioFile)
     }
 
-    /// 模拟流式转写
-    /// Qwen3-ASR 不支持真正的流式，此处先发送 "正在识别..." 状态，
-    /// 转写完成后一次性返回结果。
-    /// 如需真正的流式体验，建议使用 WhisperKit 或云端 ASR。
+    /// 分段式转写
+    /// Qwen3-ASR 不支持真正的实时流式。
+    /// 这里先发送起始状态，再在识别结束后发送最终结果，避免让 UI 误以为是连续实时输出。
     public func transcribeStream(
         audioFile: AudioFile,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
     ) async throws -> String {
-        // 发送开始状态
-        await onUpdate(TranscriptionSnapshot(text: "⏳ 正在识别...", isFinal: false))
+        await onUpdate(TranscriptionSnapshot(text: "⏳ 正在分段识别...", isFinal: false))
 
         // 执行转写
         let text = try await decoder.decode(audioFile: audioFile)

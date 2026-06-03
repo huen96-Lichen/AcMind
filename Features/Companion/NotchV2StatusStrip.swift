@@ -21,15 +21,15 @@ struct NotchV2LightStatusStrip: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(NotchV2DesignTokens.cardBackgroundDeep.opacity(0.92))
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(NotchV2DesignTokens.cardBackgroundDeep.opacity(0.80))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(NotchV2DesignTokens.separator.opacity(0.55), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.36), lineWidth: 1)
         )
     }
 
@@ -48,12 +48,12 @@ struct NotchV2LightStatusStrip: View {
     private func statusChip(_ item: NotchV2LightStatusItem) -> some View {
         HStack(spacing: 5) {
             Image(systemName: item.icon)
-                .font(.system(size: 9, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(item.accent)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(item.title)
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(NotchV2DesignTokens.Typography.caption)
                     .foregroundStyle(NotchV2DesignTokens.primaryText)
                     .lineLimit(1)
                 Text(item.detail)
@@ -64,14 +64,14 @@ struct NotchV2LightStatusStrip: View {
             }
         }
         .padding(.horizontal, 7)
-        .padding(.vertical, 4)
+        .padding(.vertical, 3)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(item.highlighted ? item.accent.opacity(0.14) : NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(item.highlighted ? item.accent.opacity(0.12) : NotchV2DesignTokens.innerCardBackground.opacity(0.82))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(item.highlighted ? item.accent.opacity(0.22) : NotchV2DesignTokens.separator.opacity(0.25), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(item.highlighted ? item.accent.opacity(0.18) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
         )
     }
 }
@@ -232,4 +232,65 @@ extension NotchV2ViewModel {
         }
     }
 
+}
+
+// MARK: - System Rail
+
+struct NotchV2SystemRail: View {
+    @ObservedObject var viewModel: NotchV2ViewModel
+
+    var body: some View {
+        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
+            NotchV2Card(title: "本机状态", symbol: "desktopcomputer", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+                VStack(alignment: .leading, spacing: 6) {
+                    statusRow(title: "电池", value: viewModel.batteryStateText, accent: viewModel.batteryAccent)
+                    statusRow(title: "麦克风", value: viewModel.microphonePermissionStatus.displayName, accent: permissionAccent(for: viewModel.microphonePermissionStatus))
+                    statusRow(title: "录屏", value: viewModel.screenRecordingPermissionStatus.displayName, accent: permissionAccent(for: viewModel.screenRecordingPermissionStatus))
+                    statusRow(title: "辅助功能", value: viewModel.accessibilityPermissionStatus.displayName, accent: permissionAccent(for: viewModel.accessibilityPermissionStatus))
+                }
+            }
+        }
+    }
+
+    private func statusRow(title: String, value: String, accent: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(accent)
+                .frame(width: 5, height: 5)
+
+            Text(title)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            Text(value)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+        )
+    }
+
+    private func permissionAccent(for status: AppPermissionStatus) -> Color {
+        switch status {
+        case .authorized:
+            return NotchV2DesignTokens.accentBlue
+        case .denied, .restricted, .needsSystemSettings:
+            return .orange
+        case .failed:
+            return .red
+        case .requesting:
+            return .blue
+        case .notDetermined, .unknown:
+            return NotchV2DesignTokens.secondaryText
+        }
+    }
 }

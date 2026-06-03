@@ -16,7 +16,9 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
     private var usageHistory: [ModelUsage] = []
     private var currentSessionUsages: [ModelUsage] = []
     private var pricingConfig: [String: PricingConfig]
-    private let strategy: ModelRoutingStrategy
+    private var strategy: ModelRoutingStrategy
+    private var routingHistory: [RoutingRecord] = []
+    private var configurableCandidates: [ModelRoute.TaskType: [RouteCandidate]] = [:]
 
     private struct RouteCandidate {
         let providerId: String
@@ -43,6 +45,16 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
             let tokens = estimateTokens(inputLength: request.inputLength, taskType: taskType)
             estimatedCost = pricing.calculateCost(promptTokens: tokens, completionTokens: tokens / 2).usd
         }
+
+        let record = RoutingRecord(
+            taskType: taskType,
+            providerId: providerId,
+            modelId: modelId,
+            strategy: strategy,
+            reason: reason,
+            estimatedCost: estimatedCost
+        )
+        routingHistory.append(record)
 
         return ModelRoute(
             taskType: taskType,
@@ -86,6 +98,38 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
 
     public func updatePricing(_ config: PricingConfig) {
         pricingConfig["\(config.providerId)_\(config.modelId)"] = config
+    }
+
+    // MARK: - Routing History
+
+    public func getRoutingHistory(limit: Int = 50) async -> [RoutingRecord] {
+        Array(routingHistory.suffix(limit))
+    }
+
+    public func getRoutingHistory(for taskType: ModelRoute.TaskType) async -> [RoutingRecord] {
+        routingHistory.filter { $0.taskType == taskType }
+    }
+
+    // MARK: - Strategy Management
+
+    public func updateStrategy(_ newStrategy: ModelRoutingStrategy) {
+        strategy = newStrategy
+    }
+
+    public func getCurrentStrategy() async -> ModelRoutingStrategy {
+        strategy
+    }
+
+    // MARK: - Configurable Candidates
+
+    public func setCandidates(_ candidates: [(providerId: String, modelId: String, tier: ProviderTier, qualityScore: Int)], for taskType: ModelRoute.TaskType) {
+        configurableCandidates[taskType] = candidates.map {
+            RouteCandidate(providerId: $0.providerId, modelId: $0.modelId, tier: $0.tier, qualityScore: $0.qualityScore)
+        }
+    }
+
+    public func clearCandidates(for taskType: ModelRoute.TaskType) {
+        configurableCandidates.removeValue(forKey: taskType)
     }
 
     // MARK: - Private Methods
@@ -196,6 +240,10 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
     }
 
     private func routeCandidates(for taskType: ModelRoute.TaskType) -> [RouteCandidate] {
+        if let custom = configurableCandidates[taskType], !custom.isEmpty {
+            return custom
+        }
+
         switch taskType {
         case .simpleChat:
             return [
@@ -308,6 +356,39 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
             failedRequests: failedCount,
             avgLatencyMs: avgLatency
         )
+    }
+}
+
+// MARK: - Routing Record
+
+public struct RoutingRecord: Codable, Sendable, Identifiable, Equatable {
+    public let id: String
+    public let taskType: ModelRoute.TaskType
+    public let providerId: String
+    public let modelId: String
+    public let strategy: ModelRoutingStrategy
+    public let reason: String
+    public let estimatedCost: Double?
+    public let timestamp: Date
+
+    public init(
+        id: String = UUID().uuidString,
+        taskType: ModelRoute.TaskType,
+        providerId: String,
+        modelId: String,
+        strategy: ModelRoutingStrategy,
+        reason: String,
+        estimatedCost: Double? = nil,
+        timestamp: Date = Date()
+    ) {
+        self.id = id
+        self.taskType = taskType
+        self.providerId = providerId
+        self.modelId = modelId
+        self.strategy = strategy
+        self.reason = reason
+        self.estimatedCost = estimatedCost
+        self.timestamp = timestamp
     }
 }
 

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - JSON Formatter Panel
 
@@ -142,6 +143,22 @@ struct JSONFormatterPanel: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.saveOutput()
+                } label: {
+                    Label("保存结果", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.openSavedOutput()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             TextEditor(text: $viewModel.outputText)
@@ -167,6 +184,7 @@ final class JSONFormatterViewModel: ObservableObject {
     @Published var statusText = "等待输入 JSON"
     @Published var errorMessage: String?
     @Published var isWorking = false
+    @Published var lastSavedURL: URL?
 
     func clear() {
         inputText = ""
@@ -174,6 +192,7 @@ final class JSONFormatterViewModel: ObservableObject {
         statusText = "等待输入 JSON"
         errorMessage = nil
         isWorking = false
+        lastSavedURL = nil
     }
 
     func loadFromClipboard() {
@@ -201,6 +220,7 @@ final class JSONFormatterViewModel: ObservableObject {
         do {
             outputText = try JSONFormattingSupport.format(trimmed, pretty: pretty)
             statusText = pretty ? "JSON 已美化" : "JSON 已压缩"
+            lastSavedURL = nil
             ToastManager.shared.show(.success, pretty ? "JSON 已美化" : "JSON 已压缩")
         } catch {
             outputText = ""
@@ -221,6 +241,30 @@ final class JSONFormatterViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
         ToastManager.shared.show(.success, "结果已复制")
+    }
+
+    func saveOutput() {
+        guard outputText.isEmpty == false else { return }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json, .plainText]
+        panel.nameFieldStringValue = "formatted.json"
+        panel.canCreateDirectories = true
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try outputText.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
+                ToastManager.shared.show(.success, "结果已保存")
+            } catch {
+                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }
 
@@ -394,6 +438,22 @@ struct Base64CodecPanel: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.saveOutput()
+                } label: {
+                    Label("保存结果", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.openSavedOutput()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             TextEditor(text: $viewModel.outputText)
@@ -445,6 +505,7 @@ final class Base64CodecViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var mode: Base64CodecMode = .encode
+    @Published var lastSavedURL: URL?
 
     func clear() {
         inputText = ""
@@ -453,6 +514,7 @@ final class Base64CodecViewModel: ObservableObject {
         errorMessage = nil
         isWorking = false
         mode = .encode
+        lastSavedURL = nil
     }
 
     func loadFromClipboard() {
@@ -476,6 +538,7 @@ final class Base64CodecViewModel: ObservableObject {
 
         isWorking = true
         errorMessage = nil
+        lastSavedURL = nil
 
         switch mode {
         case .encode:
@@ -517,6 +580,30 @@ final class Base64CodecViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
         ToastManager.shared.show(.success, "结果已复制")
+    }
+
+    func saveOutput() {
+        guard outputText.isEmpty == false else { return }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = mode == .encode ? "base64.txt" : "decoded.txt"
+        panel.canCreateDirectories = true
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try outputText.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
+                ToastManager.shared.show(.success, "结果已保存")
+            } catch {
+                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }
 
@@ -678,6 +765,7 @@ final class MarkdownCleanerViewModel: ObservableObject {
     @Published var statusText = "等待输入 Markdown"
     @Published var errorMessage: String?
     @Published var isWorking = false
+    @Published var lastSavedURL: URL?
 
     func clear() {
         inputText = ""
@@ -685,6 +773,7 @@ final class MarkdownCleanerViewModel: ObservableObject {
         statusText = "等待输入 Markdown"
         errorMessage = nil
         isWorking = false
+        lastSavedURL = nil
     }
 
     func loadFromClipboard() {
@@ -712,6 +801,7 @@ final class MarkdownCleanerViewModel: ObservableObject {
         let result = MarkdownCleaningSupport.clean(trimmed)
         outputText = result.text
         statusText = "已整理 Markdown，清理了 \(result.trimmedTrailingSpaces) 处尾随空格，压缩了 \(result.collapsedBlankLines) 处空行"
+        lastSavedURL = nil
         ToastManager.shared.show(.success, "Markdown 已整理")
 
         isWorking = false
@@ -726,6 +816,30 @@ final class MarkdownCleanerViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
         ToastManager.shared.show(.success, "结果已复制")
+    }
+
+    func saveOutput() {
+        guard outputText.isEmpty == false else { return }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText, .plainText]
+        panel.nameFieldStringValue = "cleaned-markdown.md"
+        panel.canCreateDirectories = true
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try outputText.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
+                ToastManager.shared.show(.success, "结果已保存")
+            } catch {
+                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }
 
@@ -965,6 +1079,30 @@ struct TextComparePanel: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.summaryText.isEmpty)
+
+                Button {
+                    viewModel.copyDiff()
+                } label: {
+                    Label("复制差异", systemImage: "arrow.up.doc")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.diffText.isEmpty)
+
+                Button {
+                    viewModel.saveDiff()
+                } label: {
+                    Label("保存差异", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.diffText.isEmpty)
+
+                Button {
+                    viewModel.openSavedDiff()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             Text(viewModel.summaryText.isEmpty ? "比较完成后会显示摘要" : viewModel.summaryText)
@@ -1002,6 +1140,11 @@ final class TextCompareViewModel: ObservableObject {
     @Published var statusText = "等待输入两段文本"
     @Published var errorMessage: String?
     @Published var isWorking = false
+    @Published var lastSavedURL: URL?
+
+    var diffText: String {
+        TextComparisonSupport.render(diffLines: diffLines)
+    }
 
     func clear() {
         leftText = ""
@@ -1011,6 +1154,7 @@ final class TextCompareViewModel: ObservableObject {
         statusText = "等待输入两段文本"
         errorMessage = nil
         isWorking = false
+        lastSavedURL = nil
     }
 
     func compare() {
@@ -1031,6 +1175,7 @@ final class TextCompareViewModel: ObservableObject {
         diffLines = result.lines
         summaryText = result.summary
         statusText = "比较完成"
+        lastSavedURL = nil
         ToastManager.shared.show(.success, "文本对比已完成")
 
         isWorking = false
@@ -1045,6 +1190,41 @@ final class TextCompareViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(summaryText, forType: .string)
         ToastManager.shared.show(.success, "摘要已复制")
+    }
+
+    func copyDiff() {
+        guard diffLines.isEmpty == false else {
+            ToastManager.shared.show(.warning, "没有可复制的差异")
+            return
+        }
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(diffText, forType: .string)
+        ToastManager.shared.show(.success, "差异已复制")
+    }
+
+    func saveDiff() {
+        guard diffLines.isEmpty == false else { return }
+
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.plainText]
+        savePanel.nameFieldStringValue = "text-diff.txt"
+        savePanel.canCreateDirectories = true
+
+        if savePanel.runModal() == .OK, let url = savePanel.url {
+            do {
+                try diffText.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
+                ToastManager.shared.show(.success, "差异已保存")
+            } catch {
+                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func openSavedDiff() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 
     private func splitLines(_ text: String) -> [String] {
@@ -1175,6 +1355,24 @@ enum TextComparisonSupport {
 
         let summary = "左侧 \(n) 行，右侧 \(m) 行，相同 \(sameCount) 行，新增 \(insertCount) 行，删除 \(deleteCount) 行"
         return TextComparisonResult(lines: lines, summary: summary)
+    }
+
+    static func render(diffLines: [DiffLine]) -> String {
+        diffLines.map { line in
+            let left = line.leftLineNumber.map(String.init) ?? "-"
+            let right = line.rightLineNumber.map(String.init) ?? "-"
+            let marker: String
+            switch line.kind {
+            case .same:
+                marker = " "
+            case .insert:
+                marker = "+"
+            case .delete:
+                marker = "-"
+            }
+            return "[L\(left) R\(right)] \(marker) \(line.text)"
+        }
+        .joined(separator: "\n")
     }
 }
 
@@ -1445,6 +1643,7 @@ final class SRTTFCPXMLViewModel: ObservableObject {
     @Published var statusText = "等待导入 SRT"
     @Published var isLoading = false
     @Published var generatedFCPXML: String = ""
+    @Published var lastSavedURL: URL?
 
     @Published var fps: Int = 25
     @Published var width: Int = 1920
@@ -1592,11 +1791,17 @@ final class SRTTFCPXMLViewModel: ObservableObject {
         if savePanel.runModal() == .OK, let url = savePanel.url {
             do {
                 try generatedFCPXML.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
                 ToastManager.shared.show(.success, "文件已保存")
             } catch {
                 ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
             }
         }
+    }
+
+    func openSavedFile() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 
     func clear() {
@@ -1606,6 +1811,7 @@ final class SRTTFCPXMLViewModel: ObservableObject {
         statusText = "等待导入 SRT"
         isLoading = false
         generatedFCPXML = ""
+        lastSavedURL = nil
     }
 }
 
@@ -1887,6 +2093,14 @@ struct SRTTFCPXMLPanel: View {
             }
             .buttonStyle(.bordered)
             .disabled(!viewModel.hasGenerated)
+
+            Button {
+                viewModel.openSavedFile()
+            } label: {
+                Label("打开文件", systemImage: "arrow.up.right.square")
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.lastSavedURL == nil)
 
             Spacer()
 

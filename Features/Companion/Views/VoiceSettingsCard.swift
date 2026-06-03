@@ -11,7 +11,7 @@ struct VoiceSettingsCard: View {
             iconName: "mic.fill",
             iconColor: .purple,
             title: "说入法入口",
-            description: "长按 Fn 唤起，把口语清洗成可直接使用的文稿。",
+            description: "长按 Fn 唤起，把口语清洗或翻译成可直接使用的文稿。",
             isEnabled: isEnabled,
             isGlobalEnabled: isGlobalEnabled,
             toggleEnabled: $isEnabled

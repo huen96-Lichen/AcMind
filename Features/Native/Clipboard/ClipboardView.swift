@@ -33,7 +33,7 @@ struct ClipboardView: View {
                 id: "experimental",
                 title: "实验功能",
                 items: [
-                    SecondarySidebarItem(id: "phoneSync", title: "手机响 / 手机同步", icon: "iphone")
+                    SecondarySidebarItem(id: "phoneSync", title: "手机同步（实验）", icon: "iphone")
                 ]
             )
         ]
@@ -42,7 +42,7 @@ struct ClipboardView: View {
     var body: some View {
         HSplitView {
             SecondarySidebarWithHeader(
-                title: "剪贴板 & 手机响",
+                title: "剪贴板 & 手机同步",
                 subtitle: "\(viewModel.items.count) 条内容",
                 sections: sidebarSections,
                 selectedItem: $selectedSidebarItem

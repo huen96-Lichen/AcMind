@@ -80,7 +80,11 @@ public actor ExportService: ExportServiceProtocol {
         // 保存记录
         exportRecords[record.id] = record
         try? await storage.insertExportRecord(record)
-        
+        if let data = try? JSONEncoder().encode(Array(exportRecords.values)),
+           let json = String(data: data, encoding: .utf8) {
+            try? await storage.setSetting(key: "export_records", value: json)
+        }
+
         return record
     }
     
@@ -135,7 +139,11 @@ public actor ExportService: ExportServiceProtocol {
         
         exportRecords[record.id] = record
         try? await storage.insertExportRecord(record)
-        
+        if let data = try? JSONEncoder().encode(Array(exportRecords.values)),
+           let json = String(data: data, encoding: .utf8) {
+            try? await storage.setSetting(key: "export_records", value: json)
+        }
+
         return record
     }
     
@@ -353,7 +361,16 @@ public actor ExportService: ExportServiceProtocol {
     // MARK: - Records
     
     public func listExportRecords() async throws -> [ExportRecord] {
-        Array(exportRecords.values).sorted { $0.exportedAt > $1.exportedAt }
+        if exportRecords.isEmpty {
+            if let stored = try? await storage.getSetting(key: "export_records"),
+               let data = stored.data(using: .utf8),
+               let records = try? JSONDecoder().decode([ExportRecord].self, from: data) {
+                for record in records {
+                    exportRecords[record.id] = record
+                }
+            }
+        }
+        return Array(exportRecords.values).sorted { $0.exportedAt > $1.exportedAt }
     }
     
     public func getExportRecord(id: String) async throws -> ExportRecord? {

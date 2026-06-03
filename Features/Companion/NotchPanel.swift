@@ -49,6 +49,9 @@ final class NotchPanel: NSPanel {
         self.acceptsMouseMovedEvents = true
         self.becomesKeyOnlyIfNeeded = false
         self.animationBehavior = .utilityWindow
+        self.backgroundColor = .clear
+        self.isOpaque = false
+        self.hasShadow = true
 
         // 关键：不忽略鼠标事件，让窗口接收所有事件
         self.ignoresMouseEvents = false

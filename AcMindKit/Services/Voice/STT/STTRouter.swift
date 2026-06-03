@@ -20,6 +20,7 @@ public final class STTRouter: @unchecked Sendable {
     private var openAITranscriber: Transcriber?
     private var aliCloudTranscriber: Transcriber?
     private var doubaoTranscriber: Transcriber?
+    private var mimoTranscriber: Transcriber?
 
     // Configuration
     private var whisperKitModelName: String = "large-v3-turbo"
@@ -209,6 +210,14 @@ public final class STTRouter: @unchecked Sendable {
             let transcriber = try await createDoubaoTranscriber()
             doubaoTranscriber = transcriber
             return transcriber
+
+        case .mimoASR:
+            if let transcriber = mimoTranscriber {
+                return transcriber
+            }
+            let transcriber = try await createMiMoTranscriber()
+            mimoTranscriber = transcriber
+            return transcriber
             
         default:
             // 兼容路径：Apple Speech
@@ -364,6 +373,13 @@ public final class STTRouter: @unchecked Sendable {
             throw STTError.apiKeyMissing("火山引擎 ASR 凭证未配置")
         }
         return DoubaoTranscriber(appId: appId, token: token)
+    }
+    
+    private func createMiMoTranscriber() async throws -> Transcriber {
+        guard let apiKey = await SecretStore.shared.getAPIKey(for: "mimo") else {
+            throw STTError.apiKeyMissing("MiMo API Key 未配置")
+        }
+        return MiMoTranscriber(apiKey: apiKey)
     }
 }
 

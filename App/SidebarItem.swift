@@ -1,6 +1,8 @@
 import Foundation
 import AcMindKit
 
+public typealias AcMindKeyboardShortcut = KeyboardShortcut
+
 public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     case home = "home"
     case agent = "agent"
@@ -36,7 +38,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "首页"
         case .agent: return "Agent"
         case .inbox: return "收集箱"
-        case .clipboard: return "剪贴板 & 手机响"
+        case .clipboard: return "剪贴板 & 手机同步"
         case .schedule: return "日程"
         case .workbench: return "工具台"
         case .dynamicContinent: return "灵动大陆 & 配置"

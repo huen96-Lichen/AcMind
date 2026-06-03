@@ -362,12 +362,12 @@ struct NoteRow: View {
             // 类型图标
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(AppSurfaceTokens.accentPurple.opacity(0.12))
+                    .fill(AppSurfaceTokens.accentPrimary.opacity(0.12))
                     .frame(width: 40, height: 40)
 
                 Image(systemName: "doc.text")
                     .font(.system(size: 18))
-                    .foregroundStyle(AppSurfaceTokens.accentPurple)
+                    .foregroundStyle(AppSurfaceTokens.accentPrimary)
             }
 
             // 内容

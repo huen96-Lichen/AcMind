@@ -55,6 +55,96 @@ public struct ScheduleEvent: Codable, Identifiable, Equatable, Hashable, Sendabl
         case low
         case medium
         case high
+
+        public var displayName: String {
+            switch self {
+            case .low: return "低"
+            case .medium: return "中"
+            case .high: return "高"
+            }
+        }
+    }
+
+    public var durationMinutes: Int {
+        Calendar.current.dateComponents([.minute], from: startAt, to: endAt).minute ?? 0
+    }
+
+    public func isOn(date: Date) -> Bool {
+        Calendar.current.isDate(startAt, inSameDayAs: date)
+    }
+
+    public func isIn(weekOf date: Date) -> Bool {
+        let cal = Calendar.current
+        guard let weekStart = cal.dateInterval(of: .weekOfYear, for: date)?.start,
+              let eventWeekStart = cal.dateInterval(of: .weekOfYear, for: startAt)?.start else {
+            return false
+        }
+        return cal.isDate(weekStart, inSameDayAs: eventWeekStart)
+    }
+
+    public func isIn(monthOf date: Date) -> Bool {
+        let cal = Calendar.current
+        return cal.component(.year, from: startAt) == cal.component(.year, from: date)
+            && cal.component(.month, from: startAt) == cal.component(.month, from: date)
+    }
+
+    public func isIn(yearOf date: Date) -> Bool {
+        Calendar.current.component(.year, from: startAt) == Calendar.current.component(.year, from: date)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+// MARK: - Schedule Event Filter
+
+public struct ScheduleEventFilter: Sendable, Equatable {
+    public let status: ScheduleEvent.EventStatus?
+    public let categoryId: String?
+    public let priority: ScheduleEvent.EventPriority?
+    public let startDate: Date?
+    public let endDate: Date?
+    public let query: String?
+
+    public init(
+        status: ScheduleEvent.EventStatus? = nil,
+        categoryId: String? = nil,
+        priority: ScheduleEvent.EventPriority? = nil,
+        startDate: Date? = nil,
+        endDate: Date? = nil,
+        query: String? = nil
+    ) {
+        self.status = status
+        self.categoryId = categoryId
+        self.priority = priority
+        self.startDate = startDate
+        self.endDate = endDate
+        self.query = query
+    }
+}
+
+// MARK: - Schedule Stats
+
+public struct ScheduleStats: Sendable, Equatable {
+    public let totalEvents: Int
+    public let todayEvents: Int
+    public let weekEvents: Int
+    public let completedToday: Int
+    public let focusMinutesToday: Int
+
+    public init(
+        totalEvents: Int = 0,
+        todayEvents: Int = 0,
+        weekEvents: Int = 0,
+        completedToday: Int = 0,
+        focusMinutesToday: Int = 0
+    ) {
+        self.totalEvents = totalEvents
+        self.todayEvents = todayEvents
+        self.weekEvents = weekEvents
+        self.completedToday = completedToday
+        self.focusMinutesToday = focusMinutesToday
     }
 }
 
@@ -68,7 +158,14 @@ public final class ScheduleViewModel: ObservableObject {
         self.selectedDate = Date()
         self.events = []
         self.searchText = ""
-        _ = shouldLoadEvents
+        if shouldLoadEvents {
+            loadEvents()
+        }
+    }
+
+    private func loadEvents() {
+        // Events are loaded by the internal ScheduleViewModel in Features/Native/Schedule/ScheduleViewModel.swift
+        // This public model serves as the AcMindKit-level data contract
     }
 
     private var normalizedSearchText: String {

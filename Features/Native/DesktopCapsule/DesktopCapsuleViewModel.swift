@@ -16,9 +16,22 @@ final class DesktopCapsuleViewModel: ObservableObject {
     // MARK: - Settings
 
     @Published private(set) var settings: DesktopCapsuleSettings = .default
+    private var settingsObserver: NSObjectProtocol?
 
     var enabledActions: [CapsuleActionConfig] {
         settings.enabledActions
+    }
+
+    init() {
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: .desktopCapsuleSettingsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.reloadSettingsFromStore()
+            }
+        }
     }
 
     // MARK: - Load/Save Settings
@@ -34,6 +47,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
     func saveSettings() {
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: "AppSettings.desktopCapsule")
+            NotificationCenter.default.post(name: .desktopCapsuleSettingsDidChange, object: nil)
         }
     }
 
@@ -79,6 +93,8 @@ final class DesktopCapsuleViewModel: ObservableObject {
             switch type {
             case .screenshot:
                 await executeScreenshot()
+            case .scrollScreenshot:
+                await executeScrollScreenshot()
             case .voiceNote:
                 await executeVoiceNote()
             case .urlToText:
@@ -129,6 +145,30 @@ final class DesktopCapsuleViewModel: ObservableObject {
         }
     }
 
+    private func executeScrollScreenshot() async {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            print("⚠️ 滚动截图已在设置中关闭")
+            return
+        }
+
+        DesktopCapsulePanel.shared.hide()
+
+        do {
+            let captureService = ServiceContainer.shared.captureService
+            let result = try await captureService.captureScrollingScreenshot()
+            print("滚动截图成功: \(result.sourceItem.id)")
+
+            await MainActor.run {
+                DesktopCapsulePanel.shared.show()
+            }
+        } catch {
+            print("滚动截图失败: \(error)")
+            await MainActor.run {
+                DesktopCapsulePanel.shared.show()
+            }
+        }
+    }
+
     private func executeVoiceNote() async {
         guard SettingsLocalPreferences.isVoiceInputEnabled() else {
             print("⚠️ 说入法输入已在设置中关闭")
@@ -140,31 +180,21 @@ final class DesktopCapsuleViewModel: ObservableObject {
     }
 
     private func executeUrlToText() async {
-        // 显示 URL 输入对话框
-        await MainActor.run {
-            let alert = NSAlert()
-            alert.messageText = "URL转文字稿"
-            alert.informativeText = "请输入网页URL"
+        guard let input = await promptForWebpageURL() else { return }
+        guard let url = normalizeWebpageURL(input) else {
+            print("URL转换失败: 请输入有效的网页 URL")
+            return
+        }
 
-            let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-            textField.placeholderString = "https://..."
-            alert.accessoryView = textField
+        do {
+            let captureService = ServiceContainer.shared.captureService
+            let result = try await captureService.captureFromWebpage(url: url)
+            print("URL转换成功: \(result.sourceItem.id)")
 
-            alert.addButton(withTitle: "转换")
-            alert.addButton(withTitle: "取消")
-
-            let response = alert.runModal()
-            if response == .alertFirstButtonReturn, let url = URL(string: textField.stringValue), textField.stringValue.hasPrefix("http") {
-                Task {
-                    do {
-                        let captureService = ServiceContainer.shared.captureService
-                        let result = try await captureService.captureFromWebpage(url: url)
-                        print("URL转换成功: \(result.sourceItem.id)")
-                    } catch {
-                        print("URL转换失败: \(error)")
-                    }
-                }
-            }
+            settings.lastWebpageURL = url
+            saveSettings()
+        } catch {
+            print("URL转换失败: \(error)")
         }
     }
 
@@ -264,4 +294,68 @@ final class DesktopCapsuleViewModel: ObservableObject {
         }
         saveSettings()
     }
+
+    private func reloadSettingsFromStore() {
+        let wasExpanded = isExpanded
+        loadSettings()
+
+        guard wasExpanded else { return }
+        let width = calculateExpandedWidth()
+        DesktopCapsulePanel.shared.resizeToExpanded(width: width)
+    }
+
+    private func promptForWebpageURL() async -> String? {
+        await MainActor.run {
+            let alert = NSAlert()
+            alert.messageText = "URL转文字稿"
+            alert.informativeText = "请输入网页URL"
+
+            let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            textField.stringValue = preferredWebpageInputText()
+            textField.placeholderString = "https://..."
+            alert.accessoryView = textField
+
+            alert.addButton(withTitle: "转换")
+            alert.addButton(withTitle: "取消")
+
+            let response = alert.runModal()
+            guard response == .alertFirstButtonReturn else { return nil }
+            let value = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            return value.isEmpty ? nil : value
+        }
+    }
+
+    private func preferredWebpageInputText() -> String {
+        if let clipboardValue = clipboardWebpageInputText() {
+            return clipboardValue
+        }
+
+        return settings.lastWebpageURL?.absoluteString ?? ""
+    }
+
+    private func clipboardWebpageInputText() -> String? {
+        guard let rawValue = NSPasteboard.general.string(forType: .string) else {
+            return nil
+        }
+
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return nil }
+        return normalizeWebpageURL(trimmed) != nil ? trimmed : nil
+    }
+
+    private func normalizeWebpageURL(_ rawValue: String) -> URL? {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return nil }
+
+        if let url = URL(string: trimmed), url.scheme?.hasPrefix("http") == true {
+            return url
+        }
+
+        if let url = URL(string: "https://\(trimmed)"), url.scheme?.hasPrefix("http") == true {
+            return url
+        }
+
+        return nil
+    }
+
 }

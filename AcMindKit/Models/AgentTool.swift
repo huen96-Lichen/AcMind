@@ -104,35 +104,6 @@ public struct AgentToolResult: Codable, Sendable, Identifiable {
     }
 }
 
-/// 工具调用历史
-public struct ToolCallHistory: Codable, Sendable, Identifiable {
-    public let id: String
-    public var requests: [AgentToolRequest]
-    public var results: [AgentToolResult]
-    public var totalDurationMs: Int
-    public var successCount: Int
-    public var failureCount: Int
-    public let timestamp: Date
-
-    public init(
-        id: String = UUID().uuidString,
-        requests: [AgentToolRequest] = [],
-        results: [AgentToolResult] = [],
-        totalDurationMs: Int = 0,
-        successCount: Int = 0,
-        failureCount: Int = 0,
-        timestamp: Date = Date()
-    ) {
-        self.id = id
-        self.requests = requests
-        self.results = results
-        self.totalDurationMs = totalDurationMs
-        self.successCount = successCount
-        self.failureCount = failureCount
-        self.timestamp = timestamp
-    }
-}
-
 /// 可用工具信息
 public struct AgentToolInfo: Codable, Sendable, Identifiable, Hashable {
     public let id: String
@@ -209,6 +180,18 @@ public struct AgentToolInfo: Codable, Sendable, Identifiable, Hashable {
             name: "导出",
             description: "导出内容到 Obsidian/Markdown",
             availableActions: ["toObsidian", "toMarkdown", "toJSON"]
+        ),
+        AgentToolInfo(
+            type: .file,
+            name: "文件操作",
+            description: "查看、重命名、复制、移动、删除和打开文件",
+            availableActions: ["info", "list", "rename", "move", "copy", "delete", "open", "reveal"]
+        ),
+        AgentToolInfo(
+            type: .ai,
+            name: "AI 调用",
+            description: "直接调用 AI 运行时进行对话、查询 Provider 和模型",
+            availableActions: ["chat", "ask", "quickAsk", "providers", "models", "health"]
         ),
     ]
 }

@@ -29,7 +29,7 @@ struct WorkspaceHomeView: View {
             title: "设置",
             subtitle: "进入单层设置页，调整常用偏好。",
             icon: "gearshape.fill",
-            accent: AppSurfaceTokens.accentPurple,
+            accent: AppSurfaceTokens.accentPrimary,
             kind: .settings
         )
     ]
@@ -48,32 +48,7 @@ struct WorkspaceHomeView: View {
     }
 
     private var homeBackground: some View {
-        ZStack {
-            AppSurfaceTokens.background
-
-            LinearGradient(
-                colors: [
-                    AppSurfaceTokens.accentBlue.opacity(0.10),
-                    Color.clear,
-                    AppSurfaceTokens.accentPurple.opacity(0.08)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .blendMode(.plusLighter)
-
-            Circle()
-                .fill(AppSurfaceTokens.accentBlue.opacity(0.08))
-                .frame(width: 420, height: 420)
-                .blur(radius: 70)
-                .offset(x: -260, y: -180)
-
-            Circle()
-                .fill(AppSurfaceTokens.accentPurple.opacity(0.08))
-                .frame(width: 360, height: 360)
-                .blur(radius: 72)
-                .offset(x: 340, y: 180)
-        }
+        Color.white
         .ignoresSafeArea()
     }
 
@@ -87,7 +62,7 @@ struct WorkspaceHomeView: View {
                                 LinearGradient(
                                     colors: [
                                         AppSurfaceTokens.accentBlue.opacity(0.22),
-                                        AppSurfaceTokens.accentPurple.opacity(0.20)
+                                        AppSurfaceTokens.accentPrimary.opacity(0.20)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -124,7 +99,7 @@ struct WorkspaceHomeView: View {
                 HStack(spacing: 10) {
                     homeChip(label: appState.isAppReady ? "已就绪" : "初始化中", accent: appState.isAppReady ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
                     homeChip(label: windowStateText(appState.mainWindowState), accent: AppSurfaceTokens.accentBlue)
-                    homeChip(label: windowStateText(appState.capsuleWindowState), accent: AppSurfaceTokens.accentPurple)
+                    homeChip(label: windowStateText(appState.capsuleWindowState), accent: AppSurfaceTokens.accentPrimary)
                 }
             }
         }

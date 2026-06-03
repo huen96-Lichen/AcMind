@@ -11,7 +11,7 @@ struct NotchV2DashboardLayout<Left: View, Center: View, Right: View>: View {
     init(
         leftColumnWidth: CGFloat = 216,
         rightColumnWidth: CGFloat = 240,
-        topInset: CGFloat = 12,
+        topInset: CGFloat = 8,
         @ViewBuilder leftColumn: () -> Left,
         @ViewBuilder centerColumn: () -> Center,
         @ViewBuilder rightColumn: () -> Right

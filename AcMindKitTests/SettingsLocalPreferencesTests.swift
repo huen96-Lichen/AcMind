@@ -21,6 +21,11 @@ final class SettingsLocalPreferencesTests: XCTestCase {
             updateAvailableNotificationsEnabled: true,
             captureOnlyWhenAppActive: true,
             captureScreenshotEnabled: false,
+            captureAutoRedactionEnabled: false,
+            captureCensorModeRawValue: CensorMode.blur.rawValue,
+            companionCaptureAutoSaveToInbox: false,
+            companionCaptureOpenDetailAfterCapture: true,
+            companionCaptureShowNotification: false,
             voiceInputEnabled: false,
             localFirstMode: false,
             sensitiveContentNotUpload: false,
@@ -108,6 +113,40 @@ final class SettingsLocalPreferencesTests: XCTestCase {
         let deletedKey = await store.getAPIKey(for: "provider-x")
         XCTAssertNil(deletedKey)
     }
+
+    func testUpdateAvailableNotificationsArePurePreferenceOnly() throws {
+        let suiteName = "AcMind.UpdateNotificationTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create test defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var prefs = SettingsLocalPreferences()
+        prefs.updateAvailableNotificationsEnabled = false
+        prefs.save(to: defaults)
+
+        let loaded = SettingsLocalPreferences.load(from: defaults)
+        XCTAssertNotNil(loaded)
+        XCTAssertFalse(loaded!.updateAvailableNotificationsEnabled)
+    }
+
+    func testCaptureAutoRedactionIsPurePreferenceOnly() throws {
+        let suiteName = "AcMind.CaptureAutoRedactionTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create test defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var prefs = SettingsLocalPreferences()
+        prefs.captureAutoRedactionEnabled = false
+        prefs.save(to: defaults)
+
+        let loaded = SettingsLocalPreferences.load(from: defaults)
+        XCTAssertNotNil(loaded)
+        XCTAssertFalse(loaded!.captureAutoRedactionEnabled)
+    }
 }
 
 private final class InMemoryStorageStub: StorageServiceProtocol, @unchecked Sendable {
@@ -154,6 +193,11 @@ private final class InMemoryStorageStub: StorageServiceProtocol, @unchecked Send
     func removeProvider(id: String) async throws {}
 
     func getSetting(key: String) async throws -> String? { settings[key] }
+    func insertScheduleEvent(_ event: ScheduleEvent) async throws {}
+    func updateScheduleEvent(_ event: ScheduleEvent) async throws {}
+    func deleteScheduleEvent(id: String) async throws {}
+    func listScheduleEvents() async throws -> [ScheduleEvent] { [] }
+    func getScheduleEvent(id: String) async throws -> ScheduleEvent? { nil }
     func setSetting(key: String, value: String) async throws { settings[key] = value }
 
     func importFromJSON(_ items: [SourceItem]) async throws -> Int { 0 }
