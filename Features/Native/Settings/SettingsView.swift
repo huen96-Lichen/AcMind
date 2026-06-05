@@ -308,12 +308,12 @@ final class ShortcutCaptureNSView: NSView {
 extension SettingsCategory {
     var description: String {
         switch self {
-        case .general: return "配置 AcMind 的基础偏好设置"
-        case .companion: return "设置随身胶囊、语音和快捷键等全局能力"
-        case .aiModels: return "管理 AI Provider、模型选择和使用统计"
-        case .dataKnowledge: return "配置数据存储、Vault 和知识库"
-        case .captureInput: return "设置剪贴板、截图、说入法等捕获能力"
-        case .security: return "管理系统权限、隐私设置和安全选项"
+        case .general: return "配置 AcMind 的基础偏好"
+        case .companion: return "设置随身胶囊、语音和快捷键"
+        case .aiModels: return "管理提供商、模型选择和使用统计"
+        case .dataKnowledge: return "配置数据存储、库和知识库"
+        case .captureInput: return "设置剪贴板、截图和说入法"
+        case .security: return "管理权限、隐私和安全"
         case .about: return "查看版本信息、帮助和反馈"
         }
     }
@@ -359,7 +359,7 @@ struct GeneralSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SettingsCard(title: "外观", description: "自定义 AcMind 的视觉风格") {
+            SettingsCard(title: "外观", description: "调整 AcMind 的视觉风格") {
                 VStack(alignment: .leading, spacing: 12) {
                     Picker("主题", selection: $viewModel.theme) {
                         ForEach(AppTheme.allCases, id: \.self) { theme in
@@ -370,7 +370,7 @@ struct GeneralSettingsPage: View {
 
                     Picker("语言", selection: $viewModel.language) {
                         Text("简体中文").tag("zh-CN")
-                        Text("English").tag("en")
+                        Text("英文").tag("en")
                     }
                     .pickerStyle(.segmented)
                 }
@@ -389,7 +389,7 @@ struct GeneralSettingsPage: View {
                     Toggle("任务完成时通知", isOn: $viewModel.taskCompletedNotificationsEnabled)
                     SettingsInfoRow(
                         label: "更新可用时通知",
-                        value: "纯偏好，当前未接入自动更新检查"
+                        value: "仅为偏好，更新检查暂未接入"
                     )
                 }
             }
@@ -467,7 +467,7 @@ struct CompanionSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "说入法入口", description: "长按 Fn 唤起、选择输出落点与收集行为") {
+            SettingsCard(title: "说入法入口", description: "长按 Fn 唤起，选择输出落点与收集行为") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("启用说入法", isOn: $viewModel.companionVoiceEnabled)
 
@@ -523,7 +523,7 @@ struct CompanionSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "随身捕获", description: "快速收集内容到 AcMind") {
+            SettingsCard(title: "随身捕获", description: "把内容快速收集到 AcMind") {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("自动剪贴板采集", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("文本快速收集", isOn: $viewModel.companionCaptureTextEnabled)
@@ -558,13 +558,13 @@ struct AIModelsSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SettingsCard(title: "模型路由策略", description: "选择 AcMind 如何为不同任务选择最合适的模型") {
+            SettingsCard(title: "模型路由策略", description: "选择不同任务的默认路由方式") {
                 HStack(spacing: 8) {
                     StrategyButton(title: "自动", subtitle: "智能选择最佳模型", icon: "wand.and.stars", selected: viewModel.modelRoutingStrategy == .automatic) {
                         viewModel.modelRoutingStrategy = .automatic
                         Task { await viewModel.saveSettings() }
                     }
-                    StrategyButton(title: "优先本地", subtitle: "优先使用本地模型", icon: "harddrive", selected: viewModel.modelRoutingStrategy == .localPriority) {
+                    StrategyButton(title: "优先本地", subtitle: "优先使用本地 AI / ASR", icon: "harddrive", selected: viewModel.modelRoutingStrategy == .localPriority) {
                         viewModel.modelRoutingStrategy = .localPriority
                         Task { await viewModel.saveSettings() }
                     }
@@ -587,10 +587,10 @@ struct AIModelsSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "可用模型提供商", description: "启用并配置你使用的 AI 模型提供商") {
+            SettingsCard(title: "可用模型提供商", description: "启用并配置正在使用的提供商") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("AI Providers")
+                        Text("AI 提供商")
                             .font(.subheadline)
                         Spacer()
                         Button("+ 添加提供商") {
@@ -601,7 +601,7 @@ struct AIModelsSettingsPage: View {
                     }
 
                     if viewModel.providers.isEmpty {
-                        Text("暂无 Provider，请添加")
+                        Text("暂无提供商，请添加")
                             .foregroundStyle(Color.secondary)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -625,7 +625,7 @@ struct AIModelsSettingsPage: View {
                         StatBox(label: "收集条目", value: "\(viewModel.usageSummary.sourceItems)", change: "本地存储")
                         StatBox(label: "蒸馏笔记", value: "\(viewModel.usageSummary.distilledNotes)", change: "本地存储")
                         StatBox(label: "导出记录", value: "\(viewModel.usageSummary.exportRecords)", change: "本地存储")
-                        StatBox(label: "Clipboard", value: "\(viewModel.usageSummary.clipboardItems)", change: "本地存储")
+                        StatBox(label: "剪贴板", value: "\(viewModel.usageSummary.clipboardItems)", change: "本地存储")
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -639,8 +639,8 @@ struct AIModelsSettingsPage: View {
                         }
 
                         HStack(spacing: 10) {
-                            StatBox(label: "Providers", value: "\(viewModel.usageSummary.providers)", change: viewModel.usageSummary.providers == 0 ? "未配置" : "已保存")
-                            StatBox(label: "自动采集", value: viewModel.autoCaptureClipboard ? "开" : "关", change: viewModel.autoCaptureClipboard ? "Clipboard" : "Manual")
+                            StatBox(label: "提供商", value: "\(viewModel.usageSummary.providers)", change: viewModel.usageSummary.providers == 0 ? "未配置" : "已保存")
+                            StatBox(label: "自动采集", value: viewModel.autoCaptureClipboard ? "开" : "关", change: viewModel.autoCaptureClipboard ? "剪贴板" : "手动")
                             StatBox(label: "语音润色", value: viewModel.voiceAutoPolish ? "开" : "关", change: viewModel.voicePolishMode.displayName)
                         }
                     }
@@ -704,11 +704,11 @@ struct DataKnowledgeSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "Obsidian Vault", description: "配置 Obsidian Vault 集成") {
+            SettingsCard(title: "Obsidian 库", description: "配置 Obsidian 库集成") {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            TextField("选择 Vault 文件夹", text: $viewModel.vaultPath)
+                            TextField("选择库文件夹", text: $viewModel.vaultPath)
                                 .textFieldStyle(.roundedBorder)
                                 .disabled(true)
 
@@ -730,7 +730,7 @@ struct DataKnowledgeSettingsPage: View {
                         }
                     }
 
-                    TextField("默认 Inbox 文件夹", text: $viewModel.vaultDefaultFolder)
+                    TextField("默认收件箱文件夹", text: $viewModel.vaultDefaultFolder)
                         .textFieldStyle(.roundedBorder)
                 }
             }
@@ -761,10 +761,10 @@ struct DataKnowledgeSettingsPage: View {
                         .pickerStyle(.segmented)
                     }
 
-                    Toggle("自动添加 Frontmatter", isOn: $viewModel.autoFrontmatter)
+                    Toggle("自动添加元数据", isOn: $viewModel.autoFrontmatter)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Frontmatter 模板 (JSON)")
+                        Text("元数据模板（JSON）")
                             .font(.subheadline)
 
                         TextEditor(text: $viewModel.vaultFrontmatterTemplateText)
@@ -855,17 +855,18 @@ struct CaptureInputSettingsPage: View {
 
                         SettingsInfoRow(
                             label: "自动打码敏感内容",
-                            value: "功能开发中，当前仅保留设置位"
+                            value: "暂未接入"
                         )
 
                         SettingsInfoRow(
                             label: "打码模式",
-                            value: "功能开发中，暂不生效"
+                            value: "暂不生效"
                         )
 
-                        Text("截图会先在本地识别敏感内容，再按当前打码模式处理后保存。当前页面仅用于说明，尚未接通实际控制。")
+                        Text("截图会先在本地识别敏感内容，再按当前打码模式处理后保存。当前仅展示状态，控制暂未接入。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -887,7 +888,7 @@ struct CaptureInputSettingsPage: View {
 
                         if viewModel.voicePolishMode == .aiPrompt {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Prompt 风格")
+                                Text("提示词风格")
                                     .font(.caption)
 
                                 Picker("", selection: $viewModel.aiPromptStyle) {
@@ -905,10 +906,10 @@ struct CaptureInputSettingsPage: View {
 
             SettingsCard(title: "隐私保护", description: "配置截图隐私打码") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("截图自动打码人脸、PII 检测和打码模式已经接入截图保存流程。")
+                    Text("截图自动打码人脸、个人信息检测和打码模式已经接入截图保存流程。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("当前为草稿阶段，功能持续完善中。")
+                    Text("功能仍在持续完善。")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -938,7 +939,7 @@ struct CaptureInputSettingsPage: View {
                         .font(.subheadline)
 
                     Picker("", selection: $viewModel.injectionStrategy) {
-                        Text("postToPid 优先").tag("postToPid")
+                        Text("进程写入优先").tag("postToPid")
                         Text("剪贴板优先").tag("clipboard")
                     }
                     .labelsHidden()
@@ -974,7 +975,7 @@ struct CaptureInputSettingsPage: View {
 
             SettingsCard(title: "云端同步", description: "配置数据云端同步") {
                 Toggle("启用云端同步", isOn: $cloudSyncEnabled)
-                    .onChange(of: cloudSyncEnabled) { newValue in
+                    .onChange(of: cloudSyncEnabled) { _, newValue in
                         Task {
                             UserDefaults.standard.set(newValue, forKey: "com.acmind.cloudSync.enabled")
                         }
@@ -1062,7 +1063,7 @@ struct SecuritySettingsPage: View {
 
                     PermissionRow(
                         title: "完全磁盘访问",
-                        description: "用于访问 Vault 文件夹",
+                        description: "用于访问库文件夹",
                         status: viewModel.fullDiskAccessStatus,
                         onRequest: {
                             Task {
@@ -1098,7 +1099,7 @@ struct SecuritySettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("本地优先模式", isOn: $viewModel.localFirstMode)
                     Toggle("敏感内容不上传云端", isOn: $viewModel.sensitiveContentNotUpload)
-                    Toggle("API Key 使用 Keychain 存储", isOn: $viewModel.apiKeyUsesKeychain)
+                    Toggle("API 密钥使用钥匙串存储", isOn: $viewModel.apiKeyUsesKeychain)
                 }
             }
 
@@ -1185,19 +1186,16 @@ struct AboutSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "诊断信息", description: "查看应用诊断信息") {
+            SettingsCard(title: "状态入口", description: "完整本机状态集中到主侧边栏的「状态」") {
                 VStack(alignment: .leading, spacing: 8) {
-                    SettingsInfoRow(label: "应用版本", value: viewModel.diagnosticAppVersionString)
-                    SettingsInfoRow(label: "macOS 版本", value: viewModel.diagnosticMacOSVersionString)
-                    SettingsInfoRow(label: "设备", value: viewModel.diagnosticDeviceModelString)
-                    SettingsInfoRow(label: "处理器", value: viewModel.diagnosticProcessorString)
-                    SettingsInfoRow(label: "内存", value: viewModel.diagnosticMemoryString)
-
-                    Button("复制诊断信息") {
-                        viewModel.copyDiagnosticsToPasteboard()
+                    Text("这里不再展示诊断看板，只保留跳转。")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Button("查看状态") {
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                     }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
             }
 
@@ -1329,7 +1327,7 @@ struct ProviderCard: View {
                     Text(provider.providerType.displayName)
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
-                    Text("模型: \(provider.modelId)")
+                    Text("模型：\(provider.modelId)")
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
                 }
@@ -1550,7 +1548,7 @@ struct AddProviderSheet: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("添加 Provider")
+            Text("添加提供商")
                 .font(.title2)
                 .fontWeight(.semibold)
 
@@ -1561,9 +1559,9 @@ struct AddProviderSheet: View {
                         Text(type.displayName).tag(type)
                     }
                 }
-                TextField("Base URL", text: $baseURL)
+                TextField("基础地址", text: $baseURL)
                     .textFieldStyle(.roundedBorder)
-                SecureField("API Key", text: $apiKey)
+                SecureField("API 密钥", text: $apiKey)
                     .textFieldStyle(.roundedBorder)
                 TextField("默认模型", text: $modelId)
                     .textFieldStyle(.roundedBorder)

@@ -20,6 +20,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var mainWindowController: MainWindowController?
     var capsuleWindowController: CapsuleWindowController?
     private var oobeWindowController: OOBEWindowController?
+    private var clipboardPinWindowManager: ClipboardPinWindowManager?
 
     // MARK: - Notch Panel
 
@@ -72,6 +73,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 try await ServiceContainer.setup()
                 await MainActor.run {
                     self.hideLaunchWindow()
+                    if self.clipboardPinWindowManager == nil {
+                        self.clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: ServiceContainer.shared.assetStore)
+                    }
                     
                     // 检查是否需要显示 OOBE
                     if !UserDefaults.standard.bool(forKey: OOBEWindowController.completionDefaultsKey) {
@@ -114,6 +118,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         fnKeyMonitor?.stop()
         fnKeyMonitor = nil
         Task { HeadphoneMonitor.shared.disable() }
+        clipboardPinWindowManager?.closeAll()
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -128,7 +133,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showMainWindow() {
         if mainWindowController == nil {
-            mainWindowController = MainWindowController(restoreWindowPosition: shouldRestoreWindowPosition)
+            mainWindowController = MainWindowController(
+                restoreWindowPosition: shouldRestoreWindowPosition,
+                clipboardPinActions: clipboardPinActions
+            )
         }
         NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
@@ -225,6 +233,96 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DesktopCapsulePanel.shared.toggle()
     }
 
+    // MARK: - Clipboard Pin Windows
+
+    func showClipboardPinWindow(item: ClipboardItem) {
+        guard isTerminating == false else { return }
+        #if DEBUG
+        print("[ClipboardPin] request pin item=\(item.id) type=\(item.type.displayName)")
+        #endif
+        if clipboardPinWindowManager == nil {
+            let assetStore = ServiceContainer.isInitialized() ? ServiceContainer.shared.assetStore : AssetStore()
+            clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: assetStore)
+        }
+        clipboardPinWindowManager?.show(item: item)
+    }
+
+    func hideClipboardPinWindows() {
+        #if DEBUG
+        print("[ClipboardPin] hide all request")
+        #endif
+        clipboardPinWindowManager?.hideAll()
+    }
+
+    func showClipboardPinWindows() {
+        #if DEBUG
+        print("[ClipboardPin] show all request")
+        #endif
+        clipboardPinWindowManager?.showAll()
+    }
+
+    func closeClipboardPinWindows() {
+        #if DEBUG
+        print("[ClipboardPin] close all request")
+        #endif
+        clipboardPinWindowManager?.closeAll()
+    }
+
+    func clipboardPinWindowCount() -> Int {
+        clipboardPinWindowManager?.openWindowCount ?? 0
+    }
+
+    func clipboardPinWindowSnapshots() -> [ClipboardPinWindowSnapshot] {
+        clipboardPinWindowManager?.windowSnapshots ?? []
+    }
+
+    func copyClipboardPinDiagnosticsToPasteboard() {
+        let snapshots = clipboardPinWindowSnapshots()
+        let expectedLevel = snapshots.first?.expectedAlwaysOnTopLevelRawValue ?? NSWindow.Level.screenSaver.rawValue
+        let header = [
+            "AcMind Clipboard Pin Diagnostics",
+            "Window Count: \(snapshots.count)",
+            "Expected Always-On-Top Level: \(expectedLevel)",
+            "Generated At: \(Date().formatted(date: .abbreviated, time: .standard))"
+        ]
+        let entries = snapshots.enumerated().map { index, snapshot in
+            [
+                "#\(index + 1) item=\(snapshot.itemId)",
+                "visible=\(snapshot.isVisible)",
+                "alwaysOnTop=\(snapshot.isAlwaysOnTop)",
+                "level=\(snapshot.levelRawValue)",
+                "expectedLevel=\(snapshot.expectedAlwaysOnTopLevelRawValue)",
+                "matchesExpected=\(snapshot.isAtExpectedAlwaysOnTopLevel)",
+                "frame=\(snapshot.frame.debugDescription)",
+                "screen=\(snapshot.screenFrame?.debugDescription ?? "nil")",
+                "display=\(snapshot.displayFrame.debugDescription)"
+            ].joined(separator: " ")
+        }
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString((header + entries).joined(separator: "\n"), forType: .string)
+    }
+
+    private var clipboardPinActions: ClipboardPinActions {
+        ClipboardPinActions(
+            showItem: { [weak self] item in
+                self?.showClipboardPinWindow(item: item)
+            },
+            showAll: { [weak self] in
+                self?.showClipboardPinWindows()
+            },
+            hideAll: { [weak self] in
+                self?.hideClipboardPinWindows()
+            },
+            closeAll: { [weak self] in
+                self?.closeClipboardPinWindows()
+            },
+            copyDiagnostics: { [weak self] in
+                self?.copyClipboardPinDiagnosticsToPasteboard()
+            }
+        )
+    }
+
     // MARK: - OOBE
 
     func showOOBE() {
@@ -281,6 +379,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem(title: "显示主窗口", action: #selector(showMainWindowFromMenu), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "显示灵动胶囊", action: #selector(toggleDesktopCapsuleFromMenu), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+
+        let pinMenu = NSMenu(title: "剪贴板 Pin")
+        pinMenu.addItem(NSMenuItem(title: "全部显示 Pin 窗口", action: #selector(showClipboardPinWindowsFromMenu), keyEquivalent: ""))
+        pinMenu.addItem(NSMenuItem(title: "全部隐藏 Pin 窗口", action: #selector(hideClipboardPinWindowsFromMenu), keyEquivalent: ""))
+        pinMenu.addItem(NSMenuItem(title: "全部关闭 Pin 窗口", action: #selector(closeClipboardPinWindowsFromMenu), keyEquivalent: ""))
+        pinMenu.addItem(NSMenuItem.separator())
+        pinMenu.addItem(NSMenuItem(title: "复制 Pin 诊断", action: #selector(copyClipboardPinDiagnosticsFromMenu), keyEquivalent: ""))
+        let pinMenuItem = NSMenuItem(title: "剪贴板 Pin", action: nil, keyEquivalent: "")
+        pinMenuItem.submenu = pinMenu
+        menu.addItem(pinMenuItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // 快速操作
@@ -783,6 +893,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         toggleDesktopCapsule()
     }
 
+    @objc private func showClipboardPinWindowsFromMenu() {
+        showClipboardPinWindows()
+    }
+
+    @objc private func hideClipboardPinWindowsFromMenu() {
+        hideClipboardPinWindows()
+    }
+
+    @objc private func closeClipboardPinWindowsFromMenu() {
+        closeClipboardPinWindows()
+    }
+
+    @objc private func copyClipboardPinDiagnosticsFromMenu() {
+        copyClipboardPinDiagnosticsToPasteboard()
+    }
+
     private func performHotCornerAction(_ action: HotCornerAction) {
         switch action {
         case .none:
@@ -888,12 +1014,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 showMainWindow()
             }
         case .systemStatus:
-            if notchPanelEnabled {
-                showNotchPanel(page: .systemStatus)
-            } else {
-                appState.selectSidebarItem(.systemStatus)
-                showMainWindow()
-            }
+            appState.selectSidebarItem(.home)
+            showMainWindow()
         case .voiceEntry:
             appState.selectSidebarItem(.voiceEntry)
             showMainWindow()
@@ -901,6 +1023,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             appState.selectSidebarItem(item)
             showMainWindow()
         }
+    }
+
+    @objc func showSystemStatus() {
+        appState.selectSidebarItem(.home)
+        showMainWindow()
     }
 
     @objc private func captureScreenshot() {
@@ -1201,7 +1328,7 @@ struct ScreenshotPreviewView: View {
 // MARK: - Main Window Controller
 
 class MainWindowController: NSWindowController {
-    convenience init(restoreWindowPosition: Bool) {
+    convenience init(restoreWindowPosition: Bool, clipboardPinActions: ClipboardPinActions) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1320, height: 880),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -1220,7 +1347,7 @@ class MainWindowController: NSWindowController {
         }
 
         // 设置内容视图
-        let contentView = ContentView()
+        let contentView = ContentView(clipboardPinActions: clipboardPinActions)
             .environmentObject(AppState.shared)
             .environmentObject(ServiceContainer.shared)
 

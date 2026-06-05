@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import AcMindKit
 
 struct DynamicContinentTodayPage: View {
@@ -266,36 +267,39 @@ struct DynamicContinentSystemStatusPage: View {
 
     var body: some View {
         NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
-            DynamicCard(title: "设备概览", subtitle: "采样摘要", symbol: "desktopcomputer") {
+            DynamicCard(title: "状态入口", subtitle: "跳转到主状态中心", symbol: "arrow.right.circle") {
                 VStack(alignment: .leading, spacing: 8) {
-                    deviceOverviewRow(title: "最近刷新", value: viewModel.lastUpdateTime.isEmpty ? "等待刷新" : viewModel.lastUpdateTime)
-                    deviceOverviewRow(title: "采样状态", value: "运行中")
-                    deviceOverviewRow(title: "电池", value: "\(viewModel.batteryLevel)% · \(viewModel.batteryState)")
-                    deviceOverviewRow(title: "内存总量", value: "\(String(format: "%.1f", viewModel.totalMemory)) GB")
+                    Text("这里只保留轻量摘要，不再重复完整状态面板。")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button("查看状态") {
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
             }
         } centerColumn: {
-            DynamicCard(title: "核心指标", subtitle: "CPU / 内存 / 磁盘 / 网络", symbol: "cpu") {
+            DynamicCard(title: "核心摘要", subtitle: "真实可读字段", symbol: "chart.line.uptrend.xyaxis") {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    DynamicMetricCard(title: "CPU 使用率", value: "\(viewModel.cpuUsage)%", icon: "cpu", tint: .blue, trend: .up)
-                    DynamicMetricCard(title: "内存使用", value: "\(String(format: "%.1f", viewModel.memoryUsage)) GB", icon: "memorychip", tint: .purple, trend: .stable)
-                    DynamicMetricCard(title: "磁盘使用", value: "\(viewModel.diskUsage)%", icon: "internaldrive", tint: .orange, trend: .up)
-                    DynamicMetricCard(title: "网络速度", value: "\(viewModel.networkSpeed) MB/s", icon: "network", tint: .green, trend: .down)
+                    DynamicMetricCard(title: "CPU", value: viewModel.cpuSummary, icon: "cpu", tint: .blue, trend: .up)
+                    DynamicMetricCard(title: "内存", value: viewModel.memorySummary, icon: "memorychip", tint: .purple, trend: .stable)
+                    DynamicMetricCard(title: "磁盘", value: viewModel.diskSummary, icon: "internaldrive", tint: .orange, trend: .up)
+                    DynamicMetricCard(title: "网络", value: viewModel.networkSummary, icon: "network", tint: .green, trend: .down)
                 }
             }
         } rightColumn: {
-            DynamicCard(title: "活动状态", subtitle: "进程与通道", symbol: "list.bullet.rectangle", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            DynamicCard(title: "运行摘要", subtitle: "进程与刷新时间", symbol: "list.bullet.rectangle", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
                 VStack(alignment: .leading, spacing: 10) {
-                    DynamicProcessListSection(processes: Array(viewModel.topProcesses.prefix(2)))
+                    deviceOverviewRow(title: "最近刷新", value: viewModel.lastUpdatedText)
+                    deviceOverviewRow(title: "电池", value: viewModel.batterySummary)
+                    deviceOverviewRow(title: "温度", value: viewModel.temperatureSummary)
 
                     Divider()
                         .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        statusChip("CPU 采样", color: .blue)
-                        statusChip("内存采样", color: .purple)
-                        statusChip("网络采样", color: .green)
-                    }
+                    DynamicProcessListSection(processes: Array(viewModel.snapshot.topCPUProcesses.prefix(2)))
                 }
             }
         }

@@ -311,6 +311,20 @@ final class StorageTests: XCTestCase {
         
         XCTAssertTrue(FileManager.default.fileExists(atPath: asset.filePath))
     }
+
+    func testAssetStoreLoadsDisplaySizedImage() async throws {
+        let image = NSImage(size: NSSize(width: 1200, height: 800))
+        image.lockFocus()
+        NSColor.blue.setFill()
+        NSRect(origin: .zero, size: NSSize(width: 1200, height: 800)).fill()
+        image.unlockFocus()
+
+        let asset = try await assetStore.saveImage(image, sourceItemId: nil)
+        let thumbnail = await assetStore.loadImage(asset: asset, maxPixelSize: 240)
+
+        XCTAssertNotNil(thumbnail)
+        XCTAssertLessThanOrEqual(max(thumbnail?.size.width ?? 0, thumbnail?.size.height ?? 0), 240)
+    }
     
     func testAssetStoreSaveText() async throws {
         let text = "Test content for asset storage"

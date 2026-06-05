@@ -295,7 +295,7 @@ public enum ModelRoutingStrategy: String, Codable, Sendable, Hashable, CaseItera
     public var subtitle: String {
         switch self {
         case .automatic: return "按任务类型自动路由"
-        case .localPriority: return "优先选择本地模型"
+        case .localPriority: return "优先选择本地 AI / ASR"
         case .cloudPriority: return "优先选择云端模型"
         case .costPriority: return "优先选择更便宜的模型"
         case .qualityPriority: return "优先选择更高质量的模型"
@@ -316,5 +316,223 @@ public extension ProviderTier {
 
     var isCloud: Bool {
         !isLocal
+    }
+}
+
+// MARK: - Model Management
+
+public enum ModelManagementDomain: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case ai
+    case speechRecognition
+    case voiceClone
+    case localModel
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .ai: return "AI"
+        case .speechRecognition: return "语音识别"
+        case .voiceClone: return "语音克隆"
+        case .localModel: return "本地 AI / ASR"
+        }
+    }
+}
+
+public enum ModelManagementDeploymentKind: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case local
+    case cloud
+    case api
+    case system
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .local: return "本地"
+        case .cloud: return "云端"
+        case .api: return "接口"
+        case .system: return "系统"
+        }
+    }
+}
+
+public enum ModelManagementSortOption: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case recommended
+    case localFirst
+    case enabledFirst
+    case name
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .recommended: return "推荐优先"
+        case .localFirst: return "本地优先"
+        case .enabledFirst: return "启用优先"
+        case .name: return "按名称"
+        }
+    }
+
+    public func sort(_ items: [ModelManagementItem]) -> [ModelManagementItem] {
+        items.sorted { lhs, rhs in
+            switch self {
+            case .recommended:
+                return recommendedKey(for: lhs) < recommendedKey(for: rhs)
+            case .localFirst:
+                return localFirstKey(for: lhs) < localFirstKey(for: rhs)
+            case .enabledFirst:
+                return enabledFirstKey(for: lhs) < enabledFirstKey(for: rhs)
+            case .name:
+                return nameKey(for: lhs) < nameKey(for: rhs)
+            }
+        }
+    }
+
+    private func recommendedKey(for item: ModelManagementItem) -> (Int, Int, Int, String) {
+        (
+            item.isDefault ? 0 : 1,
+            item.isEnabled ? 0 : 1,
+            item.deploymentKind == .local ? 0 : 1,
+            nameKey(for: item)
+        )
+    }
+
+    private func localFirstKey(for item: ModelManagementItem) -> (Int, Int, Int, String) {
+        (
+            item.deploymentKind == .local ? 0 : 1,
+            item.isDefault ? 0 : 1,
+            item.isEnabled ? 0 : 1,
+            nameKey(for: item)
+        )
+    }
+
+    private func enabledFirstKey(for item: ModelManagementItem) -> (Int, Int, Int, String) {
+        (
+            item.isEnabled ? 0 : 1,
+            item.isDefault ? 0 : 1,
+            item.deploymentKind == .local ? 0 : 1,
+            nameKey(for: item)
+        )
+    }
+
+    private func nameKey(for item: ModelManagementItem) -> String {
+        item.displayName.lowercased()
+    }
+}
+
+public struct ModelManagementItem: Identifiable, Codable, Sendable, Hashable {
+    public let id: String
+    public var displayName: String
+    public var domain: ModelManagementDomain
+    public var deploymentKind: ModelManagementDeploymentKind
+    public var isDefault: Bool
+    public var isEnabled: Bool
+    public var isAvailable: Bool
+    public var isDownloaded: Bool
+    public var sizeLabel: String
+    public var statusLabel: String
+    public var tags: [String]
+    public var detailText: String?
+    public var providerId: String?
+    public var modelId: String?
+
+    public init(
+        id: String,
+        displayName: String,
+        domain: ModelManagementDomain,
+        deploymentKind: ModelManagementDeploymentKind,
+        isDefault: Bool,
+        isEnabled: Bool,
+        isAvailable: Bool,
+        isDownloaded: Bool,
+        sizeLabel: String,
+        statusLabel: String,
+        tags: [String],
+        detailText: String? = nil,
+        providerId: String? = nil,
+        modelId: String? = nil
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.domain = domain
+        self.deploymentKind = deploymentKind
+        self.isDefault = isDefault
+        self.isEnabled = isEnabled
+        self.isAvailable = isAvailable
+        self.isDownloaded = isDownloaded
+        self.sizeLabel = sizeLabel
+        self.statusLabel = statusLabel
+        self.tags = tags
+        self.detailText = detailText
+        self.providerId = providerId
+        self.modelId = modelId
+    }
+}
+
+public struct ModelManagementFilter: Sendable, Equatable {
+    public var query: String
+    public var domain: ModelManagementDomain?
+    public var deploymentKind: ModelManagementDeploymentKind?
+    public var onlyEnabled: Bool
+    public var onlyAvailable: Bool
+    public var onlyDownloaded: Bool
+
+    public init(
+        query: String = "",
+        domain: ModelManagementDomain? = nil,
+        deploymentKind: ModelManagementDeploymentKind? = nil,
+        onlyEnabled: Bool = false,
+        onlyAvailable: Bool = false,
+        onlyDownloaded: Bool = false
+    ) {
+        self.query = query
+        self.domain = domain
+        self.deploymentKind = deploymentKind
+        self.onlyEnabled = onlyEnabled
+        self.onlyAvailable = onlyAvailable
+        self.onlyDownloaded = onlyDownloaded
+    }
+
+    public func apply(to items: [ModelManagementItem]) -> [ModelManagementItem] {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return items.filter { item in
+            if let domain, item.domain != domain { return false }
+            if let deploymentKind, item.deploymentKind != deploymentKind { return false }
+            if onlyEnabled, item.isEnabled == false { return false }
+            if onlyAvailable, item.isAvailable == false { return false }
+            if onlyDownloaded, item.isDownloaded == false { return false }
+            guard normalizedQuery.isEmpty == false else { return true }
+            let haystack = [
+                item.displayName,
+                item.sizeLabel,
+                item.statusLabel,
+                item.detailText ?? "",
+                item.providerId ?? "",
+                item.modelId ?? "",
+                item.tags.joined(separator: " ")
+            ]
+            .joined(separator: " ")
+            .lowercased()
+            return haystack.contains(normalizedQuery)
+        }
+    }
+}
+
+public struct ModelManagementSummary: Sendable, Equatable {
+    public var totalCount: Int
+    public var defaultCount: Int
+    public var enabledCount: Int
+    public var localCount: Int
+    public var cloudCount: Int
+    public var downloadedCount: Int
+
+    public init(items: [ModelManagementItem] = []) {
+        totalCount = items.count
+        defaultCount = items.filter(\.isDefault).count
+        enabledCount = items.filter(\.isEnabled).count
+        localCount = items.filter { $0.deploymentKind == .local }.count
+        cloudCount = items.filter { $0.deploymentKind == .cloud || $0.deploymentKind == .api }.count
+        downloadedCount = items.filter(\.isDownloaded).count
     }
 }

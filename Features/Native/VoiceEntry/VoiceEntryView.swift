@@ -28,7 +28,7 @@ struct VoiceEntryView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     runtimeCard
-                    permissionCard
+                    statusEntryCard
                     microphoneCard
                 }
                 .frame(width: UI.summaryWidth)
@@ -225,13 +225,12 @@ struct VoiceEntryView: View {
         }
     }
 
-    private var permissionCard: some View {
-        settingCard(title: "权限状态", description: "说入法真正依赖的权限。") {
-            statusRow("麦克风", status: viewModel.microphoneStatus)
-            divider
-            statusRow("辅助功能", status: viewModel.accessibilityStatus)
-            divider
-            statusRow("屏幕录制", status: viewModel.screenRecordingStatus)
+    private var statusEntryCard: some View {
+        settingCard(title: "状态入口", description: "完整本机状态集中在主侧边栏的「状态」。") {
+            Button("查看状态") {
+                (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+            }
+            .buttonStyle(.bordered)
         }
     }
 

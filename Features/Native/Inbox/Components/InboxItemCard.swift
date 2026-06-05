@@ -1,15 +1,16 @@
 import AppKit
 import SwiftUI
 import AcMindKit
+import ImageIO
 
 struct InboxItemCard: View {
     let item: SourceItem
     let isSelected: Bool
     let onSelect: () -> Void
     let onMore: () -> Void
-    
+
     @State private var isHovered = false
-    
+
     private var previewText: String {
         if let text = item.previewText, !text.isEmpty {
             return text
@@ -20,135 +21,108 @@ struct InboxItemCard: View {
         }
         return ""
     }
-    
-    private var fileSize: String {
-        if let sizeStr = item.metadata["fileSize"], let bytes = Int(sizeStr) {
-            return formatFileSize(bytes)
-        }
-        return ""
-    }
-    
-    private var dimensions: String {
-        if let width = item.metadata["width"], let height = item.metadata["height"] {
-            return "\(width) × \(height)"
-        }
-        return ""
-    }
-    
+
     private var duration: TimeInterval {
         if let durationStr = item.metadata["duration"], let duration = TimeInterval(durationStr) {
             return duration
         }
         return 60
     }
-    
+
+    private var metadata: MaterialCardMetadata {
+        MaterialCardMetadataFactory.source(
+            title: item.title,
+            kind: item.type.displayName,
+            source: item.sourceApp,
+            timestamp: item.createdAt
+        )
+    }
+    private var previewHeight: CGFloat {
+        ContentCardPresentation.previewHeight(for: item.type, text: previewText)
+    }
+    private var cardHeight: CGFloat {
+        ContentCardPresentation.cardHeight(for: item.type, text: previewText)
+    }
+
     var body: some View {
-        HStack(spacing: 12) {
-            // 类型图标
-            typeIcon
-            
-            // 主内容区
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top, spacing: 8) {
-                    Text(item.title ?? "未命名")
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    Text(formatTime(item.createdAt))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    moreButton
-                }
-                
-                // 元信息行
-                HStack(spacing: 6) {
-                    Text(item.type.displayName)
-                        .font(.caption)
-                        .foregroundColor(item.type.color)
-                    
-                    Text("·")
-                        .font(.caption)
-                        .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                    
-                    if !fileSize.isEmpty {
-                        Text(fileSize)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text("·")
-                            .font(.caption)
-                            .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                    }
-                    
-                    if !dimensions.isEmpty {
-                        Text(dimensions)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text("·")
-                            .font(.caption)
-                            .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                    }
-                    
-                    Text(formatTimeShort(item.createdAt))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    InboxStatusTag(status: item.status)
-                }
-                
-                // 预览内容
-                previewContent
+        MaterialCardShell(
+            isSelected: isSelected,
+            isHovered: isHovered,
+            cardHeight: cardHeight,
+            onSelect: onSelect,
+            header: { headerBar },
+            preview: { previewBody },
+            footer: { cardMetadata },
+            actions: { actionBar }
+        )
+        .onHover { isHovered = $0 }
+        .contextMenu { contextMenuItems }
+    }
+
+    private var cardMetadata: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(metadata.title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .minimumScaleFactor(0.92)
+
+            HStack(spacing: 6) {
+                metadataLine
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(12)
-        .background(cardBackground)
-        .cornerRadius(12)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .onTapGesture {
-            onSelect()
-        }
-        .contextMenu {
-            contextMenuItems
-        }
+        .frame(maxWidth: .infinity, minHeight: ContentCardPresentation.materialMetadataMinHeight, alignment: .topLeading)
     }
-    
-    private var typeIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(item.type.bgColor)
-                .frame(width: 36, height: 36)
-            
+
+    private var headerBar: some View {
+        HStack(spacing: 8) {
             Image(systemName: item.type.iconName)
-                .font(.system(size: 16))
-                .foregroundColor(item.type.color)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(item.type.color)
+
+            Text(item.type.displayName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+
+            Spacer(minLength: 0)
         }
-        .frame(width: 36, height: 36)
     }
-    
-    private var moreButton: some View {
-        Button(action: onMore) {
-            Image(systemName: "ellipsis")
+
+    private var metadataLine: some View {
+        HStack(spacing: 6) {
+            Text(metadata.subtitle)
+                .font(.caption)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            Text("·")
                 .font(.caption)
                 .foregroundStyle(Color(NSColor.tertiaryLabelColor))
-                .opacity(isHovered ? 1 : 0)
+
+            Text(formatTimeShort(item.createdAt))
+                .font(.caption)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
         }
-        .buttonStyle(.plain)
-        .frame(width: 20, height: 20)
     }
-    
+
+    private var actionBar: some View {
+        HStack(spacing: 8) {
+            Button(action: onMore) {
+                Image(systemName: "ellipsis")
+                    .font(.caption)
+                    .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+                    .opacity(isHovered ? 1 : 0)
+                    .frame(width: 20, height: 20)
+                    .background(Circle().fill(Color.white.opacity(isHovered ? 0.14 : 0.08)))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     @ViewBuilder
-    private var previewContent: some View {
+    private var previewBody: some View {
         switch item.type {
         case .audio:
             audioPreview
@@ -164,112 +138,172 @@ struct InboxItemCard: View {
             videoPreview
         }
     }
-    
+
     private var audioPreview: some View {
         HStack(spacing: 8) {
             InboxWaveformPreview(duration: duration, color: item.type.color)
-            
+
             Text(duration.formattedDuration)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fontWeight(.medium)
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: previewHeight, maxHeight: previewHeight, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+        )
     }
-    
+
     @ViewBuilder
     private var imagePreview: some View {
-        HStack {
-            Text(previewText.prefix(50).description)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            
-            Spacer()
-            
+        ZStack(alignment: .topLeading) {
             if let path = item.contentPath {
-                ImagePreview(url: URL(fileURLWithPath: path))
-                    .frame(width: 60, height: 40)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color(NSColor.tertiaryLabelColor).opacity(0.3), lineWidth: 1)
-                    )
+                ImagePreview(url: URL(fileURLWithPath: path), type: item.type)
+            } else {
+                placeholderPreview
             }
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: previewHeight)
+        .clipShape(RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .stroke(Color(NSColor.tertiaryLabelColor).opacity(0.16), lineWidth: 1)
+        )
+        .clipped()
     }
-    
+
     private var textPreview: some View {
-        Text(previewText.prefix(80).description)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .lineLimit(2)
-            .padding(.trailing, 20)
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .fill(item.type.color.opacity(0.10))
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(previewText.prefix(120).description)
+                    .font(.subheadline)
+                    .foregroundStyle(Color(nsColor: .labelColor))
+                    .lineLimit(3)
+                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.92)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Spacer(minLength: 0)
+            }
+            .padding(14)
+        }
+        .frame(height: previewHeight)
+        .overlay(
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+        )
+        .clipped()
     }
-    
+
     private var linkPreview: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let url = item.originalUrl {
-                Text(extractDomain(url))
+        RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+            .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.60))
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let url = item.originalUrl {
+                        Text(extractDomain(url))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                    Text(url)
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.92)
+                    }
+                }
+                .padding(14)
+            }
+            .frame(height: previewHeight)
+            .overlay(
+                RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                    .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+            )
+            .clipped()
+    }
+
+    private var filePreview: some View {
+        RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+            .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.60))
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(previewText.prefix(96).description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .minimumScaleFactor(0.92)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(14)
+            }
+            .frame(height: previewHeight)
+            .overlay(
+                RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                    .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+            )
+            .clipped()
+    }
+
+    private var videoPreview: some View {
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(previewText.prefix(40).description)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
-                Text(url)
-                    .font(.caption)
-                    .foregroundColor(.blue)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.92)
             }
-        }
-    }
-    
-    private var filePreview: some View {
-        Text(previewText.prefix(60).description)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .lineLimit(2)
-            .padding(.trailing, 20)
-    }
-    
-    private var videoPreview: some View {
-        HStack {
-            Text(previewText.prefix(40).description)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            
+
             Spacer()
-            
+
             Text(duration.formattedDuration)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: previewHeight, maxHeight: previewHeight, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+        )
+        .clipped()
     }
-    
-    private var cardBackground: Color {
-        if isSelected {
-            return Color.accentColor.opacity(0.08)
-        } else if isHovered {
-            return Color.secondary.opacity(0.04)
-        }
-        return Color.clear
-    }
-    
+
     @ViewBuilder
     private var contextMenuItems: some View {
         Button("AI 整理") {
             copySummary()
             AppState.shared.selectSidebarItem(.agent)
         }
-        
+
         Button("复制内容") {
             copySummary()
         }
-        
+
         Divider()
-        
+
         Button("移动到工作台") {
             AppState.shared.selectSidebarItem(.workbench)
         }
-        
+
         Button("删除") {
             NotificationCenter.default.post(name: .acmindDeleteSourceItem, object: item.id)
         }
@@ -281,17 +315,28 @@ struct InboxItemCard: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
     }
-    
+
     private func formatTime(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
     }
-    
+
+    private var placeholderPreview: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                .fill(item.type.color.opacity(0.12))
+
+            Image(systemName: item.type.iconName)
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(item.type.color)
+        }
+    }
+
     private func formatTimeShort(_ date: Date) -> String {
         let calendar = Calendar.current
         let now = Date()
-        
+
         if calendar.isDate(date, inSameDayAs: now) {
             let formatter = DateFormatter()
             formatter.dateFormat = "HH:mm"
@@ -302,17 +347,7 @@ struct InboxItemCard: View {
             return formatter.string(from: date)
         }
     }
-    
-    private func formatFileSize(_ bytes: Int) -> String {
-        if bytes < 1024 {
-            return "\(bytes) B"
-        } else if bytes < 1024 * 1024 {
-            return String(format: "%.1f KB", Double(bytes) / 1024)
-        } else {
-            return String(format: "%.1f MB", Double(bytes) / (1024 * 1024))
-        }
-    }
-    
+
     private func extractDomain(_ urlString: String) -> String {
         guard let url = URL(string: urlString), let host = url.host else {
             return urlString
@@ -323,15 +358,57 @@ struct InboxItemCard: View {
 
 private struct ImagePreview: View {
     let url: URL
-    
+    let type: SourceType
+    @State private var image: NSImage?
+
     var body: some View {
-        if let image = NSImage(contentsOf: url) {
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFill()
-        } else {
-            Image(systemName: "photo")
-                .foregroundColor(.secondary)
+        Group {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                        .fill(type.color.opacity(0.12))
+
+                    Image(systemName: type.iconName)
+                        .font(.system(size: 26, weight: .medium))
+                        .foregroundStyle(type.color)
+                }
+            }
         }
+        .task(id: url.path) {
+            let loaded = await Self.loadThumbnail(from: url)
+            await MainActor.run {
+                image = loaded
+            }
+        }
+    }
+
+    private static func loadThumbnail(from url: URL) async -> NSImage? {
+        await Task.detached(priority: .userInitiated) {
+            let sourceOptions = [
+                kCGImageSourceShouldCache: false
+            ] as CFDictionary
+            guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions) else {
+                return NSImage(contentsOf: url)
+            }
+
+            let thumbnailOptions = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: Int(max(ContentCardPresentation.thumbnailHeight * 2.4, 480))
+            ] as CFDictionary
+
+            guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+                return NSImage(contentsOf: url)
+            }
+
+            return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        }.value
     }
 }

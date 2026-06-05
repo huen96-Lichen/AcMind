@@ -24,25 +24,15 @@ public struct NotchV2RootView: View {
             backdropLayer
 
             ZStack(alignment: .top) {
-                if viewModel.presentationState.isExpandedVisual {
-                    NotchV2ExpandedView(viewModel: viewModel)
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity.combined(with: .scale(scale: NotchV2DesignTokens.transitionInsertScale, anchor: .top)),
-                                removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
-                            )
-                        )
-                        .allowsHitTesting(true)
-                } else {
-                    NotchV2CollapsedView(viewModel: viewModel)
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity.combined(with: .scale(scale: 0.98, anchor: .top)),
-                                removal: .opacity.combined(with: .scale(scale: NotchV2DesignTokens.transitionRemoveScale, anchor: .top))
-                            )
-                        )
-                        .allowsHitTesting(true)
-                }
+                NotchV2CollapsedView(viewModel: viewModel)
+                    .opacity(viewModel.presentationState.isExpandedVisual ? 0 : 1)
+                    .scaleEffect(viewModel.presentationState.isExpandedVisual ? 0.985 : 1, anchor: .top)
+                    .allowsHitTesting(viewModel.presentationState.isExpandedVisual == false)
+
+                NotchV2ExpandedView(viewModel: viewModel)
+                    .opacity(viewModel.presentationState.isExpandedVisual ? 1 : 0)
+                    .scaleEffect(viewModel.presentationState.isExpandedVisual ? 1 : NotchV2DesignTokens.transitionRemoveScale, anchor: .top)
+                    .allowsHitTesting(viewModel.presentationState.isExpandedVisual)
             }
             .frame(
                 width: viewModel.presentationState.isExpandedVisual ? NotchV2DesignTokens.expandedWidth : viewModel.collapsedSize.width,
@@ -120,16 +110,21 @@ public struct NotchV2RootView: View {
 
         if hovering {
             hoverTask = Task { @MainActor in
-                let delay = max(0.2, settings.hoverExpandDelay)
+                let delay = max(0.15, settings.hoverExpandDelay)
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 guard !Task.isCancelled else { return }
-                onExpansionChange(true)
+                if viewModel.presentationState != .expanded && viewModel.presentationState != .expanding {
+                    onExpansionChange(true)
+                }
             }
         } else {
             hoverTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 120_000_000)
+                let delay = max(0.08, settings.hoverExpandDelay * 0.45)
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 guard !Task.isCancelled else { return }
-                onExpansionChange(false)
+                if viewModel.presentationState == .expanded || viewModel.presentationState == .expanding {
+                    onExpansionChange(false)
+                }
             }
         }
     }

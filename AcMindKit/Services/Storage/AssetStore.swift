@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ImageIO
 
 /// Asset storage manager for binary files (images, audio, documents)
 /// Manages local file system storage with SQLite metadata tracking
@@ -225,6 +226,33 @@ public actor AssetStore: AssetStoreProtocol {
     public func loadImage(asset: AssetFile) -> NSImage? {
         guard asset.kind == .image else { return nil }
         return NSImage(contentsOfFile: asset.filePath)
+    }
+
+    /// Load a display-sized image without decoding the original full-resolution bitmap.
+    public func loadImage(asset: AssetFile, maxPixelSize: CGFloat) -> NSImage? {
+        guard asset.kind == .image else { return nil }
+        guard maxPixelSize > 0 else { return loadImage(asset: asset) }
+
+        let url = URL(fileURLWithPath: asset.filePath) as CFURL
+        let sourceOptions = [
+            kCGImageSourceShouldCache: false
+        ] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(url, sourceOptions) else {
+            return loadImage(asset: asset)
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, Int(maxPixelSize.rounded(.up)))
+        ] as CFDictionary
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return loadImage(asset: asset)
+        }
+
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
     
     /// Load text content from asset

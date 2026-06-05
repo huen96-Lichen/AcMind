@@ -67,11 +67,6 @@ struct InboxView: View {
             .frame(width: 220)
 
             itemList
-
-            if let item = selectedItem {
-                detailPanel(item: item)
-                    .frame(width: 300)
-            }
         }
         .background(AppVisualBackdrop())
         .onAppear {
@@ -99,21 +94,28 @@ struct InboxView: View {
             if filteredItems.isEmpty {
                 emptyState
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 1) {
-                        ForEach(filteredItems) { item in
-                            InboxItemRow(
-                                item: item,
-                                isSelected: selectedItem?.id == item.id,
-                                onSelect: { selectedItem = item }
-                            )
+                GeometryReader { proxy in
+                    ScrollView {
+                        LazyVGrid(columns: inboxColumns(availableWidth: proxy.size.width), spacing: 12) {
+                            ForEach(filteredItems) { item in
+                                InboxItemCard(
+                                    item: item,
+                                    isSelected: selectedItem?.id == item.id,
+                                    onSelect: { selectedItem = item },
+                                    onMore: { selectedItem = item }
+                                )
+                            }
                         }
+                        .padding(16)
                     }
-                    .padding(.vertical, 8)
                 }
             }
         }
-        .frame(minWidth: 300)
+        .frame(minWidth: 320)
+    }
+
+    private func inboxColumns(availableWidth: CGFloat) -> [GridItem] {
+        MaterialCardGridLayout.columns(availableWidth: availableWidth, minimumColumnWidth: 240)
     }
 
     private var searchBar: some View {
@@ -148,122 +150,6 @@ struct InboxView: View {
         )
     }
 
-    private func detailPanel(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("详情")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-                Button(action: { selectedItem = nil }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    itemHeader(item: item)
-                    itemContent(item: item)
-                    itemActions(item: item)
-                }
-                .padding(16)
-            }
-        }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
-    }
-
-    private func itemHeader(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: item.type.iconName)
-                    .foregroundStyle(item.type.color)
-                Text(item.type.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if let title = item.title {
-                Text(title)
-                    .font(.headline)
-            }
-
-            Text(item.createdAt.formatted())
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.7))
-        )
-    }
-
-    private func itemContent(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("内容预览")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(item.previewText ?? item.transcript ?? "无预览内容")
-                .font(.body)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(AppSurfaceTokens.cardBackground))
-        }
-    }
-
-    private func itemActions(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("操作")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            VStack(spacing: 6) {
-                actionButton(icon: "sparkles", title: "AI 提炼") {
-                    Task { await viewModel.distillItem(item) }
-                }
-                actionButton(icon: "archivebox", title: "归档") {
-                    Task { await viewModel.archive(item: item) }
-                }
-                actionButton(icon: "rectangle.on.rectangle", title: "工作台") {
-                    Task { await viewModel.moveToWorkbench(item: item) }
-                }
-                actionButton(icon: "brain", title: "知识库") {
-                    Task { await viewModel.sendToKnowledgeBase(item: item) }
-                }
-                actionButton(icon: "trash", title: "删除", role: .destructive) {
-                    Task { await viewModel.delete(item: item) }
-                }
-            }
-        }
-    }
-
-    private func actionButton(icon: String, title: String, role: ButtonRole? = nil, action: @escaping () -> Void) -> some View {
-        Button(role: role, action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .frame(width: 16)
-                Text(title)
-                    .font(.system(size: 12))
-                Spacer()
-            }
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackground))
-        }
-        .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
-    }
-
     @MainActor
     private func focusPendingCaptureDetailIfNeeded() async {
         guard let pendingItemID = appState.pendingInboxDetailSourceItemID else { return }
@@ -273,52 +159,5 @@ struct InboxView: View {
             selectedItem = item
             appState.pendingInboxDetailSourceItemID = nil
         }
-    }
-}
-
-struct InboxItemRow: View {
-    let item: SourceItem
-    let isSelected: Bool
-    let onSelect: () -> Void
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: item.type.iconName)
-                    .font(.system(size: 14))
-                    .foregroundStyle(item.type.color)
-                    .frame(width: 20)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title ?? item.previewText ?? "未命名")
-                        .font(.system(size: 13))
-                        .lineLimit(1)
-                        .foregroundStyle(isSelected ? .white : .primary)
-
-                    HStack(spacing: 4) {
-                        Text(item.type.displayName)
-                            .font(.system(size: 10))
-                        Text("·")
-                            .font(.system(size: 10))
-                        Text(item.createdAt.formatted(.relative(presentation: .named)))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundStyle(isSelected ? .white.opacity(0.7) : .secondary)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .padding(.horizontal, 8)
     }
 }

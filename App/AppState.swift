@@ -116,7 +116,16 @@ public final class AppState: ObservableObject, Sendable {
     // MARK: - Navigation
 
     public func selectSidebarItem(_ item: SidebarItem) {
-        sidebarSelection = item
+        sidebarSelection = canonicalSidebarItem(for: item)
+    }
+
+    public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {
+        switch item {
+        case .systemStatus:
+            return .home
+        default:
+            return item
+        }
     }
 
     public func toggleSidebar() {

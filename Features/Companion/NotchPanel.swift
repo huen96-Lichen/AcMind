@@ -16,6 +16,7 @@ final class NotchPanel: NSPanel {
     private var hostingView: NSHostingView<NotchV2RootView>?
     private var pendingDockDecision: DispatchWorkItem?
     private var lastKnownScreenFrame: CGRect?
+    private var lastAppliedFrame: CGRect?
     private var displaySettingsObserver: NSObjectProtocol?
     private var screenRecordingMonitorTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
@@ -57,13 +58,11 @@ final class NotchPanel: NSPanel {
         self.ignoresMouseEvents = false
         self.delegate = self
 
-        print("[NotchPanel] setupPanel completed, level: \(level.rawValue)")
     }
 
     // MARK: - Content View
 
     private func setupContentView() {
-        // 直接使用 NSHostingView，不使用自定义容器
         let capsule = NotchV2RootView(viewModel: viewModel) { [weak self] expanded in
             if expanded {
                 self?.viewModel.requestOpen(page: self?.viewModel.effectiveSelectedPage ?? .overview)
@@ -71,12 +70,21 @@ final class NotchPanel: NSPanel {
                 self?.viewModel.requestCompact()
             }
         }
+        let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        container.translatesAutoresizingMaskIntoConstraints = true
         let hosting = NSHostingView(rootView: capsule)
-        hosting.translatesAutoresizingMaskIntoConstraints = true
-        hosting.autoresizingMask = [.width, .height]
-        self.contentView = hosting
+        hosting.sizingOptions = []
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+
+        container.addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.topAnchor.constraint(equalTo: container.topAnchor),
+            hosting.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hosting.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+        self.contentView = container
         self.hostingView = hosting
-        syncWindowSize(with: CompanionScreenPositioning.collapsedFrame().size)
     }
 
     private func setupViewModelBindings() {
@@ -145,12 +153,9 @@ final class NotchPanel: NSPanel {
         let frame = viewModel.presentationState.isExpandedVisual
             ? CompanionScreenPositioning.expandedFrame(on: screenFrame)
             : CompanionScreenPositioning.collapsedFrame(on: screenFrame)
-        syncWindowSize(with: frame.size)
-        setFrame(frame, display: true)
-        hostingView?.frame = NSRect(origin: .zero, size: frame.size)
+        applyWindowFrame(frame)
         lastKnownScreenFrame = screenFrame
         
-        print("[NotchPanel] Positioning: frame=\(frame), realWidth=\(self.frame.width), realHeight=\(self.frame.height), hasNotch=\(CompanionScreenPositioning.hasHardwareNotch())")
     }
 
     func setExpanded(_ expanded: Bool, animated: Bool) {
@@ -251,7 +256,6 @@ final class NotchPanel: NSPanel {
 
         hide()
         DesktopCapsulePanel.shared.show(at: capsuleOrigin)
-        print("[NotchPanel] dockToDesktopCapsule() called, capsuleOrigin=\(capsuleOrigin)")
     }
 
     private func currentScreenFrame() -> CGRect {
@@ -265,11 +269,13 @@ final class NotchPanel: NSPanel {
         return NSScreen.main?.frame ?? frame
     }
 
-    private func syncWindowSize(with size: CGSize) {
-        minSize = size
-        maxSize = size
-        contentMinSize = size
-        contentMaxSize = size
+    private func applyWindowFrame(_ frame: CGRect) {
+        guard lastAppliedFrame != frame else {
+            return
+        }
+
+        lastAppliedFrame = frame
+        setFrame(frame, display: true)
     }
 
     private func applyDisplaySettings(_ settings: CompanionDisplaySettings) {
@@ -331,29 +337,23 @@ final class NotchPanel: NSPanel {
         case .hidden:
             orderOut(nil)
             return
-        case .compact, .transientHUD:
+        case .compact, .collapsing, .transientHUD:
             isMovableByWindowBackground = true
-        case .open, .blockedClose:
+        case .expanding, .expanded, .blockedClose:
             isMovableByWindowBackground = false
         }
 
         let screenFrame = lastKnownScreenFrame ?? currentScreenFrame()
-        let targetFrame = state.isExpandedVisual
+        let targetFrame = state.targetFrameIsExpanded
             ? CompanionScreenPositioning.expandedFrame(on: screenFrame)
             : CompanionScreenPositioning.collapsedFrame(on: screenFrame)
 
-        if animated, isVisible {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = state.isExpandedVisual ? NotchV2DesignTokens.windowExpandDuration : NotchV2DesignTokens.windowCollapseDuration
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                animator().setFrame(targetFrame, display: true)
-            }
-        } else {
+        if lastAppliedFrame != targetFrame {
             setFrame(targetFrame, display: true)
+            lastAppliedFrame = targetFrame
+        } else {
+            applyWindowFrame(targetFrame)
         }
-
-        syncWindowSize(with: targetFrame.size)
-        hostingView?.frame = NSRect(origin: .zero, size: targetFrame.size)
         lastKnownScreenFrame = screenFrame
         if isVisible == false {
             makeKeyAndOrderFront(nil)

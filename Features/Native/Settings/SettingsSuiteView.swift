@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import AcMindKit
 
 enum SettingsSuiteSection: String, CaseIterable, Identifiable {
@@ -433,15 +434,13 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "日志与诊断", subtitle: "排查问题和导出信息") {
+            settingsCard(title: "状态入口", subtitle: "完整本机状态已集中到主侧边栏的「状态」") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Button("打开日志文件夹") {
-                        viewModel.openLogsFolder()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("复制诊断信息") {
-                        viewModel.copyDiagnosticsToPasteboard()
+                    Text("这里不再展示诊断看板，只保留跳转。")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    Button("查看状态") {
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                     }
                     .buttonStyle(.bordered)
                 }

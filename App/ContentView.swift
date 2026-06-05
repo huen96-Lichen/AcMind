@@ -1,11 +1,21 @@
 import SwiftUI
 import AcMindKit
 
+@MainActor
+struct ClipboardPinActions {
+    let showItem: (ClipboardItem) -> Void
+    let showAll: () -> Void
+    let hideAll: () -> Void
+    let closeAll: () -> Void
+    let copyDiagnostics: () -> Void
+}
+
 // MARK: - Content View
 // AcMind 主应用框架
 
 struct ContentView: View {
     @EnvironmentObject private var appState: AppState
+    let clipboardPinActions: ClipboardPinActions
     @State private var showVoicePanel = false
     @State private var showCapturePanel = false
     @State private var showQuickNote = false
@@ -21,7 +31,10 @@ struct ContentView: View {
         NavigationSplitView {
             MainSidebar(selectedItem: selectedItemBinding)
         } detail: {
-            MainContent(selectedItem: appState.sidebarSelection)
+            MainContent(
+                selectedItem: appState.sidebarSelection,
+                clipboardPinActions: clipboardPinActions
+            )
         }
         .navigationSplitViewStyle(.balanced)
         .navigationSplitViewColumnWidth(min: 292, ideal: 320, max: 380)
@@ -67,61 +80,42 @@ struct MainSidebar: View {
     @State private var hoveredItem: SidebarItem?
 
     var body: some View {
-        List(selection: $selectedItem) {
-            sidebarHeader
-
-            Section {
-                ForEach(SidebarItem.coreWorkflow) { item in
-                    SidebarItemView(
-                        item: item,
-                        isSelected: selectedItem == item,
-                        isHovered: hoveredItem == item
-                    )
-                    .tag(item)
-                    .onHover { isHovered in
-                        hoveredItem = isHovered ? item : nil
-                    }
-                }
-            } header: {
-                sidebarSectionHeader("核心工作流")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                sidebarHeader
+                sidebarSection(title: "核心工作流", items: SidebarItem.coreWorkflow)
+                sidebarSection(title: "伴随能力", items: SidebarItem.companionCapabilities)
+                sidebarSection(title: "系统", items: SidebarItem.systemItems)
             }
-
-            Section {
-                ForEach(SidebarItem.companionCapabilities) { item in
-                    SidebarItemView(
-                        item: item,
-                        isSelected: selectedItem == item,
-                        isHovered: hoveredItem == item
-                    )
-                    .tag(item)
-                    .onHover { isHovered in
-                        hoveredItem = isHovered ? item : nil
-                    }
-                }
-            } header: {
-                sidebarSectionHeader("伴随能力")
-            }
-
-            Section {
-                ForEach(SidebarItem.systemItems) { item in
-                    SidebarItemView(
-                        item: item,
-                        isSelected: selectedItem == item,
-                        isHovered: hoveredItem == item
-                    )
-                    .tag(item)
-                    .onHover { isHovered in
-                        hoveredItem = isHovered ? item : nil
-                    }
-                }
-            } header: {
-                sidebarSectionHeader("系统")
-            }
+            .padding(.vertical, 14)
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
         .frame(minWidth: 300, idealWidth: 320, maxWidth: 360)
         .background(AppSurfaceTokens.sidebarBackground.ignoresSafeArea())
+    }
+
+    private func sidebarSection(title: String, items: [SidebarItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sidebarSectionHeader(title)
+
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(items) { item in
+                    Button {
+                        selectedItem = item
+                    } label: {
+                        SidebarItemView(
+                            item: item,
+                            isSelected: selectedItem == item,
+                            isHovered: hoveredItem == item
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHovered in
+                        hoveredItem = isHovered ? item : nil
+                    }
+                }
+            }
+        }
     }
 
     private var sidebarHeader: some View {
@@ -218,11 +212,12 @@ struct SidebarItemView: View {
 
 struct MainContent: View {
     let selectedItem: SidebarItem
+    let clipboardPinActions: ClipboardPinActions
 
     var body: some View {
         Group {
             switch selectedItem {
-            case .home:
+            case .home, .systemStatus:
                 WorkspaceHomeView()
                     .navigationTitle("首页")
             case .agent:
@@ -232,7 +227,7 @@ struct MainContent: View {
                 InboxView()
                     .navigationTitle("收集箱")
             case .clipboard:
-                ClipboardView()
+                ClipboardView(clipboardPinActions: clipboardPinActions)
                     .navigationTitle("剪贴板 & 手机同步")
             case .schedule:
                 ScheduleDashboardView()
@@ -243,12 +238,12 @@ struct MainContent: View {
             case .dynamicContinent:
                 DynamicContinentConfigView()
                     .navigationTitle("灵动大陆 & 配置")
-            case .systemStatus:
-                SystemStatusView()
-                    .navigationTitle("系统状态")
             case .voiceEntry:
                 VoiceEntryView()
                     .navigationTitle("说入法设置")
+            case .modelManagement:
+                ModelManagementPanel()
+                    .navigationTitle("模型管理")
             case .settings:
                 SettingsView()
                     .navigationTitle("设置")

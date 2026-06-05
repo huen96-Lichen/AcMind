@@ -210,8 +210,6 @@ struct ToolsView: View {
             BatchDownloadPanel()
         case .videoDownload:
             VideoDownloadPanel()
-        case .modelManagement:
-            ModelManagementPanel()
         case .apiTest:
             APITestPanel()
         }
@@ -505,7 +503,6 @@ enum ToolRoute: Identifiable, Sendable {
     case srtToFcpxml
     case batchDownload
     case videoDownload
-    case modelManagement
     case apiTest
 
     var id: String {
@@ -534,8 +531,6 @@ enum ToolRoute: Identifiable, Sendable {
             return "batchDownload"
         case .videoDownload:
             return "videoDownload"
-        case .modelManagement:
-            return "modelManagement"
         case .apiTest:
             return "apiTest"
         }
@@ -557,7 +552,6 @@ enum ToolRoute: Identifiable, Sendable {
         case "srtToFcpxml": self = .srtToFcpxml
         case "batchDownload": self = .batchDownload
         case "videoDownload": self = .videoDownload
-        case "modelManagement": self = .modelManagement
         case "apiTest": self = .apiTest
         default: return nil
         }
@@ -791,7 +785,6 @@ enum ToolRegistry {
             Tool(name: "视频下载", description: "下载在线视频", icon: "video", category: .download, tags: [.download], route: .videoDownload),
             
             // AI 工具
-            Tool(name: "模型管理", description: "管理本地和远程 AI 模型", icon: "cpu", category: .ai, tags: [.ai], route: .modelManagement),
             Tool(name: "API 测试", description: "测试 AI 提供商的 API", icon: "network", category: .ai, tags: [.ai, .dev], route: .apiTest),
             
             // 实用工具

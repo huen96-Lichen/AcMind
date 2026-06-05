@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct NotchV2OverviewPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
@@ -130,7 +131,7 @@ struct NotchV2OverviewPage: View {
                         icon: "desktopcomputer",
                         tint: NotchV2DesignTokens.secondaryText
                     ) {
-                        viewModel.select(.systemStatus)
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                     }
                 }
             }

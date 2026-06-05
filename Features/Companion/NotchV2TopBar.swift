@@ -9,22 +9,32 @@ struct NotchV2TopBar: View {
         ZStack {
             NotchV2DesignTokens.rootBackground
 
-            HStack(alignment: .center, spacing: 8) {
-                leftTabs
-                    .frame(width: 226, alignment: .leading)
+            GeometryReader { proxy in
+                let centerGapWidth = min(
+                    NotchV2DesignTokens.notchSafeZoneWidth,
+                    max(112, proxy.size.width * 0.13)
+                )
 
-                Spacer(minLength: 8)
+                HStack(alignment: .center, spacing: 10) {
+                    leftTabs
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(1)
 
-                Color.clear
-                    .frame(width: NotchV2DesignTokens.notchSafeZoneWidth, height: 1)
+                    Spacer(minLength: 10)
 
-                Spacer(minLength: 8)
+                    Color.clear
+                        .frame(width: centerGapWidth, height: 1)
+                        .allowsHitTesting(false)
 
-                rightStatus
-                    .frame(width: 286, alignment: .trailing)
+                    Spacer(minLength: 10)
+
+                    rightStatus
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(1)
+                }
+                .padding(.horizontal, 16)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
             }
-            .padding(.horizontal, 28)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
         .frame(width: NotchV2DesignTokens.expandedWidth, height: NotchV2DesignTokens.topBarHeight)
     }
@@ -62,7 +72,7 @@ struct NotchV2TopBar: View {
                 title: "状态",
                 accent: NotchV2DesignTokens.cardBackgroundStrong,
                 action: {
-                    viewModel.select(.systemStatus)
+                    (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                 }
             )
 

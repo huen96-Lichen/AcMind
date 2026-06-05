@@ -7,16 +7,39 @@ import AcMindKit
 enum NotchPresentationState: Equatable {
     case hidden
     case compact
-    case open
+    case expanding
+    case expanded
+    case collapsing
     case blockedClose
     case transientHUD
 
     var isExpandedVisual: Bool {
         switch self {
-        case .open, .blockedClose:
+        case .expanding, .expanded, .blockedClose:
             return true
-        case .hidden, .compact, .transientHUD:
+        case .hidden, .compact, .collapsing, .transientHUD:
             return false
+        }
+    }
+
+    var targetFrameIsExpanded: Bool {
+        isExpandedVisual
+    }
+
+    var animationDuration: TimeInterval {
+        switch self {
+        case .hidden:
+            return 0.15
+        case .compact:
+            return 0.24
+        case .expanding, .expanded:
+            return 0.32
+        case .collapsing:
+            return 0.24
+        case .blockedClose:
+            return 0.18
+        case .transientHUD:
+            return 0.2
         }
     }
 }
@@ -52,7 +75,7 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @Published var isExpanded = true
-    @Published var presentationState: NotchPresentationState = .open
+    @Published var presentationState: NotchPresentationState = .expanded
     @Published var selectedPage: NotchV2Page = .overview
     @Published var displaySettings: CompanionDisplaySettings = CompanionDisplaySettingsStore.load()
     @Published var collapsedSize: CGSize = CGSize(width: CompanionMenuBarLayout.collapsedWidth, height: CompanionMenuBarLayout.collapsedHeight)
@@ -118,6 +141,7 @@ final class NotchV2ViewModel: ObservableObject {
     private let permissionManager: PermissionManager
     private var cancellables = Set<AnyCancellable>()
     private var voiceStateResetTask: Task<Void, Never>?
+    private var presentationStateTransitionTask: Task<Void, Never>?
     private var quickAskSessionId = "companion-quick-ask"
     private var selectedQuickAskProviderId: String?
     private var selectedQuickAskModelId: String?
@@ -223,10 +247,10 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     func collapse() {
-        guard presentationState != .compact else { return }
+        guard presentationState != .compact && presentationState != .collapsing else { return }
         withAnimation(.spring(response: NotchV2DesignTokens.springResponse, dampingFraction: NotchV2DesignTokens.springDampingFraction)) {
             if closeBlocker == nil {
-                setPresentationState(.compact)
+                transitionPresentationState(to: .collapsing, finalState: .compact)
             } else {
                 setPresentationState(.blockedClose)
             }
@@ -240,12 +264,13 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     func requestHide() {
+        presentationStateTransitionTask?.cancel()
         setPresentationState(.hidden)
     }
 
     func requestCompact() {
         if closeBlocker == nil {
-            setPresentationState(.compact)
+            transitionPresentationState(to: .collapsing, finalState: .compact)
         } else {
             setPresentationState(.blockedClose)
         }
@@ -255,7 +280,7 @@ final class NotchV2ViewModel: ObservableObject {
         if let page {
             selectedPage = page
         }
-        setPresentationState(.open)
+        transitionPresentationState(to: .expanding, finalState: .expanded)
     }
 
     func requestTransientHUD() {
@@ -294,8 +319,24 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     private func setPresentationState(_ state: NotchPresentationState) {
+        presentationStateTransitionTask?.cancel()
         presentationState = state
         isExpanded = state.isExpandedVisual
+    }
+
+    private func transitionPresentationState(to state: NotchPresentationState, finalState: NotchPresentationState) {
+        presentationStateTransitionTask?.cancel()
+        setPresentationState(state)
+
+        presentationStateTransitionTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(state.animationDuration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.presentationState == state else { return }
+                self.presentationState = finalState
+                self.isExpanded = finalState.isExpandedVisual
+            }
+        }
     }
 
     func isModuleEnabled(_ module: DynamicContinentModuleID) -> Bool {
