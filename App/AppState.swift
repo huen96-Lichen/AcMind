@@ -30,6 +30,7 @@ public final class AppState: ObservableObject, Sendable {
 
     @Published public var sidebarSelection: SidebarItem = .home
     @Published public var sidebarCollapsed = false
+    @Published public var pendingInboxDetailSourceItemID: String?
 
     // MARK: - Window State
 
@@ -115,7 +116,16 @@ public final class AppState: ObservableObject, Sendable {
     // MARK: - Navigation
 
     public func selectSidebarItem(_ item: SidebarItem) {
-        sidebarSelection = item
+        sidebarSelection = canonicalSidebarItem(for: item)
+    }
+
+    public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {
+        switch item {
+        case .systemStatus:
+            return .home
+        default:
+            return item
+        }
     }
 
     public func toggleSidebar() {

@@ -11,6 +11,7 @@ public actor HotkeyManager {
     // MARK: - Properties
     
     private var registeredHotkeys: [KeyboardShortcut: HotkeyRegistration] = [:]
+    private var persistedHotkeys: [KeyboardShortcut] = []
     private var eventHandler: EventHandlerRef?
     
     public init() {}
@@ -24,7 +25,7 @@ public actor HotkeyManager {
     
     // MARK: - Register/Unregister
     
-    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping () -> Void) async throws {
+    public func registerShortcut(_ shortcut: KeyboardShortcut, action: @escaping @Sendable () -> Void) async throws {
         // 检查冲突
         if registeredHotkeys[shortcut] != nil {
             throw HotkeyError.alreadyRegistered(shortcut)
@@ -178,22 +179,19 @@ public actor HotkeyManager {
     // MARK: - Persistence
     
     private func loadSavedHotkeys() async {
-        // 从 UserDefaults 加载保存的快捷键
-        // 实际实现需要查询 SQLite
-        // 这里简化处理
+        persistedHotkeys = HotkeyRegistryStore.load()
     }
     
     private func saveHotkey(_ shortcut: KeyboardShortcut) async {
-        // 保存到 UserDefaults 或 SQLite
-        let key = "hotkey.\(shortcut.displayString)"
-        UserDefaults.standard.set(shortcut.key, forKey: key)
-        UserDefaults.standard.set(shortcut.modifiers.map(\.rawValue), forKey: "\(key).modifiers")
+        if persistedHotkeys.contains(shortcut) == false {
+            persistedHotkeys.append(shortcut)
+        }
+        HotkeyRegistryStore.save(persistedHotkeys)
     }
     
     private func removeHotkey(_ shortcut: KeyboardShortcut) async {
-        let key = "hotkey.\(shortcut.displayString)"
-        UserDefaults.standard.removeObject(forKey: key)
-        UserDefaults.standard.removeObject(forKey: "\(key).modifiers")
+        persistedHotkeys.removeAll { $0 == shortcut }
+        HotkeyRegistryStore.save(persistedHotkeys)
     }
     
     // MARK: - Carbon Helpers
@@ -216,7 +214,6 @@ public actor HotkeyManager {
     }
     
     private func carbonKeyCode(from key: String) -> UInt16 {
-        // 简化映射，实际需要完整的键码表
         let keyMap: [String: UInt16] = [
             "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7,
             "c": 8, "v": 9, "b": 11, "q": 12, "w": 13, "e": 14, "r": 15,
@@ -225,10 +222,129 @@ public actor HotkeyManager {
             "]": 30, "o": 31, "u": 32, "[": 33, "i": 34, "p": 35, "return": 36,
             "l": 37, "j": 38, "'": 39, "k": 40, ";": 41, "\\": 42, ",": 43,
             "/": 44, "n": 45, "m": 46, ".": 47, "tab": 48, " ": 49, "`": 50,
-            "delete": 51, "enter": 52, "escape": 53, "space": 49
+            "delete": 51, "enter": 52, "escape": 53, "space": 49,
+            "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97,
+            "f7": 98, "f8": 100, "f9": 101, "f10": 109, "f11": 103, "f12": 111,
+            "up": 126, "down": 125, "left": 123, "right": 124,
+            "home": 115, "end": 119, "pageup": 116, "pagedown": 121,
+            "forwarddelete": 117, "help": 114, "clear": 71, "capslock": 57
         ]
-        
+
         return keyMap[key.lowercased()] ?? 0
+    }
+
+    // MARK: - Hotkey Groups
+
+    private var hotkeyGroups: [String: HotkeyGroup] = [:]
+
+    public func createGroup(name: String) async {
+        guard hotkeyGroups[name] == nil else { return }
+        hotkeyGroups[name] = HotkeyGroup(name: name, isEnabled: true, shortcuts: [])
+    }
+
+    public func deleteGroup(name: String) async {
+        guard let group = hotkeyGroups.removeValue(forKey: name) else { return }
+        if !group.isEnabled {
+            for shortcut in group.shortcuts {
+                try? await unregisterShortcut(shortcut)
+            }
+        }
+    }
+
+    public func enableGroup(name: String) async {
+        guard var group = hotkeyGroups[name], !group.isEnabled else { return }
+        group.isEnabled = true
+        hotkeyGroups[name] = group
+    }
+
+    public func disableGroup(name: String) async {
+        guard var group = hotkeyGroups[name], group.isEnabled else { return }
+        group.isEnabled = false
+        hotkeyGroups[name] = group
+    }
+
+    public func addToGroup(name: String, shortcut: KeyboardShortcut) async {
+        guard var group = hotkeyGroups[name] else { return }
+        if !group.shortcuts.contains(shortcut) {
+            group.shortcuts.append(shortcut)
+            hotkeyGroups[name] = group
+        }
+    }
+
+    public func removeFromGroup(name: String, shortcut: KeyboardShortcut) async {
+        guard var group = hotkeyGroups[name] else { return }
+        group.shortcuts.removeAll { $0 == shortcut }
+        hotkeyGroups[name] = group
+    }
+
+    public func getGroups() async -> [String: HotkeyGroup] {
+        hotkeyGroups
+    }
+
+    // MARK: - Usage Statistics
+
+    private var usageStats: [String: Int] = [:]
+
+    public func recordHotkeyUsage(shortcut: KeyboardShortcut) async {
+        let key = shortcut.displayString
+        usageStats[key, default: 0] += 1
+    }
+
+    public func getHotkeyUsageStats() async -> [String: Int] {
+        usageStats
+    }
+
+    public func getTopHotkeys(limit: Int = 10) async -> [(shortcut: String, count: Int)] {
+        usageStats
+            .sorted { $0.value > $1.value }
+            .prefix(limit)
+            .map { (shortcut: $0.key, count: $0.value) }
+    }
+
+    // MARK: - Enhanced Error Handling
+
+    public func registerWithRetry(
+        _ shortcut: KeyboardShortcut,
+        action: @escaping @Sendable () -> Void,
+        maxRetries: Int = 3
+    ) async throws {
+        var lastError: Error?
+        for attempt in 0..<maxRetries {
+            do {
+                try await registerShortcut(shortcut, action: action)
+                return
+            } catch {
+                lastError = error
+                if attempt < maxRetries - 1 {
+                    try await Task.sleep(nanoseconds: UInt64(attempt + 1) * 100_000_000)
+                }
+            }
+        }
+        throw lastError ?? HotkeyError.registrationFailed(-1)
+    }
+
+    public func checkConflict(_ shortcut: KeyboardShortcut) async -> KeyboardShortcut? {
+        for (existingShortcut, _) in registeredHotkeys {
+            if existingShortcut.key == shortcut.key &&
+               Set(existingShortcut.modifiers) == Set(shortcut.modifiers) {
+                return existingShortcut
+            }
+        }
+        return nil
+    }
+}
+
+// MARK: - Hotkey Group
+
+public struct HotkeyGroup: Sendable, Equatable {
+    public let name: String
+    public var isEnabled: Bool
+    public var shortcuts: [KeyboardShortcut]
+
+    public init(name: String, isEnabled: Bool = true, shortcuts: [KeyboardShortcut] = []) {
+        self.name = name
+        self.isEnabled = isEnabled
+        self.shortcuts = shortcuts
     }
 }
 
@@ -238,7 +354,7 @@ private struct HotkeyRegistration {
     let shortcut: KeyboardShortcut
     let hotKeyRef: EventHotKeyRef
     let hotKeyID: EventHotKeyID
-    let action: () -> Void
+    let action: @Sendable () -> Void
 }
 
 // MARK: - Errors

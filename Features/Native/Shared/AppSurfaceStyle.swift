@@ -2,23 +2,25 @@ import SwiftUI
 import AppKit
 
 enum AppSurfaceTokens {
-    static let background = Color(nsColor: .windowBackgroundColor)
-    static let sidebarBackground = Color(nsColor: .windowBackgroundColor)
-    static let secondarySidebarBackground = Color(nsColor: .windowBackgroundColor)
-    static let contentBackground = Color(nsColor: .windowBackgroundColor)
-    static let islandBackground = background
-    static let islandBackgroundSoft = Color(nsColor: .windowBackgroundColor)
-    static let cardBackground = Color(nsColor: .textBackgroundColor)
-    static let cardBackgroundSoft = Color(nsColor: .controlBackgroundColor)
-    static let cardBackgroundStrong = Color(nsColor: .selectedContentBackgroundColor)
-    static let separator = Color(nsColor: .separatorColor).opacity(0.72)
+    static let background = Color(NSColor.windowBackgroundColor)
+    static let sidebarBackground = Color(NSColor.controlBackgroundColor)
+    static let secondarySidebarBackground = Color(NSColor.controlBackgroundColor)
+    static let contentBackground = Color(NSColor.windowBackgroundColor)
+    static let islandBackground = Color(NSColor.windowBackgroundColor)
+    static let islandBackgroundSoft = Color(NSColor.controlBackgroundColor)
+    static let cardBackground = Color(NSColor.controlBackgroundColor)
+    static let cardBackgroundSoft = Color(NSColor.controlBackgroundColor).opacity(0.92)
+    static let cardBackgroundStrong = Color(NSColor.controlBackgroundColor)
+    static let separator = Color(NSColor.separatorColor)
     static let primaryText = Color(nsColor: .labelColor)
     static let secondaryText = Color(nsColor: .secondaryLabelColor)
     static let tertiaryText = Color(nsColor: .tertiaryLabelColor)
     static let accentBlue = Color(nsColor: .systemBlue)
-    static let accentPurple = Color(red: 0.72, green: 0.12, blue: 0.90)
-    static let accentGreen = Color(red: 0.25, green: 0.75, blue: 0.35)
+    static let accentPrimary = Color(nsColor: .systemBlue)
+    static let accentGreen = Color(nsColor: .systemGreen)
     static let accentOrange = Color(nsColor: .systemOrange)
+    static let accentSecondary = Color(nsColor: .systemGray)
+    static let accentCyan = Color(nsColor: .systemTeal)
 
     static let mainCardRadius: CGFloat = 18
     static let cardRadius: CGFloat = 16
@@ -98,6 +100,7 @@ struct AppSurfaceCard<Content: View>: View {
             RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator, lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.035), radius: 10, x: 0, y: 4)
     }
 }
 
@@ -143,5 +146,171 @@ struct AppSurfaceSectionCard<Content: View>: View {
             RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+    }
+}
+
+struct AppSurfaceMetricTile: View {
+    let title: String
+    let value: String
+    let subtitle: String?
+    let icon: String
+    let tint: Color
+
+    init(
+        title: String,
+        value: String,
+        subtitle: String? = nil,
+        icon: String,
+        tint: Color = AppSurfaceTokens.accentBlue
+    ) {
+        self.title = title
+        self.value = value
+        self.subtitle = subtitle
+        self.icon = icon
+        self.tint = tint
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(tint.opacity(0.12))
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(tint)
+                }
+                .frame(width: 30, height: 30)
+
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                Text(value)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            AppSurfaceTokens.cardBackground,
+                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.92)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [tint.opacity(0.32), AppSurfaceTokens.separator.opacity(0.7)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: tint.opacity(0.04), radius: 8, x: 0, y: 3)
+    }
+}
+
+struct AppSurfaceEmptyState: View {
+    let icon: String
+    let title: String
+    let message: String
+    let actionTitle: String?
+    let action: (() -> Void)?
+    let tint: Color
+
+    init(
+        icon: String,
+        title: String,
+        message: String,
+        actionTitle: String? = nil,
+        tint: Color = AppSurfaceTokens.accentBlue,
+        action: (() -> Void)? = nil
+    ) {
+        self.icon = icon
+        self.title = title
+        self.message = message
+        self.actionTitle = actionTitle
+        self.tint = tint
+        self.action = action
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(tint.opacity(0.12))
+                    .frame(width: 58, height: 58)
+
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+
+                Text(message)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.borderedProminent)
+                    .tint(tint)
+            }
+        }
+        .padding(.vertical, 22)
+        .padding(.horizontal, 18)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [AppSurfaceTokens.cardBackground, AppSurfaceTokens.cardBackgroundSoft],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.9), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 10, x: 0, y: 4)
+    }
+}
+
+struct AppVisualBackdrop: View {
+    var body: some View {
+        AppSurfaceTokens.background
+            .ignoresSafeArea()
     }
 }

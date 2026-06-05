@@ -26,7 +26,7 @@ struct CapsulePreview: View {
                 
                 // 胶囊示意
                 HStack(spacing: 4) {
-                    // 示例按钮
+                    // 胶囊按钮示意
                     Circle()
                         .fill(Color.accentColor)
                         .frame(width: 18, height: 18)

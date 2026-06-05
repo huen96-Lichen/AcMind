@@ -1,19 +1,23 @@
 import Foundation
-import Darwin
-import IOKit.ps
 import Combine
 
 @MainActor
 public final class SystemStatusService: ObservableObject {
+    public static let shared = SystemStatusService()
+
     @Published public private(set) var snapshot = SystemStatusSnapshot()
 
     private var timer: Timer?
-    private var previousCPUTicks: SystemCPUTickTotals?
-    private var previousNetworkCounters: SystemNetworkCounters?
-    private var previousNetworkSampleDate: Date?
     private var isRunning = false
+    private let readers: [any SystemStatusReader]
 
-    public init() {}
+    public init() {
+        self.readers = Self.defaultReaders()
+    }
+
+    public init(readers: [any SystemStatusReader]) {
+        self.readers = readers
+    }
 
     public func start() {
         guard !isRunning else { return }
@@ -37,240 +41,98 @@ public final class SystemStatusService: ObservableObject {
 
     public func refresh() {
         let now = Date()
-        let cpuUsage = readCPUUsage()
-        let memory = readMemory()
-        let disk = readDisk()
-        let network = readNetworkRate(sampleDate: now)
-        let battery = readBattery()
-        let processes = readProcesses()
+        var merged = SystemStatusPartialSnapshot()
+
+        for reader in readers {
+            let partial = reader.read()
+            merged = Self.merge(merged, with: partial)
+        }
+
+        let totalMemoryGB = Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824.0
+        let memoryUsageGB = merged.memory?.value ?? 0
+        let memoryUsagePercent = totalMemoryGB > 0 ? (memoryUsageGB / totalMemoryGB) * 100 : 0
+        let diskUsagePercent = merged.disk?.value ?? 0
+        let batteryLevel = merged.battery?.percentage ?? 0
+        let batteryState = merged.battery?.state ?? "未知"
 
         snapshot = SystemStatusSnapshot(
-            cpuUsage: cpuUsage,
-            memoryUsageGB: memory.usedGB,
-            totalMemoryGB: memory.totalGB,
-            memoryUsagePercent: memory.percent,
-            diskUsagePercent: disk.percent,
-            diskUsedGB: disk.usedGB,
-            diskTotalGB: disk.totalGB,
-            networkDownloadMBps: network.downloadMBps,
-            networkUploadMBps: network.uploadMBps,
-            batteryLevel: battery.level,
-            batteryState: battery.state,
-            topProcesses: processes,
+            cpu: merged.cpu,
+            memory: merged.memory,
+            disk: merged.disk,
+            network: merged.network,
+            battery: merged.battery,
+            networkInterfaces: merged.networkInterfaces,
+            permissions: merged.permissions,
+            topCPUProcesses: merged.topCPUProcesses,
+            topMemoryProcesses: merged.topMemoryProcesses,
+            temperatureSensors: merged.temperatureSensors,
+            fanSensors: merged.fanSensors,
+            powerSensors: merged.powerSensors,
+            voltageSensors: merged.voltageSensors,
+            currentSensors: merged.currentSensors,
+            thermalState: merged.thermalState,
+            loadAverage1m: merged.loadAverage1m,
+            loadAverage5m: merged.loadAverage5m,
+            loadAverage15m: merged.loadAverage15m,
+            diskUsedGB: merged.diskUsedGB,
+            diskTotalGB: merged.diskTotalGB,
+            networkDownloadMBps: merged.networkDownloadMBps,
+            networkUploadMBps: merged.networkUploadMBps,
+            unavailableReasons: merged.unavailableReasons,
+            cpuUsage: merged.cpu?.value ?? 0,
+            memoryUsageGB: memoryUsageGB,
+            totalMemoryGB: totalMemoryGB,
+            memoryUsagePercent: memoryUsagePercent,
+            diskUsagePercent: diskUsagePercent,
+            batteryLevel: batteryLevel,
+            batteryState: batteryState,
+            topProcesses: merged.topCPUProcesses,
             lastUpdated: now
         )
     }
 
-    private func readCPUUsage() -> Double {
-        guard let current = currentCPUTicks() else {
-            return snapshot.cpuUsage
-        }
+    private static func merge(_ lhs: SystemStatusPartialSnapshot, with rhs: SystemStatusPartialSnapshot) -> SystemStatusPartialSnapshot {
+        var result = lhs
 
-        defer { previousCPUTicks = current }
+        if let cpu = rhs.cpu { result.cpu = cpu }
+        if let memory = rhs.memory { result.memory = memory }
+        if let disk = rhs.disk { result.disk = disk }
+        if let network = rhs.network { result.network = network }
+        if let battery = rhs.battery { result.battery = battery }
+        if rhs.networkInterfaces.isEmpty == false { result.networkInterfaces = rhs.networkInterfaces }
+        if rhs.permissions.isEmpty == false { result.permissions.append(contentsOf: rhs.permissions) }
+        if rhs.topCPUProcesses.isEmpty == false { result.topCPUProcesses = rhs.topCPUProcesses }
+        if rhs.topMemoryProcesses.isEmpty == false { result.topMemoryProcesses = rhs.topMemoryProcesses }
+        if rhs.temperatureSensors.isEmpty == false { result.temperatureSensors = rhs.temperatureSensors }
+        if rhs.fanSensors.isEmpty == false { result.fanSensors = rhs.fanSensors }
+        if rhs.powerSensors.isEmpty == false { result.powerSensors = rhs.powerSensors }
+        if rhs.voltageSensors.isEmpty == false { result.voltageSensors = rhs.voltageSensors }
+        if rhs.currentSensors.isEmpty == false { result.currentSensors = rhs.currentSensors }
+        if let thermalState = rhs.thermalState { result.thermalState = thermalState }
+        if let loadAverage1m = rhs.loadAverage1m { result.loadAverage1m = loadAverage1m }
+        if let loadAverage5m = rhs.loadAverage5m { result.loadAverage5m = loadAverage5m }
+        if let loadAverage15m = rhs.loadAverage15m { result.loadAverage15m = loadAverage15m }
+        if let diskUsedGB = rhs.diskUsedGB { result.diskUsedGB = diskUsedGB }
+        if let diskTotalGB = rhs.diskTotalGB { result.diskTotalGB = diskTotalGB }
+        if let networkDownloadMBps = rhs.networkDownloadMBps { result.networkDownloadMBps = networkDownloadMBps }
+        if let networkUploadMBps = rhs.networkUploadMBps { result.networkUploadMBps = networkUploadMBps }
+        if rhs.unavailableReasons.isEmpty == false { result.unavailableReasons.append(contentsOf: rhs.unavailableReasons) }
 
-        guard let previousCPUTicks else {
-            return snapshot.cpuUsage
-        }
-
-        return SystemStatusMetrics.cpuUsage(previous: previousCPUTicks, current: current)
+        return result
     }
 
-    private func currentCPUTicks() -> SystemCPUTickTotals? {
-        var cpuCount: natural_t = 0
-        var info: processor_info_array_t?
-        var infoCount: mach_msg_type_number_t = 0
-
-        let result = host_processor_info(
-            mach_host_self(),
-            PROCESSOR_CPU_LOAD_INFO,
-            &cpuCount,
-            &info,
-            &infoCount
-        )
-        guard result == KERN_SUCCESS, let info else {
-            return nil
-        }
-
-        defer {
-            vm_deallocate(
-                mach_task_self_,
-                vm_address_t(bitPattern: info),
-                vm_size_t(Int(infoCount) * MemoryLayout<integer_t>.stride)
-            )
-        }
-
-        let buffer = UnsafeBufferPointer(start: info, count: Int(infoCount))
-        let cpuStateMax = Int(CPU_STATE_MAX)
-        guard buffer.count >= Int(cpuCount) * cpuStateMax else {
-            return nil
-        }
-
-        var totals = SystemCPUTickTotals(user: 0, system: 0, idle: 0, nice: 0)
-        for index in 0..<Int(cpuCount) {
-            let base = index * cpuStateMax
-            totals.user += UInt64(buffer[base + Int(CPU_STATE_USER)])
-            totals.system += UInt64(buffer[base + Int(CPU_STATE_SYSTEM)])
-            totals.idle += UInt64(buffer[base + Int(CPU_STATE_IDLE)])
-            totals.nice += UInt64(buffer[base + Int(CPU_STATE_NICE)])
-        }
-
-        return totals
-    }
-
-    private func readMemory() -> (usedGB: Double, totalGB: Double, percent: Double) {
-        var stats = vm_statistics64()
-        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
-
-        let result = withUnsafeMutablePointer(to: &stats) { pointer in
-            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound -> kern_return_t in
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, rebound, &count)
-            }
-        }
-
-        let totalBytes = Double(ProcessInfo.processInfo.physicalMemory)
-        guard result == KERN_SUCCESS, totalBytes > 0 else {
-            return (0, totalBytes / 1_073_741_824.0, 0)
-        }
-
-        var pageSize: vm_size_t = 0
-        host_page_size(mach_host_self(), &pageSize)
-
-        let usedPages = Double(stats.active_count + stats.wire_count + stats.compressor_page_count)
-        let usedBytes = usedPages * Double(pageSize)
-        let percent = (usedBytes / totalBytes) * 100
-
-        return (usedBytes / 1_073_741_824.0, totalBytes / 1_073_741_824.0, max(0, min(100, percent)))
-    }
-
-    private func readDisk() -> (usedGB: Double, totalGB: Double, percent: Double) {
-        do {
-            let values = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
-            let totalBytes = (values[.systemSize] as? NSNumber)?.doubleValue ?? 0
-            let freeBytes = (values[.systemFreeSize] as? NSNumber)?.doubleValue ?? 0
-            let usedBytes = max(0, totalBytes - freeBytes)
-            let percent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0
-
-            return (usedBytes / 1_073_741_824.0, totalBytes / 1_073_741_824.0, max(0, min(100, percent)))
-        } catch {
-            return (0, 0, 0)
-        }
-    }
-
-    private func readNetworkRate(sampleDate: Date) -> SystemNetworkRate {
-        guard let current = currentNetworkCounters() else {
-            return SystemNetworkRate(downloadMBps: 0, uploadMBps: 0)
-        }
-
-        defer {
-            previousNetworkCounters = current
-            previousNetworkSampleDate = sampleDate
-        }
-
-        guard let previousNetworkCounters, let previousNetworkSampleDate else {
-            return SystemNetworkRate(downloadMBps: 0, uploadMBps: 0)
-        }
-
-        return SystemStatusMetrics.networkRate(
-            previous: previousNetworkCounters,
-            current: current,
-            interval: sampleDate.timeIntervalSince(previousNetworkSampleDate)
-        )
-    }
-
-    private func currentNetworkCounters() -> SystemNetworkCounters? {
-        var interfaces: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&interfaces) == 0, let first = interfaces else {
-            return nil
-        }
-        defer { freeifaddrs(interfaces) }
-
-        var bytesIn: UInt64 = 0
-        var bytesOut: UInt64 = 0
-        var pointer: UnsafeMutablePointer<ifaddrs>? = first
-
-        while let current = pointer {
-            defer { pointer = current.pointee.ifa_next }
-
-            let flags = Int32(current.pointee.ifa_flags)
-            guard (flags & IFF_UP) != 0, (flags & IFF_LOOPBACK) == 0 else { continue }
-            guard let address = current.pointee.ifa_addr, address.pointee.sa_family == UInt8(AF_LINK) else { continue }
-            guard let dataPointer = current.pointee.ifa_data else { continue }
-
-            let data = dataPointer.assumingMemoryBound(to: if_data.self).pointee
-            bytesIn += UInt64(data.ifi_ibytes)
-            bytesOut += UInt64(data.ifi_obytes)
-        }
-
-        return SystemNetworkCounters(bytesIn: bytesIn, bytesOut: bytesOut)
-    }
-
-    private func readBattery() -> (level: Double, state: String) {
-        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-              let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef],
-              let source = sources.first,
-              let description = IOPSGetPowerSourceDescription(snapshot, source)?.takeUnretainedValue() as? [String: Any] else {
-            return (0, "无电池")
-        }
-
-        let currentCapacity = description[kIOPSCurrentCapacityKey] as? Float ?? 0
-        let maxCapacity = description[kIOPSMaxCapacityKey] as? Float ?? 100
-        let powerSource = description[kIOPSPowerSourceStateKey] as? String ?? ""
-        let isCharging = description["Is Charging"] as? Bool ?? false
-        let level = maxCapacity > 0 ? Double(currentCapacity / maxCapacity * 100) : 0
-
-        let state: String
-        if ProcessInfo.processInfo.isLowPowerModeEnabled {
-            state = "低电量模式"
-        } else if isCharging || powerSource == kIOPSACPowerValue {
-            state = "充电中"
-        } else if powerSource.isEmpty {
-            state = "无电池"
-        } else {
-            state = "电池供电"
-        }
-
-        return (level, state)
-    }
-
-    private func readProcesses(limit: Int = 5) -> [SystemProcessSnapshot] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-axo", "pid=,pcpu=,rss=,comm="]
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return []
-        }
-
-        let output = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        let processes = output.split(whereSeparator: \.isNewline).compactMap { line -> SystemProcessSnapshot? in
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-
-            let parts = trimmed.split(maxSplits: 3, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard parts.count >= 4,
-                  let pid = Int32(parts[0]),
-                  let cpuUsage = Double(parts[1]),
-                  let rssKB = Double(parts[2]) else {
-                return nil
-            }
-
-            let command = String(parts[3])
-            let name = URL(fileURLWithPath: command).lastPathComponent
-            return SystemProcessSnapshot(
-                pid: pid,
-                name: name.isEmpty ? command : name,
-                cpuUsage: cpuUsage,
-                memoryUsageMB: rssKB / 1024.0
-            )
-        }
-
-        return SystemStatusMetrics.sortedProcesses(processes, limit: limit)
+    private static func defaultReaders() -> [any SystemStatusReader] {
+        [
+            CPUStatusReader(),
+            MemoryStatusReader(),
+            DiskStatusReader(),
+            NetworkStatusReader(),
+            BatteryStatusReader(),
+            PermissionStatusReader(),
+            ProcessStatusReader(),
+            SensorStatusReader(),
+            FanStatusReader(),
+            PowerStatusReader()
+        ]
     }
 }

@@ -91,6 +91,42 @@ final class StorageTests: XCTestCase {
         XCTAssertNil(afterDelete)
     }
 
+    func testSourceItemChangesPostNotification() async throws {
+        let id = UUID().uuidString
+        let item = SourceItem(
+            id: id,
+            type: .text,
+            source: .manual,
+            status: .inbox,
+            title: "Notification Item",
+            createdAt: Date()
+        )
+
+        let expectation = expectation(description: "source item change notifications")
+        expectation.expectedFulfillmentCount = 3
+        var notificationCount = 0
+        let token = NotificationCenter.default.addObserver(
+            forName: .acmindSourceItemsDidChange,
+            object: nil,
+            queue: .main
+        ) { _ in
+            notificationCount += 1
+            expectation.fulfill()
+        }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        try await storage.insertSourceItem(item)
+
+        var updated = item
+        updated.status = .distilled
+        try await storage.updateSourceItem(updated)
+
+        try await storage.deleteSourceItem(id: id)
+
+        await fulfillment(of: [expectation], timeout: 2.0)
+        XCTAssertEqual(notificationCount, 3)
+    }
+
     func testSourceTypeInferenceFromFileURL() {
         let expectations: [(String, SourceType)] = [
             ("photo.png", .image),
@@ -275,6 +311,20 @@ final class StorageTests: XCTestCase {
         
         XCTAssertTrue(FileManager.default.fileExists(atPath: asset.filePath))
     }
+
+    func testAssetStoreLoadsDisplaySizedImage() async throws {
+        let image = NSImage(size: NSSize(width: 1200, height: 800))
+        image.lockFocus()
+        NSColor.blue.setFill()
+        NSRect(origin: .zero, size: NSSize(width: 1200, height: 800)).fill()
+        image.unlockFocus()
+
+        let asset = try await assetStore.saveImage(image, sourceItemId: nil)
+        let thumbnail = await assetStore.loadImage(asset: asset, maxPixelSize: 240)
+
+        XCTAssertNotNil(thumbnail)
+        XCTAssertLessThanOrEqual(max(thumbnail?.size.width ?? 0, thumbnail?.size.height ?? 0), 240)
+    }
     
     func testAssetStoreSaveText() async throws {
         let text = "Test content for asset storage"
@@ -284,6 +334,18 @@ final class StorageTests: XCTestCase {
         
         let loadedText = await assetStore.loadText(asset: asset)
         XCTAssertEqual(loadedText, text)
+    }
+
+    func testAssetStoreSaveAudio() async throws {
+        let audioData = Data([0x01, 0x02, 0x03, 0x04])
+        let asset = try await assetStore.saveAudio(data: audioData, sourceItemId: nil, fileName: "test.m4a")
+
+        XCTAssertEqual(asset.kind, AssetFileKind.audio)
+        XCTAssertEqual(asset.mimeType, "audio/m4a")
+
+        let retrieved = try await assetStore.getAsset(id: asset.id)
+        XCTAssertNotNil(retrieved)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: asset.filePath))
     }
     
     func testAssetStoreDelete() async throws {

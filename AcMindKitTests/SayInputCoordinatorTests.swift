@@ -187,7 +187,6 @@ final class SayInputCoordinatorTests: XCTestCase {
     func testPunctuationAppending() async throws {
         let sourceItemId = UUID().uuidString
         let rawText = "你好"
-        let polishedText = "你好！。"
 
         let voiceService = VoiceServiceStub(stopRecordingResult: sourceItemId, polishedTextProvider: { $0 + "。" })
         let storage = SayInputSourceStoreStub(items: [
@@ -233,6 +232,121 @@ final class SayInputCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(outcome.rawText, "你好！？")
         XCTAssertEqual(voiceService.polishRequests, ["你好！？"])
+    }
+
+    func testTranslateOutputModeUsesTranslatedText() async throws {
+        let sourceItemId = UUID().uuidString
+        let rawText = "Please translate this sentence"
+        let translatedText = "请翻译这句话"
+
+        let voiceService = VoiceServiceStub(
+            stopRecordingResult: sourceItemId,
+            translatedText: translatedText
+        )
+
+        let storage = SayInputSourceStoreStub(items: [
+            sourceItemId: SourceItem(
+                id: sourceItemId,
+                type: .audio,
+                source: .voice,
+                status: .captured,
+                previewText: rawText,
+                transcript: rawText
+            )
+        ])
+        let textInjector = SayInputTextInjectorStub(
+            selectionSnapshot: {
+                var snapshot = TextSelectionSnapshot()
+                snapshot.isEditable = false
+                snapshot.isFocusedTarget = false
+                snapshot.source = "none"
+                return snapshot
+            }()
+        )
+        let clipboard = SayInputClipboardStub()
+
+        let coordinator = SayInputCoordinator(
+            voiceService: voiceService,
+            sourceStore: storage,
+            textInjector: textInjector,
+            clipboard: clipboard
+        )
+
+        let outcome = try await coordinator.processCapturedVoice(
+            sourceItemId: sourceItemId,
+            configuration: SayInputConfiguration(
+                autoPolish: false,
+                polishMode: .none,
+                outputMode: .translate,
+                saveToInbox: true,
+                preferredLanguage: "auto",
+                translationLanguage: "zh"
+            )
+        )
+
+        XCTAssertEqual(outcome.polishedText, translatedText)
+        XCTAssertEqual(outcome.deliveryState, .copiedAndSavedToInbox)
+        XCTAssertEqual(clipboard.writtenStrings, [translatedText])
+        XCTAssertEqual(voiceService.translationRequests, [rawText])
+
+        let updated = try await storage.getSourceItem(id: sourceItemId)
+        XCTAssertEqual(updated?.polishedTranscript, translatedText)
+        XCTAssertEqual(updated?.previewText, translatedText)
+    }
+
+    func testStreamingPolishCallbackReceivesAccumulatedChunks() async throws {
+        let sourceItemId = UUID().uuidString
+        let rawText = "请把这段话整理一下"
+        let polishedText = "请把这段话整理一下。"
+
+        let voiceService = VoiceServiceStub(stopRecordingResult: sourceItemId, polishedTextProvider: { $0 + "。" })
+        voiceService.streamChunks = ["请把", "这段话", "整理一下。"]
+
+        let storage = SayInputSourceStoreStub(items: [
+            sourceItemId: SourceItem(
+                id: sourceItemId,
+                type: .audio,
+                source: .voice,
+                status: .captured,
+                previewText: rawText,
+                transcript: rawText
+            )
+        ])
+        let textInjector = SayInputTextInjectorStub(
+            selectionSnapshot: {
+                var snapshot = TextSelectionSnapshot()
+                snapshot.isEditable = false
+                snapshot.isFocusedTarget = false
+                snapshot.source = "none"
+                return snapshot
+            }()
+        )
+        let clipboard = SayInputClipboardStub()
+
+        let coordinator = SayInputCoordinator(
+            voiceService: voiceService,
+            sourceStore: storage,
+            textInjector: textInjector,
+            clipboard: clipboard
+        )
+
+        let streamedUpdates = StreamedUpdatesBox()
+        let outcome = try await coordinator.processCapturedVoice(
+            sourceItemId: sourceItemId,
+            configuration: SayInputConfiguration(
+                autoPolish: true,
+                polishMode: .light,
+                outputMode: .copyToClipboard,
+                saveToInbox: true
+            ),
+            onPolishChunk: { chunk in
+                await streamedUpdates.append(chunk)
+            }
+        )
+
+        XCTAssertEqual(outcome.polishedText, polishedText)
+        let streamedSnapshot = await streamedUpdates.snapshot()
+        XCTAssertEqual(streamedSnapshot, ["请把", "请把这段话", "请把这段话整理一下。"])
     }
 
     func testSilenceTimeoutAutoStop() async throws {
@@ -290,19 +404,30 @@ final class SayInputCoordinatorTests: XCTestCase {
 private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable {
     private var stopRecordingResults: [String]
     private let polishedTextProvider: (String) -> String
+    private let translatedTextProvider: (String) -> String
     private(set) var startRecordingCalls = 0
     private(set) var stopRecordingCalls = 0
     private(set) var polishRequests: [String] = []
+    private(set) var translationRequests: [String] = []
+    var streamChunks: [String] = []
     private(set) var status: RecordingStatus = .idle
 
     init(stopRecordingResult: String, polishedText: String) {
         self.stopRecordingResults = [stopRecordingResult]
         self.polishedTextProvider = { _ in polishedText }
+        self.translatedTextProvider = { _ in polishedText }
     }
 
     init(stopRecordingResult: String, polishedTextProvider: @escaping (String) -> String) {
         self.stopRecordingResults = [stopRecordingResult]
         self.polishedTextProvider = polishedTextProvider
+        self.translatedTextProvider = polishedTextProvider
+    }
+
+    init(stopRecordingResult: String, translatedText: String) {
+        self.stopRecordingResults = [stopRecordingResult]
+        self.polishedTextProvider = { $0 }
+        self.translatedTextProvider = { _ in translatedText }
     }
 
     func enqueueStopRecordingResult(_ value: String) {
@@ -330,6 +455,49 @@ private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable 
     func polishTranscript(_ text: String, mode: VoicePolishMode) async throws -> String {
         polishRequests.append(text)
         return polishedTextProvider(text)
+    }
+
+    func polishTranscriptStream(
+        _ text: String,
+        mode: VoicePolishMode,
+        hotwords: [String],
+        customSystemPrompt: String?,
+        contextInfo: String?,
+        language: String,
+        onChunk: @escaping @Sendable (String) async -> Void
+    ) async throws -> String {
+        polishRequests.append(text)
+        if streamChunks.isEmpty {
+            let final = polishedTextProvider(text)
+            await onChunk(final)
+            return final
+        }
+
+        for chunk in streamChunks {
+            await onChunk(chunk)
+        }
+        return streamChunks.joined()
+    }
+
+    func translateTranscript(
+        _ text: String,
+        targetLanguage: String,
+        contextInfo: String?
+    ) async throws -> String {
+        translationRequests.append(text)
+        return translatedTextProvider(text)
+    }
+
+    func translateTranscriptStream(
+        _ text: String,
+        targetLanguage: String,
+        contextInfo: String?,
+        onChunk: @escaping @Sendable (String) async -> Void
+    ) async throws -> String {
+        translationRequests.append(text)
+        let translated = translatedTextProvider(text)
+        await onChunk(translated)
+        return translated
     }
 
     func getRecordingStatus() async -> RecordingStatus {
@@ -404,5 +572,17 @@ private final class SayInputSourceStoreStub: SayInputSourceItemStore, @unchecked
 
     func deleteSourceItem(id: String) async throws {
         items.removeValue(forKey: id)
+    }
+}
+
+private actor StreamedUpdatesBox {
+    private var storage: [String] = []
+
+    func append(_ value: String) {
+        storage.append(value)
+    }
+
+    func snapshot() -> [String] {
+        storage
     }
 }

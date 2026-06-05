@@ -260,6 +260,14 @@ struct DocumentConverterPanel: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.outputMarkdown.isEmpty)
+
+                Button {
+                    viewModel.openSavedOutput()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             TextEditor(text: $viewModel.outputMarkdown)
@@ -286,6 +294,7 @@ final class DocumentConverterViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var engineLabel = "waiting"
     @Published var isConverting = false
+    @Published var lastSavedURL: URL?
 
     func clear() {
         sourceURL = nil
@@ -294,6 +303,7 @@ final class DocumentConverterViewModel: ObservableObject {
         errorMessage = nil
         engineLabel = "waiting"
         isConverting = false
+        lastSavedURL = nil
     }
 
     func pickFile() {
@@ -377,11 +387,17 @@ final class DocumentConverterViewModel: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try outputMarkdown.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
                 ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
             } catch {
                 ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
             }
         }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }
 
@@ -644,6 +660,22 @@ struct OCRPanel: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.saveOutput()
+                } label: {
+                    Label("保存结果", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.outputText.isEmpty)
+
+                Button {
+                    viewModel.openSavedOutput()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             TextEditor(text: $viewModel.outputText)
@@ -669,6 +701,7 @@ final class OCRViewModel: ObservableObject {
     @Published var statusText = "请选择图片或从剪贴板识别"
     @Published var errorMessage: String?
     @Published var isWorking = false
+    @Published var lastSavedURL: URL?
 
     func clear() {
         sourceURL = nil
@@ -676,6 +709,7 @@ final class OCRViewModel: ObservableObject {
         statusText = "请选择图片或从剪贴板识别"
         errorMessage = nil
         isWorking = false
+        lastSavedURL = nil
     }
 
     func pickImage() {
@@ -690,6 +724,7 @@ final class OCRViewModel: ObservableObject {
             outputText = ""
             errorMessage = nil
             statusText = "已选择图片，等待识别"
+            lastSavedURL = nil
         }
     }
 
@@ -704,6 +739,7 @@ final class OCRViewModel: ObservableObject {
         errorMessage = nil
         statusText = "正在识别剪贴板图片..."
         isWorking = true
+        lastSavedURL = nil
 
         Task {
             do {
@@ -735,6 +771,7 @@ final class OCRViewModel: ObservableObject {
         errorMessage = nil
         outputText = ""
         statusText = "正在识别..."
+        lastSavedURL = nil
 
         Task {
             do {
@@ -765,6 +802,30 @@ final class OCRViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
         ToastManager.shared.show(.success, "识别结果已复制")
+    }
+
+    func saveOutput() {
+        guard outputText.isEmpty == false else { return }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "txt") ?? .plainText]
+        panel.nameFieldStringValue = "ocr-result.txt"
+        panel.canCreateDirectories = true
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try outputText.write(to: url, atomically: true, encoding: .utf8)
+                lastSavedURL = url
+                ToastManager.shared.show(.success, "识别结果已保存")
+            } catch {
+                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }
 
@@ -972,6 +1033,14 @@ struct ImageProcessingPanel: View {
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
                 }
+
+                Button {
+                    viewModel.openSavedOutput()
+                } label: {
+                    Label("打开文件", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.lastSavedURL == nil)
             }
 
             if let previewImage = viewModel.previewImage {
@@ -1154,6 +1223,7 @@ final class ImageProcessingViewModel: ObservableObject {
     @Published var outputFormat: ImageOutputFormat = .jpeg
     @Published var maxDimensionText = "1600"
     @Published var quality: CGFloat = 0.82
+    @Published var lastSavedURL: URL?
 
     var hasSource: Bool {
         sourceURL != nil || clipboardImage != nil
@@ -1172,6 +1242,7 @@ final class ImageProcessingViewModel: ObservableObject {
         outputFormat = .jpeg
         maxDimensionText = "1600"
         quality = 0.82
+        lastSavedURL = nil
     }
 
     func pickImage() {
@@ -1188,6 +1259,7 @@ final class ImageProcessingViewModel: ObservableObject {
             previewImage = nil
             outputData = nil
             outputSummary = nil
+            lastSavedURL = nil
             errorMessage = nil
             statusText = "已选择图片，等待处理"
         }
@@ -1207,6 +1279,7 @@ final class ImageProcessingViewModel: ObservableObject {
         clipboardInfo = outputSummary
         statusText = "已导入剪贴板图片，等待处理"
         errorMessage = nil
+        lastSavedURL = nil
     }
 
     func process() {
@@ -1216,6 +1289,7 @@ final class ImageProcessingViewModel: ObservableObject {
         statusText = "正在处理图片..."
         outputData = nil
         outputSummary = nil
+        lastSavedURL = nil
 
         do {
             let result: ImageProcessingResult
@@ -1260,11 +1334,17 @@ final class ImageProcessingViewModel: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try outputData.write(to: url)
+                lastSavedURL = url
                 ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
             } catch {
                 ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
             }
         }
+    }
+
+    func openSavedOutput() {
+        guard let lastSavedURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lastSavedURL])
     }
 }
 
@@ -1347,6 +1427,14 @@ struct BatchRenamePanel: View {
                     Label("选择文件夹", systemImage: "folder")
                 }
                 .buttonStyle(.borderedProminent)
+
+                Button {
+                    viewModel.openFolder()
+                } label: {
+                    Label("打开目录", systemImage: "folder")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.folderURL == nil)
 
                 Button {
                     viewModel.refreshPreview()
@@ -1624,6 +1712,11 @@ final class BatchRenameViewModel: ObservableObject {
         }
 
         isRenaming = false
+    }
+
+    func openFolder() {
+        guard let folderURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([folderURL])
     }
 
     private func proposedURL(for url: URL) -> URL {

@@ -61,7 +61,7 @@ struct AgentDashboardView: View {
                     .frame(width: 280)
             }
         }
-        .background(AppSurfaceTokens.background.ignoresSafeArea())
+        .background(AppVisualBackdrop())
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
         } message: {
@@ -100,7 +100,7 @@ struct AgentDashboardView: View {
     private var topBar: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text("普通对话")
+                Text(currentModeTitle)
                     .font(.system(size: 17, weight: .semibold))
                 Text("AcMind · \(viewModel.currentWorkspaceTitle)")
                     .font(.system(size: 12))
@@ -156,8 +156,18 @@ struct AgentDashboardView: View {
         VStack(alignment: .leading, spacing: 16) {
             MessageBubble(isUser: false, content: "你好！我是 AcMind Agent，有什么可以帮你的吗？")
 
+            if isQuickAskMode, let answer = viewModel.quickAskAnswer, !answer.isEmpty {
+                MessageBubble(isUser: false, content: answer)
+            }
+
             if let transcript = viewModel.lastTranscript, !transcript.isEmpty {
                 MessageBubble(isUser: true, content: transcript)
+            }
+
+            if isQuickAskMode, viewModel.quickAskMessages.isEmpty == false {
+                ForEach(viewModel.quickAskMessages, id: \.id) { message in
+                    MessageBubble(isUser: message.role == .user, content: message.content)
+                }
             }
 
             if let note = viewModel.distilledNote {
@@ -178,7 +188,7 @@ struct AgentDashboardView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 10).fill(AppSurfaceTokens.cardBackgroundSoft))
+                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
             }
         }
     }
@@ -211,19 +221,38 @@ struct AgentDashboardView: View {
                     .frame(minHeight: 36, maxHeight: 100)
                     .scrollContentBackground(.hidden)
                     .padding(8)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+                    .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                            .stroke(AppSurfaceTokens.separator, lineWidth: 1)
                     )
 
-                Button(action: { Task { await viewModel.distill() } }) {
-                    Image(systemName: "arrow.up.circle.fill")
+                Button(action: {
+                    Task {
+                        if isToolCallMode {
+                            await viewModel.runToolAction(
+                                toolType: .ai,
+                                action: "chat",
+                                parameters: [
+                                    "prompt": viewModel.inputText,
+                                    "providerId": viewModel.selectedModelOption?.providerId ?? "",
+                                    "model": viewModel.selectedModelOption?.modelName ?? ""
+                                ]
+                            )
+                        } else if isQuickAskMode {
+                            viewModel.quickAskQuestion = viewModel.inputText
+                            await viewModel.quickAsk()
+                        } else {
+                            await viewModel.distill()
+                        }
+                    }
+                }) {
+                    Image(systemName: isToolCallMode ? "wrench.and.screwdriver.fill" : (isQuickAskMode ? "questionmark.circle.fill" : "arrow.up.circle.fill"))
                         .font(.system(size: 24))
-                        .foregroundStyle(AppSurfaceTokens.accentPurple)
+                        .foregroundStyle(isToolCallMode ? AppSurfaceTokens.accentGreen : (isQuickAskMode ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.accentPrimary))
                 }
                 .buttonStyle(.plain)
-                .disabled(viewModel.inputText.isEmpty)
+                .disabled(viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
     }
@@ -247,11 +276,14 @@ struct AgentDashboardView: View {
             Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    taskSection(title: "执行中的任务", items: viewModel.isLoading ? ["正在处理输入..."] : [])
-                    recentTasksSection
-                    quickActionsSection
+            VStack(alignment: .leading, spacing: 16) {
+                taskSection(title: "执行中的任务", items: viewModel.isLoading ? ["正在处理输入..."] : [])
+                recentTasksSection
+                quickActionsSection
+                if let result = viewModel.toolCallResult, !result.isEmpty {
+                    toolCallResultCard(result)
                 }
+            }
                 .padding(16)
             }
         }
@@ -271,7 +303,7 @@ struct AgentDashboardView: View {
                     .foregroundStyle(.tertiary)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
+                    .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
             } else {
                 ForEach(items, id: \.self) { item in
                     HStack(spacing: 8) {
@@ -283,7 +315,7 @@ struct AgentDashboardView: View {
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
+                    .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
                 }
             }
         }
@@ -307,7 +339,7 @@ struct AgentDashboardView: View {
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
+                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
             }
         }
     }
@@ -320,10 +352,63 @@ struct AgentDashboardView: View {
                 .textCase(.uppercase)
 
             VStack(spacing: 6) {
-                quickActionRow(icon: "sparkles", title: "AI 整理", action: { Task { await viewModel.distill() } })
-                quickActionRow(icon: "tray.and.arrow.down", title: "保存到收集箱", action: { Task { await viewModel.saveToInbox() } })
-                quickActionRow(icon: "doc.on.clipboard", title: "复制结果", action: copyCurrentResult)
+                if isToolCallMode {
+                    quickActionRow(icon: "sparkles", title: "AI 对话", action: {
+                        Task {
+                            await viewModel.runToolAction(
+                                toolType: .ai,
+                                action: "chat",
+                                parameters: [
+                                    "prompt": viewModel.inputText,
+                                    "providerId": viewModel.selectedModelOption?.providerId ?? "",
+                                    "model": viewModel.selectedModelOption?.modelName ?? ""
+                                ]
+                            )
+                        }
+                    })
+                    quickActionRow(icon: "server.rack", title: "列出 Provider", action: {
+                        Task { await viewModel.runToolAction(toolType: .ai, action: "providers") }
+                    })
+                    quickActionRow(icon: "cpu", title: "检查模型", action: {
+                        Task {
+                            await viewModel.runToolAction(
+                                toolType: .ai,
+                                action: "models",
+                                parameters: [
+                                    "providerId": viewModel.selectedModelOption?.providerId ?? ""
+                                ]
+                            )
+                        }
+                    })
+                } else if isAutomationMode {
+                    quickActionRow(icon: "calendar", title: "查看定时任务", action: {
+                        Task { await viewModel.runToolAction(toolType: .schedule, action: "list") }
+                    })
+                    quickActionRow(icon: "tray", title: "查看收集箱", action: {
+                        Task { await viewModel.runToolAction(toolType: .inbox, action: "list") }
+                    })
+                    quickActionRow(icon: "doc.on.clipboard", title: "复制结果", action: copyCurrentResult)
+                } else {
+                    quickActionRow(icon: "sparkles", title: "AI 整理", action: { Task { await viewModel.distill() } })
+                    quickActionRow(icon: "tray.and.arrow.down", title: "保存到收集箱", action: { Task { await viewModel.saveToInbox() } })
+                    quickActionRow(icon: "doc.on.clipboard", title: "复制结果", action: copyCurrentResult)
+                }
             }
+        }
+    }
+
+    private func toolCallResultCard(_ result: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("工具调用结果")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            Text(result)
+                .font(.system(size: 12))
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
         }
     }
 
@@ -350,6 +435,33 @@ struct AgentDashboardView: View {
         }
         .buttonStyle(.plain)
     }
+
+    private var currentModeTitle: String {
+        switch selectedSidebarItem {
+        case "task":
+            return "任务执行"
+        case "quickAsk":
+            return "Quick Ask"
+        case "toolCall":
+            return "工具调用"
+        case "automation":
+            return "自动化"
+        default:
+            return "普通对话"
+        }
+    }
+
+    private var isQuickAskMode: Bool {
+        selectedSidebarItem == "quickAsk"
+    }
+
+    private var isToolCallMode: Bool {
+        selectedSidebarItem == "toolCall"
+    }
+
+    private var isAutomationMode: Bool {
+        selectedSidebarItem == "automation"
+    }
 }
 
 struct MessageBubble: View {
@@ -365,7 +477,7 @@ struct MessageBubble: View {
                     .font(.system(size: 13))
                     .padding(12)
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
                             .fill(isUser ? Color.accentColor.opacity(0.15) : AppSurfaceTokens.cardBackgroundSoft)
                     )
 
@@ -402,7 +514,7 @@ private func recordingColor(for status: RecordingStatus) -> Color {
     case .recording:
         return .red
     case .processing:
-        return AppSurfaceTokens.accentPurple
+        return AppSurfaceTokens.accentPrimary
     case .error:
         return .red
     }

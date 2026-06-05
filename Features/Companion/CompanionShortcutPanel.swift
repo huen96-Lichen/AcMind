@@ -195,7 +195,6 @@ struct ShortcutRow: View {
             Toggle("", isOn: $shortcut.isEnabled)
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .disabled(false)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

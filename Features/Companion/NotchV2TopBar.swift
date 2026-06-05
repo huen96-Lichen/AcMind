@@ -9,29 +9,39 @@ struct NotchV2TopBar: View {
         ZStack {
             NotchV2DesignTokens.rootBackground
 
-            HStack(alignment: .center, spacing: 8) {
-                leftTabs
-                    .frame(width: 300, alignment: .leading)
+            GeometryReader { proxy in
+                let centerGapWidth = min(
+                    NotchV2DesignTokens.notchSafeZoneWidth,
+                    max(112, proxy.size.width * 0.13)
+                )
 
-                Spacer(minLength: 6)
+                HStack(alignment: .center, spacing: 10) {
+                    leftTabs
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(1)
 
-                Color.clear
-                    .frame(width: NotchV2DesignTokens.notchSafeZoneWidth, height: 1)
+                    Spacer(minLength: 10)
 
-                Spacer(minLength: 6)
+                    Color.clear
+                        .frame(width: centerGapWidth, height: 1)
+                        .allowsHitTesting(false)
 
-                rightStatus
-                    .frame(width: 240, alignment: .trailing)
+                    Spacer(minLength: 10)
+
+                    rightStatus
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(1)
+                }
+                .padding(.horizontal, 16)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
             }
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
         .frame(width: NotchV2DesignTokens.expandedWidth, height: NotchV2DesignTokens.topBarHeight)
     }
 
     private var leftTabs: some View {
-        HStack(spacing: 8) {
-            topNavButton(title: "今日", icon: "calendar", selected: viewModel.effectiveSelectedPage == .overview) {
+        HStack(spacing: 6) {
+            topNavButton(title: "本机", icon: "desktopcomputer", selected: viewModel.effectiveSelectedPage == .overview) {
                 viewModel.select(.overview)
             }
 
@@ -46,33 +56,24 @@ struct NotchV2TopBar: View {
                     viewModel.select(.agent)
                 }
             }
-
-            if viewModel.isModuleEnabled(.schedule) {
-                topNavButton(title: "日程", icon: "calendar.badge.clock", selected: viewModel.effectiveSelectedPage == .schedule) {
-                    viewModel.select(.schedule)
-                }
-            }
         }
     }
 
     private var rightStatus: some View {
         HStack(spacing: 5) {
-            if viewModel.isModuleEnabled(.systemStatus) {
-                topNavButton(title: "状态", icon: "cpu", selected: viewModel.effectiveSelectedPage == .systemStatus) {
-                    viewModel.select(.systemStatus)
-                }
-            }
-
             statusPill(
                 icon: batteryIconName,
                 title: batteryText,
                 accent: batteryAccent
             )
 
-            statusPill(
-                icon: viewModel.status.icon,
-                title: viewModel.status.displayName,
-                accent: viewModel.status.color
+            NotchV2StatusPill(
+                icon: "desktopcomputer",
+                title: "状态",
+                accent: NotchV2DesignTokens.cardBackgroundStrong,
+                action: {
+                    (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                }
             )
 
             if viewModel.hasVoiceOverride {
@@ -99,7 +100,7 @@ struct NotchV2TopBar: View {
                 .foregroundStyle(viewModel.voiceDisplayAccent)
 
             Text(voiceCompactTitle)
-                .font(.system(size: 10, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -108,15 +109,15 @@ struct NotchV2TopBar: View {
                 MiniVoiceWaveform(mode: viewModel.voiceWaveformMode, accent: viewModel.voiceDisplayAccent)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
         .background(
             Capsule(style: .continuous)
-                .fill(viewModel.voiceDisplayAccent.opacity(0.13))
+                .fill(viewModel.voiceDisplayAccent.opacity(0.10))
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(viewModel.voiceDisplayAccent.opacity(0.26), lineWidth: 1)
+                .stroke(viewModel.voiceDisplayAccent.opacity(0.18), lineWidth: 1)
         )
     }
 
@@ -142,19 +143,19 @@ struct NotchV2TopBar: View {
                 .foregroundStyle(accent)
 
             Text(title)
-                .font(.system(size: 10, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.84))
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(accent.opacity(0.18), lineWidth: 1)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
         )
     }
 
@@ -163,14 +164,14 @@ struct NotchV2TopBar: View {
             Image(systemName: "chevron.up")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .frame(width: 20, height: 20)
+                .frame(width: 16, height: 16)
                 .background(
                     Circle()
-                        .fill(NotchV2DesignTokens.cardBackgroundStrong)
+                        .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.84))
                 )
                 .overlay(
                     Circle()
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.04), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -217,22 +218,22 @@ struct NotchV2TopBar: View {
                 Image(systemName: icon)
                     .font(.system(size: 9, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(NotchV2DesignTokens.Typography.caption)
                     .lineLimit(1)
             }
             .foregroundStyle(selected ? NotchV2DesignTokens.primaryText : NotchV2DesignTokens.secondaryText)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
-            .frame(height: 28)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .frame(height: 24)
             .background(
                 Capsule(style: .continuous)
-                    .fill(selected ? NotchV2DesignTokens.accentPurple : NotchV2DesignTokens.cardBackgroundStrong.opacity(0.54))
+                    .fill(selected ? NotchV2DesignTokens.accentPurple.opacity(0.94) : NotchV2DesignTokens.cardBackgroundStrong.opacity(0.46))
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(selected ? Color.white.opacity(0.08) : Color.white.opacity(0.03), lineWidth: 1)
+                    .stroke(selected ? Color.white.opacity(0.06) : Color.white.opacity(0.02), lineWidth: 1)
             )
-            .shadow(color: selected ? NotchV2DesignTokens.accentPurple.opacity(0.22) : .clear, radius: 10, x: 0, y: 4)
+            .shadow(color: selected ? NotchV2DesignTokens.accentPurple.opacity(0.10) : .clear, radius: 5, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }

@@ -6,6 +6,7 @@ import SwiftUI
 /// 胶囊功能类型
 public enum CapsuleActionType: String, Codable, CaseIterable, Sendable, Identifiable {
     case screenshot       // 截图
+    case scrollScreenshot // 滚动截图
     case voiceNote        // 录音笔记
     case urlToText        // URL转文字稿
     case scheduleAnalysis // 日程表分析
@@ -18,6 +19,7 @@ public enum CapsuleActionType: String, Codable, CaseIterable, Sendable, Identifi
     public var defaultIcon: String {
         switch self {
         case .screenshot: return "camera.fill"
+        case .scrollScreenshot: return "scroll"
         case .voiceNote: return "mic.fill"
         case .urlToText: return "link"
         case .scheduleAnalysis: return "calendar.badge.clock"
@@ -30,6 +32,7 @@ public enum CapsuleActionType: String, Codable, CaseIterable, Sendable, Identifi
     public var defaultTitle: String {
         switch self {
         case .screenshot: return "截图"
+        case .scrollScreenshot: return "滚动截图"
         case .voiceNote: return "录音笔记"
         case .urlToText: return "URL转文字"
         case .scheduleAnalysis: return "日程分析"
@@ -42,6 +45,7 @@ public enum CapsuleActionType: String, Codable, CaseIterable, Sendable, Identifi
     public var defaultColor: Color {
         switch self {
         case .screenshot: return .blue
+        case .scrollScreenshot: return .indigo
         case .voiceNote: return .red
         case .urlToText: return .purple
         case .scheduleAnalysis: return .orange
@@ -86,17 +90,20 @@ public struct DesktopCapsuleSettings: Codable, Equatable, Sendable {
     public var showOnLaunch: Bool
     public var actions: [CapsuleActionConfig]
     public var position: CGPoint
+    public var lastWebpageURL: URL?
 
     public init(
         isEnabled: Bool = true,
         showOnLaunch: Bool = true,
         actions: [CapsuleActionConfig] = [],
-        position: CGPoint = .zero
+        position: CGPoint = .zero,
+        lastWebpageURL: URL? = nil
     ) {
         self.isEnabled = isEnabled
         self.showOnLaunch = showOnLaunch
         self.actions = actions
         self.position = position
+        self.lastWebpageURL = lastWebpageURL
     }
 
     /// 默认配置 - 包含常用功能
@@ -106,9 +113,10 @@ public struct DesktopCapsuleSettings: Codable, Equatable, Sendable {
             showOnLaunch: true,
             actions: [
                 .default(type: .screenshot, order: 0),
-                .default(type: .voiceNote, order: 1),
-                .default(type: .urlToText, order: 2),
-                .default(type: .scheduleAnalysis, order: 3)
+                .default(type: .scrollScreenshot, order: 1),
+                .default(type: .voiceNote, order: 2),
+                .default(type: .urlToText, order: 3),
+                .default(type: .scheduleAnalysis, order: 4)
             ],
             position: .zero
         )
@@ -120,4 +128,8 @@ public struct DesktopCapsuleSettings: Codable, Equatable, Sendable {
             .filter { $0.isEnabled }
             .sorted { $0.order < $1.order }
     }
+}
+
+public extension Notification.Name {
+    static let desktopCapsuleSettingsDidChange = Notification.Name("desktop.capsule.settings.didChange")
 }

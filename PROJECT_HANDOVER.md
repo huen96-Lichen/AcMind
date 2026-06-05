@@ -261,17 +261,26 @@ swift test --parallel
 ### 12.1 已落地
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| WebView 迁移壳 | 已移除 | `WebViewPage` / `WebViewContainer` / `WebViewBridge` 已从主工程删除，工程元数据与 README 里的 WebView 入口也已同步清理 |
-| Shelf 临时暂存区 | 已下线 | `ShelfService` 与主界面入口已移除，不再作为半成品功能暴露 |
+| WebView 迁移壳 | 已移除 | `WebViewPage` / `WebViewContainer` / `WebViewBridge` 已从主工程删除，旧的 WebView 静态资源也已清理 |
+| Shelf 临时暂存区 | 已下线 | 主界面入口与活跃模型已移除，仅保留旧库迁移时的历史表结构 |
 | Workbench 项目列表 | 已接真实存储 | 项目、选择态、统计和编辑删除已接到本地存储，首次打开不再注入默认演示项目 |
 | 最近工具记录 | 已持久化 | 最近使用记录已跨启动保存 |
 | 最近工具恢复 | 已接通 | 清空最近使用后可恢复上一次历史记录 |
-| 随身快捷键 | 已接真实设置 | 支持启用、编辑、保存、恢复默认值 |
+| 随身快捷键 | 已接真实设置 + 已接运行时注册 | 支持启用、编辑、保存、恢复默认值，且可解析的快捷键会在启动与配置变更后注册到全局热键系统 |
+| 截图热键 | 已接真实设置 + 已接运行时注册 | `captureScreenshotHotkey` 会在保存后触发全局热键刷新，并直接调用截图采集入口 |
+| 随身配置存储 | 已抽成共享模型 | `CompanionConfiguration` 与 `CompanionConfigurationStore` 已抽到 `AcMindKit`，设置页保存/读取走同一条真实持久化链路 |
+| 随身捕获自动保存 | 已降级 | 捕获结果本来就会自动写入收集箱，`CaptureSettingsCard` 里已改成说明，不再伪装成可开关分流 |
+| 随身捕获文本快速收集 | 已接通 | `textCaptureEnabled` 会真正影响随身捕获面板里的“保存当前选中文字”入口 |
+| 随身捕获链接快速收集 | 已接通 | `linkCaptureEnabled` 会真正影响随身捕获面板里的“保存当前网页”入口 |
+| 随身捕获打开详情 | 已接通 | `openDetailAfterCapture` 会在捕获完成后打开收集箱，并选中刚写入的条目 |
+| 随身捕获通知 | 已接通 | `showCaptureNotification` 会控制捕获完成后的系统通知是否发送 |
+| 随身捕获保存位置 | 已降级 | `CaptureSettingsCard` 里的保存位置仅保留偏好展示，不再伪装成已接通的实际分流能力 |
 | 灵动大陆显示配置 | 已接真实存储 | 配置页与胶囊/状态条共享同一份持久化显示设置 |
 | 模型路由策略 | 已接真实路由 | `Settings` 中的策略会影响 `AgentModelRouter` 的实际选路 |
 | 截图捕获开关 | 已接入口 | 菜单、快捷键、胶囊和 Notch 截图动作都会读取本地开关 |
 | 说入法设备偏好 | 已明确降级 | 仍仅作为偏好保存，不再伪装为已生效输入源 |
 | 说入法录音设备标签 | 已对齐 | `录音设备偏好` 明确标注为偏好项，避免误读成已接通的输入源切换 |
+| 说入法录音设备偏好存储 | 已抽成共享 store | `VoiceMicrophonePreferenceStore` 已移到 `AcMindKit`，录音设备偏好可共享、可测试，但 UI 现已明确降级为只读展示，不再伪装成生效输入源切换 |
 | 说入法输入开关 | 已接入口 | Fn、菜单、胶囊和 Notch 的说入法入口都会读取本地开关 |
 | 旧桌面版迁移 | 已恢复 | 启动时自动检查旧库并迁移关键数据 |
 | Notch 热图 | 已接真实数据 | 近 7 天收集箱数据会生成热力图，空态时保持空白而非样例数据 |
@@ -284,9 +293,11 @@ swift test --parallel
 | Vault frontmatter 模板 | 已接通 | 模板已从设置页写入存储并影响导出结果 |
 | 导出冲突记录 | 已对齐 | `ExportRecord.relativeFilePath` 现在记录冲突处理后的最终路径，而不是初始候选路径 |
 | 导出闭环 | 已接通 | `ExportService` 已按真实配置构建 Markdown 和 frontmatter |
+| Agent 工具路由 | 已分流 | `AI`、`File`、`Inbox.distill`、`Knowledge`、`Export`、`Schedule`、`Clipboard summarize/history`、`Voice.transcribe`、`WebDigest.fetch`、`Markdown.format`、`OCR.recognize` 与大部分 `Tools` 子命令走真实服务或真实处理，其余未接通路由在 router 层明确降级，避免假成功输出 |
 | 自动备份 | 已接通 | `autoBackupEnabled` 现在会驱动按周备份策略并落盘备份文件 |
 | 窗口位置恢复 | 已接通 | `restoreWindowPosition` 现在会真正决定主窗口是否沿用 autosave 位置 |
 | 仅在激活应用时采集 | 已接通 | `captureOnlyWhenAppActive` 现在会限制剪贴板自动监听只在应用激活时生效 |
+| 截图自动打码 / PII 检测 / 滚动截图 | 已降级 | 这三项目前只保留为设置草稿和界面说明，没有进入实际截图处理或滚动捕获链路 |
 | 本地优先模式 | 已接通 | `localFirstMode` 现在会优先选择本地 tier 的 AI Provider 作为默认运行时 |
 | API Key 存储模式 | 已接通 | `apiKeyUsesKeychain` 现在会决定 SecretStore 是写入 Keychain 还是本地偏好存储 |
 | 任务完成通知 | 已接通 | `notificationsEnabled` 与 `taskCompletedNotificationsEnabled` 现在会驱动采集完成的本地通知 |
@@ -298,7 +309,7 @@ swift test --parallel
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | WebView 路线 | 已弃用 | 不再作为主路径入口；相关工程引用已移除，仅保留历史记录 |
-| Shelf 临时模型 | 已弃用 | 临时暂存壳已移除，不再推荐使用 |
+| Shelf 临时模型 | 已弃用 | 活跃模型已删除，仅保留历史迁移语义，不再推荐使用 |
 | 样例数据入口 | 已弃用 | `CompanionSampleData`、`NotchDashboardData.sample` 等 sample data 已从主路径移除 |
 | ToolUnavailablePanel | 已弃用 | 旧的“死接口”说明面板已移除，避免继续暗示半成品能力 |
-| 更新可用通知 | 已降级 | 当前仅保留偏好字段，不再传入通知服务，也未接入真实更新检查与通知触发 |
+| 更新可用通知 | 已降级 | 当前仅保留偏好字段，设置页已改成只读说明，不再伪装成可配置开关，也未接入真实更新检查与通知触发 |

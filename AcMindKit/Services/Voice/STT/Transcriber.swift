@@ -104,6 +104,7 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
     case doubao = "doubao"
     case googleCloud = "google_cloud"
     case groq = "groq"
+    case mimoASR = "mimo_asr"
     
     // 系统
     case appleSpeech = "apple_speech"
@@ -123,6 +124,7 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
         case .doubao: return "火山引擎 ASR"
         case .googleCloud: return "Google Cloud Speech"
         case .groq: return "Groq Whisper"
+        case .mimoASR: return "MiMo ASR"
         case .appleSpeech: return "系统听写"
         case .freeModel: return "免费模型"
         }
@@ -139,7 +141,7 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
     
     public var requiresAPIKey: Bool {
         switch self {
-        case .openAI, .aliCloud, .doubao, .googleCloud, .groq:
+        case .openAI, .aliCloud, .doubao, .googleCloud, .groq, .mimoASR:
             return true
         default:
             return false

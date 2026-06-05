@@ -7,16 +7,39 @@ import AcMindKit
 enum NotchPresentationState: Equatable {
     case hidden
     case compact
-    case open
+    case expanding
+    case expanded
+    case collapsing
     case blockedClose
     case transientHUD
 
     var isExpandedVisual: Bool {
         switch self {
-        case .open, .blockedClose:
+        case .expanding, .expanded, .blockedClose:
             return true
-        case .hidden, .compact, .transientHUD:
+        case .hidden, .compact, .collapsing, .transientHUD:
             return false
+        }
+    }
+
+    var targetFrameIsExpanded: Bool {
+        isExpandedVisual
+    }
+
+    var animationDuration: TimeInterval {
+        switch self {
+        case .hidden:
+            return 0.15
+        case .compact:
+            return 0.24
+        case .expanding, .expanded:
+            return 0.32
+        case .collapsing:
+            return 0.24
+        case .blockedClose:
+            return 0.18
+        case .transientHUD:
+            return 0.2
         }
     }
 }
@@ -52,7 +75,7 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @Published var isExpanded = true
-    @Published var presentationState: NotchPresentationState = .open
+    @Published var presentationState: NotchPresentationState = .expanded
     @Published var selectedPage: NotchV2Page = .overview
     @Published var displaySettings: CompanionDisplaySettings = CompanionDisplaySettingsStore.load()
     @Published var collapsedSize: CGSize = CGSize(width: CompanionMenuBarLayout.collapsedWidth, height: CompanionMenuBarLayout.collapsedHeight)
@@ -68,6 +91,40 @@ final class NotchV2ViewModel: ObservableObject {
     @Published var screenRecordingPermissionStatus: AppPermissionStatus = .unknown
     @Published var accessibilityPermissionStatus: AppPermissionStatus = .unknown
     @Published var activeModelLabel: String = "未配置模型"
+    @Published var activeProviderStatus: String = "未配置"
+    @Published var quickAskDraft: String = ""
+    @Published var quickAskMessages: [ChatMessage] = []
+    @Published var quickAskIsSending: Bool = false
+    @Published var quickAskError: String?
+
+    var playbackAccentColor: Color {
+        guard let artworkData = playbackState.artwork,
+              let image = NSImage(data: artworkData) else {
+            return NotchV2DesignTokens.accentBlue
+        }
+        return extractDominantColor(from: image)
+    }
+
+    private func extractDominantColor(from image: NSImage) -> Color {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return NotchV2DesignTokens.accentBlue
+        }
+        let size = CGSize(width: 1, height: 1)
+        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1, pixelsHigh: 1,
+                                       bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                       isPlanar: false, colorSpaceName: .calibratedRGB,
+                                       bytesPerRow: 4, bitsPerPixel: 32)!
+        let context = NSGraphicsContext(bitmapImageRep: bitmap)!
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.cgContext.draw(cgImage, in: CGRect(origin: .zero, size: size))
+        NSGraphicsContext.restoreGraphicsState()
+        let pixel = bitmap.bitmapData!
+        let r = Double(pixel[0]) / 255.0
+        let g = Double(pixel[1]) / 255.0
+        let b = Double(pixel[2]) / 255.0
+        return Color(red: r, green: g, blue: b)
+    }
 
     struct QuickAction: Identifiable {
         let id = UUID()
@@ -79,10 +136,15 @@ final class NotchV2ViewModel: ObservableObject {
 
     private let batteryService = BatteryService.shared
     private let aiRuntime: AIRuntimeProtocol
+    private let quickAskService: AgentQuickAskService
     private let systemEventCenter = SystemEventCenter.shared
     private let permissionManager: PermissionManager
     private var cancellables = Set<AnyCancellable>()
     private var voiceStateResetTask: Task<Void, Never>?
+    private var presentationStateTransitionTask: Task<Void, Never>?
+    private var quickAskSessionId = "companion-quick-ask"
+    private var selectedQuickAskProviderId: String?
+    private var selectedQuickAskModelId: String?
 
     private lazy var allQuickActions: [QuickAction] = [
         QuickAction(icon: "camera.viewfinder", title: "截图", module: nil, action: { [weak self] in self?.captureScreenshot() }),
@@ -122,20 +184,11 @@ final class NotchV2ViewModel: ObservableObject {
         NotchRuntimeSurfaceDispatcher.resolve(context: runtimeSurfaceContext, scope: .primary)
     }
 
-    var overviewContextMetrics: [OverviewMetric] {
-        [
-            .init(label: "时间", value: currentClockText),
-            .init(label: "页面", value: effectiveSelectedPage.title),
-            .init(label: "任务", value: recentTranscriptionStatusText),
-            .init(label: "焦点", value: status.displayName)
-        ]
-    }
-
     var overviewAgentStatusRows: [OverviewStatusRow] {
         [
             .init(icon: status.icon, title: "Agent", value: status.displayName, accent: status.color),
-            .init(icon: "cpu", title: "模型", value: activeModelLabel, accent: NotchV2DesignTokens.accentPurple),
-            .init(icon: "mic.fill", title: "说入法", value: isVoiceRecording ? "正在收音" : "待命", accent: isVoiceRecording ? .red : NotchV2DesignTokens.accentGreen),
+            .init(icon: "cpu", title: "模型", value: activeModelLabel, accent: NotchV2DesignTokens.accentBlue),
+            .init(icon: "mic.fill", title: "说入法", value: isVoiceRecording ? "正在收音" : "待命", accent: isVoiceRecording ? .red : NotchV2DesignTokens.secondaryText),
             .init(icon: "camera.viewfinder", title: "截图", value: isCapturing ? "处理中" : "待命", accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText)
         ]
     }
@@ -143,9 +196,9 @@ final class NotchV2ViewModel: ObservableObject {
     var overviewSystemStatusRows: [OverviewStatusRow] {
         [
             .init(icon: nil, title: "电池", value: batteryStateText, accent: batteryAccent),
-            .init(icon: nil, title: "麦克风", value: microphonePermissionStatus.displayName, accent: microphonePermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange),
-            .init(icon: nil, title: "录屏", value: screenRecordingPermissionStatus.displayName, accent: screenRecordingPermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange),
-            .init(icon: nil, title: "辅助功能", value: accessibilityPermissionStatus.displayName, accent: accessibilityPermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange)
+            .init(icon: nil, title: "麦克风", value: microphonePermissionStatus.displayName, accent: microphonePermissionStatus == .authorized ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.secondaryText),
+            .init(icon: nil, title: "录屏", value: screenRecordingPermissionStatus.displayName, accent: screenRecordingPermissionStatus == .authorized ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.secondaryText),
+            .init(icon: nil, title: "辅助功能", value: accessibilityPermissionStatus.displayName, accent: accessibilityPermissionStatus == .authorized ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.secondaryText)
         ]
     }
 
@@ -162,8 +215,20 @@ final class NotchV2ViewModel: ObservableObject {
     init() {
         permissionManager = ServiceContainer.isInitialized() ? ServiceContainer.shared.permissionManager : PermissionManager()
         aiRuntime = ServiceContainer.isInitialized() ? ServiceContainer.shared.aiRuntime : AIRuntimeService()
+        quickAskService = AgentQuickAskService(
+            aiRuntime: aiRuntime,
+            storage: ServiceContainer.isInitialized() ? ServiceContainer.shared.storageService : nil
+        )
         playbackState = Self.snapshot()
         lastTranscription = nil
+        quickAskMessages = [
+            ChatMessage(
+                sessionId: quickAskSessionId,
+                role: .assistant,
+                content: "直接说，我帮你快速处理。",
+                status: .completed
+            )
+        ]
         syncDisplaySettings()
         setupObservers()
         setupSystemObservers()
@@ -182,10 +247,10 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     func collapse() {
-        guard presentationState != .compact else { return }
+        guard presentationState != .compact && presentationState != .collapsing else { return }
         withAnimation(.spring(response: NotchV2DesignTokens.springResponse, dampingFraction: NotchV2DesignTokens.springDampingFraction)) {
             if closeBlocker == nil {
-                setPresentationState(.compact)
+                transitionPresentationState(to: .collapsing, finalState: .compact)
             } else {
                 setPresentationState(.blockedClose)
             }
@@ -199,12 +264,13 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     func requestHide() {
+        presentationStateTransitionTask?.cancel()
         setPresentationState(.hidden)
     }
 
     func requestCompact() {
         if closeBlocker == nil {
-            setPresentationState(.compact)
+            transitionPresentationState(to: .collapsing, finalState: .compact)
         } else {
             setPresentationState(.blockedClose)
         }
@@ -214,7 +280,7 @@ final class NotchV2ViewModel: ObservableObject {
         if let page {
             selectedPage = page
         }
-        setPresentationState(.open)
+        transitionPresentationState(to: .expanding, finalState: .expanded)
     }
 
     func requestTransientHUD() {
@@ -253,8 +319,24 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     private func setPresentationState(_ state: NotchPresentationState) {
+        presentationStateTransitionTask?.cancel()
         presentationState = state
         isExpanded = state.isExpandedVisual
+    }
+
+    private func transitionPresentationState(to state: NotchPresentationState, finalState: NotchPresentationState) {
+        presentationStateTransitionTask?.cancel()
+        setPresentationState(state)
+
+        presentationStateTransitionTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(state.animationDuration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.presentationState == state else { return }
+                self.presentationState = finalState
+                self.isExpanded = finalState.isExpandedVisual
+            }
+        }
     }
 
     func isModuleEnabled(_ module: DynamicContinentModuleID) -> Bool {
@@ -293,20 +375,6 @@ final class NotchV2ViewModel: ObservableObject {
         voiceSurfaceState.displayTitle
     }
 
-    var currentClockText: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: Date())
-    }
-
-    var recentTranscriptionStatusText: String {
-        if let text = lastTranscription?.text, text.isEmpty == false {
-            return "最近转写已记录"
-        }
-        return "等待下一条指令"
-    }
-
     var batteryStateText: String {
         let percentage = Int(batteryInfo.percentage.rounded())
         if batteryInfo.isInLowPowerMode {
@@ -329,7 +397,7 @@ final class NotchV2ViewModel: ObservableObject {
             return .red
         }
         if batteryInfo.isCharging || batteryInfo.isPluggedIn {
-            return NotchV2DesignTokens.accentGreen
+            return NotchV2DesignTokens.accentBlue
         }
         return NotchV2DesignTokens.secondaryText
     }
@@ -345,11 +413,11 @@ final class NotchV2ViewModel: ObservableObject {
     var voiceDisplayAccent: Color {
         switch voiceSurfaceState {
         case .idle:
-            return NotchV2DesignTokens.accentPurple
+            return NotchV2DesignTokens.secondaryText
         case .listening, .completed:
-            return NotchV2DesignTokens.accentPurple
+            return NotchV2DesignTokens.accentBlue
         case .processing:
-            return NotchV2DesignTokens.accentPurple
+            return NotchV2DesignTokens.accentBlue
         case .cancelled:
             return .red
         }
@@ -467,6 +535,9 @@ final class NotchV2ViewModel: ObservableObject {
         let providers = await aiRuntime.listProviders()
         guard let provider = providers.first(where: { $0.enabled }) ?? providers.first else {
             activeModelLabel = "未配置模型"
+            activeProviderStatus = "未配置"
+            selectedQuickAskProviderId = nil
+            selectedQuickAskModelId = nil
             return
         }
 
@@ -476,6 +547,86 @@ final class NotchV2ViewModel: ObservableObject {
         } else {
             activeModelLabel = "\(providerName) · \(provider.modelId)"
         }
+        selectedQuickAskProviderId = provider.id
+        selectedQuickAskModelId = provider.modelId.isEmpty ? nil : provider.modelId
+
+        switch provider.tier {
+        case .localLight, .localHeavy:
+            activeProviderStatus = "本地就绪"
+        case .cloudLight, .cloudHeavy:
+            activeProviderStatus = "云端就绪"
+        }
+    }
+
+    func sendQuickAsk() async {
+        let prompt = quickAskDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard prompt.isEmpty == false else { return }
+
+        quickAskDraft = ""
+        quickAskError = nil
+        quickAskIsSending = true
+
+        quickAskMessages.append(
+            ChatMessage(
+                sessionId: quickAskSessionId,
+                role: .user,
+                content: prompt,
+                status: .completed
+            )
+        )
+        trimQuickAskMessages()
+
+        do {
+            let response = try await quickAskService.ask(
+                question: prompt,
+                providerId: selectedQuickAskProviderId,
+                model: selectedQuickAskModelId,
+                context: quickAskContextSummary
+            )
+
+            quickAskMessages.append(
+                ChatMessage(
+                    sessionId: quickAskSessionId,
+                    role: .assistant,
+                    content: response.content.trimmingCharacters(in: .whitespacesAndNewlines),
+                    status: .completed,
+                    modelId: response.model,
+                    providerId: response.providerId,
+                    promptTokens: response.promptTokens,
+                    completionTokens: response.completionTokens,
+                    latencyMs: response.latencyMs
+                )
+            )
+            trimQuickAskMessages()
+        } catch {
+            quickAskError = error.localizedDescription
+            quickAskMessages.append(
+                ChatMessage(
+                    sessionId: quickAskSessionId,
+                    role: .assistant,
+                    content: "未能发送：\(error.localizedDescription)",
+                    status: .failed
+                )
+            )
+            trimQuickAskMessages()
+        }
+
+        quickAskIsSending = false
+    }
+
+    func clearQuickAskDraft() {
+        quickAskDraft = ""
+    }
+
+    private func trimQuickAskMessages() {
+        if quickAskMessages.count > 4 {
+            quickAskMessages = Array(quickAskMessages.suffix(4))
+        }
+    }
+
+    private var quickAskContextSummary: String {
+        let focus = activeRuntimeSurface.subtitle.isEmpty ? activeRuntimeSurface.title : activeRuntimeSurface.subtitle
+        return "\(activeRuntimeSurface.title) · \(focus)"
     }
 
     @objc private func handlePlaybackStateChanged(_ notification: Notification) {
@@ -560,7 +711,9 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @objc private func handleUserDefaultsChanged(_ notification: Notification) {
-        syncDisplaySettings()
+        Task { @MainActor in
+            self.syncDisplaySettings()
+        }
     }
 
     private func updateVoiceState(_ state: NotchV2VoiceSurfaceState, autoResetAfter delay: TimeInterval? = nil) {
@@ -655,6 +808,16 @@ final class NotchV2ViewModel: ObservableObject {
 
     func showAgent() {
         NotificationCenter.default.post(name: .companionShowAgent, object: nil)
+        requestCompact()
+    }
+
+    func showMainHome() {
+        NotificationCenter.default.post(name: Notification.Name("AcMind.openHome"), object: nil)
+        requestCompact()
+    }
+
+    func showMainSettings() {
+        NotificationCenter.default.post(name: Notification.Name("AcMind.openSettings"), object: nil)
         requestCompact()
     }
 

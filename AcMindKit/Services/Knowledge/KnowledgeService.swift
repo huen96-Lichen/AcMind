@@ -289,8 +289,116 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         return results
     }
     
+    // MARK: - Tag Management
+
+    public func listTags() async throws -> [String: Int] {
+        var tagCounts: [String: Int] = [:]
+        for card in cards.values where card.status == .active {
+            for tag in card.tags {
+                tagCounts[tag, default: 0] += 1
+            }
+        }
+        return tagCounts
+    }
+
+    public func getCardsByTag(_ tag: String) async throws -> [KnowledgeCard] {
+        cards.values
+            .filter { $0.status == .active && $0.tags.contains(where: { $0.localizedCaseInsensitiveContains(tag) }) }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    public func renameTag(from oldTag: String, to newTag: String) async throws {
+        for (id, card) in cards where card.tags.contains(where: { $0.localizedCaseInsensitiveContains(oldTag) }) {
+            var updated = card
+            updated.tags = updated.tags.map { $0.localizedCaseInsensitiveContains(oldTag) ? newTag : $0 }
+            updated.updatedAt = Date()
+            updated.searchVector = buildSearchVector(card: updated)
+            cards[id] = updated
+            try? await storage.updateKnowledgeCard(updated)
+        }
+    }
+
+    public func mergeTags(_ tags: [String], into targetTag: String) async throws {
+        for (id, card) in cards {
+            let hasMatchingTag = card.tags.contains { tag in
+                tags.contains(where: { $0.localizedCaseInsensitiveContains(tag) })
+            }
+            guard hasMatchingTag else { continue }
+
+            var updated = card
+            updated.tags = updated.tags.filter { tag in
+                !tags.contains(where: { $0.localizedCaseInsensitiveContains(tag) })
+            }
+            if !updated.tags.contains(targetTag) {
+                updated.tags.append(targetTag)
+            }
+            updated.updatedAt = Date()
+            updated.searchVector = buildSearchVector(card: updated)
+            cards[id] = updated
+            try? await storage.updateKnowledgeCard(updated)
+        }
+    }
+
+    // MARK: - Batch Operations
+
+    public func batchDelete(ids: [String]) async throws {
+        for id in ids {
+            try await deleteCard(id: id)
+        }
+    }
+
+    public func batchArchive(ids: [String]) async throws {
+        for id in ids {
+            try await archiveCard(id: id)
+        }
+    }
+
+    public func batchMoveToCategory(ids: [String], category: String) async throws {
+        for id in ids {
+            guard var card = cards[id] else { continue }
+            card.category = category
+            card.updatedAt = Date()
+            cards[id] = card
+            try? await storage.updateKnowledgeCard(card)
+        }
+    }
+
+    // MARK: - Knowledge Graph
+
+    public func getGraphData() async throws -> KnowledgeGraph {
+        let activeCards = cards.values.filter { $0.status == .active }
+        let edges = try await storage.listKnowledgeEdges(fromCardId: nil, toCardId: nil)
+
+        let nodes = activeCards.map { card in
+            KnowledgeGraphNode(
+                id: card.id,
+                title: card.canonicalTitle,
+                category: card.category,
+                tags: card.tags,
+                valueScore: card.valueScore
+            )
+        }
+
+        let graphEdges = edges
+            .filter { edge in
+                activeCards.contains(where: { $0.id == edge.fromKnowledgeCardId })
+                    && activeCards.contains(where: { $0.id == edge.toKnowledgeCardId })
+            }
+            .map { edge in
+                KnowledgeGraphEdge(
+                    id: edge.id,
+                    sourceId: edge.fromKnowledgeCardId,
+                    targetId: edge.toKnowledgeCardId,
+                    relationType: edge.relationType,
+                    confidence: edge.confidence
+                )
+            }
+
+        return KnowledgeGraph(nodes: nodes, edges: graphEdges)
+    }
+
     // MARK: - Stats
-    
+
     public func getStats() async throws -> KnowledgeStats {
         let allCards = Array(cards.values).filter { $0.status != .deleted }
         

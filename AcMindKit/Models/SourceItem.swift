@@ -70,6 +70,10 @@ public struct SourceItem: Codable, Sendable, Identifiable, Hashable, Equatable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
+
+    public var isAgentGenerated: Bool {
+        source == .agent
+    }
 }
 
 // MARK: - SourceItem 枚举

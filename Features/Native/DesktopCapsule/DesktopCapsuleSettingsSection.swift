@@ -130,6 +130,7 @@ struct DesktopCapsuleSettingsSection: View {
     private func saveSettings() {
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: "AppSettings.desktopCapsule")
+            NotificationCenter.default.post(name: .desktopCapsuleSettingsDidChange, object: nil)
         }
     }
 
@@ -174,6 +175,7 @@ struct DesktopCapsuleSettingsSection: View {
     private func actionDescription(for type: CapsuleActionType) -> String {
         switch type {
         case .screenshot: return "截取屏幕内容"
+        case .scrollScreenshot: return "自动滚动拼接当前页面"
         case .voiceNote: return "录音并转文字"
         case .urlToText: return "提取网页文字"
         case .scheduleAnalysis: return "分析日程安排"

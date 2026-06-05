@@ -2,56 +2,70 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
+// Notch 暗色模式 Token，值与 AcMindDesignTokens.Notch 保持同步
 enum NotchV2DesignTokens {
-    static let rootBackground = Color(red: 0.02, green: 0.024, blue: 0.027) // #050607
-    static let panelBackground = Color(red: 0.043, green: 0.047, blue: 0.055) // #0B0C0E
-    static let innerCardBackground = Color(red: 0.078, green: 0.082, blue: 0.094) // #141518
-    static let innerCardActive = Color(red: 0.102, green: 0.106, blue: 0.122) // #1A1B1F
-    static let panelBorder = Color.white.opacity(0.085)
-    static let innerBorder = Color.white.opacity(0.10)
-    static let accentPurple = Color(red: 0.70, green: 0.19, blue: 1.0)
+    static let rootBackground = Color(red: 0.03, green: 0.03, blue: 0.035)
+    static let panelBackground = Color(red: 0.055, green: 0.055, blue: 0.07)
+    static let innerCardBackground = Color(red: 0.08, green: 0.08, blue: 0.095)
+    static let innerCardActive = Color(red: 0.10, green: 0.10, blue: 0.12)
+    static let panelBorder = Color.white.opacity(0.06)
+    static let innerBorder = Color.white.opacity(0.08)
+    static let backdropGradientTop = Color(red: 0.04, green: 0.04, blue: 0.06)
+    static let backdropGradientBottom = Color(red: 0.015, green: 0.015, blue: 0.02)
+    static let accentPurple = Color(nsColor: .systemBlue)
     static let accentPurpleLight = accentPurple
     static let accentPurpleDark = accentPurple
-    static let accentGreen = Color(red: 0.22, green: 0.95, blue: 0.42)
-    static let primaryText = Color(red: 0.96, green: 0.96, blue: 0.97)
-    static let secondaryText = Color.white.opacity(0.68)
-    static let tertiaryText = Color.white.opacity(0.46)
-    static let weakText = Color.white.opacity(0.28)
+    static let accentGreen = Color(nsColor: .systemGreen)
+    static let accentBlue = Color(nsColor: .systemBlue)
+    static let primaryText = Color.white.opacity(0.95)
+    static let secondaryText = Color.white.opacity(0.72)
+    static let tertiaryText = Color.white.opacity(0.52)
+    static let weakText = Color.white.opacity(0.35)
     static let islandBackground = rootBackground
-    static let islandBackgroundSoft = rootBackground
+    static let islandBackgroundSoft = Color(red: 0.04, green: 0.04, blue: 0.045)
     static let cardBackground = panelBackground
     static let cardBackgroundStrong = innerCardBackground
     static let cardBackgroundDeep = innerCardActive
     static let separator = panelBorder
-    static let collapsedWidth: CGFloat = 240
-    static let expandedWidth: CGFloat = 880
+    static let collapsedWidth: CGFloat = 228
+    static let expandedWidth: CGFloat = CompanionMenuBarLayout.expandedWidth
     static let collapsedHeight: CGFloat = 30
-    static let expandedOverviewHeight: CGFloat = 460
-    static let expandedMusicHeight: CGFloat = 420
-    static let expandedAgentHeight: CGFloat = 420
-    static let expandedScheduleHeight: CGFloat = 440
-    static let expandedSystemStatusHeight: CGFloat = 480
-    static let topBarHeight: CGFloat = 32
-    static let dashboardFooterHeight: CGFloat = 48
+    static let expandedOverviewHeight: CGFloat = CompanionMenuBarLayout.expandedHeight
+    static let expandedMusicHeight: CGFloat = CompanionMenuBarLayout.expandedHeight
+    static let expandedAgentHeight: CGFloat = CompanionMenuBarLayout.expandedHeight
+    static let expandedScheduleHeight: CGFloat = CompanionMenuBarLayout.expandedHeight
+    static let expandedSystemStatusHeight: CGFloat = CompanionMenuBarLayout.expandedHeight
+    static let topBarHeight: CGFloat = 34
+    static let dashboardFooterHeight: CGFloat = 28
     static let transitionInsertScale: CGFloat = 0.985
-    static let transitionRemoveScale: CGFloat = 0.992
-    static let springResponse: Double = 0.32
-    static let springDampingFraction: Double = 0.90
+    static let transitionRemoveScale: CGFloat = 0.99
+    static let springResponse: Double = 0.38
+    static let springDampingFraction: Double = 0.88
     static let windowExpandDuration: TimeInterval = 0.24
     static let windowCollapseDuration: TimeInterval = 0.20
     static let notchSafeZoneX: CGFloat = 360
     static let notchSafeZoneY: CGFloat = 0
     static let notchSafeZoneWidth: CGFloat = 236
     static let notchSafeZoneHeight: CGFloat = 30
-    static let cardRadius: CGFloat = 20
+    static let cardRadius: CGFloat = 18
     static let rightCardRadius: CGFloat = 14
-    static let largeRadius: CGFloat = 28
-    static let islandBottomRadius: CGFloat = 16
+    static let largeRadius: CGFloat = 24
+    static let islandBottomRadius: CGFloat = 14
     static let pagePadding: CGFloat = 20
-    static let cardSpacing: CGFloat = 12
-    static let bottomPadding: CGFloat = 10
+    static let cardSpacing: CGFloat = 10
+    static let bottomPadding: CGFloat = 8
     static let pillRadius: CGFloat = 999
-    static let smallButtonRadius: CGFloat = 16
+    static let smallButtonRadius: CGFloat = 14
+
+    static let collapsedArtworkSize: CGFloat = 18
+    static let collapsedArtworkRadius: CGFloat = 4
+
+    enum Typography {
+        static let title = Font.system(size: 14, weight: .semibold, design: .rounded)
+        static let body = Font.system(size: 11, weight: .medium, design: .rounded)
+        static let caption = Font.system(size: 9.5, weight: .medium, design: .rounded)
+        static let footnote = Font.system(size: 8, weight: .regular, design: .rounded)
+    }
 }
 
 enum NotchV2Page: String, CaseIterable, Identifiable {
@@ -65,7 +79,7 @@ enum NotchV2Page: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .overview: return "今日"
+        case .overview: return "本机"
         case .music: return "音乐"
         case .agent: return "AI"
         case .schedule: return "日程"

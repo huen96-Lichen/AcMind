@@ -308,7 +308,11 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         NotificationCenter.default.post(name: .companionVoiceProcessingStarted, object: nil)
 
         do {
-            let outcome = try await coordinator.stopRecording(configuration: currentConfiguration)
+            let outcome = try await coordinator.stopRecording(configuration: currentConfiguration) { [weak self] chunk in
+                await MainActor.run {
+                    self?.displayText = chunk
+                }
+            }
             hasResult = true
             isRecording = false
             isProcessing = false

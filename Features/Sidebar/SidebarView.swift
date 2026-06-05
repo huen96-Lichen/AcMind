@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import struct AcMindKit.KeyboardShortcut
+import enum AcMindKit.SidebarItem
 
 // MARK: - Sidebar View
 

@@ -683,7 +683,25 @@ public actor Database {
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_process_jobs_status ON process_jobs(status)",
-            "CREATE INDEX IF NOT EXISTS idx_process_jobs_source_item_id ON process_jobs(source_item_id)"
+            "CREATE INDEX IF NOT EXISTS idx_process_jobs_source_item_id ON process_jobs(source_item_id)",
+            """
+            CREATE TABLE IF NOT EXISTS schedule_events (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                category_id TEXT NOT NULL DEFAULT '',
+                start_at REAL NOT NULL,
+                end_at REAL NOT NULL,
+                is_all_day INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'todo',
+                priority TEXT NOT NULL DEFAULT 'medium',
+                tag TEXT,
+                created_at REAL NOT NULL,
+                updated_at REAL NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_schedule_events_start_at ON schedule_events(start_at)",
+            "CREATE INDEX IF NOT EXISTS idx_schedule_events_status ON schedule_events(status)"
         ]
 
         for statement in statements {
@@ -1173,6 +1191,69 @@ public actor Database {
         try db().execute("DELETE FROM process_jobs WHERE id = ?", arguments: [id])
     }
 
+    // MARK: - Schedule Events
+
+    public func insertScheduleEvent(_ event: ScheduleEvent) async throws {
+        try db().execute(
+            """
+            INSERT INTO schedule_events (id, title, description, category_id, start_at, end_at, is_all_day, status, priority, tag, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                description = excluded.description,
+                category_id = excluded.category_id,
+                start_at = excluded.start_at,
+                end_at = excluded.end_at,
+                is_all_day = excluded.is_all_day,
+                status = excluded.status,
+                priority = excluded.priority,
+                tag = excluded.tag,
+                updated_at = excluded.updated_at
+            """,
+            arguments: [
+                event.id, event.title, event.description as Any, event.categoryId,
+                event.startAt.timeIntervalSince1970, event.endAt.timeIntervalSince1970,
+                event.isAllDay ? 1 : 0, event.status.rawValue, event.priority.rawValue,
+                event.tag as Any, Date().timeIntervalSince1970, Date().timeIntervalSince1970
+            ]
+        )
+    }
+
+    public func updateScheduleEvent(_ event: ScheduleEvent) async throws {
+        try await insertScheduleEvent(event)
+    }
+
+    public func deleteScheduleEvent(id: String) async throws {
+        try db().execute("DELETE FROM schedule_events WHERE id = ?", arguments: [id])
+    }
+
+    public func listScheduleEvents() async throws -> [ScheduleEvent] {
+        try db().query("SELECT * FROM schedule_events ORDER BY start_at ASC") { row in
+            self.rowToScheduleEvent(row)
+        }
+    }
+
+    public func getScheduleEvent(id: String) async throws -> ScheduleEvent? {
+        try db().queryOne("SELECT * FROM schedule_events WHERE id = ? LIMIT 1", arguments: [id]) { row in
+            self.rowToScheduleEvent(row)
+        }
+    }
+
+    private func rowToScheduleEvent(_ row: SQLiteRow) -> ScheduleEvent {
+        ScheduleEvent(
+            id: row.string("id") ?? UUID().uuidString,
+            title: row.string("title") ?? "",
+            description: row.string("description"),
+            categoryId: row.string("category_id") ?? "",
+            startAt: Date(timeIntervalSince1970: row.double("start_at") ?? 0),
+            endAt: Date(timeIntervalSince1970: row.double("end_at") ?? 0),
+            isAllDay: row.int("is_all_day") == 1,
+            status: ScheduleEvent.EventStatus(rawValue: row.string("status") ?? "todo") ?? .todo,
+            priority: ScheduleEvent.EventPriority(rawValue: row.string("priority") ?? "medium") ?? .medium,
+            tag: row.string("tag")
+        )
+    }
+
     private func rowToProcessJob(_ row: SQLiteRow) -> ProcessJob {
         let inputStr = row.string("input") ?? "{}"
         let outputStr = row.string("output")
@@ -1195,7 +1276,10 @@ public actor Database {
     }
 
     private func rowToKnowledgeCard(_ row: SQLiteRow) -> KnowledgeCard {
-        let tags = (row.string("tags") ?? "").split(separator: ",").map(String.init)
+        let tagsString = row.string("tags") ?? "[]"
+        let tagsData = tagsString.data(using: .utf8) ?? Data()
+        let tags = (try? JSONDecoder().decode([String].self, from: tagsData))
+            ?? tagsString.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
         let status = KnowledgeCardStatus(rawValue: row.string("status") ?? "active") ?? .active
         let createdAt = Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? 0))
         let updatedAt = Date(timeIntervalSince1970: TimeInterval(row.int("updated_at") ?? 0))

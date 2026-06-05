@@ -1,9 +1,9 @@
 import SwiftUI
+import AcMindKit
 
 struct CaptureSettingsCard: View {
     @Binding var isEnabled: Bool
     let isGlobalEnabled: Bool
-    @Binding var autoSaveToInbox: Bool
     @Binding var textCaptureEnabled: Bool
     @Binding var linkCaptureEnabled: Bool
     @Binding var saveDestinationIndex: Int
@@ -21,9 +21,25 @@ struct CaptureSettingsCard: View {
             HStack(spacing: 24) {
                 // Left: Settings
                 VStack(alignment: .leading, spacing: 12) {
-                    // Screenshot to Inbox
-                    Toggle("截图后自动保存到收集箱", isOn: $autoSaveToInbox)
-                        .disabled(!isEnabled)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("捕获后默认去向")
+                                .font(.headline)
+
+                            Spacer()
+
+                            Text("可配置")
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondary.opacity(0.12))
+                                .cornerRadius(4)
+                        }
+
+                        Text("选择捕获完成后的默认处理方式，支持收集箱、剪贴板或每次询问。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     
                     // Text Capture
                     Toggle("复制文本后支持快速收集", isOn: $textCaptureEnabled)
@@ -35,16 +51,19 @@ struct CaptureSettingsCard: View {
                     
                     // Save Location
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("保存位置")
+                        Text("结果去向")
                             .font(.headline)
-                        
-                        Picker("", selection: $saveDestinationIndex) {
-                            Text("收集箱").tag(0)
-                            Text("剪贴板").tag(1)
-                            Text("询问").tag(2)
+
+                        Picker("结果去向", selection: $saveDestinationIndex) {
+                            ForEach(CompanionCaptureSaveDestination.allCases) { destination in
+                                Text(destination.displayName).tag(destination.rawValue)
+                            }
                         }
                         .pickerStyle(.segmented)
-                        .disabled(!isEnabled)
+
+                        Text(selectedSaveDestinationDescription(for: saveDestinationIndex))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
@@ -94,7 +113,7 @@ struct CaptureSettingsCard: View {
                                     .foregroundStyle(.purple)
                             }
                             
-                            Text("截图 / 文本 / 链接 → 收集箱 → AI 整理")
+                            Text("截图 / 文本 / 链接 → 默认去向 → 后续处理")
                                 .font(.caption)
                                 .foregroundStyle(Color.secondary)
                         }
@@ -104,5 +123,9 @@ struct CaptureSettingsCard: View {
                 }
             }
         }
+    }
+
+    private func selectedSaveDestinationDescription(for index: Int) -> String {
+        CompanionCaptureSaveDestination(rawValue: index)?.description ?? "当前设置尚未识别，默认视为收集箱。"
     }
 }

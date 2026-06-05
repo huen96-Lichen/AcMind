@@ -27,7 +27,7 @@ public struct CompanionMenuBarLayout {
     public static let expandedWidth: CGFloat = 880
     
     /// 展开态高度
-    public static let expandedHeight: CGFloat = 440
+    public static let expandedHeight: CGFloat = 340
     
     /// 展开态最大高度占屏幕比例
     public static let expandedMaxHeightRatio: CGFloat = 0.58
@@ -75,10 +75,10 @@ public struct CompanionMenuBarLayout {
     public static let collapseDuration: TimeInterval = 0.18
     
     /// 弹簧响应参数
-    public static let springResponse: CGFloat = 0.28
+    public static let springResponse: CGFloat = 0.36
     
     /// 弹簧阻尼参数
-    public static let springDamping: CGFloat = 0.86
+    public static let springDamping: CGFloat = 0.85
 
 }
 

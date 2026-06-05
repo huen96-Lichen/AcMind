@@ -5,7 +5,7 @@ struct NotchV2MusicPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 200, rightColumnWidth: 224) {
+        NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
             leftColumn
         } centerColumn: {
             centerColumn
@@ -15,62 +15,64 @@ struct NotchV2MusicPage: View {
     }
 
     private var leftColumn: some View {
-        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "来源", subtitle: "播放入口", symbol: "music.note.list") {
-                VStack(alignment: .leading, spacing: 6) {
-                    summaryRow(label: "来源", value: sourceTitle)
-                    summaryRow(label: "状态", value: playbackStatusText)
-                    summaryRow(label: "曲目", value: titleText)
-                    summaryRow(label: "位置", value: currentTimeText)
-                }
-            }
+        NotchV2Card(title: "来源与队列", symbol: "music.note.list") {
+            VStack(alignment: .leading, spacing: 10) {
+                compactRow(label: "来源", value: sourceTitle)
+                compactRow(label: "状态", value: playbackStatusText)
 
-            NotchV2Card(title: "队列", subtitle: "轻摘要", symbol: "list.bullet") {
+                Divider()
+                    .overlay(NotchV2DesignTokens.separator.opacity(0.45))
+
                 if viewModel.playbackState.title.isEmpty {
-                    emptyQueueState
+                    Text("暂无队列")
+                        .font(NotchV2DesignTokens.Typography.title)
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .lineLimit(1)
+                    Text("空播放时只保留轻量提示。")
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
                 } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("当前没有完整队列视图。")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(NotchV2DesignTokens.primaryText)
-                            .lineLimit(1)
-                        Text("这里只保留正在播放的摘要和控制入口。")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
+                    Text("队列视图未展开")
+                        .font(NotchV2DesignTokens.Typography.title)
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .lineLimit(1)
+                    Text("这里只显示当前播放摘要。")
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
                 }
+
             }
         }
     }
 
     private var centerColumn: some View {
-        NotchV2Card(title: "正在播放", subtitle: playbackStatusText, symbol: "play.circle.fill") {
+        NotchV2Card(title: "正在播放", symbol: "play.circle.fill", cardAccent: NotchV2DesignTokens.accentGreen) {
             VStack(alignment: .leading, spacing: 12) {
                 if viewModel.playbackState.title.isEmpty {
-                    mediaEmptyState
+                    emptyState
                 } else {
-                    HStack(alignment: .center, spacing: 14) {
+                    HStack(alignment: .center, spacing: 12) {
                         AlbumArtworkHeroView(artworkData: viewModel.playbackState.artwork)
-                            .frame(width: 96, height: 96)
+                            .frame(width: 84, height: 84)
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text(titleText)
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
 
                             Text("\(artistText) · \(albumText)")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(NotchV2DesignTokens.Typography.body)
                                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
 
                             progressRow
 
-                            HStack(spacing: 10) {
+                            HStack(spacing: 8) {
                                 playbackButton(systemName: "backward.fill", size: 32) {
                                     viewModel.previousTrack()
                                 }
@@ -89,7 +91,7 @@ struct NotchV2MusicPage: View {
                 }
 
                 Divider()
-                    .overlay(NotchV2DesignTokens.separator)
+                    .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
                 HStack(spacing: 8) {
                     NotchV2StatusPill(icon: "waveform", title: playbackStatusText, accent: NotchV2DesignTokens.cardBackgroundStrong)
@@ -101,22 +103,11 @@ struct NotchV2MusicPage: View {
     }
 
     private var rightColumn: some View {
-        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "播放摘要", subtitle: "状态", symbol: "waveform", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
-                VStack(alignment: .leading, spacing: 6) {
-                    summaryRow(label: "来源", value: sourceTitle)
-                    summaryRow(label: "状态", value: playbackStatusText)
-                    summaryRow(label: "进度", value: "\(currentTimeText) / \(durationText)")
-                    summaryRow(label: "播放率", value: "\(Int(progressValue * 100))%")
-                }
-            }
-
-            NotchV2Card(title: "音频状态", subtitle: "设备 / 音量", symbol: "speaker.wave.2", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
-                VStack(alignment: .leading, spacing: 6) {
-                    compactStatusRow(title: "音量", value: volumeText, accent: .blue)
-                    compactStatusRow(title: "输出", value: playbackStateLabel, accent: NotchV2DesignTokens.accentGreen)
-                    compactStatusRow(title: "设备", value: sourceTitle, accent: NotchV2DesignTokens.secondaryText)
-                }
+        NotchV2Card(title: "播放与设备", symbol: "speaker.wave.2", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            VStack(alignment: .leading, spacing: 10) {
+                compactStatusRow(title: "进度", value: "\(currentTimeText) / \(durationText)", accent: .blue)
+                compactStatusRow(title: "音量", value: volumeText, accent: .blue)
+                compactStatusRow(title: "输出", value: playbackStateLabel, accent: NotchV2DesignTokens.accentGreen)
             }
         }
     }
@@ -172,9 +163,9 @@ struct NotchV2MusicPage: View {
     }
 
     private var progressRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Text(currentTimeText)
-                .font(.system(size: 10, weight: .medium))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
 
             GeometryReader { proxy in
@@ -182,60 +173,43 @@ struct NotchV2MusicPage: View {
                     Capsule(style: .continuous)
                         .fill(NotchV2DesignTokens.innerCardBackground)
                     Capsule(style: .continuous)
-                        .fill(NotchV2DesignTokens.accentPurple)
+                        .fill(NotchV2DesignTokens.accentBlue)
                         .frame(width: proxy.size.width * progressValue)
                 }
             }
             .frame(height: 4)
 
             Text(durationText)
-                .font(.system(size: 10, weight: .medium))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
         }
     }
 
-    private var mediaEmptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "music.note.slash")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
             Text("当前没有播放内容")
-                .font(.system(size: 13, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.title)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
-            Text("有内容时显示封面、标题、艺术家和进度。")
-                .font(.system(size: 10, weight: .medium))
+            Text("有内容时只显示封面、标题和进度。")
+                .font(NotchV2DesignTokens.Typography.body)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
     }
 
-    private var emptyQueueState: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: "tray")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-            Text("暂无队列视图")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-            Text("空播放时只保留克制提示，不占大面积空白。")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-    }
-
-    private func summaryRow(label: String, value: String) -> some View {
+    private func compactRow(label: String, value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(label)
-                .font(.system(size: 10, weight: .medium))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .frame(width: 40, alignment: .leading)
+                .frame(width: 34, alignment: .leading)
                 .lineLimit(1)
             Text(value)
-                .font(.system(size: 11, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.body)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -249,12 +223,12 @@ struct NotchV2MusicPage: View {
                 .fill(accent)
                 .frame(width: 5, height: 5)
             Text(title)
-                .font(.system(size: 10, weight: .medium))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
             Spacer(minLength: 0)
             Text(value)
-                .font(.system(size: 10, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -275,7 +249,7 @@ struct NotchV2MusicPage: View {
                 .frame(width: size, height: size)
                 .background(
                     Circle()
-                        .fill(isPrimary ? NotchV2DesignTokens.accentPurple : NotchV2DesignTokens.innerCardBackground)
+                        .fill(isPrimary ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.innerCardBackground)
                 )
                 .overlay(
                     Circle()
@@ -283,28 +257,5 @@ struct NotchV2MusicPage: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct AlbumArtworkHeroView: View {
-    let artworkData: Data?
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(NotchV2DesignTokens.accentPurple)
-
-            if let artworkData, let image = NSImage(data: artworkData) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            } else {
-                Image(systemName: "music.note")
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.95))
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }

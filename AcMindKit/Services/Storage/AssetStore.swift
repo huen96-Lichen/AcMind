@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ImageIO
 
 /// Asset storage manager for binary files (images, audio, documents)
 /// Manages local file system storage with SQLite metadata tracking
@@ -93,7 +94,35 @@ public actor AssetStore: AssetStoreProtocol {
         try await insertAssetRecord(assetFile)
         return assetFile
     }
-    
+
+    /// Save audio content to the asset store
+    /// - Parameters:
+    ///   - data: The audio payload to save
+    ///   - sourceItemId: Optional associated source item ID
+    ///   - fileName: Optional custom filename (defaults to UUID)
+    /// - Returns: AssetFile record with metadata
+    public func saveAudio(data: Data, sourceItemId: String? = nil, fileName: String? = nil, mimeType: String = "audio/m4a") async throws -> AssetFile {
+        let name = fileName ?? "\(UUID().uuidString).m4a"
+        let url = assetsDir.appendingPathComponent(name)
+
+        try data.write(to: url)
+
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+
+        let assetFile = AssetFile(
+            id: UUID().uuidString,
+            sourceItemId: sourceItemId,
+            fileName: name,
+            filePath: url.path,
+            mimeType: mimeType,
+            fileSize: fileSize,
+            kind: .audio
+        )
+
+        try await insertAssetRecord(assetFile)
+        return assetFile
+    }
+
     /// Copy an external file to the asset store
     /// - Parameters:
     ///   - sourceURL: The source file URL
@@ -197,6 +226,33 @@ public actor AssetStore: AssetStoreProtocol {
     public func loadImage(asset: AssetFile) -> NSImage? {
         guard asset.kind == .image else { return nil }
         return NSImage(contentsOfFile: asset.filePath)
+    }
+
+    /// Load a display-sized image without decoding the original full-resolution bitmap.
+    public func loadImage(asset: AssetFile, maxPixelSize: CGFloat) -> NSImage? {
+        guard asset.kind == .image else { return nil }
+        guard maxPixelSize > 0 else { return loadImage(asset: asset) }
+
+        let url = URL(fileURLWithPath: asset.filePath) as CFURL
+        let sourceOptions = [
+            kCGImageSourceShouldCache: false
+        ] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(url, sourceOptions) else {
+            return loadImage(asset: asset)
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, Int(maxPixelSize.rounded(.up)))
+        ] as CFDictionary
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return loadImage(asset: asset)
+        }
+
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
     
     /// Load text content from asset

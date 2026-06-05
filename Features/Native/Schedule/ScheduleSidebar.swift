@@ -50,7 +50,7 @@ struct CalendarCategoryList: View {
             }
             .padding(8)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         }
     }
 }
@@ -148,7 +148,7 @@ struct TodayOverview: View {
             }
             .padding(12)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         }
     }
 }
@@ -237,7 +237,7 @@ struct TodayTodoList: View {
             }
             .padding(8)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         }
     }
 }
@@ -421,7 +421,7 @@ struct MiniMonthCalendar: View {
             }
             .padding(6)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         }
     }
 
@@ -545,7 +545,7 @@ struct WorkloadSummary: View {
             }
             .padding(12)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindTheme.cornerRadius)
+            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         }
     }
 }

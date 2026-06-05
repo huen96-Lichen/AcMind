@@ -46,11 +46,24 @@ public protocol StorageServiceProtocol: Sendable {
     func updateClipboardItem(_ item: ClipboardItem) async throws
     func deleteClipboardItem(id: String) async throws
 
+    // Scheduled agent tasks
+    func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws
+    func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask?
+    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask]
+    func deleteScheduledAgentTask(id: String) async throws
+
     // Provider configs
     func listProviders() async throws -> [ProviderConfig]
     func addProvider(_ config: ProviderConfig) async throws
     func updateProvider(_ config: ProviderConfig) async throws
     func removeProvider(id: String) async throws
+
+    // Schedule Events
+    func insertScheduleEvent(_ event: ScheduleEvent) async throws
+    func updateScheduleEvent(_ event: ScheduleEvent) async throws
+    func deleteScheduleEvent(id: String) async throws
+    func listScheduleEvents() async throws -> [ScheduleEvent]
+    func getScheduleEvent(id: String) async throws -> ScheduleEvent?
 
     // Settings
     func getSetting(key: String) async throws -> String?
@@ -79,10 +92,18 @@ public struct SourceItemFilter: Sendable, Equatable {
     }
 }
 
+public extension StorageServiceProtocol {
+    func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {}
+    func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? { nil }
+    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] { [] }
+    func deleteScheduledAgentTask(id: String) async throws {}
+}
+
 // MARK: - CaptureServiceProtocol
 
 public protocol CaptureServiceProtocol: Sendable {
     func captureScreenshot(mode: ScreenshotMode) async throws -> CaptureResult
+    func captureScrollingScreenshot() async throws -> CaptureResult
     func captureFromClipboard() async throws -> CaptureResult?
     func captureFromFile(url: URL) async throws -> CaptureResult
     func captureFromWebpage(url: URL) async throws -> CaptureResult

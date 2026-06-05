@@ -193,6 +193,11 @@ private final class InMemoryStorageStub: StorageServiceProtocol, @unchecked Send
         settings[key]
     }
 
+    func insertScheduleEvent(_ event: ScheduleEvent) async throws {}
+    func updateScheduleEvent(_ event: ScheduleEvent) async throws {}
+    func deleteScheduleEvent(id: String) async throws {}
+    func listScheduleEvents() async throws -> [ScheduleEvent] { [] }
+    func getScheduleEvent(id: String) async throws -> ScheduleEvent? { nil }
     func setSetting(key: String, value: String) async throws {
         settings[key] = value
     }

@@ -1,12 +1,11 @@
 import SwiftUI
 import AppKit
-import AVFoundation
 import AcMindKit
 
 struct VoiceEntryView: View {
     @StateObject private var viewModel = SettingsViewModel()
-    @State private var preferredMicrophoneName = VoiceMicrophonePreferenceStore.defaultName
-    @State private var microphoneOptions: [VoiceMicrophoneOption] = []
+    @State private var preferredMicrophoneSelection = VoiceMicrophonePreferenceStore.defaultName
+    @State private var microphoneDevices: [VoiceMicrophoneDevice] = []
 
     private enum UI {
         static let maxWidth: CGFloat = 1180
@@ -29,7 +28,7 @@ struct VoiceEntryView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     runtimeCard
-                    permissionCard
+                    statusEntryCard
                     microphoneCard
                 }
                 .frame(width: UI.summaryWidth)
@@ -39,9 +38,19 @@ struct VoiceEntryView: View {
         }
         .background(AppSurfaceTokens.background)
         .task {
-            preferredMicrophoneName = VoiceMicrophonePreferenceStore.load()
-            microphoneOptions = VoiceMicrophoneOption.available()
+            microphoneDevices = VoiceMicrophoneDeviceCatalog.availableInputDevices()
+            let storedSelection = VoiceMicrophonePreferenceStore.load()
+            if storedSelection == VoiceMicrophonePreferenceStore.defaultName {
+                preferredMicrophoneSelection = storedSelection
+            } else if let matchedDevice = microphoneDevices.first(where: { $0.id == storedSelection || $0.name == storedSelection }) {
+                preferredMicrophoneSelection = matchedDevice.id
+            } else {
+                preferredMicrophoneSelection = storedSelection
+            }
             await viewModel.loadPermissions()
+        }
+        .onChange(of: preferredMicrophoneSelection) { _, newValue in
+            VoiceMicrophonePreferenceStore.save(newValue)
         }
     }
 
@@ -83,6 +92,7 @@ struct VoiceEntryView: View {
                 icon: "arrow.up.doc",
                 rows: [
                     ("输出方式", viewModel.voiceOutputMode.displayName),
+                    ("翻译目标", translationLanguageDisplayName(viewModel.translationLanguage)),
                     ("收集箱", viewModel.voiceSaveToInbox ? "写入" : "不写入"),
                     ("连续输入", viewModel.voiceAllowContinuation ? continuationText : "关闭")
                 ]
@@ -144,6 +154,11 @@ struct VoiceEntryView: View {
                         Text(option.title).tag(option.id)
                     }
                 }
+                if viewModel.voiceDefaultProvider == "qwen3ASR" {
+                    Text("Qwen3-ASR 不支持真正的实时流式，这里会按分段结果刷新。")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
                 divider
                 pickerRow(title: "首选语言", description: "传给识别和说入法链路的语言偏好。", selection: persistedBinding(\.preferredLanguage)) {
                     ForEach(languageOptions, id: \.id) { option in
@@ -167,6 +182,12 @@ struct VoiceEntryView: View {
                     }
                 }
                 divider
+                pickerRow(title: "翻译目标", description: "当输出方式为翻译时，译到这个语言。", selection: persistedBinding(\.translationLanguage)) {
+                    ForEach(translationLanguageOptions, id: \.id) { option in
+                        Text(option.title).tag(option.id)
+                    }
+                }
+                divider
                 toggleRow(title: "保存到收集箱", description: "在交付文本同时写入收集箱。", isOn: persistedBinding(\.voiceSaveToInbox))
                 divider
                 toggleRow(title: "连续输入", description: "允许在短时间内延续上一段输入。", isOn: persistedBinding(\.voiceAllowContinuation))
@@ -176,7 +197,7 @@ struct VoiceEntryView: View {
                 toggleRow(title: "补全结尾标点", description: "结束时自动补充基础句末标点。", isOn: persistedBinding(\.enablePunctuationAppend))
             }
 
-            settingCard(title: "静音检测与注入", description: "静音检测已经进入 SayInputConfiguration；麦克风设备当前明确为仅记录偏好，不影响录音源。") {
+            settingCard(title: "静音检测与注入", description: "静音检测已经进入 SayInputConfiguration；麦克风设备偏好会在开始录音时自动应用。") {
                 toggleRow(title: "启用静音检测", description: "检测长静音后自动停止录音。", isOn: persistedBinding(\.voiceEnableSilenceDetection))
                 divider
                 stepperRow(title: "静音超时", description: "达到该时长后自动停录。", value: persistedBinding(\.voiceSilenceTimeout), range: 1...10, step: 0.5, format: { "\($0.formatted(.number.precision(.fractionLength(1))))s" })
@@ -204,30 +225,42 @@ struct VoiceEntryView: View {
         }
     }
 
-    private var permissionCard: some View {
-        settingCard(title: "权限状态", description: "说入法真正依赖的权限。") {
-            statusRow("麦克风", status: viewModel.microphoneStatus)
-            divider
-            statusRow("辅助功能", status: viewModel.accessibilityStatus)
-            divider
-            statusRow("屏幕录制", status: viewModel.screenRecordingStatus)
+    private var statusEntryCard: some View {
+        settingCard(title: "状态入口", description: "完整本机状态集中在主侧边栏的「状态」。") {
+            Button("查看状态") {
+                (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+            }
+            .buttonStyle(.bordered)
         }
     }
 
     private var microphoneCard: some View {
-        settingCard(title: "录音输入偏好", description: "当前只保存偏好，底层录音链路不消费这个选择。") {
-            Picker("录音设备偏好", selection: $preferredMicrophoneName) {
-                ForEach(microphoneOptions, id: \.name) { option in
-                    Text(option.name).tag(option.name)
+        settingCard(title: "录音输入设备", description: "这里选择的设备会在开始录音时写入系统默认输入；找不到时会回退自动选择。") {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker("输入设备", selection: $preferredMicrophoneSelection) {
+                        Text(VoiceMicrophonePreferenceStore.defaultName).tag(VoiceMicrophonePreferenceStore.defaultName)
+                        ForEach(microphoneDevices) { device in
+                            Text(device.name).tag(device.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Text("当前已选: \(VoiceMicrophoneDeviceCatalog.displayName(for: preferredMicrophoneSelection))")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .onChange(of: preferredMicrophoneName) { _, newValue in
-                VoiceMicrophonePreferenceStore.save(newValue)
+
+                Spacer()
+
+                Button("恢复自动选择") {
+                    preferredMicrophoneSelection = VoiceMicrophonePreferenceStore.defaultName
+                }
+                .buttonStyle(.bordered)
             }
 
-            Text("这只是可持久化偏好，不会伪装成已经生效的输入源。")
+            Text("如果选中的设备在系统里不存在，会自动退回到默认输入。")
                 .font(.system(size: 11))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -368,7 +401,9 @@ struct VoiceEntryView: View {
 
     private var outputSummaryText: String {
         let output = viewModel.voiceOutputMode.displayName
-        return viewModel.voiceSaveToInbox ? "\(output) + 收集箱" : output
+        let translated = viewModel.voiceOutputMode == .translate ? " → \(translationLanguageDisplayName(viewModel.translationLanguage))" : ""
+        let summary = "\(output)\(translated)"
+        return viewModel.voiceSaveToInbox ? "\(summary) + 收集箱" : summary
     }
 
     private var asrProviderOptions: [(id: String, title: String)] {
@@ -379,7 +414,8 @@ struct VoiceEntryView: View {
             ("whisperKit", "WhisperKit"),
             ("funASR", "FunASR"),
             ("qwen3ASR", "Qwen3-ASR"),
-            ("parakeet", "Parakeet")
+            ("parakeet", "Parakeet"),
+            ("mimo_asr", "MiMo ASR")
         ]
     }
 
@@ -401,12 +437,25 @@ struct VoiceEntryView: View {
         ]
     }
 
+    private var translationLanguageOptions: [(id: String, title: String)] {
+        [
+            ("zh", "中文"),
+            ("en", "英文"),
+            ("ja", "日文"),
+            ("ko", "韩文")
+        ]
+    }
+
     private func providerDisplayName(_ id: String) -> String {
         asrProviderOptions.first(where: { $0.id == id })?.title ?? id
     }
 
     private func languageDisplayName(_ id: String) -> String {
         languageOptions.first(where: { $0.id == id })?.title ?? id
+    }
+
+    private func translationLanguageDisplayName(_ id: String) -> String {
+        translationLanguageOptions.first(where: { $0.id == id })?.title ?? id
     }
 
     private func permissionColor(_ status: AppPermissionStatus) -> Color {
@@ -426,33 +475,5 @@ struct VoiceEntryView: View {
                 Task { await viewModel.saveSettings() }
             }
         )
-    }
-}
-
-private struct VoiceMicrophoneOption: Identifiable {
-    let id: String
-    let name: String
-
-    static func available() -> [VoiceMicrophoneOption] {
-        let session = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInMicrophone, .externalUnknown],
-            mediaType: .audio,
-            position: .unspecified
-        )
-        let devices = session.devices.map { VoiceMicrophoneOption(id: $0.uniqueID, name: $0.localizedName) }
-        return [VoiceMicrophoneOption(id: "auto", name: VoiceMicrophonePreferenceStore.defaultName)] + devices
-    }
-}
-
-private enum VoiceMicrophonePreferenceStore {
-    static let key = "voice.preferredMicrophoneName.v1"
-    static let defaultName = "自动选择"
-
-    static func load() -> String {
-        UserDefaults.standard.string(forKey: key) ?? defaultName
-    }
-
-    static func save(_ value: String) {
-        UserDefaults.standard.set(value, forKey: key)
     }
 }

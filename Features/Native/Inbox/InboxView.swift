@@ -2,6 +2,7 @@ import SwiftUI
 import AcMindKit
 
 struct InboxView: View {
+    @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = InboxViewModel()
     @State private var selectedSidebarItem: String? = "all"
     @State private var selectedItem: SourceItem?
@@ -44,7 +45,7 @@ struct InboxView: View {
             case "voice": matchesSource = item.type == .audio
             case "screenshot": matchesSource = item.type == .screenshot
             case "clipboard": matchesSource = item.type == .text
-            case "agent": matchesSource = false
+            case "agent": matchesSource = item.isAgentGenerated
             case "pending": matchesSource = item.status == .pending
             case "refined": matchesSource = item.status == .distilled
             case "archived": matchesSource = item.status == .archived
@@ -66,15 +67,19 @@ struct InboxView: View {
             .frame(width: 220)
 
             itemList
-
-            if let item = selectedItem {
-                detailPanel(item: item)
-                    .frame(width: 300)
+        }
+        .background(AppVisualBackdrop())
+        .onAppear {
+            Task {
+                await viewModel.loadItems()
+                await focusPendingCaptureDetailIfNeeded()
             }
         }
-        .background(AppSurfaceTokens.background)
-        .onAppear {
-            Task { await viewModel.loadItems() }
+        .onChange(of: appState.pendingInboxDetailSourceItemID) { _, _ in
+            Task {
+                await viewModel.loadItems()
+                await focusPendingCaptureDetailIfNeeded()
+            }
         }
     }
 
@@ -89,21 +94,28 @@ struct InboxView: View {
             if filteredItems.isEmpty {
                 emptyState
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 1) {
-                        ForEach(filteredItems) { item in
-                            InboxItemRow(
-                                item: item,
-                                isSelected: selectedItem?.id == item.id,
-                                onSelect: { selectedItem = item }
-                            )
+                GeometryReader { proxy in
+                    ScrollView {
+                        LazyVGrid(columns: inboxColumns(availableWidth: proxy.size.width), spacing: 12) {
+                            ForEach(filteredItems) { item in
+                                InboxItemCard(
+                                    item: item,
+                                    isSelected: selectedItem?.id == item.id,
+                                    onSelect: { selectedItem = item },
+                                    onMore: { selectedItem = item }
+                                )
+                            }
                         }
+                        .padding(16)
                     }
-                    .padding(.vertical, 8)
                 }
             }
         }
-        .frame(minWidth: 300)
+        .frame(minWidth: 320)
+    }
+
+    private func inboxColumns(availableWidth: CGFloat) -> [GridItem] {
+        MaterialCardGridLayout.columns(availableWidth: availableWidth, minimumColumnWidth: 240)
     }
 
     private var searchBar: some View {
@@ -130,173 +142,22 @@ struct InboxView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "tray")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary.opacity(0.3))
-
-            Text("暂无收集内容")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-
-            Text("通过语音、截图、剪贴板或 Agent 生成内容")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        AppSurfaceEmptyState(
+            icon: "tray",
+            title: "暂无收集内容",
+            message: "通过语音、截图、剪贴板或 Agent 生成内容后，会先进入这里等待整理。",
+            tint: AppSurfaceTokens.accentBlue
+        )
     }
 
-    private func detailPanel(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("详情")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-                Button(action: { selectedItem = nil }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+    @MainActor
+    private func focusPendingCaptureDetailIfNeeded() async {
+        guard let pendingItemID = appState.pendingInboxDetailSourceItemID else { return }
 
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    itemHeader(item: item)
-                    itemContent(item: item)
-                    itemActions(item: item)
-                }
-                .padding(16)
-            }
+        if let item = viewModel.items.first(where: { $0.id == pendingItemID }) {
+            selectedSidebarItem = "all"
+            selectedItem = item
+            appState.pendingInboxDetailSourceItemID = nil
         }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-    }
-
-    private func itemHeader(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: item.type.iconName)
-                    .foregroundStyle(item.type.color)
-                Text(item.type.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if let title = item.title {
-                Text(title)
-                    .font(.headline)
-            }
-
-            Text(item.createdAt.formatted())
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    private func itemContent(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("内容预览")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(item.previewText ?? item.transcript ?? "无预览内容")
-                .font(.body)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackground))
-        }
-    }
-
-    private func itemActions(item: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("操作")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            VStack(spacing: 6) {
-                actionButton(icon: "sparkles", title: "AI 提炼") {
-                    Task { await viewModel.distillItem(item) }
-                }
-                actionButton(icon: "archivebox", title: "归档") {
-                    Task { await viewModel.archive(item: item) }
-                }
-                actionButton(icon: "rectangle.on.rectangle", title: "工作台") {
-                    Task { await viewModel.moveToWorkbench(item: item) }
-                }
-                actionButton(icon: "brain", title: "知识库") {
-                    Task { await viewModel.sendToKnowledgeBase(item: item) }
-                }
-                actionButton(icon: "trash", title: "删除", role: .destructive) {
-                    Task { await viewModel.delete(item: item) }
-                }
-            }
-        }
-    }
-
-    private func actionButton(icon: String, title: String, role: ButtonRole? = nil, action: @escaping () -> Void) -> some View {
-        Button(role: role, action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .frame(width: 16)
-                Text(title)
-                    .font(.system(size: 12))
-                Spacer()
-            }
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackground))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct InboxItemRow: View {
-    let item: SourceItem
-    let isSelected: Bool
-    let onSelect: () -> Void
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: item.type.iconName)
-                    .font(.system(size: 14))
-                    .foregroundStyle(item.type.color)
-                    .frame(width: 20)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title ?? item.previewText ?? "未命名")
-                        .font(.system(size: 13))
-                        .lineLimit(1)
-                        .foregroundStyle(isSelected ? .white : .primary)
-
-                    HStack(spacing: 4) {
-                        Text(item.type.displayName)
-                            .font(.system(size: 10))
-                        Text("·")
-                            .font(.system(size: 10))
-                        Text(item.createdAt.formatted(.relative(presentation: .named)))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundStyle(isSelected ? .white.opacity(0.7) : .secondary)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .padding(.horizontal, 8)
     }
 }

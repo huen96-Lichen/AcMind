@@ -123,9 +123,9 @@ private struct MiniMonthCard: View {
                 ? Color.accentColor.opacity(0.05)
                 : AppSurfaceTokens.cardBackgroundSoft
         )
-        .cornerRadius(AcMindTheme.cornerRadius)
+        .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         .overlay(
-            RoundedRectangle(cornerRadius: AcMindTheme.cornerRadius)
+            RoundedRectangle(cornerRadius: AcMindDesignTokens.Layout.inlineBlockRadius)
                 .stroke(isCurrentMonth ? Color.accentColor.opacity(0.2) : Color(NSColor.separatorColor).opacity(0.5), lineWidth: 0.5)
         )
     }

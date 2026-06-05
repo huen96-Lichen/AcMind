@@ -1,119 +1,64 @@
 import SwiftUI
 import Combine
-import EventKit
 import AcMindKit
 
 struct SystemStatusView: View {
-    @StateObject private var viewModel = SystemStatusViewModel()
-
-    private let summaryColumns = Array(
-        repeating: GridItem(.flexible(minimum: 180), spacing: 12, alignment: .top),
-        count: 3
-    )
-
-    private let bodyColumns = [
-        GridItem(.flexible(minimum: 520), spacing: 16, alignment: .top),
-        GridItem(.flexible(minimum: 320), spacing: 16, alignment: .top)
-    ]
+    @StateObject private var viewModel = SystemStatusViewModel(service: .shared)
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                headerCard
+                header
                 summaryStrip
-                bodyGrid
+                performanceSection
+                networkSection
+                batterySection
+                sensorSection
+                permissionsSection
+                exceptionsSection
             }
             .padding(.horizontal, AppSurfaceTokens.Layout.pagePadding)
             .padding(.vertical, 24)
             .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, alignment: .leading)
         }
-        .background(backgroundLayer.ignoresSafeArea())
-        .onAppear {
-            viewModel.startMonitoring()
-        }
-        .onDisappear {
-            viewModel.stopMonitoring()
-        }
+        .background(Color.white.ignoresSafeArea())
+        .onAppear { viewModel.startMonitoring() }
+        .onDisappear { viewModel.stopMonitoring() }
     }
 
-    private var backgroundLayer: some View {
-        ZStack {
-            AppSurfaceTokens.background
-
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.08),
-                    Color.clear,
-                    AppSurfaceTokens.background
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Circle()
-                .fill(Color.accentColor.opacity(0.08))
-                .frame(width: 380, height: 380)
-                .blur(radius: 70)
-                .offset(x: -260, y: -220)
-
-            Circle()
-                .fill(AppSurfaceTokens.accentPurple.opacity(0.10))
-                .frame(width: 280, height: 280)
-                .blur(radius: 80)
-                .offset(x: 300, y: -140)
-        }
-    }
-
-    private var headerCard: some View {
-        AppSurfaceCard(title: "系统状态", subtitle: "把采样结果做成更紧凑的总览、详情和异常区，减少空白和来回切换。") {
+    private var header: some View {
+        AppSurfaceCard(title: "状态", subtitle: "主状态中心只展示真实可读的数据，读不到就明确写不可用。") {
             HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 10) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.accentColor.opacity(0.12))
-                                .frame(width: 44, height: 44)
-                            Image(systemName: "cpu")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color.accentColor)
-                        }
-
+                        statusGlyph
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("本机状态")
+                            Text("状态中心")
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text("CPU、内存、磁盘、网络、电池、权限一次看全")
+                            Text("CPU、内存、磁盘、网络、电池、权限、进程、传感器一次看全")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .lineLimit(1)
-                                .truncationMode(.tail)
                         }
                     }
 
                     HStack(spacing: 8) {
-                        statusPill(
-                            icon: "clock",
-                            title: viewModel.lastUpdateTime.isEmpty ? "等待刷新" : "更新 \(viewModel.lastUpdateTime)",
-                            accent: AppSurfaceTokens.cardBackgroundSoft
-                        )
-                        statusPill(
-                            icon: "waveform.path.ecg",
-                            title: viewModel.samplingStatusText,
-                            accent: viewModel.samplingStatusColor.opacity(0.16)
-                        )
+                        statusPill(icon: "clock", title: viewModel.lastUpdatedText, accent: AppSurfaceTokens.cardBackgroundSoft)
+                        statusPill(icon: "waveform.path.ecg", title: viewModel.samplingStatusText, accent: viewModel.samplingStatusColor.opacity(0.16))
                     }
                 }
 
                 Spacer(minLength: 0)
 
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text("运行中")
+                    Text(viewModel.samplingStatusText)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(viewModel.samplingStatusColor)
-                    Text("监控中")
+                    Text(viewModel.refreshHint)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
-                    Text("2 秒刷新一次")
+                    Text("白底只读总览")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -122,186 +67,131 @@ struct SystemStatusView: View {
     }
 
     private var summaryStrip: some View {
-        LazyVGrid(columns: summaryColumns, spacing: 12) {
-            SummaryMetricCard(
-                title: "CPU 使用率",
-                value: "\(viewModel.cpuUsage)%",
-                detail: "\(viewModel.cpuCores) 核",
-                icon: "cpu",
-                tint: .blue,
-                progress: Double(viewModel.cpuUsage) / 100.0
-            )
-
-            SummaryMetricCard(
-                title: "内存",
-                value: "\(String(format: "%.1f", viewModel.memoryUsage)) / \(String(format: "%.1f", viewModel.totalMemory)) GB",
-                detail: "\(String(format: "%.0f", viewModel.totalMemory > 0 ? (viewModel.memoryUsage / viewModel.totalMemory) * 100 : 0))%",
-                icon: "memorychip",
-                tint: .purple,
-                progress: viewModel.totalMemory > 0 ? viewModel.memoryUsage / viewModel.totalMemory : 0
-            )
-
-            SummaryMetricCard(
-                title: "磁盘",
-                value: "\(String(format: "%.1f", viewModel.diskUsedGB)) / \(String(format: "%.1f", viewModel.diskTotalGB)) GB",
-                detail: "\(viewModel.diskUsage)% 使用",
-                icon: "internaldrive",
-                tint: .orange,
-                progress: Double(viewModel.diskUsage) / 100.0
-            )
-
-            SummaryMetricCard(
-                title: "网络",
-                value: "↓ \(viewModel.downloadSpeed) / ↑ \(viewModel.uploadSpeed) MB/s",
-                detail: "\(viewModel.networkSpeed) MB/s 合计",
-                icon: "network",
-                tint: .green,
-                progress: min(1, Double(viewModel.networkSpeed) / 25.0)
-            )
-
-            SummaryMetricCard(
-                title: "电池",
-                value: "\(viewModel.batteryLevel)%",
-                detail: viewModel.batteryState,
-                icon: "battery.100",
-                tint: .cyan,
-                progress: Double(viewModel.batteryLevel) / 100.0
-            )
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 180), spacing: 12), count: 3), spacing: 12) {
+            summaryCard(title: "CPU", icon: "cpu", value: viewModel.cpuSummary, detail: viewModel.loadAverageSummary, tint: .blue)
+            summaryCard(title: "内存", icon: "memorychip", value: viewModel.memorySummary, detail: viewModel.memoryPressureSummary, tint: .purple)
+            summaryCard(title: "网络", icon: "network", value: viewModel.networkSummary, detail: viewModel.networkInterfaceSummary, tint: .green)
+            summaryCard(title: "电池", icon: "battery.100", value: viewModel.batterySummary, detail: viewModel.batteryStateSummary, tint: .cyan)
+            summaryCard(title: "温度", icon: "thermometer", value: viewModel.temperatureSummary, detail: viewModel.temperatureDetailSummary, tint: .orange)
         }
     }
 
-    private var bodyGrid: some View {
-        LazyVGrid(columns: bodyColumns, spacing: 16) {
-            VStack(spacing: 16) {
-                overviewCard
-                processCard
-            }
-
-            VStack(spacing: 16) {
-                permissionsCard
-                samplingCard
-                runtimeCard
-            }
-        }
-    }
-
-    private var overviewCard: some View {
-        AppSurfaceSectionCard(
-            title: "设备概览",
-            subtitle: "按类别集中呈现关键硬件与当前采样结果"
-        ) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                DetailTile(title: "CPU", value: "\(viewModel.cpuUsage)%", detail: "\(viewModel.cpuCores) 核")
-                DetailTile(title: "内存", value: "\(String(format: "%.1f", viewModel.memoryUsage)) GB", detail: "\(String(format: "%.0f", viewModel.totalMemory > 0 ? (viewModel.memoryUsage / viewModel.totalMemory) * 100 : 0))% / \(String(format: "%.1f", viewModel.totalMemory)) GB")
-                DetailTile(title: "磁盘", value: "\(String(format: "%.1f", viewModel.diskUsagePercent))%", detail: "\(String(format: "%.1f", viewModel.diskUsedGB)) / \(String(format: "%.1f", viewModel.diskTotalGB)) GB")
-                DetailTile(title: "网络", value: "↓ \(viewModel.downloadSpeed) / ↑ \(viewModel.uploadSpeed)", detail: "MB/s")
-                DetailTile(title: "电池", value: "\(viewModel.batteryLevel)%", detail: viewModel.batteryState)
-                DetailTile(title: "更新", value: viewModel.lastUpdateTime.isEmpty ? "--:--:--" : viewModel.lastUpdateTime, detail: viewModel.samplingStatusText)
-            }
-        }
-    }
-
-    private var processCard: some View {
-        AppSurfaceSectionCard(
-            title: "活跃进程",
-            subtitle: "按 CPU 与内存排过序的前 5 个进程"
-        ) {
-            ProcessListSection(processes: viewModel.topProcesses)
-        }
-    }
-
-    private var permissionsCard: some View {
-        AppSurfaceSectionCard(
-            title: "权限状态",
-            subtitle: "默认突出异常项，方便先处理问题"
-        ) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Spacer()
-                    Button("打开系统设置") {
-                        viewModel.openPrivacySettings()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+    private var performanceSection: some View {
+        AppSurfaceSectionCard(title: "性能", subtitle: "CPU、内存、磁盘和进程排行") {
+            VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    metricTile(title: "CPU", value: viewModel.cpuSummary, detail: viewModel.loadAverageSummary)
+                    metricTile(title: "内存", value: viewModel.memorySummary, detail: viewModel.memoryUsagePercentSummary)
+                    metricTile(title: "磁盘", value: viewModel.diskSummary, detail: viewModel.diskDetailSummary)
+                    metricTile(title: "最近刷新", value: viewModel.lastUpdatedText, detail: viewModel.refreshHint)
                 }
 
-                SystemStatusPermissionRow(
-                    title: "辅助功能",
-                    detail: viewModel.accessibilityPermissionStatus.displayName,
-                    isWarning: viewModel.accessibilityPermissionStatus != .authorized,
-                    accent: .purple
-                )
+                Divider()
 
-                SystemStatusPermissionRow(
-                    title: "麦克风",
-                    detail: viewModel.microphonePermissionStatus.displayName,
-                    isWarning: viewModel.microphonePermissionStatus != .authorized,
-                    accent: .red
-                )
-
-                SystemStatusPermissionRow(
-                    title: "屏幕录制",
-                    detail: viewModel.screenRecordingPermissionStatus.displayName,
-                    isWarning: viewModel.screenRecordingPermissionStatus != .authorized,
-                    accent: .orange
-                )
-
-                SystemStatusPermissionRow(
-                    title: "日历",
-                    detail: viewModel.calendarPermissionStatusText,
-                    isWarning: viewModel.calendarPermissionStatusText != "已授权",
-                    accent: .blue
-                )
-
-                SystemStatusPermissionRow(
-                    title: "提醒事项",
-                    detail: viewModel.remindersPermissionStatusText,
-                    isWarning: viewModel.remindersPermissionStatusText != "已授权",
-                    accent: .green
-                )
+                HStack(alignment: .top, spacing: 12) {
+                    processList(title: "CPU 进程", processes: viewModel.snapshot.topCPUProcesses)
+                    processList(title: "内存进程", processes: viewModel.snapshot.topMemoryProcesses)
+                }
             }
         }
     }
 
-    private var samplingCard: some View {
-        AppSurfaceSectionCard(
-            title: "采样通道",
-            subtitle: "当前页面展示的系统采样源"
-        ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
-                ChannelChip(title: "CPU", value: "\(viewModel.cpuUsage)%", accent: .blue)
-                ChannelChip(title: "内存", value: "\(String(format: "%.1f", viewModel.memoryUsage)) GB", accent: .purple)
-                ChannelChip(title: "磁盘", value: "\(viewModel.diskUsage)%", accent: .orange)
-                ChannelChip(title: "网络", value: "\(viewModel.networkSpeed) MB/s", accent: .green)
-                ChannelChip(title: "电池", value: "\(viewModel.batteryLevel)%", accent: .cyan)
+    private var networkSection: some View {
+        AppSurfaceSectionCard(title: "网络", subtitle: "速率、主接口和 Wi‑Fi 详情") {
+            VStack(alignment: .leading, spacing: 10) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    infoTile(title: "下载", value: viewModel.networkDownloadSummary, detail: "MB/s")
+                    infoTile(title: "上传", value: viewModel.networkUploadSummary, detail: "MB/s")
+                    infoTile(title: "主接口", value: viewModel.primaryInterfaceSummary, detail: viewModel.primaryInterfaceDetail)
+                    infoTile(title: "Wi‑Fi", value: viewModel.wifiSummary, detail: viewModel.wifiDetail)
+                }
             }
         }
     }
 
-    private var runtimeCard: some View {
-        AppSurfaceSectionCard(
-            title: "运行摘要",
-            subtitle: "把一些不适合放在主指标里的状态单独收拢"
-        ) {
+    private var batterySection: some View {
+        AppSurfaceSectionCard(title: "电池", subtitle: "容量、健康、温度、电压、电流和充电功率") {
+            VStack(alignment: .leading, spacing: 10) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    infoTile(title: "电量", value: viewModel.batterySummary, detail: viewModel.batteryStateSummary)
+                    infoTile(title: "循环", value: viewModel.batteryCycleSummary, detail: "CycleCount")
+                    infoTile(title: "容量", value: viewModel.batteryCapacitySummary, detail: viewModel.batteryCapacityDetail)
+                    infoTile(title: "温度", value: viewModel.batteryTemperatureSummary, detail: "°C")
+                    infoTile(title: "电压", value: viewModel.batteryVoltageSummary, detail: "V")
+                    infoTile(title: "电流", value: viewModel.batteryCurrentSummary, detail: "A")
+                    infoTile(title: "充电功率", value: viewModel.batteryPowerSummary, detail: "W")
+                    infoTile(title: "剩余时间", value: viewModel.batteryTimeSummary, detail: viewModel.batteryTimeDetail)
+                    infoTile(title: "健康", value: viewModel.batteryHealthSummary, detail: viewModel.batteryHealthDetail)
+                }
+            }
+        }
+    }
+
+    private var sensorSection: some View {
+        AppSurfaceSectionCard(title: "传感器", subtitle: "温度、风扇、功耗、电压、电流") {
+            VStack(alignment: .leading, spacing: 12) {
+                sensorGroup(title: "温度", items: viewModel.snapshot.temperatureSensors, placeholder: "暂无温度传感器")
+                sensorGroup(title: "风扇", items: viewModel.fanSensorSummaries, placeholder: "暂无风扇传感器")
+                sensorGroup(title: "功耗", items: viewModel.snapshot.powerSensors, placeholder: "暂无功耗传感器")
+                sensorGroup(title: "电压", items: viewModel.snapshot.voltageSensors, placeholder: "暂无电压传感器")
+                sensorGroup(title: "电流", items: viewModel.snapshot.currentSensors, placeholder: "暂无电流传感器")
+                if let thermalState = viewModel.snapshot.thermalState {
+                    infoRow(title: "热状态", value: thermalState)
+                }
+            }
+        }
+    }
+
+    private var permissionsSection: some View {
+        AppSurfaceSectionCard(title: "权限", subtitle: "麦克风、辅助功能、屏幕录制、日历、提醒事项、通知") {
             VStack(alignment: .leading, spacing: 8) {
-                infoRow(title: "当前状态", value: viewModel.samplingStatusText)
-                infoRow(title: "最近刷新", value: viewModel.lastUpdateTime.isEmpty ? "等待刷新" : viewModel.lastUpdateTime)
-                infoRow(title: "总内存", value: "\(String(format: "%.1f", viewModel.totalMemory)) GB")
-                infoRow(title: "总磁盘", value: "\(String(format: "%.1f", viewModel.diskTotalGB)) GB")
-                infoRow(title: "电池健康", value: batteryHealthText)
+                ForEach(viewModel.snapshot.permissions) { permission in
+                    permissionRow(permission)
+                }
             }
         }
     }
 
-    private var batteryHealthText: String {
-        if let health = viewModel.batteryInfo.healthPercentage {
-            return "\(Int(health.rounded()))%"
+    private var exceptionsSection: some View {
+        AppSurfaceSectionCard(title: "异常", subtitle: "明确列出所有不可用原因") {
+            if viewModel.snapshot.unavailableReasons.isEmpty {
+                Text("当前没有不可用项。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(viewModel.snapshot.unavailableReasons) { reason in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(reason.message)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
+                            Text([reason.category, reason.detail].compactMap { $0 }.joined(separator: " · "))
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(10)
+                        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
+                        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
+                    }
+                }
+            }
         }
-        return "未知"
+    }
+
+    private var statusGlyph: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .fill(Color.accentColor.opacity(0.12))
+                .frame(width: 44, height: 44)
+            Image(systemName: "cpu")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+        }
     }
 
     private func statusPill(icon: String, title: String, accent: Color) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
@@ -309,287 +199,222 @@ struct SystemStatusView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
-                .truncationMode(.tail)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(
-            Capsule(style: .continuous)
-                .fill(accent)
-        )
+        .background(Capsule(style: .continuous).fill(accent))
     }
 
-    private func infoRow(title: String, value: String) -> some View {
-        HStack(spacing: 10) {
-            Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Spacer(minLength: 0)
-            Text(value)
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-}
-
-private struct SummaryMetricCard: View {
-    let title: String
-    let value: String
-    let detail: String
-    let icon: String
-    let tint: Color
-    let progress: Double
-
-    var body: some View {
+    private func summaryCard(title: String, icon: String, value: String, detail: String, tint: Color) -> some View {
         AppSurfaceCard(padding: 14) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(tint.opacity(0.14))
-                            .frame(width: 28, height: 28)
-                        Image(systemName: icon)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(tint)
-                    }
-
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(tint.opacity(0.14))
+                        .frame(width: 28, height: 28)
+                        .overlay(Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint))
                     Text(title)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
                 }
-
                 Text(value)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
-                    .truncationMode(.tail)
-
-                HStack(spacing: 8) {
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule(style: .continuous)
-                                .fill(AppSurfaceTokens.cardBackgroundSoft)
-                            Capsule(style: .continuous)
-                                .fill(tint)
-                                .frame(width: max(6, proxy.size.width * max(0, min(1, progress))))
-                        }
-                    }
-                    .frame(height: 5)
-
-                    Text(detail)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+                Text(detail)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(1)
             }
         }
     }
-}
 
-private struct DetailTile: View {
-    let title: String
-    let value: String
-    let detail: String
-
-    var body: some View {
+    private func metricTile(title: String, value: String, detail: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .lineLimit(1)
-
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
-                .truncationMode(.tail)
-
             Text(detail)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
     }
-}
 
-private struct SystemStatusPermissionRow: View {
-    let title: String
-    let detail: String
-    let isWarning: Bool
-    let accent: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(isWarning ? accent : .green)
-                .frame(width: 7, height: 7)
-
+    private func infoTile(title: String, value: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 13.5, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
-
-            Spacer(minLength: 0)
-
-            Text(detail)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(isWarning ? accent : AppSurfaceTokens.secondaryText)
                 .lineLimit(1)
+            Text(detail)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
+    }
+
+    private func processList(title: String, processes: [SystemProcessSnapshot]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+            if processes.isEmpty {
+                Text("暂无进程排行")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            } else {
+                ForEach(processes.prefix(5)) { process in
+                    HStack {
+                        Text(process.name)
+                            .font(.system(size: 11, weight: .medium))
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(String(format: "%.0f%%", process.cpuUsage))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Text(String(format: "%.0f MB", process.memoryUsageMB))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
+                    .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
+    }
+
+    private func sensorGroup<T>(title: String, items: [T], placeholder: String) -> some View where T: SensorDisplayRow {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+            if items.isEmpty {
+                Text(placeholder)
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            } else {
+                ForEach(items.indices, id: \.self) { index in
+                    sensorRow(items[index])
+                }
+            }
+        }
+        .padding(12)
+        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
+    }
+
+    private func sensorRow<T: SensorDisplayRow>(_ item: T) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.displayName)
+                    .font(.system(size: 11, weight: .medium))
+                Text(item.displaySource)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            }
+            Spacer(minLength: 0)
+            Text(item.displayValue)
+                .font(.system(size: 11, weight: .semibold))
+            if item.isUnavailable {
+                Text("不可用")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.orange)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(isWarning ? accent.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(item.isUnavailable ? Color.orange.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
-}
 
-private struct ChannelChip: View {
-    let title: String
-    let value: String
-    let accent: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(accent)
-                .frame(width: 7, height: 7)
-
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-
+    private func permissionRow(_ item: SystemPermissionSnapshot) -> some View {
+        HStack {
+            Text(item.name)
+                .font(.system(size: 11, weight: .medium))
             Spacer(minLength: 0)
-
-            Text(value)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .lineLimit(1)
+            Text(item.value ?? "不可用")
+                .font(.system(size: 11, weight: .semibold))
+            if item.isAvailable == false, let reason = item.unavailableReason {
+                Text(reason)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.orange)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
-}
 
-private struct ProcessListSection: View {
-    let processes: [SystemProcessSnapshot]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            let rows = Array(processes.prefix(5).enumerated())
-
-            ForEach(rows, id: \.offset) { row in
-                let process = row.element
-                HStack(spacing: 10) {
-                    Text(process.name)
-                        .font(.system(size: 11, weight: .semibold))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    Spacer(minLength: 0)
-
-                    Text(String(format: "%.0f%%", process.cpuUsage))
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .lineLimit(1)
-
-                    Text(String(format: "%.0f MB", process.memoryUsageMB))
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-            }
+    private func infoRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
 }
 
 @MainActor
-class SystemStatusViewModel: ObservableObject {
-    @Published var cpuUsage = 0
-    @Published var memoryUsage: Double = 0
-    @Published var totalMemory: Double = 16
-    @Published var memoryUsagePercent: Double = 0
-    @Published var diskUsage = 0
-    @Published var diskUsagePercent: Double = 0
-    @Published var diskUsedGB: Double = 0
-    @Published var diskTotalGB: Double = 0
-    @Published var networkSpeed = 0
-    @Published var downloadSpeed = 0
-    @Published var uploadSpeed = 0
-    @Published var batteryLevel = 0
-    @Published var batteryState = "未知"
-    @Published var batteryInfo = BatteryInfo()
-    @Published var microphonePermissionStatus: AppPermissionStatus = .unknown
-    @Published var accessibilityPermissionStatus: AppPermissionStatus = .unknown
-    @Published var screenRecordingPermissionStatus: AppPermissionStatus = .unknown
-    @Published var calendarPermissionStatusText = "待检查"
-    @Published var remindersPermissionStatusText = "待检查"
-    @Published var cpuCores = 8
-    @Published var lastUpdateTime = ""
-    @Published var samplingStatusText = "待机"
-    @Published var samplingStatusColor: Color = .secondary
-    @Published var topProcesses: [SystemProcessSnapshot] = []
+final class SystemStatusViewModel: ObservableObject {
+    @Published private(set) var snapshot = SystemStatusSnapshot()
+    @Published private(set) var samplingStatusText = "待机"
+    @Published private(set) var samplingStatusColor: Color = .secondary
+    @Published private(set) var cpuHistory: [Double] = []
+    @Published private(set) var memoryHistory: [Double] = []
+    @Published private(set) var networkHistory: [Double] = []
+    @Published private(set) var diskHistory: [Double] = []
+    @Published private(set) var temperatureHistory: [Double] = []
+    @Published private(set) var fanHistory: [Double] = []
+    @Published private(set) var batteryHistory: [Double] = []
 
     private let service: SystemStatusService
-    private let batteryService = BatteryService.shared
-    private let permissionManager: PermissionManager
     private var cancellables = Set<AnyCancellable>()
-    private let eventStore = EKEventStore()
 
-    init(service: SystemStatusService = SystemStatusService()) {
+    init(service: SystemStatusService = .shared) {
         self.service = service
-        self.permissionManager = ServiceContainer.isInitialized() ? ServiceContainer.shared.permissionManager : PermissionManager()
-        cpuCores = ProcessInfo.processInfo.processorCount
         service.$snapshot
             .sink { [weak self] snapshot in
-                self?.apply(snapshot)
+                self?.snapshot = snapshot
+                self?.appendHistory(from: snapshot)
             }
             .store(in: &cancellables)
-
-        batteryService.$batteryInfo
-            .sink { [weak self] info in
-                self?.batteryInfo = info
-                self?.batteryState = self?.batteryInfoSummary ?? "未知"
-            }
-            .store(in: &cancellables)
-
-        permissionManager.$statuses
-            .sink { [weak self] _ in
-                self?.syncPermissions()
-            }
-            .store(in: &cancellables)
-
-        syncPermissions()
     }
 
     func startMonitoring() {
         service.start()
         samplingStatusText = "采样中"
         samplingStatusColor = .green
-        Task {
-            await permissionManager.refreshAll()
-            await MainActor.run {
-                self.syncPermissions()
-            }
-        }
     }
 
     func stopMonitoring() {
@@ -598,67 +423,294 @@ class SystemStatusViewModel: ObservableObject {
         samplingStatusColor = .secondary
     }
 
-    func openPrivacySettings() {
-        permissionManager.openPrivacySettings()
+    var lastUpdatedText: String {
+        guard snapshot.lastUpdated != .distantPast else { return "等待刷新" }
+        return Self.timeFormatter.string(from: snapshot.lastUpdated)
     }
 
-    private func syncPermissions() {
-        microphonePermissionStatus = permissionManager.statuses[.microphone] ?? .unknown
-        accessibilityPermissionStatus = permissionManager.statuses[.accessibility] ?? .unknown
-        screenRecordingPermissionStatus = permissionManager.statuses[.screenRecording] ?? .unknown
-        calendarPermissionStatusText = Self.formatCalendarStatus(EKEventStore.authorizationStatus(for: .event))
-        remindersPermissionStatusText = Self.formatCalendarStatus(EKEventStore.authorizationStatus(for: .reminder))
+    var refreshHint: String {
+        snapshot.lastUpdated == .distantPast ? "未刷新" : "已刷新"
     }
 
-    private static func formatCalendarStatus(_ status: EKAuthorizationStatus) -> String {
-        switch status {
-        case .authorized: return "已授权"
-        case .fullAccess: return "已授权"
-        case .writeOnly: return "已授权"
-        case .denied: return "已拒绝"
-        case .restricted: return "受限"
-        case .notDetermined: return "未确定"
-        @unknown default: return "未知"
+    var cpuSummary: String {
+        formatPercent(snapshot.cpu?.value)
+    }
+
+    var loadAverageSummary: String {
+        let values = [snapshot.loadAverage1m, snapshot.loadAverage5m, snapshot.loadAverage15m].compactMap { $0 }
+        guard values.isEmpty == false else { return "负载不可用" }
+        return values.map { String(format: "%.2f", $0) }.joined(separator: " / ")
+    }
+
+    var memorySummary: String {
+        formatGB(snapshot.memory?.value)
+    }
+
+    var memoryUsagePercentSummary: String {
+        snapshot.memoryUsagePercent > 0 ? String(format: "%.0f%%", snapshot.memoryUsagePercent) : "不可用"
+    }
+
+    var memoryPressureSummary: String {
+        snapshot.unavailableReasons.first(where: { $0.category == "memory" })?.message ?? "内存压力已读取"
+    }
+
+    var diskSummary: String {
+        snapshot.diskUsagePercent > 0 ? String(format: "%.0f%%", snapshot.diskUsagePercent) : "不可用"
+    }
+
+    var diskDetailSummary: String {
+        "\(formatGB(snapshot.diskUsedGB)) / \(formatGB(snapshot.diskTotalGB))"
+    }
+
+    var networkSummary: String {
+        "↓ \(formatMBps(snapshot.networkDownloadMBps)) / ↑ \(formatMBps(snapshot.networkUploadMBps))"
+    }
+
+    var networkDownloadSummary: String {
+        formatMBps(snapshot.networkDownloadMBps)
+    }
+
+    var networkUploadSummary: String {
+        formatMBps(snapshot.networkUploadMBps)
+    }
+
+    var networkInterfaceSummary: String {
+        snapshot.networkInterfaces.first?.interfaceName ?? "主接口不可用"
+    }
+
+    var primaryInterfaceSummary: String {
+        snapshot.networkInterfaces.first(where: { $0.name == "主接口" })?.interfaceName ?? "不可用"
+    }
+
+    var primaryInterfaceDetail: String {
+        snapshot.networkInterfaces.first(where: { $0.name == "主接口" })?.isVPN == true ? "VPN / scoped" : "SCDynamicStore"
+    }
+
+    var wifiSummary: String {
+        snapshot.networkInterfaces.first(where: { $0.ssid != nil })?.ssid ?? "不可用"
+    }
+
+    var wifiDetail: String {
+        guard let wifi = snapshot.networkInterfaces.first(where: { $0.ssid != nil }) else { return "未连接 Wi‑Fi" }
+        var parts: [String] = []
+        if let bssid = wifi.bssid { parts.append(bssid) }
+        if let rssi = wifi.rssi { parts.append("RSSI \(rssi)") }
+        if let transmit = wifi.transmitRateMbps { parts.append("Tx \(String(format: "%.0f", transmit)) Mbps") }
+        if let channel = wifi.channel { parts.append(channel) }
+        return parts.isEmpty ? "Wi‑Fi 已连接" : parts.joined(separator: " · ")
+    }
+
+    var batterySummary: String {
+        guard let battery = snapshot.battery else { return "不可用" }
+        guard battery.isAvailable else { return battery.unavailableReason ?? "无电池" }
+        if let percentage = battery.percentage {
+            return String(format: "%.0f%%", percentage)
+        }
+        return "不可用"
+    }
+
+    var batteryStateSummary: String {
+        snapshot.battery?.state ?? "无电池"
+    }
+
+    var batteryCycleSummary: String {
+        snapshot.battery?.cycleCount.map(String.init) ?? "不可用"
+    }
+
+    var batteryCapacitySummary: String {
+        guard let battery = snapshot.battery, battery.isAvailable else { return "不可用" }
+        let current = battery.rawCurrentCapacity ?? battery.maxCapacity
+        let max = battery.rawMaxCapacity ?? battery.designCapacity ?? battery.maxCapacity
+        guard let current, let max, max > 0 else { return "不可用" }
+        return "\(String(format: "%.0f", current)) / \(String(format: "%.0f", max))"
+    }
+
+    var batteryCapacityDetail: String {
+        "rawCurrent / rawMax"
+    }
+
+    var batteryTemperatureSummary: String {
+        formatTemperature(snapshot.battery?.temperatureC)
+    }
+
+    var batteryVoltageSummary: String {
+        formatMetric(snapshot.battery?.voltageV, unit: "V")
+    }
+
+    var batteryCurrentSummary: String {
+        formatMetric(snapshot.battery?.amperageA, unit: "A")
+    }
+
+    var batteryPowerSummary: String {
+        formatMetric(snapshot.battery?.chargerPowerW, unit: "W")
+    }
+
+    var batteryTimeSummary: String {
+        if let minutes = snapshot.battery?.timeToEmptyMinutes {
+            return "\(minutes) min"
+        }
+        if let minutes = snapshot.battery?.timeToFullChargeMinutes {
+            return "\(minutes) min"
+        }
+        return "不可用"
+    }
+
+    var batteryTimeDetail: String {
+        snapshot.battery?.timeToEmptyMinutes != nil ? "剩余时间" : "充满时间"
+    }
+
+    var batteryHealthSummary: String {
+        if let health = batteryHealthPercentage {
+            return String(format: "%.0f%%", health)
+        }
+        return "不可用"
+    }
+
+    var batteryHealthDetail: String {
+        "Max / Design"
+    }
+
+    var batteryHealthPercentage: Double? {
+        guard let battery = snapshot.battery, let max = battery.maxCapacity, let design = battery.designCapacity, design > 0 else { return nil }
+        return (max / design) * 100
+    }
+
+    var temperatureSummary: String {
+        snapshot.temperatureSensors.first.flatMap { sensorSummary($0) } ?? "不可用"
+    }
+
+    var temperatureDetailSummary: String {
+        snapshot.temperatureSensors.isEmpty ? "无温度传感器" : "\(snapshot.temperatureSensors.count) 个"
+    }
+
+    var fanSensorSummaries: [SystemFanRow] {
+        snapshot.fanSensors.map { fan in
+            SystemFanRow(
+                id: fan.id,
+                displayName: fan.name,
+                displayValue: fan.value.map { String(format: "%.0f RPM", $0) } ?? fan.unavailableReason ?? "不可用",
+                displaySource: fan.source,
+                isUnavailable: fan.isAvailable == false || fan.value == nil
+            )
         }
     }
 
-    private func apply(_ snapshot: SystemStatusSnapshot) {
+    private func sensorSummary(_ sensor: SystemSensorSnapshot) -> String {
+        guard sensor.isAvailable, let value = sensor.value else { return sensor.unavailableReason ?? "不可用" }
+        if sensor.unit == "°C" { return String(format: "%.1f°C", value) }
+        if sensor.unit == "W" { return String(format: "%.1fW", value) }
+        if sensor.unit == "V" { return String(format: "%.2fV", value) }
+        if sensor.unit == "A" { return String(format: "%.2fA", value) }
+        return "\(String(format: "%.1f", value)) \(sensor.unit)"
+    }
+
+    private func formatPercent(_ value: Double?) -> String {
+        guard let value else { return "不可用" }
+        return String(format: "%.0f%%", value)
+    }
+
+    private func formatGB(_ value: Double?) -> String {
+        guard let value else { return "不可用" }
+        return String(format: "%.1f GB", value)
+    }
+
+    private func formatMBps(_ value: Double) -> String {
+        String(format: "%.1f MB/s", value)
+    }
+
+    private func formatMBps(_ value: Double?) -> String {
+        guard let value else { return "不可用" }
+        return String(format: "%.1f MB/s", value)
+    }
+
+    private func formatTemperature(_ value: Double?) -> String {
+        guard let value else { return "不可用" }
+        return String(format: "%.1f°C", value)
+    }
+
+    private func formatMetric(_ value: Double?, unit: String) -> String {
+        guard let value else { return "不可用" }
+        return String(format: "%.2f %@", value, unit)
+    }
+
+    private func appendHistory(from snapshot: SystemStatusSnapshot) {
         guard snapshot.lastUpdated != .distantPast else { return }
 
-        cpuUsage = Int(snapshot.cpuUsage.rounded())
-        memoryUsage = snapshot.memoryUsageGB
-        totalMemory = snapshot.totalMemoryGB
-        memoryUsagePercent = snapshot.memoryUsagePercent
-        diskUsage = Int(snapshot.diskUsagePercent.rounded())
-        diskUsagePercent = snapshot.diskUsagePercent
-        diskUsedGB = snapshot.diskUsedGB
-        diskTotalGB = snapshot.diskTotalGB
-        networkSpeed = Int((snapshot.networkDownloadMBps + snapshot.networkUploadMBps).rounded())
-        downloadSpeed = Int(snapshot.networkDownloadMBps.rounded())
-        uploadSpeed = Int(snapshot.networkUploadMBps.rounded())
-        batteryLevel = Int(snapshot.batteryLevel.rounded())
-        batteryState = batteryInfoSummary
-        cpuCores = ProcessInfo.processInfo.processorCount
+        if let cpu = snapshot.cpu?.value {
+            cpuHistory = Self.appendLimited(cpuHistory, value: cpu)
+        }
+        if let memoryPercent = snapshot.memoryUsagePercent.nonZeroOrNil {
+            memoryHistory = Self.appendLimited(memoryHistory, value: memoryPercent)
+        }
+        if snapshot.networkDownloadMBps != nil || snapshot.networkUploadMBps != nil {
+            let combinedNetwork = (snapshot.networkDownloadMBps ?? 0) + (snapshot.networkUploadMBps ?? 0)
+            networkHistory = Self.appendLimited(networkHistory, value: combinedNetwork)
+        }
+        if snapshot.diskUsagePercent.nonZeroOrNil != nil {
+            diskHistory = Self.appendLimited(diskHistory, value: snapshot.diskUsagePercent)
+        }
+        if let temperature = snapshot.temperatureSensors.first(where: { $0.value != nil })?.value {
+            temperatureHistory = Self.appendLimited(temperatureHistory, value: temperature)
+        } else if let batteryTemperature = snapshot.battery?.temperatureC {
+            temperatureHistory = Self.appendLimited(temperatureHistory, value: batteryTemperature)
+        }
+        if let fan = snapshot.fanSensors.first(where: { $0.value != nil })?.value {
+            fanHistory = Self.appendLimited(fanHistory, value: fan)
+        }
+        if let battery = snapshot.battery?.percentage {
+            batteryHistory = Self.appendLimited(batteryHistory, value: battery)
+        }
+    }
 
+    private static func appendLimited(_ values: [Double], value: Double, limit: Int = 24) -> [Double] {
+        var next = values
+        next.append(value)
+        if next.count > limit {
+            next.removeFirst(next.count - limit)
+        }
+        return next
+    }
+
+    private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
-        lastUpdateTime = formatter.string(from: snapshot.lastUpdated)
-        topProcesses = snapshot.topProcesses
-    }
+        return formatter
+    }()
+}
 
-    private var batteryInfoSummary: String {
-        if batteryInfo.isCharging {
-            return "充电中"
-        }
-        if batteryInfo.isPluggedIn {
-            return "接电"
-        }
-        if batteryInfo.isInLowPowerMode {
-            return "低电量模式"
-        }
-        if batteryInfo.currentCapacity <= 0 {
-            return "无电池"
-        }
-        return "电池供电"
+private extension Double {
+    var nonZeroOrNil: Double? {
+        self > 0 ? self : nil
     }
+}
+
+protocol SensorDisplayRow {
+    var displayName: String { get }
+    var displayValue: String { get }
+    var displaySource: String { get }
+    var isUnavailable: Bool { get }
+}
+
+struct SystemFanRow: Identifiable, SensorDisplayRow {
+    let id: String
+    let displayName: String
+    let displayValue: String
+    let displaySource: String
+    let isUnavailable: Bool
+}
+
+extension SystemSensorSnapshot: SensorDisplayRow {
+    var displayName: String { name }
+    var displayValue: String {
+        guard isAvailable, let value else { return unavailableReason ?? "不可用" }
+        if unit.isEmpty { return String(format: "%.0f", value) }
+        if unit == "°C" { return String(format: "%.1f°C", value) }
+        if unit == "RPM" { return String(format: "%.0f RPM", value) }
+        if unit == "W" { return String(format: "%.1fW", value) }
+        if unit == "V" { return String(format: "%.2fV", value) }
+        if unit == "A" { return String(format: "%.2fA", value) }
+        return "\(String(format: "%.1f", value)) \(unit)"
+    }
+    var displaySource: String { source }
+    var isUnavailable: Bool { isAvailable == false }
 }

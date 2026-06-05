@@ -80,17 +80,15 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var injectionStrategy: String = "postToPid"
     @Published public var enableCloudSync: Bool = false
     @Published public var preferredLanguage: String = "auto"
+    @Published public var translationLanguage: String = "zh"
 
     // Capture Settings
-    @Published public var autoRedactFaces: Bool = true
-    @Published public var autoDetectPII: Bool = true
-    @Published public var enabledRedactionTypes: Set<RedactionType> = Set(RedactionType.allCases)
-    @Published public var censorMode: CensorMode = .pixelate
-    @Published public var scrollCaptureAutoScroll: Bool = true
-    @Published public var scrollCaptureSpeed: Double = 3
-    @Published public var scrollCaptureMaxHeight: Int = 30000
     @Published public var captureOnlyWhenAppActive: Bool = false
     @Published public var captureScreenshotEnabled: Bool = true
+    @Published public var captureAutoRedactionEnabled: Bool = true
+    @Published public var captureCensorMode: CensorMode = .pixelate
+    @Published public var companionCaptureOpenDetailAfterCapture: Bool = false
+    @Published public var companionCaptureShowNotification: Bool = true
     @Published public var voiceInputEnabled: Bool = true
     @Published public var localFirstMode: Bool = true
     @Published public var sensitiveContentNotUpload: Bool = true
@@ -98,8 +96,10 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var aiCallLogEnabled: Bool = true
     @Published public var errorLogEnabled: Bool = true
     private var lastAutoBackupAt: Date?
+    @Published public var lastBackupAtText: String = "尚未备份"
 
     // 随身设置
+    @Published public var companionEnabled: Bool = true
     @Published public var companionCapsuleEnabled: Bool = true
     @Published public var companionCapsuleShowOnLaunch: Bool = true
     @Published public var companionCapsulePosition: CompanionCapsulePosition = .topCenter
@@ -119,6 +119,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var companionCaptureTextEnabled: Bool = true
     @Published public var companionCaptureLinkEnabled: Bool = true
     @Published public var companionCaptureSaveDestinationIndex: Int = 0
+    @Published public var isApplyingCompanionSettings: Bool = false
 
     // 随身权限状态 (new types)
     @Published public var microphonePermissionStatus: CompanionPermissionStatus = .notDetermined
@@ -136,6 +137,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var providers: [ProviderConfig] = []
     @Published public var usageSummary: SettingsUsageSummary = .empty
     @Published public var isLoading = false
+    @Published public var isCheckingForUpdates = false
     @Published public var errorMessage: String?
     @Published public var showError = false
 
@@ -199,6 +201,7 @@ public final class SettingsViewModel: ObservableObject {
         injectionStrategy = voiceSettings.injectionStrategy
         enableCloudSync = voiceSettings.enableCloudSync
         preferredLanguage = voiceSettings.preferredLanguage
+        translationLanguage = voiceSettings.translationLanguage
 
         loadLocalPreferences()
     }
@@ -206,76 +209,11 @@ public final class SettingsViewModel: ObservableObject {
     // MARK: - Companion Settings
 
     public func loadCompanionSettings() async {
-        do {
-            if let jsonString = try await storage.getSetting(key: "companion_config"),
-               let jsonData = jsonString.data(using: .utf8),
-               let config = try? JSONDecoder().decode(CompanionConfiguration.self, from: jsonData) {
-                companionCapsuleEnabled = config.capsuleEnabled
-                companionCapsuleShowOnLaunch = config.capsuleShowOnLaunch
-                companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
-                companionCapsuleExpanded = config.capsuleExpandedByDefault
-                companionVoiceEnabled = config.voiceEnabled
-                companionVoiceShortcut = config.voiceShortcut
-                companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
-                companionVoiceSaveToInbox = config.voiceSaveToInbox
-                voiceOutputMode = companionVoiceOutputMode.asSayInputOutputMode
-                voiceSaveToInbox = companionVoiceSaveToInbox
-                companionShortcutsEnabled = config.shortcutsEnabled
-                companionCaptureEnabled = config.captureEnabled
-                companionScreenshotShortcut = config.captureScreenshotShortcut
-                companionCaptureShortcut = config.captureShortcut
-                companionAgentShortcut = config.agentShortcut
-                companionScheduleShortcut = config.scheduleShortcut
-                companionCaptureAutoSaveToInbox = config.captureAutoSaveToInbox
-                companionCaptureTextEnabled = config.captureTextEnabled
-                companionCaptureLinkEnabled = config.captureLinkEnabled
-                companionCaptureSaveDestinationIndex = config.captureSaveDestinationIndex
-            } else {
-                let config = CompanionConfiguration.default
-                companionCapsuleEnabled = config.capsuleEnabled
-                companionCapsuleShowOnLaunch = config.capsuleShowOnLaunch
-                companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
-                companionCapsuleExpanded = config.capsuleExpandedByDefault
-                companionVoiceEnabled = config.voiceEnabled
-                companionVoiceShortcut = config.voiceShortcut
-                companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
-                companionVoiceSaveToInbox = config.voiceSaveToInbox
-                voiceOutputMode = companionVoiceOutputMode.asSayInputOutputMode
-                voiceSaveToInbox = companionVoiceSaveToInbox
-                companionShortcutsEnabled = config.shortcutsEnabled
-                companionCaptureEnabled = config.captureEnabled
-                companionScreenshotShortcut = config.captureScreenshotShortcut
-                companionCaptureShortcut = config.captureShortcut
-                companionAgentShortcut = config.agentShortcut
-                companionScheduleShortcut = config.scheduleShortcut
-                companionCaptureAutoSaveToInbox = config.captureAutoSaveToInbox
-                companionCaptureTextEnabled = config.captureTextEnabled
-                companionCaptureLinkEnabled = config.captureLinkEnabled
-                companionCaptureSaveDestinationIndex = config.captureSaveDestinationIndex
-            }
-        } catch {
-            let config = CompanionConfiguration.default
-            companionCapsuleEnabled = config.capsuleEnabled
-            companionCapsuleShowOnLaunch = config.capsuleShowOnLaunch
-            companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
-            companionCapsuleExpanded = config.capsuleExpandedByDefault
-            companionVoiceEnabled = config.voiceEnabled
-            companionVoiceShortcut = config.voiceShortcut
-            companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
-            companionVoiceSaveToInbox = config.voiceSaveToInbox
-            voiceOutputMode = companionVoiceOutputMode.asSayInputOutputMode
-            voiceSaveToInbox = companionVoiceSaveToInbox
-            companionShortcutsEnabled = config.shortcutsEnabled
-            companionCaptureEnabled = config.captureEnabled
-            companionScreenshotShortcut = config.captureScreenshotShortcut
-            companionCaptureShortcut = config.captureShortcut
-            companionAgentShortcut = config.agentShortcut
-            companionScheduleShortcut = config.scheduleShortcut
-            companionCaptureAutoSaveToInbox = config.captureAutoSaveToInbox
-            companionCaptureTextEnabled = config.captureTextEnabled
-            companionCaptureLinkEnabled = config.captureLinkEnabled
-            companionCaptureSaveDestinationIndex = config.captureSaveDestinationIndex
-        }
+        isApplyingCompanionSettings = true
+        defer { isApplyingCompanionSettings = false }
+
+        let config = await CompanionConfigurationStore.load(from: storage)
+        apply(companionConfiguration: config)
 
         companionShortcuts = await loadCompanionShortcuts()
 
@@ -333,7 +271,8 @@ public final class SettingsViewModel: ObservableObject {
                 enablePunctuationAppend: enablePunctuationAppend,
                 injectionStrategy: injectionStrategy,
                 enableCloudSync: enableCloudSync,
-                preferredLanguage: preferredLanguage
+                preferredLanguage: preferredLanguage,
+                translationLanguage: translationLanguage
             )
             try await settings.updateVoiceSettings(voiceSettings)
 
@@ -349,10 +288,11 @@ public final class SettingsViewModel: ObservableObject {
 
     public func saveCompanionSettings() async {
         let config = CompanionConfiguration(
+            companionEnabled: companionEnabled,
             capsuleEnabled: companionCapsuleEnabled,
             capsuleShowOnLaunch: companionCapsuleShowOnLaunch,
             capsulePosition: companionCapsulePosition.rawValue,
-                capsuleExpandedByDefault: companionCapsuleExpanded,
+            capsuleExpandedByDefault: companionCapsuleExpanded,
             voiceEnabled: companionVoiceEnabled,
             voiceShortcut: companionVoiceShortcut,
             voiceOutputMode: voiceOutputMode.asCompanionOutputMode.rawValue,
@@ -365,17 +305,41 @@ public final class SettingsViewModel: ObservableObject {
             scheduleShortcut: companionScheduleShortcut,
             captureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
             captureTextEnabled: companionCaptureTextEnabled,
-                captureLinkEnabled: companionCaptureLinkEnabled,
-                captureSaveDestinationIndex: companionCaptureSaveDestinationIndex
-            )
-            do {
-                let jsonData = try JSONEncoder().encode(config)
-                let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
-                try await storage.setSetting(key: "companion_config", value: jsonString)
-                try await saveCompanionShortcuts()
+            captureLinkEnabled: companionCaptureLinkEnabled,
+            captureSaveDestinationIndex: companionCaptureSaveDestinationIndex
+        )
+        do {
+            try await CompanionConfigurationStore.save(config, to: storage)
+            try await saveCompanionShortcuts()
+            NotificationCenter.default.post(name: .companionConfigurationDidChange, object: nil)
+            NotificationCenter.default.post(name: .companionShortcutsDidChange, object: nil)
         } catch {
             showError(message: "保存随身配置失败: \(error.localizedDescription)")
         }
+    }
+
+    private func apply(companionConfiguration config: CompanionConfiguration) {
+        companionEnabled = config.companionEnabled
+        companionCapsuleEnabled = config.capsuleEnabled
+        companionCapsuleShowOnLaunch = config.capsuleShowOnLaunch
+        companionCapsulePosition = CompanionCapsulePosition(rawValue: config.capsulePosition) ?? .topCenter
+        companionCapsuleExpanded = config.capsuleExpandedByDefault
+        companionVoiceEnabled = config.voiceEnabled
+        companionVoiceShortcut = config.voiceShortcut
+        companionVoiceOutputMode = VoiceOutputMode(rawValue: config.voiceOutputMode) ?? .copyToClipboard
+        companionVoiceSaveToInbox = config.voiceSaveToInbox
+        voiceOutputMode = companionVoiceOutputMode.asSayInputOutputMode
+        voiceSaveToInbox = companionVoiceSaveToInbox
+        companionShortcutsEnabled = config.shortcutsEnabled
+        companionCaptureEnabled = config.captureEnabled
+        companionScreenshotShortcut = config.captureScreenshotShortcut
+        companionCaptureShortcut = config.captureShortcut
+        companionAgentShortcut = config.agentShortcut
+        companionScheduleShortcut = config.scheduleShortcut
+        companionCaptureAutoSaveToInbox = config.captureAutoSaveToInbox
+        companionCaptureTextEnabled = config.captureTextEnabled
+        companionCaptureLinkEnabled = config.captureLinkEnabled
+        companionCaptureSaveDestinationIndex = config.captureSaveDestinationIndex
     }
 
     private enum CompanionShortcutStorageKey {
@@ -412,7 +376,8 @@ public final class SettingsViewModel: ObservableObject {
             triggerMode: voiceTriggerMode,
             silenceTimeout: voiceSilenceTimeout,
             enableSilenceDetection: voiceEnableSilenceDetection,
-            preferredLanguage: preferredLanguage
+            preferredLanguage: preferredLanguage,
+            translationLanguage: translationLanguage
         )
     }
 
@@ -544,6 +509,43 @@ public final class SettingsViewModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
+    public func checkForUpdates() async {
+        guard !isCheckingForUpdates else { return }
+        isCheckingForUpdates = true
+        defer { isCheckingForUpdates = false }
+
+        if updateAvailableNotificationsEnabled {
+            ToastManager.shared.show(.info, "正在检查更新...")
+        }
+
+        do {
+            let latestVersion = try await fetchLatestReleaseVersion()
+            let currentVersion = Self.currentAppVersion()
+
+            guard let latestVersion, !latestVersion.isEmpty else {
+                if updateAvailableNotificationsEnabled {
+                    ToastManager.shared.show(.warning, "没有找到可用的发布版本")
+                }
+                return
+            }
+
+            if Self.isVersion(latestVersion, newerThan: currentVersion) {
+                if updateAvailableNotificationsEnabled {
+                    ToastManager.shared.show(.success, "发现新版本 \(latestVersion)")
+                }
+                openReleasesPage()
+            } else {
+                if updateAvailableNotificationsEnabled {
+                    ToastManager.shared.show(.success, "当前已是最新版本 \(currentVersion)")
+                }
+            }
+        } catch {
+            if updateAvailableNotificationsEnabled {
+                ToastManager.shared.show(.error, "检查更新失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
     public func openFeedbackPage() {
         guard let url = URL(string: "https://github.com/huen96-Lichen/AcMind/issues") else { return }
         NSWorkspace.shared.open(url)
@@ -576,6 +578,115 @@ public final class SettingsViewModel: ObservableObject {
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(diagnostics, forType: .string)
+    }
+
+    private func fetchLatestReleaseVersion() async throws -> String? {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                do {
+                    let tagsOutput = try Self.gitRemoteTags(
+                        remote: "https://github.com/huen96-Lichen/AcMind.git"
+                    )
+                    let latestTag = Self.latestSemanticVersion(from: tagsOutput)
+                    continuation.resume(returning: latestTag)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    nonisolated private static func gitRemoteTags(remote: String) throws -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["ls-remote", "--tags", remote]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw NSError(
+                domain: "AcMind.UpdateCheck",
+                code: Int(process.terminationStatus),
+                userInfo: [NSLocalizedDescriptionKey: "无法读取远端标签"]
+            )
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            throw NSError(
+                domain: "AcMind.UpdateCheck",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "无法解析远端标签输出"]
+            )
+        }
+        return output
+    }
+
+    nonisolated private static func latestSemanticVersion(from gitOutput: String) -> String? {
+        let tags = gitOutput
+            .split(whereSeparator: \.isNewline)
+            .compactMap { line -> String? in
+                let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
+                guard parts.count == 2 else { return nil }
+                let ref = String(parts[1])
+                guard ref.hasPrefix("refs/tags/") else { return nil }
+                let tag = ref.replacingOccurrences(of: "refs/tags/", with: "")
+                    .replacingOccurrences(of: "^{}", with: "")
+                return tag.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "vV")) }
+            .filter { !$0.isEmpty }
+
+        return tags.max { lhs, rhs in
+            Self.compareVersion(lhs, rhs) == .orderedAscending
+        }
+    }
+
+    nonisolated private static func currentAppVersion() -> String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+    }
+
+    nonisolated private static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
+        let candidateParts = normalizedVersionParts(candidate)
+        let currentParts = normalizedVersionParts(current)
+        let count = max(candidateParts.count, currentParts.count)
+
+        for index in 0..<count {
+            let lhs = index < candidateParts.count ? candidateParts[index] : 0
+            let rhs = index < currentParts.count ? currentParts[index] : 0
+            if lhs != rhs {
+                return lhs > rhs
+            }
+        }
+
+        return false
+    }
+
+    nonisolated private static func compareVersion(_ lhs: String, _ rhs: String) -> ComparisonResult {
+        let left = normalizedVersionParts(lhs)
+        let right = normalizedVersionParts(rhs)
+        let count = max(left.count, right.count)
+
+        for index in 0..<count {
+            let l = index < left.count ? left[index] : 0
+            let r = index < right.count ? right[index] : 0
+            if l != r {
+                return l < r ? .orderedAscending : .orderedDescending
+            }
+        }
+
+        return .orderedSame
+    }
+
+    nonisolated private static func normalizedVersionParts(_ version: String) -> [Int] {
+        version
+            .split(whereSeparator: { !"0123456789".contains($0) })
+            .compactMap { Int($0) }
     }
 
     public var diagnosticAppVersionString: String {
@@ -612,7 +723,8 @@ public final class SettingsViewModel: ObservableObject {
         guard sysctlbyname(name, &buffer, &size, nil, 0) == 0 else {
             return nil
         }
-        return String(cString: buffer)
+        let bytes = buffer.prefix(max(0, Int(size) - 1)).map { UInt8(bitPattern: $0) }
+        return String(decoding: bytes, as: UTF8.self)
     }
 
     public func createBackup() async {
@@ -629,6 +741,10 @@ public final class SettingsViewModel: ObservableObject {
             formatter.dateFormat = "yyyyMMdd-HHmmss"
             let fileURL = folder.appendingPathComponent("AcMind-backup-\(formatter.string(from: Date())).json")
             try data.write(to: fileURL, options: [.atomic])
+            let now = Date()
+            lastAutoBackupAt = now
+            lastBackupAtText = Self.formatBackupDate(now)
+            saveLocalPreferences()
         } catch {
             showError(message: "创建备份失败: \(error.localizedDescription)")
         }
@@ -686,6 +802,11 @@ public final class SettingsViewModel: ObservableObject {
             updateAvailableNotificationsEnabled: updateAvailableNotificationsEnabled,
             captureOnlyWhenAppActive: captureOnlyWhenAppActive,
             captureScreenshotEnabled: captureScreenshotEnabled,
+            captureAutoRedactionEnabled: captureAutoRedactionEnabled,
+            captureCensorModeRawValue: captureCensorMode.rawValue,
+            companionCaptureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
+            companionCaptureOpenDetailAfterCapture: companionCaptureOpenDetailAfterCapture,
+            companionCaptureShowNotification: companionCaptureShowNotification,
             voiceInputEnabled: voiceInputEnabled,
             localFirstMode: localFirstMode,
             sensitiveContentNotUpload: sensitiveContentNotUpload,
@@ -707,8 +828,14 @@ public final class SettingsViewModel: ObservableObject {
         }
 
         await createBackup()
-        lastAutoBackupAt = Date()
-        saveLocalPreferences()
+    }
+
+    private static func formatBackupDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
     private struct BackupSnapshot: Codable {
@@ -759,10 +886,12 @@ public final class SettingsViewModel: ObservableObject {
             enablePunctuationAppend: enablePunctuationAppend,
             injectionStrategy: injectionStrategy,
             enableCloudSync: enableCloudSync,
-            preferredLanguage: preferredLanguage
+            preferredLanguage: preferredLanguage,
+            translationLanguage: translationLanguage
         )
 
         let companionConfiguration = CompanionConfiguration(
+            companionEnabled: companionEnabled,
             capsuleEnabled: companionCapsuleEnabled,
             capsuleShowOnLaunch: companionCapsuleShowOnLaunch,
             capsulePosition: companionCapsulePosition.rawValue,
@@ -793,6 +922,11 @@ public final class SettingsViewModel: ObservableObject {
                 updateAvailableNotificationsEnabled: updateAvailableNotificationsEnabled,
                 captureOnlyWhenAppActive: captureOnlyWhenAppActive,
                 captureScreenshotEnabled: captureScreenshotEnabled,
+                captureAutoRedactionEnabled: captureAutoRedactionEnabled,
+                captureCensorModeRawValue: captureCensorMode.rawValue,
+                companionCaptureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
+                companionCaptureOpenDetailAfterCapture: companionCaptureOpenDetailAfterCapture,
+                companionCaptureShowNotification: companionCaptureShowNotification,
                 voiceInputEnabled: voiceInputEnabled,
                 localFirstMode: localFirstMode,
                 sensitiveContentNotUpload: sensitiveContentNotUpload,
@@ -836,6 +970,7 @@ public final class SettingsViewModel: ObservableObject {
         injectionStrategy = snapshot.voiceSettings.injectionStrategy
         enableCloudSync = snapshot.voiceSettings.enableCloudSync
         preferredLanguage = snapshot.voiceSettings.preferredLanguage
+        translationLanguage = snapshot.voiceSettings.translationLanguage
 
         companionCapsuleEnabled = snapshot.companionConfiguration.capsuleEnabled
         companionCapsuleShowOnLaunch = snapshot.companionConfiguration.capsuleShowOnLaunch
@@ -845,6 +980,7 @@ public final class SettingsViewModel: ObservableObject {
         companionVoiceShortcut = snapshot.companionConfiguration.voiceShortcut
         companionVoiceOutputMode = VoiceOutputMode(rawValue: snapshot.companionConfiguration.voiceOutputMode) ?? .copyToClipboard
         companionVoiceSaveToInbox = snapshot.companionConfiguration.voiceSaveToInbox
+        companionEnabled = snapshot.companionConfiguration.companionEnabled
         companionShortcutsEnabled = snapshot.companionConfiguration.shortcutsEnabled
         companionCaptureEnabled = snapshot.companionConfiguration.captureEnabled
         companionScreenshotShortcut = snapshot.companionConfiguration.captureScreenshotShortcut
@@ -867,12 +1003,18 @@ public final class SettingsViewModel: ObservableObject {
     private func applyLocalPreferences(_ preferences: SettingsLocalPreferences) {
         autoBackupEnabled = preferences.autoBackupEnabled
         lastAutoBackupAt = preferences.lastAutoBackupAt
+        lastBackupAtText = preferences.lastAutoBackupAt.map(Self.formatBackupDate) ?? "尚未备份"
         restoreWindowPosition = preferences.restoreWindowPosition
         notificationsEnabled = preferences.notificationsEnabled
         taskCompletedNotificationsEnabled = preferences.taskCompletedNotificationsEnabled
         updateAvailableNotificationsEnabled = preferences.updateAvailableNotificationsEnabled
         captureOnlyWhenAppActive = preferences.captureOnlyWhenAppActive
         captureScreenshotEnabled = preferences.captureScreenshotEnabled
+        captureAutoRedactionEnabled = preferences.captureAutoRedactionEnabled
+        captureCensorMode = preferences.captureCensorMode
+        companionCaptureAutoSaveToInbox = preferences.companionCaptureAutoSaveToInbox
+        companionCaptureOpenDetailAfterCapture = preferences.companionCaptureOpenDetailAfterCapture
+        companionCaptureShowNotification = preferences.companionCaptureShowNotification
         voiceInputEnabled = preferences.voiceInputEnabled
         localFirstMode = preferences.localFirstMode
         sensitiveContentNotUpload = preferences.sensitiveContentNotUpload
@@ -943,6 +1085,7 @@ private extension SayInputOutputMode {
         case .copyToClipboard: return .copyToClipboard
         case .autoPaste: return .autoPaste
         case .ask: return .ask
+        case .translate: return .translate
         }
     }
 }
@@ -953,6 +1096,7 @@ private extension VoiceOutputMode {
         case .copyToClipboard: return .copyToClipboard
         case .autoPaste: return .autoPaste
         case .ask: return .ask
+        case .translate: return .translate
         }
     }
 }

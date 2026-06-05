@@ -16,6 +16,7 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
     public func insertSourceItem(_ item: SourceItem) async throws {
         let record = SourceItemRecord(from: item)
         try await db.insertSourceItem(record)
+        notifySourceItemsDidChange()
     }
     
     public func getSourceItem(id: String) async throws -> SourceItem? {
@@ -31,10 +32,12 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
     public func updateSourceItem(_ item: SourceItem) async throws {
         let record = SourceItemRecord(from: item)
         try await db.updateSourceItem(record)
+        notifySourceItemsDidChange()
     }
     
     public func deleteSourceItem(id: String) async throws {
         try await db.deleteSourceItem(id: id)
+        notifySourceItemsDidChange()
     }
     
     // MARK: - Chat Session Operations
@@ -149,6 +152,24 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.deleteClipboardItem(id: id)
     }
 
+    // MARK: - Scheduled Agent Task Operations
+
+    public func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {
+        try await db.insertScheduledAgentTask(task)
+    }
+
+    public func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? {
+        try await db.getScheduledAgentTask(id: id)
+    }
+
+    public func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] {
+        try await db.listScheduledAgentTasks()
+    }
+
+    public func deleteScheduledAgentTask(id: String) async throws {
+        try await db.deleteScheduledAgentTask(id: id)
+    }
+
     // MARK: - Provider Config Operations
 
     public func listProviders() async -> [ProviderConfig] {
@@ -165,6 +186,28 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
 
     public func removeProvider(id: String) async throws {
         try await db.removeProvider(id: id)
+    }
+
+    // MARK: - Schedule Event Operations
+
+    public func insertScheduleEvent(_ event: ScheduleEvent) async throws {
+        try await db.insertScheduleEvent(event)
+    }
+
+    public func updateScheduleEvent(_ event: ScheduleEvent) async throws {
+        try await db.updateScheduleEvent(event)
+    }
+
+    public func deleteScheduleEvent(id: String) async throws {
+        try await db.deleteScheduleEvent(id: id)
+    }
+
+    public func listScheduleEvents() async throws -> [ScheduleEvent] {
+        try await db.listScheduleEvents()
+    }
+
+    public func getScheduleEvent(id: String) async throws -> ScheduleEvent? {
+        try await db.getScheduleEvent(id: id)
     }
 
     // MARK: - Settings Operations
@@ -197,6 +240,14 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
     public func getDatabasePath() -> String { db.path }
     public func getDatabaseVersion() async throws -> Int { db.version }
 
+    private func notifySourceItemsDidChange() {
+        NotificationCenter.default.post(name: .acmindSourceItemsDidChange, object: nil)
+    }
+
+}
+
+public extension Notification.Name {
+    static let acmindSourceItemsDidChange = Notification.Name("AcMind.sourceItemsDidChange")
 }
 
 // MARK: - Model Extensions

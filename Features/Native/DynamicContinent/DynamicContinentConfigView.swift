@@ -214,35 +214,6 @@ struct DynamicContinentConfigView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 12) {
-                summaryBlock(title: "采样通道", icon: "waveform.path.ecg", color: .blue) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        samplingItem("CPU 采样", value: "实时", color: .blue)
-                        samplingItem("内存采样", value: "5s", color: .purple)
-                        samplingItem("电池采样", value: "30s", color: .green)
-                        samplingItem("网络采样", value: "3s", color: .orange)
-                    }
-                }
-
-                summaryBlock(title: "权限状态", icon: "checkmark.shield", color: .green) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        permissionStatusItem(
-                            "辅助功能",
-                            status: permissionManager.statuses[.accessibility] ?? .unknown,
-                            color: permissionColor(for: permissionManager.statuses[.accessibility] ?? .unknown)
-                        )
-                        permissionStatusItem(
-                            "屏幕录制",
-                            status: permissionManager.statuses[.screenRecording] ?? .unknown,
-                            color: permissionColor(for: permissionManager.statuses[.screenRecording] ?? .unknown)
-                        )
-                        permissionStatusItem(
-                            "麦克风",
-                            status: permissionManager.statuses[.microphone] ?? .unknown,
-                            color: permissionColor(for: permissionManager.statuses[.microphone] ?? .unknown)
-                        )
-                    }
-                }
-
                 summaryBlock(title: "反馈", icon: "bubble.left.and.bubble.right", color: .orange) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -263,36 +234,17 @@ struct DynamicContinentConfigView: View {
                         }
                     }
                 }
-
-                summaryBlock(title: "系统事件", icon: "sparkles", color: .purple) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Toggle(isOn: $viewModel.showSystemEventHUD) {
-                            Text("启用 HUD")
-                                .font(.system(size: 11))
+                summaryBlock(title: "状态入口", icon: "desktopcomputer", color: .blue) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("完整本机状态已集中到主侧边栏的「状态」。")
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("查看状态") {
+                            (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                         }
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-                        .padding(.vertical, 6)
-                        ForEach(viewModel.systemEventSettings.indices, id: \.self) { index in
-                            Divider()
-                            HStack(spacing: 6) {
-                                Image(systemName: viewModel.systemEventSettings[index].kind.icon)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(viewModel.systemEventSettings[index].kind.accent)
-                                    .frame(width: 14)
-                                Text(viewModel.systemEventSettings[index].kind.displayName)
-                                    .font(.system(size: 11))
-                                Spacer()
-                                Toggle("", isOn: Binding(
-                                    get: { viewModel.systemEventSettings[index].isEnabled },
-                                    set: { viewModel.systemEventSettings[index].isEnabled = $0 }
-                                ))
-                                .labelsHidden()
-                                .toggleStyle(.switch)
-                                .controlSize(.mini)
-                            }
-                            .padding(.vertical, 6)
-                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                 }
             }
@@ -620,14 +572,17 @@ struct DynamicContinentConfigView: View {
                     }
                 }
 
-                summaryBlock(title: "系统事件", icon: "checkmark.circle", color: .green) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        let enabledCount = viewModel.systemEventSettings.filter(\.isEnabled).count
-                        Text("\(enabledCount) / \(viewModel.systemEventSettings.count)")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("事件类型已启用")
+                summaryBlock(title: "状态入口", icon: "desktopcomputer", color: .blue) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("完整本机状态已集中到主侧边栏的「状态」。")
                             .font(.system(size: 11))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("查看状态") {
+                            (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                 }
             }

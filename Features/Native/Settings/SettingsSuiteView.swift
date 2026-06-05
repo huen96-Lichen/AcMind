@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import AcMindKit
 
 enum SettingsSuiteSection: String, CaseIterable, Identifiable {
@@ -45,6 +46,7 @@ enum SettingsSuiteSection: String, CaseIterable, Identifiable {
     }
 }
 
+// Deprecated: Use SettingsView instead. Kept for reference only.
 struct SettingsSuiteView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @State private var selectedSection: SettingsSuiteSection = .general
@@ -61,7 +63,7 @@ struct SettingsSuiteView: View {
             .padding(28)
             .frame(maxWidth: 1120, alignment: .leading)
         }
-        .background(AppSurfaceTokens.background)
+        .background(AppVisualBackdrop())
         .alert("设置错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
         } message: {
@@ -81,14 +83,42 @@ struct SettingsSuiteView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("设置")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("设置")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
-            Text("统一管理基础偏好、Agent、知识库和工具链，尽量保持一层就能找到。")
-                .font(.system(size: 13.5))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                Text("统一管理基础偏好、Agent、知识库和工具链，尽量保持一层就能找到。")
+                    .font(.system(size: 13.5))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            }
+
+            LazyVGrid(columns: [
+                GridItem(.adaptive(minimum: 180), spacing: 12)
+            ], spacing: 12) {
+                AppSurfaceMetricTile(
+                    title: "当前主题",
+                    value: viewModel.theme.displayName,
+                    subtitle: "全局视觉基线",
+                    icon: "paintbrush",
+                    tint: AppSurfaceTokens.accentBlue
+                )
+                AppSurfaceMetricTile(
+                    title: "Agent 状态",
+                    value: viewModel.companionVoiceEnabled ? "已启用" : "未启用",
+                    subtitle: "说入法入口",
+                    icon: "sparkles",
+                    tint: viewModel.companionVoiceEnabled ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
+                )
+                AppSurfaceMetricTile(
+                    title: "权限概况",
+                    value: permissionSummary,
+                    subtitle: "麦克风 / 无障碍 / 录屏",
+                    icon: "shield.checkerboard",
+                    tint: permissionTint
+                )
+            }
         }
     }
 
@@ -124,6 +154,15 @@ struct SettingsSuiteView: View {
             }
             .padding(.vertical, 2)
         }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+        )
     }
 
     private var sectionContent: some View {
@@ -247,18 +286,21 @@ struct SettingsSuiteView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("自动剪贴板采集", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("自动前置 Frontmatter", isOn: $viewModel.autoFrontmatter)
+                    Toggle("自动备份（每周）", isOn: $viewModel.autoBackupEnabled)
                     Picker("导出目标", selection: $viewModel.defaultExportTarget) {
                         ForEach(ExportTarget.allCases, id: \.self) { target in
                             Text(target.displayName).tag(target)
                         }
                     }
                     .pickerStyle(.menu)
+                    settingsRow(key: "上次备份", value: viewModel.lastBackupAtText)
                 }
             }
 
             settingsCard(title: "转写 / 摘录", subtitle: "处理结果会进入收集链路") {
                 VStack(alignment: .leading, spacing: 8) {
                     settingsRow(key: "默认语言", value: viewModel.voiceDefaultLanguage)
+                    settingsRow(key: "翻译目标", value: translationLanguageDisplayName(viewModel.translationLanguage))
                     settingsRow(key: "自动润色", value: viewModel.voiceAutoPolish ? "开启" : "关闭")
                     settingsRow(key: "润色模式", value: viewModel.voicePolishMode.displayName)
                 }
@@ -312,9 +354,9 @@ struct SettingsSuiteView: View {
             settingsCard(title: "工具集", subtitle: "截图、OCR、监听与语音") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("自动监听剪贴板", isOn: $viewModel.autoCaptureClipboard)
-                    Toggle("截图自动打码", isOn: $viewModel.autoRedactFaces)
-                    Toggle("检测敏感信息", isOn: $viewModel.autoDetectPII)
-                    Toggle("滚动截图自动滚动", isOn: $viewModel.scrollCaptureAutoScroll)
+                    Text("截图自动打码和敏感信息检测已经接入实际捕获流程；滚动截图仍在继续补齐。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Button("打开桌面小胶囊设置") {
                         showingDesktopCapsuleSettings = true
                     }
@@ -334,43 +376,82 @@ struct SettingsSuiteView: View {
         VStack(spacing: 16) {
             settingsCard(title: "权限管理", subtitle: "系统权限状态") {
                 VStack(alignment: .leading, spacing: 8) {
-                    settingsStatusRow(label: "麦克风", status: viewModel.microphonePermissionStatus.displayName, color: viewModel.microphonePermissionStatus.color)
-                    settingsStatusRow(label: "无障碍", status: viewModel.accessibilityPermissionStatus.displayName, color: viewModel.accessibilityPermissionStatus.color)
-                    settingsStatusRow(label: "录屏", status: viewModel.screenRecordingPermissionStatus.displayName, color: viewModel.screenRecordingPermissionStatus.color)
+                    PermissionRow(
+                        title: "麦克风",
+                        description: "用于说入法与录音转写",
+                        status: viewModel.microphoneStatus,
+                        onRequest: {
+                            Task { await viewModel.requestPermission(.microphone) }
+                        },
+                        onOpenSettings: {
+                            Task { await viewModel.openSystemPreferences(for: .microphone) }
+                        }
+                    )
+
+                    PermissionRow(
+                        title: "无障碍",
+                        description: "用于键盘注入和系统交互",
+                        status: viewModel.accessibilityStatus,
+                        onRequest: {
+                            Task { await viewModel.requestPermission(.accessibility) }
+                        },
+                        onOpenSettings: {
+                            Task { await viewModel.openSystemPreferences(for: .accessibility) }
+                        }
+                    )
+
+                    PermissionRow(
+                        title: "录屏",
+                        description: "用于截图和滚动截图",
+                        status: viewModel.screenRecordingStatus,
+                        onRequest: {
+                            Task { await viewModel.requestPermission(.screenRecording) }
+                        },
+                        onOpenSettings: {
+                            Task { await viewModel.openSystemPreferences(for: .screenRecording) }
+                        }
+                    )
+
+                    PermissionRow(
+                        title: "通知",
+                        description: "用于任务完成和更新提醒",
+                        status: viewModel.notificationsStatus,
+                        onRequest: {
+                            Task { await viewModel.requestPermission(.notifications) }
+                        },
+                        onOpenSettings: {
+                            Task { await viewModel.openSystemPreferences(for: .notifications) }
+                        }
+                    )
                 }
             }
 
             settingsCard(title: "关于", subtitle: "版本信息") {
                 VStack(alignment: .leading, spacing: 8) {
-                    settingsRow(key: "版本", value: "0.0.4")
-                    settingsRow(key: "构建", value: "2026.05.25")
+                    settingsRow(key: "版本", value: viewModel.diagnosticAppVersionString)
+                    settingsRow(key: "macOS", value: viewModel.diagnosticMacOSVersionString)
                     settingsRow(key: "Swift", value: "5.9")
+                }
+            }
+
+            settingsCard(title: "状态入口", subtitle: "完整本机状态已集中到主侧边栏的「状态」") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("这里不再展示诊断看板，只保留跳转。")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    Button("查看状态") {
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
         }
     }
 
     private func settingsCard<Content: View>(title: String, subtitle: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
+        AppSurfaceSectionCard(title: title, subtitle: subtitle) {
             content()
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(AppSurfaceTokens.cardBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(AppSurfaceTokens.separator, lineWidth: 1)
-        )
     }
 
     private func settingsRow(key: String, value: String) -> some View {
@@ -399,6 +480,35 @@ struct SettingsSuiteView: View {
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private func translationLanguageDisplayName(_ id: String) -> String {
+        switch id {
+        case "zh": return "中文"
+        case "en": return "英文"
+        case "ja": return "日文"
+        case "ko": return "韩文"
+        default: return id
+        }
+    }
+
+    private var permissionSummary: String {
+        let statuses = [
+            viewModel.microphonePermissionStatus,
+            viewModel.accessibilityPermissionStatus,
+            viewModel.screenRecordingPermissionStatus
+        ]
+        let grantedCount = statuses.filter { $0 == .authorized }.count
+        return "\(grantedCount)/\(statuses.count) 已授权"
+    }
+
+    private var permissionTint: Color {
+        let statuses = [
+            viewModel.microphonePermissionStatus,
+            viewModel.accessibilityPermissionStatus,
+            viewModel.screenRecordingPermissionStatus
+        ]
+        return statuses.allSatisfy { $0 == .authorized } ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
     }
 
 }

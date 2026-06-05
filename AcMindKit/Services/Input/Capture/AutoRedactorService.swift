@@ -2,6 +2,10 @@ import Foundation
 import Vision
 import AppKit
 
+public protocol ScreenshotRedacting: Sendable {
+    func redact(_ image: NSImage, mode: CensorMode) async -> NSImage
+}
+
 public enum CensorMode: Int, Codable, CaseIterable {
     case pixelate = 0
     case blur = 1
@@ -64,7 +68,7 @@ public enum RedactionType: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public actor AutoRedactorService {
+public actor AutoRedactorService: ScreenshotRedacting {
     
     public static let shared = AutoRedactorService()
     
@@ -87,6 +91,30 @@ public actor AutoRedactorService {
             return (type, regex)
         }
     }()
+
+    public func redact(_ image: NSImage, mode: CensorMode) async -> NSImage {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return image
+        }
+
+        var regions: [RedactionRegion] = []
+        let selectionRect = NSRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
+
+        let piiRegions = await redactPII(in: image, selectionRect: selectionRect)
+        regions.append(contentsOf: piiRegions)
+
+        let faceRegions = await detectFaces(in: image, selectionRect: selectionRect)
+        regions.append(contentsOf: faceRegions)
+
+        let personRegions = await detectPeople(in: image, selectionRect: selectionRect)
+        regions.append(contentsOf: personRegions)
+
+        guard regions.isEmpty == false else {
+            return image
+        }
+
+        return await applyRedactions(to: image, regions: regions, mode: mode)
+    }
     
     public func redactPII(in image: NSImage, selectionRect: NSRect) async -> [RedactionRegion] {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
@@ -138,7 +166,7 @@ public actor AutoRedactorService {
                 }
                 
                 let regions = observations.map { observation -> RedactionRegion in
-                    let normalizedBox = self.normalizeBoundingBox(observation.boundingBox, in: selectionRect)
+                    let normalizedBox = self.convertVisionBoundingBox(observation.boundingBox, in: selectionRect)
                     return RedactionRegion(boundingBox: normalizedBox, type: .face)
                 }
                 
@@ -164,7 +192,7 @@ public actor AutoRedactorService {
                 }
                 
                 let regions = observations.map { observation -> RedactionRegion in
-                    let normalizedBox = self.normalizeBoundingBox(observation.boundingBox, in: selectionRect)
+                    let normalizedBox = self.convertVisionBoundingBox(observation.boundingBox, in: selectionRect)
                     return RedactionRegion(boundingBox: normalizedBox, type: .person)
                 }
                 
@@ -236,6 +264,15 @@ public actor AutoRedactorService {
         let normalizedH = (box.height * selectionRect.height) / 1000
         
         return CGRect(x: normalizedX, y: normalizedY, width: normalizedW, height: normalizedH)
+    }
+
+    private func convertVisionBoundingBox(_ box: CGRect, in selectionRect: NSRect) -> CGRect {
+        CGRect(
+            x: box.origin.x * selectionRect.width,
+            y: box.origin.y * selectionRect.height,
+            width: box.width * selectionRect.width,
+            height: box.height * selectionRect.height
+        )
     }
     
     private func pixelateRegion(in context: CGContext, rect: CGRect) {

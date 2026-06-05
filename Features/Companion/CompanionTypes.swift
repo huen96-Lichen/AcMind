@@ -64,116 +64,6 @@ public enum CompanionCapsulePosition: String, CaseIterable, Sendable, Identifiab
 /// 说入法输出方式
 public typealias VoiceOutputMode = SayInputOutputMode
 
-/// 随身配置
-public struct CompanionConfiguration: Codable, Sendable {
-    public var capsuleEnabled: Bool
-    public var capsuleShowOnLaunch: Bool
-    public var capsulePosition: String
-    public var capsuleExpandedByDefault: Bool
-
-    public var voiceEnabled: Bool
-    public var voiceShortcut: String
-    public var voiceOutputMode: String
-    public var voiceSaveToInbox: Bool
-
-    public var shortcutsEnabled: Bool
-
-    public var captureEnabled: Bool
-    public var captureScreenshotShortcut: String
-    public var captureShortcut: String
-    public var agentShortcut: String
-    public var scheduleShortcut: String
-    public var captureAutoSaveToInbox: Bool
-    public var captureTextEnabled: Bool
-    public var captureLinkEnabled: Bool
-    public var captureSaveDestinationIndex: Int
-
-    public init(
-        capsuleEnabled: Bool = true,
-        capsuleShowOnLaunch: Bool = true,
-        capsulePosition: String = "topCenter",
-        capsuleExpandedByDefault: Bool = false,
-        voiceEnabled: Bool = true,
-        voiceShortcut: String = "⌥Space",
-        voiceOutputMode: String = "copyToClipboard",
-        voiceSaveToInbox: Bool = true,
-        shortcutsEnabled: Bool = true,
-        captureEnabled: Bool = true,
-        captureScreenshotShortcut: String = "⌘⇧4",
-        captureShortcut: String = "⌘⇧C",
-        agentShortcut: String = "⌘1",
-        scheduleShortcut: String = "⌘4",
-        captureAutoSaveToInbox: Bool = true,
-        captureTextEnabled: Bool = true,
-        captureLinkEnabled: Bool = true,
-        captureSaveDestinationIndex: Int = 0
-    ) {
-        self.capsuleEnabled = capsuleEnabled
-        self.capsuleShowOnLaunch = capsuleShowOnLaunch
-        self.capsulePosition = capsulePosition
-        self.capsuleExpandedByDefault = capsuleExpandedByDefault
-        self.voiceEnabled = voiceEnabled
-        self.voiceShortcut = voiceShortcut
-        self.voiceOutputMode = voiceOutputMode
-        self.voiceSaveToInbox = voiceSaveToInbox
-        self.shortcutsEnabled = shortcutsEnabled
-        self.captureEnabled = captureEnabled
-        self.captureScreenshotShortcut = captureScreenshotShortcut
-        self.captureShortcut = captureShortcut
-        self.agentShortcut = agentShortcut
-        self.scheduleShortcut = scheduleShortcut
-        self.captureAutoSaveToInbox = captureAutoSaveToInbox
-        self.captureTextEnabled = captureTextEnabled
-        self.captureLinkEnabled = captureLinkEnabled
-        self.captureSaveDestinationIndex = captureSaveDestinationIndex
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case capsuleEnabled
-        case capsuleShowOnLaunch
-        case capsulePosition
-        case capsuleExpandedByDefault
-        case voiceEnabled
-        case voiceShortcut
-        case voiceOutputMode
-        case voiceSaveToInbox
-        case shortcutsEnabled
-        case captureEnabled
-        case captureScreenshotShortcut
-        case captureShortcut
-        case agentShortcut
-        case scheduleShortcut
-        case captureAutoSaveToInbox
-        case captureTextEnabled
-        case captureLinkEnabled
-        case captureSaveDestinationIndex
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        capsuleEnabled = try container.decodeIfPresent(Bool.self, forKey: .capsuleEnabled) ?? true
-        capsuleShowOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .capsuleShowOnLaunch) ?? true
-        capsulePosition = try container.decodeIfPresent(String.self, forKey: .capsulePosition) ?? "topCenter"
-        capsuleExpandedByDefault = try container.decodeIfPresent(Bool.self, forKey: .capsuleExpandedByDefault) ?? false
-        voiceEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceEnabled) ?? true
-        voiceShortcut = try container.decodeIfPresent(String.self, forKey: .voiceShortcut) ?? "⌥Space"
-        voiceOutputMode = try container.decodeIfPresent(String.self, forKey: .voiceOutputMode) ?? "copyToClipboard"
-        voiceSaveToInbox = try container.decodeIfPresent(Bool.self, forKey: .voiceSaveToInbox) ?? true
-        shortcutsEnabled = try container.decodeIfPresent(Bool.self, forKey: .shortcutsEnabled) ?? true
-        captureEnabled = try container.decodeIfPresent(Bool.self, forKey: .captureEnabled) ?? true
-        captureScreenshotShortcut = try container.decodeIfPresent(String.self, forKey: .captureScreenshotShortcut) ?? "⌘⇧4"
-        captureShortcut = try container.decodeIfPresent(String.self, forKey: .captureShortcut) ?? "⌘⇧C"
-        agentShortcut = try container.decodeIfPresent(String.self, forKey: .agentShortcut) ?? "⌘1"
-        scheduleShortcut = try container.decodeIfPresent(String.self, forKey: .scheduleShortcut) ?? "⌘4"
-        captureAutoSaveToInbox = try container.decodeIfPresent(Bool.self, forKey: .captureAutoSaveToInbox) ?? true
-        captureTextEnabled = try container.decodeIfPresent(Bool.self, forKey: .captureTextEnabled) ?? true
-        captureLinkEnabled = try container.decodeIfPresent(Bool.self, forKey: .captureLinkEnabled) ?? true
-        captureSaveDestinationIndex = try container.decodeIfPresent(Int.self, forKey: .captureSaveDestinationIndex) ?? 0
-    }
-
-    public static let `default` = CompanionConfiguration()
-}
-
 public enum DynamicContinentModuleID: String, CaseIterable, Codable, Sendable, Identifiable {
     case music
     case agent
@@ -477,6 +367,7 @@ public struct CompanionShortcut: Identifiable, Codable, Equatable, Sendable {
 /// 随身捕获类型
 public enum CompanionCaptureType: String, CaseIterable, Sendable, Identifiable {
     case screenshot = "screenshot"
+    case scrollScreenshot = "scrollScreenshot"
     case clipboard = "clipboard"
     case selectedText = "selectedText"
     case webpage = "webpage"
@@ -486,6 +377,7 @@ public enum CompanionCaptureType: String, CaseIterable, Sendable, Identifiable {
     public var displayName: String {
         switch self {
         case .screenshot: return "截图到收集箱"
+        case .scrollScreenshot: return "滚动截图到收集箱"
         case .clipboard: return "保存当前剪贴板"
         case .selectedText: return "保存当前选中文字"
         case .webpage: return "保存当前网页"
@@ -495,11 +387,57 @@ public enum CompanionCaptureType: String, CaseIterable, Sendable, Identifiable {
     public var icon: String {
         switch self {
         case .screenshot: return "camera.viewfinder"
+        case .scrollScreenshot: return "scroll"
         case .clipboard: return "doc.on.clipboard"
         case .selectedText: return "text.quote"
         case .webpage: return "globe"
         }
     }
+}
+
+extension Notification.Name {
+    static let companionConfigurationDidChange = Notification.Name("companion.configuration.didChange")
+    static let companionEnabled = Notification.Name("companion.enabled")
+    static let companionCapabilities = Notification.Name("companion.capabilities")
+    static let companionCapsuleEnabled = Notification.Name("companion.capsule.enabled")
+    static let companionCapsuleExpanded = Notification.Name("companion.capsule.expanded")
+    static let companionCapsulePosition = Notification.Name("companion.capsule.position")
+    static let companionCapsuleShowOnLaunch = Notification.Name("companion.capsule.showOnLaunch")
+    static let companionCaptureAutoSaveToInbox = Notification.Name("companion.capture.autoSaveToInbox")
+    static let companionCaptureCompleted = Notification.Name("companion.captureCompleted")
+    static let companionCaptureEnabled = Notification.Name("companion.capture.enabled")
+    static let companionCaptureLinkEnabled = Notification.Name("companion.capture.linkEnabled")
+    static let companionCaptureOpenDetailAfterCapture = Notification.Name("companion.capture.openDetailAfterCapture")
+    static let companionCaptureSaveDestinationIndex = Notification.Name("companion.capture.saveDestinationIndex")
+    static let companionCaptureShortcut = Notification.Name("companion.capture.shortcut")
+    static let companionCaptureShowNotification = Notification.Name("companion.capture.showNotification")
+    static let companionCaptureSuccess = Notification.Name("companion.captureSuccess")
+    static let companionCaptureTextEnabled = Notification.Name("companion.capture.textEnabled")
+    static let companionClosePanel = Notification.Name("companion.closePanel")
+    static let companionPlaybackStateChanged = Notification.Name("companion.playbackStateChanged")
+    static let companionQuickNoteSaved = Notification.Name("companion.quickNoteSaved")
+    static let companionScheduleShortcut = Notification.Name("companion.schedule.shortcut")
+    static let companionScreenshotShortcut = Notification.Name("companion.screenshot.shortcut")
+    static let companionShortcuts = Notification.Name("companion.shortcuts")
+    static let companionShortcutsDidChange = Notification.Name("companion.shortcuts.didChange")
+    static let companionShortcutsEnabled = Notification.Name("companion.shortcuts.enabled")
+    static let companionShowAgent = Notification.Name("companion.showAgent")
+    static let companionShowCapturePanel = Notification.Name("companion.showCapturePanel")
+    static let companionShowInbox = Notification.Name("companion.showInbox")
+    static let companionShowQuickNote = Notification.Name("companion.showQuickNote")
+    static let companionShowSchedule = Notification.Name("companion.showSchedule")
+    static let companionShowShortcuts = Notification.Name("companion.showShortcuts")
+    static let companionShowVoicePanel = Notification.Name("companion.showVoicePanel")
+    static let companionVoiceCancelled = Notification.Name("companion.voiceCancelled")
+    static let companionVoiceEnabled = Notification.Name("companion.voice.enabled")
+    static let companionVoiceFinishRequested = Notification.Name("companion.voice.finishRequested")
+    static let companionVoiceOutputMode = Notification.Name("companion.voice.outputMode")
+    static let companionVoiceProcessingFinished = Notification.Name("companion.voiceProcessingFinished")
+    static let companionVoiceProcessingStarted = Notification.Name("companion.voiceProcessingStarted")
+    static let companionVoiceRecordingStarted = Notification.Name("companion.voiceRecordingStarted")
+    static let companionVoiceRecordingStopped = Notification.Name("companion.voiceRecordingStopped")
+    static let companionVoiceSaveToInbox = Notification.Name("companion.voice.saveToInbox")
+    static let companionVoiceShortcut = Notification.Name("companion.voice.shortcut")
 }
 
 /// 权限状态
