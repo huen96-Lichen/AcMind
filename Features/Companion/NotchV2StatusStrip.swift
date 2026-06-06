@@ -198,9 +198,7 @@ extension NotchV2ViewModel {
         }.prefix(6))
     }
 
-    private var eventCenter: SystemEventCenter {
-        SystemEventCenter.shared
-    }
+    private var eventCenter: SystemEventCenter { systemEventCenter }
 
     private var batteryDetailText: String {
         "\(Int(batteryInfo.percentage.rounded()))%"

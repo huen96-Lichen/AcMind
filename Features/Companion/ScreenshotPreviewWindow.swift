@@ -34,8 +34,21 @@ struct ScreenshotPreviewContentView: View {
     let image: NSImage?
     let captureResult: CaptureResult
     let onDismiss: () -> Void
+    private let captureService: CaptureServiceProtocol
     
     @State private var imageSize: CGSize = .zero
+
+    init(
+        image: NSImage?,
+        captureResult: CaptureResult,
+        onDismiss: @escaping () -> Void,
+        captureService: CaptureServiceProtocol = CaptureService()
+    ) {
+        self.image = image
+        self.captureResult = captureResult
+        self.onDismiss = onDismiss
+        self.captureService = captureService
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -62,7 +75,8 @@ struct ScreenshotPreviewContentView: View {
                 }
                 .keyboardShortcut(.return)
             }
-            .padding()
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .background(AppSurfaceTokens.cardBackgroundSoft)
             
             // 预览区域
@@ -75,7 +89,7 @@ struct ScreenshotPreviewContentView: View {
                             imageSize = image.size
                         }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minWidth: 560, minHeight: 360, maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "photo")
@@ -87,7 +101,7 @@ struct ScreenshotPreviewContentView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minWidth: 560, minHeight: 360, maxWidth: .infinity, maxHeight: .infinity)
                 .background(AppSurfaceTokens.background)
             }
         }
@@ -112,6 +126,11 @@ struct QuickNotePanel: View {
     @Environment(\.dismiss) private var dismiss
     @State private var noteText: String = ""
     @FocusState private var isFocused: Bool
+    private let captureService: CaptureServiceProtocol
+
+    init(captureService: CaptureServiceProtocol = CaptureService()) {
+        self.captureService = captureService
+    }
     
     var body: some View {
         VStack(spacing: 16) {
@@ -156,7 +175,7 @@ struct QuickNotePanel: View {
         
         Task {
             do {
-                let result = try await ServiceContainer.shared.captureService.captureFromManualText(noteText)
+                let result = try await captureService.captureFromManualText(noteText)
                 NotificationCenter.default.post(
                     name: Notification.Name("AcMind.captureCompleted"),
                     object: result

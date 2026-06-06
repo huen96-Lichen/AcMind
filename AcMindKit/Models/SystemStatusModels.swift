@@ -330,6 +330,13 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
     public var diskTotalGB: Double?
     public var networkDownloadMBps: Double?
     public var networkUploadMBps: Double?
+    public var gpuUsagePercent: Double?
+    public var gpuFrequencyMHz: Double?
+    public var gpuCoreCount: Int?
+    public var gpuChipModel: String?
+    public var diskReadMBps: Double?
+    public var diskWriteMBps: Double?
+    public var hardwareInfo: SystemHardwareInfo?
     public var unavailableReasons: [SystemStatusUnavailableReason]
 
     public init(
@@ -355,6 +362,13 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         diskTotalGB: Double? = nil,
         networkDownloadMBps: Double? = nil,
         networkUploadMBps: Double? = nil,
+        gpuUsagePercent: Double? = nil,
+        gpuFrequencyMHz: Double? = nil,
+        gpuCoreCount: Int? = nil,
+        gpuChipModel: String? = nil,
+        diskReadMBps: Double? = nil,
+        diskWriteMBps: Double? = nil,
+        hardwareInfo: SystemHardwareInfo? = nil,
         unavailableReasons: [SystemStatusUnavailableReason] = []
     ) {
         self.cpu = cpu
@@ -379,13 +393,68 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         self.diskTotalGB = diskTotalGB
         self.networkDownloadMBps = networkDownloadMBps
         self.networkUploadMBps = networkUploadMBps
+        self.gpuUsagePercent = gpuUsagePercent
+        self.gpuFrequencyMHz = gpuFrequencyMHz
+        self.gpuCoreCount = gpuCoreCount
+        self.gpuChipModel = gpuChipModel
+        self.diskReadMBps = diskReadMBps
+        self.diskWriteMBps = diskWriteMBps
+        self.hardwareInfo = hardwareInfo
         self.unavailableReasons = unavailableReasons
     }
 }
 
-@MainActor
+public struct SystemHardwareInfo: Equatable, Sendable {
+    public var uptimeSeconds: TimeInterval
+    public var bootTime: Date?
+    public var osVersion: String
+    public var kernelVersion: String
+    public var chipModel: String?
+    public var cpuCoreCount: Int
+    public var performanceCoreCount: Int?
+    public var efficiencyCoreCount: Int?
+    public var hostname: String
+    public var memoryType: String?
+    public var memoryManufacturer: String?
+    public var modelIdentifier: String?
+    public var serialNumber: String?
+    public var firmwareVersion: String?
+
+    public init(
+        uptimeSeconds: TimeInterval,
+        bootTime: Date? = nil,
+        osVersion: String,
+        kernelVersion: String,
+        chipModel: String? = nil,
+        cpuCoreCount: Int,
+        performanceCoreCount: Int? = nil,
+        efficiencyCoreCount: Int? = nil,
+        hostname: String,
+        memoryType: String? = nil,
+        memoryManufacturer: String? = nil,
+        modelIdentifier: String? = nil,
+        serialNumber: String? = nil,
+        firmwareVersion: String? = nil
+    ) {
+        self.uptimeSeconds = uptimeSeconds
+        self.bootTime = bootTime
+        self.osVersion = osVersion
+        self.kernelVersion = kernelVersion
+        self.chipModel = chipModel
+        self.cpuCoreCount = cpuCoreCount
+        self.performanceCoreCount = performanceCoreCount
+        self.efficiencyCoreCount = efficiencyCoreCount
+        self.hostname = hostname
+        self.memoryType = memoryType
+        self.memoryManufacturer = memoryManufacturer
+        self.modelIdentifier = modelIdentifier
+        self.serialNumber = serialNumber
+        self.firmwareVersion = firmwareVersion
+    }
+}
+
 public protocol SystemStatusReader: Sendable {
-    func read() -> SystemStatusPartialSnapshot
+    func read() async -> SystemStatusPartialSnapshot
 }
 
 public struct SystemStatusSnapshot: Equatable, Sendable {
@@ -411,6 +480,13 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
     public var diskTotalGB: Double?
     public var networkDownloadMBps: Double?
     public var networkUploadMBps: Double?
+    public var gpuUsagePercent: Double?
+    public var gpuFrequencyMHz: Double?
+    public var gpuCoreCount: Int?
+    public var gpuChipModel: String?
+    public var diskReadMBps: Double?
+    public var diskWriteMBps: Double?
+    public var hardwareInfo: SystemHardwareInfo?
     public var unavailableReasons: [SystemStatusUnavailableReason]
 
     public var cpuUsage: Double
@@ -446,6 +522,13 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         diskTotalGB: Double? = nil,
         networkDownloadMBps: Double? = nil,
         networkUploadMBps: Double? = nil,
+        gpuUsagePercent: Double? = nil,
+        gpuFrequencyMHz: Double? = nil,
+        gpuCoreCount: Int? = nil,
+        gpuChipModel: String? = nil,
+        diskReadMBps: Double? = nil,
+        diskWriteMBps: Double? = nil,
+        hardwareInfo: SystemHardwareInfo? = nil,
         unavailableReasons: [SystemStatusUnavailableReason] = [],
         cpuUsage: Double = 0,
         memoryUsageGB: Double = 0,
@@ -479,6 +562,13 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         self.diskTotalGB = diskTotalGB
         self.networkDownloadMBps = networkDownloadMBps
         self.networkUploadMBps = networkUploadMBps
+        self.gpuUsagePercent = gpuUsagePercent
+        self.gpuFrequencyMHz = gpuFrequencyMHz
+        self.gpuCoreCount = gpuCoreCount
+        self.gpuChipModel = gpuChipModel
+        self.diskReadMBps = diskReadMBps
+        self.diskWriteMBps = diskWriteMBps
+        self.hardwareInfo = hardwareInfo
         self.unavailableReasons = unavailableReasons
         self.cpuUsage = cpuUsage
         self.memoryUsageGB = memoryUsageGB

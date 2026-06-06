@@ -48,6 +48,22 @@
 		A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* OpenAICompatibleProvider.swift */; };
 		A1000000000000000000007E /* CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* CaptureService.swift */; };
 		A1000000000000000000007F /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ClipboardService.swift */; };
+		B10000000000000000000002 /* PipelineContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* PipelineContext.swift */; };
+		B10000000000000000000004 /* PipelineStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* PipelineStage.swift */; };
+		B10000000000000000000006 /* DiscoveryStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* DiscoveryStage.swift */; };
+		B10000000000000000000008 /* TransformationStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* TransformationStage.swift */; };
+		B1000000000000000000000A /* ValidationStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* ValidationStage.swift */; };
+		B1000000000000000000000C /* PersistenceStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* PersistenceStage.swift */; };
+		B1000000000000000000000E /* DistributionStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* DistributionStage.swift */; };
+		B10000000000000000000010 /* ClipboardPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* ClipboardPipeline.swift */; };
+		C10000000000000000000002 /* TransientPaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000001 /* TransientPaster.swift */; };
+		C10000000000000000000004 /* PasteQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* PasteQueue.swift */; };
+		C10000000000000000000006 /* FocusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* FocusManager.swift */; };
+		C10000000000000000000008 /* CleaningRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000007 /* CleaningRule.swift */; };
+		C1000000000000000000000A /* CleaningRulesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000009 /* CleaningRulesStore.swift */; };
+		C1000000000000000000000C /* ClipboardTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000B /* ClipboardTag.swift */; };
+		C10000000000000000000010 /* PasteQueuePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000D /* PasteQueuePanel.swift */; };
+		C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000011 /* ClipboardPipelineTests.swift */; };
 		A10000000000000000000080 /* DistillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* DistillService.swift */; };
 		A10000000000000000000081 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* ExportService.swift */; };
 		A10000000000000000000082 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* KnowledgeService.swift */; };
@@ -306,6 +322,22 @@
 		A1000000000000000000008D /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008E /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/CaptureService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008F /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardService.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000001 /* PipelineContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PipelineContext.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000003 /* PipelineStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PipelineStage.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000005 /* DiscoveryStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/DiscoveryStage.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000007 /* TransformationStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/TransformationStage.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000009 /* ValidationStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ValidationStage.swift; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000B /* PersistenceStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PersistenceStage.swift; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000D /* DistributionStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/DistributionStage.swift; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000F /* ClipboardPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardPipeline.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000001 /* TransientPaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/TransientPaster.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000003 /* PasteQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PasteQueue.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000005 /* FocusManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/FocusManager.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000007 /* CleaningRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/CleaningRule.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000009 /* CleaningRulesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/CleaningRulesStore.swift; sourceTree = SOURCE_ROOT; };
+		C1000000000000000000000B /* ClipboardTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ClipboardTag.swift; sourceTree = SOURCE_ROOT; };
+		C1000000000000000000000D /* PasteQueuePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Clipboard/PasteQueuePanel.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000011 /* ClipboardPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ClipboardPipelineTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000090 /* DistillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/DistillService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000091 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/ExportService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000092 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Knowledge/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
@@ -613,6 +645,8 @@
 				A10000000000000000000613 /* AgentSkill.swift */,
 				A10000000000000000000615 /* AgentTask.swift */,
 				A10000000000000000000617 /* ScheduleModels.swift */,
+				C10000000000000000000007 /* CleaningRule.swift */,
+				C1000000000000000000000B /* ClipboardTag.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -776,6 +810,18 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000000000000008F /* ClipboardService.swift */,
+				B10000000000000000000001 /* PipelineContext.swift */,
+				B10000000000000000000003 /* PipelineStage.swift */,
+				B10000000000000000000005 /* DiscoveryStage.swift */,
+				B10000000000000000000007 /* TransformationStage.swift */,
+				B10000000000000000000009 /* ValidationStage.swift */,
+				B1000000000000000000000B /* PersistenceStage.swift */,
+				B1000000000000000000000D /* DistributionStage.swift */,
+				B1000000000000000000000F /* ClipboardPipeline.swift */,
+				C10000000000000000000001 /* TransientPaster.swift */,
+				C10000000000000000000003 /* PasteQueue.swift */,
+				C10000000000000000000005 /* FocusManager.swift */,
+				C10000000000000000000009 /* CleaningRulesStore.swift */,
 			);
 			path = Clipboard;
 			sourceTree = "<group>";
@@ -944,6 +990,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000158 /* ClipboardView.swift */,
+				C1000000000000000000000D /* PasteQueuePanel.swift */,
 			);
 			path = Clipboard;
 			sourceTree = "<group>";
@@ -1007,6 +1054,7 @@
 				A10000000000000000000516 /* CaptureServiceScreenshotPolicyTests.swift */,
 				A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */,
 				A1000000000000000000051D /* SourceItemTests.swift */,
+				C10000000000000000000011 /* ClipboardPipelineTests.swift */,
 			);
 			path = AcMindKitTests;
 			sourceTree = "<group>";
@@ -1331,6 +1379,7 @@
 				A1000000000000000000010C /* AgentViewModel.swift in Sources */,
 				A1000000000000000000010E /* SettingsViewModel.swift in Sources */,
 				A10000000000000000000154 /* ClipboardView.swift in Sources */,
+				C10000000000000000000010 /* PasteQueuePanel.swift in Sources */,
 				A10000000000000000000156 /* WorkbenchView.swift in Sources */,
 				A10000000000000000000423 /* WorkspaceHomeView.swift in Sources */,
 				A10000000000000000000157 /* ToolsView.swift in Sources */,
@@ -1382,6 +1431,20 @@
 				A1000000000000000000007E /* CaptureService.swift in Sources */,
 				A1000000000000000000051A /* ScrollCaptureService.swift in Sources */,
 				A1000000000000000000007F /* ClipboardService.swift in Sources */,
+				B10000000000000000000002 /* PipelineContext.swift in Sources */,
+				B10000000000000000000004 /* PipelineStage.swift in Sources */,
+				B10000000000000000000006 /* DiscoveryStage.swift in Sources */,
+				B10000000000000000000008 /* TransformationStage.swift in Sources */,
+				B1000000000000000000000A /* ValidationStage.swift in Sources */,
+				B1000000000000000000000C /* PersistenceStage.swift in Sources */,
+				B1000000000000000000000E /* DistributionStage.swift in Sources */,
+				B10000000000000000000010 /* ClipboardPipeline.swift in Sources */,
+				C10000000000000000000002 /* TransientPaster.swift in Sources */,
+				C10000000000000000000004 /* PasteQueue.swift in Sources */,
+				C10000000000000000000006 /* FocusManager.swift in Sources */,
+				C10000000000000000000008 /* CleaningRule.swift in Sources */,
+				C1000000000000000000000A /* CleaningRulesStore.swift in Sources */,
+				C1000000000000000000000C /* ClipboardTag.swift in Sources */,
 				A10000000000000000000080 /* DistillService.swift in Sources */,
 				A10000000000000000000081 /* ExportService.swift in Sources */,
 				A10000000000000000000082 /* KnowledgeService.swift in Sources */,
@@ -1494,6 +1557,7 @@
 				A10000000000000000000517 /* CaptureServiceScreenshotPolicyTests.swift in Sources */,
 				A10000000000000000000519 /* DesktopCapsuleConfigTests.swift in Sources */,
 				A1000000000000000000051C /* SourceItemTests.swift in Sources */,
+				C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1654,6 +1718,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "AcMind 可能需要使用摄像头进行图像输入。";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcMind 需要使用麦克风进行语音输入和语音转文字。";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSUserNotificationAlertStyle = alert;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1689,6 +1754,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "AcMind 可能需要使用摄像头进行图像输入。";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcMind 需要使用麦克风进行语音输入和语音转文字。";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSUserNotificationAlertStyle = alert;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

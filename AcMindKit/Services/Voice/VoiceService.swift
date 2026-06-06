@@ -35,6 +35,12 @@ public actor VoiceService: VoiceServiceProtocol {
     private var statusHandler: (@Sendable (RecordingStatus) -> Void)?
     private var restoredInputDeviceID: AudioDeviceID?
     
+    // MARK: - Realtime Transcription
+    
+    private var realtimeSession: RealtimeTranscriptionSession?
+    private var audioEngineForRealtime: AVAudioEngine?
+    private var recorderWasRecording: Bool = false
+    
     // MARK: - ASR Configuration
     
     private var sttProvider: STTProvider = .appleSpeech
@@ -156,11 +162,13 @@ public actor VoiceService: VoiceServiceProtocol {
     }
     
     public func stopRecording() async throws -> String {
-        guard let recorder = recorder, recorder.isRecording else {
+        guard let recorder = recorder else {
             throw VoiceError.notRecording
         }
         
-        recorder.stop()
+        if recorder.isRecording {
+            recorder.stop()
+        }
         updateStatus(.processing)
         restoreDefaultMicrophoneSelectionIfNeeded()
         
@@ -253,6 +261,66 @@ public actor VoiceService: VoiceServiceProtocol {
         
         let audioFile = AudioFile(url: audioURL)
         return try await router.transcribeStream(audioFile: audioFile, onUpdate: onUpdate)
+    }
+    
+    // MARK: - Realtime Transcription
+    
+    public func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws {
+        guard let router = sttRouter else {
+            throw VoiceError.asrNotAvailable("STTRouter 未初始化")
+        }
+        
+        let transcriber = try await router.getTranscriber()
+        guard let session = transcriber.createRealtimeSession() else {
+            throw VoiceError.asrNotAvailable("当前引擎不支持实时转写")
+        }
+        session.onUpdate = onUpdate
+        realtimeSession = session
+        
+        recorderWasRecording = recorder?.isRecording == true
+        if recorderWasRecording {
+            recorder?.pause()
+        }
+        
+        let engine = AVAudioEngine()
+        let inputNode = engine.inputNode
+        let format = inputNode.inputFormat(forBus: 0)
+        
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, _ in
+            guard let self = self else { return }
+            let pcmData = self.convertToPCM16(buffer: buffer)
+            Task {
+                try? await self.realtimeSession?.sendAudioData(pcmData)
+            }
+        }
+        
+        engine.prepare()
+        try engine.start()
+        audioEngineForRealtime = engine
+    }
+    
+    public func stopRealtimeTranscription() async throws -> String {
+        audioEngineForRealtime?.stop()
+        audioEngineForRealtime?.inputNode.removeTap(onBus: 0)
+        audioEngineForRealtime = nil
+        
+        guard let session = realtimeSession else { return "" }
+        realtimeSession = nil
+        return try await session.finish()
+    }
+    
+    private func convertToPCM16(buffer: AVAudioPCMBuffer) -> Data {
+        let channelData = buffer.floatChannelData![0]
+        let frames = buffer.frameLength
+        var pcm16 = Data(count: Int(frames) * 2)
+        pcm16.withUnsafeMutableBytes { rawBuffer in
+            let int16Buffer = rawBuffer.bindMemory(to: Int16.self)
+            for i in 0..<Int(frames) {
+                let sample = max(-1.0, min(1.0, channelData[i]))
+                int16Buffer[i] = Int16(sample * 32767)
+            }
+        }
+        return pcm16
     }
     
     private func performTranscription(sourceItem: SourceItem, assetFile: AssetFile) async {

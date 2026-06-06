@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import AppKit
-import Darwin
 import UniformTypeIdentifiers
 import AcMindKit
 
@@ -144,9 +143,12 @@ public final class SettingsViewModel: ObservableObject {
     // MARK: - Initialization
 
     public init(settings: SettingsServiceProtocol? = nil, storage: StorageServiceProtocol? = nil) {
-        self.settings = settings ?? ServiceContainer.shared.settingsService
-        self.storage = storage ?? ServiceContainer.shared.storageService
-        self.permissionManager = ServiceContainer.shared.permissionManager
+        self.storage = storage ?? StorageService()
+        self.permissionManager = PermissionManager()
+        self.settings = settings ?? SettingsService(
+            storage: self.storage,
+            permissionManager: self.permissionManager
+        )
 
         // 加载设置
         Task {
@@ -277,7 +279,13 @@ public final class SettingsViewModel: ObservableObject {
             try await settings.updateVoiceSettings(voiceSettings)
 
             // 保存随身配置
+            let prevConfig = await CompanionConfigurationStore.load(from: storage)
+            let prevVoiceShortcut = prevConfig.voiceShortcut
             await saveCompanionSettings()
+            if prevVoiceShortcut != companionVoiceShortcut {
+                (NSApp.delegate as? AppDelegate)?.unregisterVoiceShortcut(prevVoiceShortcut)
+                (NSApp.delegate as? AppDelegate)?.registerVoiceShortcut(companionVoiceShortcut)
+            }
             saveLocalPreferences()
             await performAutomaticBackupIfNeeded()
 

@@ -188,6 +188,152 @@ final class ClipboardPinLayoutTests: XCTestCase {
         XCTAssertFalse(notPinned.isAtExpectedAlwaysOnTopLevel)
     }
 
+    func testPinWindowSnapshotDiagnosticReasonExplainsWhyAWindowIsNotStable() {
+        let displayFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+
+        let hidden = ClipboardPinWindowSnapshot(
+            itemId: "hidden",
+            isVisible: false,
+            isAlwaysOnTop: true,
+            levelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 100, y: 100, width: 320, height: 240),
+            screenFrame: displayFrame,
+            displayFrame: displayFrame
+        )
+        let demoted = ClipboardPinWindowSnapshot(
+            itemId: "demoted",
+            isVisible: true,
+            isAlwaysOnTop: true,
+            levelRawValue: ClipboardPinWindowPresentation.fallbackLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 100, y: 100, width: 320, height: 240),
+            screenFrame: displayFrame,
+            displayFrame: displayFrame
+        )
+        let detached = ClipboardPinWindowSnapshot(
+            itemId: "detached",
+            isVisible: true,
+            isAlwaysOnTop: true,
+            levelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 100, y: 100, width: 320, height: 240),
+            screenFrame: nil,
+            displayFrame: displayFrame
+        )
+        let healthy = ClipboardPinWindowSnapshot(
+            itemId: "healthy",
+            isVisible: true,
+            isAlwaysOnTop: true,
+            levelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 100, y: 100, width: 320, height: 240),
+            screenFrame: displayFrame,
+            displayFrame: displayFrame
+        )
+
+        XCTAssertEqual(hidden.diagnosticReason, "hidden")
+        XCTAssertEqual(demoted.diagnosticReason, "level mismatch")
+        XCTAssertEqual(detached.diagnosticReason, "missing screen frame")
+        XCTAssertEqual(healthy.diagnosticReason, "ok")
+    }
+
+    func testClipboardPinDiagnosticsReportMarksMismatchedWindowsAndSummarizesCounts() {
+        let displayFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let snapshots = [
+            ClipboardPinWindowSnapshot(
+                itemId: "item-1",
+                isVisible: true,
+                isAlwaysOnTop: true,
+                levelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+                expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+                frame: CGRect(x: 100, y: 100, width: 320, height: 240),
+                screenFrame: displayFrame,
+                displayFrame: displayFrame
+            ),
+            ClipboardPinWindowSnapshot(
+                itemId: "item-2",
+                isVisible: true,
+                isAlwaysOnTop: true,
+                levelRawValue: ClipboardPinWindowPresentation.fallbackLevel.rawValue,
+                expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+                frame: CGRect(x: 200, y: 120, width: 320, height: 240),
+                screenFrame: displayFrame,
+                displayFrame: displayFrame
+            )
+        ]
+
+        let report = ClipboardPinWindowManager.diagnosticsReport(
+            from: snapshots,
+            generatedAt: Date(timeIntervalSince1970: 1_780_000_000)
+        )
+
+        XCTAssertTrue(report.contains("Window Count: 2"))
+        XCTAssertTrue(report.contains("Visible Count: 2"))
+        XCTAssertTrue(report.contains("Always-On-Top Count: 2"))
+        XCTAssertTrue(report.contains("At Expected Level: 1"))
+        XCTAssertTrue(report.contains("Keep-Alive Eligible Count: 2"))
+        XCTAssertTrue(report.contains("Keep-Alive Active: true"))
+        XCTAssertTrue(report.contains("Unstable Window Count: 1"))
+        XCTAssertTrue(report.contains("Reason Summary: level mismatch=1, ok=1"))
+        XCTAssertTrue(report.contains("reason=level mismatch"))
+        XCTAssertTrue(report.contains("reason=ok"))
+        XCTAssertTrue(report.contains("item=item-2"))
+        XCTAssertTrue(report.contains("status=mismatch"))
+        XCTAssertTrue(report.contains("matchesExpected=false"))
+        XCTAssertLessThan(report.range(of: "item=item-2")!.lowerBound, report.range(of: "item=item-1")!.lowerBound)
+    }
+
+    func testClipboardPinDiagnosticsReportHandlesEmptyStateCleanly() {
+        let report = ClipboardPinWindowManager.diagnosticsReport(
+            from: [],
+            generatedAt: Date(timeIntervalSince1970: 1_780_000_000)
+        )
+
+        XCTAssertTrue(report.contains("Window Count: 0"))
+        XCTAssertTrue(report.contains("Visible Count: 0"))
+        XCTAssertTrue(report.contains("No open pin windows."))
+    }
+
+    func testClipboardPinKeepAliveOnlyDependsOnVisibleAlwaysOnTopWindows() {
+        let displayFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let visiblePinned = ClipboardPinWindowSnapshot(
+            itemId: "item-visible",
+            isVisible: true,
+            isAlwaysOnTop: true,
+            levelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 120, y: 120, width: 320, height: 240),
+            screenFrame: displayFrame,
+            displayFrame: displayFrame
+        )
+        let hiddenPinned = ClipboardPinWindowSnapshot(
+            itemId: "item-hidden",
+            isVisible: false,
+            isAlwaysOnTop: true,
+            levelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 160, y: 160, width: 320, height: 240),
+            screenFrame: displayFrame,
+            displayFrame: displayFrame
+        )
+        let visibleUnpinned = ClipboardPinWindowSnapshot(
+            itemId: "item-unpinned",
+            isVisible: true,
+            isAlwaysOnTop: false,
+            levelRawValue: ClipboardPinWindowPresentation.fallbackLevel.rawValue,
+            expectedAlwaysOnTopLevelRawValue: ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue,
+            frame: CGRect(x: 200, y: 200, width: 320, height: 240),
+            screenFrame: displayFrame,
+            displayFrame: displayFrame
+        )
+
+        XCTAssertTrue(ClipboardPinWindowManager.shouldKeepAlive(using: [visiblePinned]))
+        XCTAssertFalse(ClipboardPinWindowManager.shouldKeepAlive(using: [hiddenPinned]))
+        XCTAssertFalse(ClipboardPinWindowManager.shouldKeepAlive(using: [visibleUnpinned]))
+        XCTAssertTrue(ClipboardPinWindowManager.shouldKeepAlive(using: [hiddenPinned, visiblePinned, visibleUnpinned]))
+    }
+
     func testTextWindowHeightGrowsWithLongerTextAndRespectsMaximum() {
         let shortText = "短文本"
         let longText = String(repeating: "这是一段用于测试悬浮窗高度的较长文本。", count: 80)

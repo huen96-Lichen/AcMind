@@ -8,35 +8,30 @@ struct VoiceEntryView: View {
     @State private var microphoneDevices: [VoiceMicrophoneDevice] = []
 
     private enum UI {
-        static let maxWidth: CGFloat = 1180
+        static let maxWidth: CGFloat = 1040
         static let pagePadding: CGFloat = 20
         static let sectionSpacing: CGFloat = 14
         static let cardRadius: CGFloat = 16
         static let rowRadius: CGFloat = 12
-        static let summaryWidth: CGFloat = 296
+        static let summaryWidth: CGFloat = 224
     }
 
     var body: some View {
-        ScrollView {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: UI.sectionSpacing) {
-                    header
-                    summaryGrid
-                    controlSections
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    runtimeCard
-                    statusEntryCard
-                    microphoneCard
-                }
-                .frame(width: UI.summaryWidth)
+        WorkspacePageShell(
+            title: "说入法设置",
+            subtitle: "真实控制语音输入链路：入口、识别、润色、输出、静音检测和连续输入。",
+            leadingRailWidth: 208,
+            trailingRailWidth: UI.summaryWidth,
+            leadingRail: {
+                voiceSummaryRail
+            },
+            content: {
+                voiceContent
+            },
+            trailingRail: {
+                voiceDetailRail
             }
-            .padding(UI.pagePadding)
-            .frame(maxWidth: UI.maxWidth, alignment: .leading)
-        }
-        .background(AppSurfaceTokens.background)
+        )
         .task {
             microphoneDevices = VoiceMicrophoneDeviceCatalog.availableInputDevices()
             let storedSelection = VoiceMicrophonePreferenceStore.load()
@@ -54,14 +49,65 @@ struct VoiceEntryView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("说入法设置")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-            Text("真实控制语音输入链路：入口、识别、润色、输出、静音检测和连续输入。")
-                .font(.system(size: 13))
+    private var voiceContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: UI.sectionSpacing) {
+                summaryGrid
+                controlSections
+            }
+            .padding(UI.pagePadding)
+            .frame(maxWidth: UI.maxWidth, alignment: .leading)
+        }
+        .background(AppSurfaceTokens.background)
+    }
+
+    private var voiceSummaryRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "入口概览", subtitle: "只读摘要", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        railSummaryRow(title: "启用", value: viewModel.companionVoiceEnabled ? "已启用" : "已关闭")
+                        railSummaryRow(title: "快捷键", value: viewModel.companionVoiceShortcut)
+                        railSummaryRow(title: "触发", value: viewModel.voiceTriggerMode.displayName)
+                    }
+                }
+
+                AppSurfaceCard(title: "识别与输出", subtitle: "真实设置状态", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        railSummaryRow(title: "ASR", value: providerDisplayName(viewModel.voiceDefaultProvider))
+                        railSummaryRow(title: "润色", value: viewModel.voiceAutoPolish ? viewModel.voicePolishMode.displayName : "关闭")
+                        railSummaryRow(title: "输出", value: viewModel.voiceOutputMode.displayName)
+                        railSummaryRow(title: "收集箱", value: viewModel.voiceSaveToInbox ? "写入" : "不写入")
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private var voiceDetailRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                runtimeCard
+                statusEntryCard
+                microphoneCard
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private func railSummaryRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
         }
     }
 
@@ -105,7 +151,7 @@ struct VoiceEntryView: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(AppSurfaceTokens.accentBlue)
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
@@ -136,10 +182,22 @@ struct VoiceEntryView: View {
 
     private var controlSections: some View {
         VStack(alignment: .leading, spacing: UI.sectionSpacing) {
-            settingCard(title: "入口与触发", description: "说入法真实入口。已移除的随便问/翻译入口不再出现在这里。") {
+            settingCard(title: "入口与触发", description: "说入法真实入口。已移除的独立问答和翻译入口不再出现在这里。") {
                 toggleRow(title: "启用说入法", description: "控制快捷键入口是否工作。", isOn: persistedBinding(\.companionVoiceEnabled))
                 divider
-                textRow(title: "触发快捷键", description: "当前全局入口。", value: persistedBinding(\.companionVoiceShortcut))
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("触发快捷键")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                        Text("当前全局入口。")
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                    Spacer()
+                    ShortcutRecorderView(shortcut: persistedBinding(\.companionVoiceShortcut))
+                }
+                .frame(minHeight: 44)
                 divider
                 pickerRow(title: "触发模式", description: viewModel.voiceTriggerMode.description, selection: persistedBinding(\.voiceTriggerMode)) {
                     ForEach(SayInputTriggerMode.allCases) { mode in
@@ -155,7 +213,7 @@ struct VoiceEntryView: View {
                     }
                 }
                 if viewModel.voiceDefaultProvider == "qwen3ASR" {
-                    Text("Qwen3-ASR 不支持真正的实时流式，这里会按分段结果刷新。")
+                    Text("Qwen3-ASR 以分段结果呈现，不提供真正的实时流式输出。")
                         .font(.system(size: 11))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }

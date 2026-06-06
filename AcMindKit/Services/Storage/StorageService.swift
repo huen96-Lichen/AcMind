@@ -152,6 +152,32 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
         try await db.deleteClipboardItem(id: id)
     }
 
+    // MARK: - Clipboard Tag Operations
+
+    public func insertClipboardTag(_ tag: ClipboardTag) async throws {
+        try await db.insertClipboardTag(tag)
+    }
+
+    public func listClipboardTags() async throws -> [ClipboardTag] {
+        try await db.listClipboardTags()
+    }
+
+    public func deleteClipboardTag(id: String) async throws {
+        try await db.deleteClipboardTag(id: id)
+    }
+
+    public func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem] {
+        try await db.listClipboardItemsByTag(tagName, limit: limit)
+    }
+
+    public func addTagToClipboardItem(itemId: String, tagName: String) async throws {
+        try await db.addTagToClipboardItem(itemId: itemId, tagName: tagName)
+    }
+
+    public func removeTagFromClipboardItem(itemId: String, tagName: String) async throws {
+        try await db.removeTagFromClipboardItem(itemId: itemId, tagName: tagName)
+    }
+
     // MARK: - Scheduled Agent Task Operations
 
     public func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {

@@ -55,7 +55,45 @@ final class StorageTests: XCTestCase {
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.title, testItem.title)
     }
-    
+
+    func testSchemaColumnMigrationIsIdempotent() throws {
+        let tempDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AcMindSchemaMigrationTests", isDirectory: true)
+        let tempURL = tempDirectory.appendingPathComponent("schema-\(UUID().uuidString).db")
+
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempURL)
+            try? FileManager.default.removeItem(at: tempDirectory)
+        }
+
+        let db = try SQLiteConnection(path: tempURL.path)
+        try db.execute("""
+            CREATE TABLE source_items (
+                id TEXT PRIMARY KEY
+            )
+        """)
+        try db.execute("""
+            CREATE TABLE process_jobs (
+                id TEXT PRIMARY KEY
+            )
+        """)
+
+        try db.addColumnIfMissing(to: "source_items", column: "transcript", definition: "transcript TEXT")
+        try db.addColumnIfMissing(to: "source_items", column: "transcript", definition: "transcript TEXT")
+        try db.addColumnIfMissing(to: "source_items", column: "polished_transcript", definition: "polished_transcript TEXT")
+        try db.addColumnIfMissing(to: "source_items", column: "metadata", definition: "metadata TEXT NOT NULL DEFAULT '{}'")
+        try db.addColumnIfMissing(to: "process_jobs", column: "progress", definition: "progress REAL")
+        try db.addColumnIfMissing(to: "process_jobs", column: "result", definition: "result TEXT")
+        try db.addColumnIfMissing(to: "process_jobs", column: "result", definition: "result TEXT")
+
+        XCTAssertTrue(try db.columnExists("source_items", column: "transcript"))
+        XCTAssertTrue(try db.columnExists("source_items", column: "polished_transcript"))
+        XCTAssertTrue(try db.columnExists("source_items", column: "metadata"))
+        XCTAssertTrue(try db.columnExists("process_jobs", column: "progress"))
+        XCTAssertTrue(try db.columnExists("process_jobs", column: "result"))
+    }
+
     // MARK: - SourceItem CRUD Tests
     
     func testSourceItemCRUD() async throws {
@@ -320,7 +358,7 @@ final class StorageTests: XCTestCase {
         image.unlockFocus()
 
         let asset = try await assetStore.saveImage(image, sourceItemId: nil)
-        let thumbnail = await assetStore.loadImage(asset: asset, maxPixelSize: 240)
+        let thumbnail = assetStore.loadImage(asset: asset, maxPixelSize: 240)
 
         XCTAssertNotNil(thumbnail)
         XCTAssertLessThanOrEqual(max(thumbnail?.size.width ?? 0, thumbnail?.size.height ?? 0), 240)

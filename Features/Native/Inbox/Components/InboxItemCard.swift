@@ -98,7 +98,7 @@ struct InboxItemCard: View {
 
             Text("·")
                 .font(.caption)
-                .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             Text(formatTimeShort(item.createdAt))
                 .font(.caption)
@@ -110,12 +110,12 @@ struct InboxItemCard: View {
     private var actionBar: some View {
         HStack(spacing: 8) {
             Button(action: onMore) {
-                Image(systemName: "ellipsis")
-                    .font(.caption)
-                    .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+            Image(systemName: "ellipsis")
+                .font(.caption)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .opacity(isHovered ? 1 : 0)
                     .frame(width: 20, height: 20)
-                    .background(Circle().fill(Color.white.opacity(isHovered ? 0.14 : 0.08)))
+                    .background(Circle().fill(AppSurfaceTokens.cardBackgroundSoft.opacity(isHovered ? 0.8 : 0.65)))
             }
             .buttonStyle(.plain)
         }
@@ -145,7 +145,7 @@ struct InboxItemCard: View {
 
             Text(duration.formattedDuration)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .fontWeight(.medium)
         }
         .padding(12)
@@ -156,7 +156,7 @@ struct InboxItemCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
         )
     }
 
@@ -174,7 +174,7 @@ struct InboxItemCard: View {
         .clipShape(RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                .stroke(Color(NSColor.tertiaryLabelColor).opacity(0.16), lineWidth: 1)
+                .stroke(AppSurfaceTokens.secondaryText.opacity(0.16), lineWidth: 1)
         )
         .clipped()
     }
@@ -184,23 +184,23 @@ struct InboxItemCard: View {
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
                 .fill(item.type.color.opacity(0.10))
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(previewText.prefix(120).description)
                     .font(.subheadline)
-                    .foregroundStyle(Color(nsColor: .labelColor))
-                    .lineLimit(3)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(2)
                     .truncationMode(.tail)
                     .minimumScaleFactor(0.92)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 0)
             }
-            .padding(14)
+            .padding(12)
         }
         .frame(height: previewHeight)
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
         )
         .clipped()
     }
@@ -209,20 +209,20 @@ struct InboxItemCard: View {
         RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
             .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.60))
             .overlay(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     if let url = item.originalUrl {
                         Text(extractDomain(url))
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     Text(url)
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
                         .lineLimit(2)
                         .minimumScaleFactor(0.92)
                     }
                 }
-                .padding(14)
+                .padding(12)
             }
             .frame(height: previewHeight)
             .overlay(
@@ -236,10 +236,10 @@ struct InboxItemCard: View {
         RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
             .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.60))
             .overlay(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(previewText.prefix(96).description)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .minimumScaleFactor(0.92)
@@ -247,7 +247,7 @@ struct InboxItemCard: View {
 
                     Spacer(minLength: 0)
                 }
-                .padding(14)
+                .padding(12)
             }
             .frame(height: previewHeight)
             .overlay(
@@ -260,10 +260,10 @@ struct InboxItemCard: View {
     private var videoPreview: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(previewText.prefix(40).description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    Text(previewText.prefix(40).description)
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .lineLimit(1)
                     .truncationMode(.tail)
                     .minimumScaleFactor(0.92)
             }
@@ -272,7 +272,7 @@ struct InboxItemCard: View {
 
             Text(duration.formattedDuration)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: previewHeight, maxHeight: previewHeight, alignment: .leading)
@@ -282,7 +282,7 @@ struct InboxItemCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                .stroke(Color(NSColor.separatorColor).opacity(0.18), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
         )
         .clipped()
     }

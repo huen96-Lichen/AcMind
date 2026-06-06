@@ -36,21 +36,18 @@ struct NotchV2CollapsedView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                Button(action: { viewModel.toggleExpansion() }) {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(NotchV2DesignTokens.primaryText)
-                        .frame(width: 16, height: 16)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.9))
-                        )
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(NotchV2DesignTokens.panelBorder, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .frame(width: 16, height: 16)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.9))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(NotchV2DesignTokens.panelBorder, lineWidth: 1)
+                    )
             }
             .padding(.horizontal, 10)
         }
@@ -113,7 +110,13 @@ struct NotchV2CollapsedView: View {
     }
 
     private var collapsedSubtitle: String? {
-        viewModel.collapsedRuntimeSurface.subtitle
+        if viewModel.isRecordingActive {
+            if viewModel.realtimeTranscript.isEmpty {
+                return "收音中..."
+            }
+            return "收音中 · \(viewModel.realtimeTranscript)"
+        }
+        return viewModel.collapsedRuntimeSurface.subtitle
     }
 
     private var subtitleAccentColor: Color {

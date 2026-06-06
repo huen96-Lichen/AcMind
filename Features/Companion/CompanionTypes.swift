@@ -434,6 +434,7 @@ extension Notification.Name {
     static let companionVoiceOutputMode = Notification.Name("companion.voice.outputMode")
     static let companionVoiceProcessingFinished = Notification.Name("companion.voiceProcessingFinished")
     static let companionVoiceProcessingStarted = Notification.Name("companion.voiceProcessingStarted")
+    static let companionVoiceRealtimeTranscript = Notification.Name("companion.voiceRealtimeTranscript")
     static let companionVoiceRecordingStarted = Notification.Name("companion.voiceRecordingStarted")
     static let companionVoiceRecordingStopped = Notification.Name("companion.voiceRecordingStopped")
     static let companionVoiceSaveToInbox = Notification.Name("companion.voice.saveToInbox")

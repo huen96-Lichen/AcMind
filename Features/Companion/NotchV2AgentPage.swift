@@ -186,7 +186,7 @@ struct NotchV2AgentPage: View {
                 Text(message.content)
                     .font(NotchV2DesignTokens.Typography.body)
                     .foregroundStyle(NotchV2DesignTokens.primaryText)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .truncationMode(.tail)
             }
             .padding(.horizontal, 10)

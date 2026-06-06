@@ -243,7 +243,7 @@ public actor AutoRedactorService: ScreenshotRedacting {
             case .blur:
                 blurRegion(in: context, rect: rect, image: cgImage)
             case .solid:
-                context.setFillColor(NSColor.black.cgColor)
+                context.setFillColor(NSColor(white: 0, alpha: 1).cgColor)
                 context.fill(rect)
             case .erase:
                 eraseRegion(in: context, rect: rect, image: cgImage)
@@ -311,12 +311,12 @@ public actor AutoRedactorService: ScreenshotRedacting {
     }
     
     private func blurRegion(in context: CGContext, rect: CGRect, image: CGImage) {
-        context.setFillColor(NSColor.black.withAlphaComponent(0.7).cgColor)
+        context.setFillColor(NSColor(white: 0, alpha: 0.7).cgColor)
         context.fill(rect)
     }
     
     private func eraseRegion(in context: CGContext, rect: CGRect, image: CGImage) {
-        context.setFillColor(NSColor.white.cgColor)
+        context.setFillColor(NSColor(white: 1, alpha: 1).cgColor)
         context.fill(rect)
     }
 }

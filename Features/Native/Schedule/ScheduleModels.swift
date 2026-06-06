@@ -196,8 +196,8 @@ enum ScheduleViewMode: String, CaseIterable {
 // MARK: - Layout Constants
 
 enum ScheduleLayout {
-    static let sidebarWidth: CGFloat = 280
-    static let mainMinWidth: CGFloat = 820
+    static let sidebarWidth: CGFloat = 240
+    static let mainMinWidth: CGFloat = 780
     static let pagePadding: CGFloat = 24
     static let pageRadius: CGFloat = 20
     static let toolbarHeight: CGFloat = 64

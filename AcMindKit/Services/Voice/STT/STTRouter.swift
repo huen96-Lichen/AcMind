@@ -51,6 +51,11 @@ public final class STTRouter: @unchecked Sendable {
         currentProvider
     }
     
+    /// 获取当前 provider 的 Transcriber 实例
+    public func getTranscriber() async throws -> Transcriber {
+        try await getTranscriber(for: currentProvider)
+    }
+    
     // MARK: - Transcription
     
     public func transcribe(

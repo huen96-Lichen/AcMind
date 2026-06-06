@@ -103,7 +103,7 @@ struct BatchDownloadPanel: View {
 
                 Text("抓取网页中的图片和文件链接，批量保存到本地。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -125,7 +125,7 @@ struct BatchDownloadPanel: View {
 
             Text("如果链接是相对路径，会自动按当前页面地址解析。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -143,10 +143,10 @@ struct BatchDownloadPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("保存目录")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text(viewModel.outputFolder.path)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .textSelection(.enabled)
                         .lineLimit(2)
                 }
@@ -182,12 +182,12 @@ struct BatchDownloadPanel: View {
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -215,7 +215,7 @@ struct BatchDownloadPanel: View {
             if viewModel.results.isEmpty {
                 Text("还没有开始下载。")
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
             } else {
                 ScrollView {
@@ -223,7 +223,7 @@ struct BatchDownloadPanel: View {
                         ForEach(viewModel.results) { item in
                             HStack(alignment: .top, spacing: 10) {
                                 Image(systemName: item.isDownloaded ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundStyle(item.isDownloaded ? .green : .red)
+                                    .foregroundStyle(item.isDownloaded ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.sourceURL.absoluteString)
@@ -231,7 +231,7 @@ struct BatchDownloadPanel: View {
                                         .lineLimit(2)
                                     Text(item.destinationURL.path)
                                         .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                                         .textSelection(.enabled)
                                 }
 
@@ -500,7 +500,7 @@ struct VideoDownloadPanel: View {
 
                 Text("使用本机 `yt-dlp` 下载在线视频或音频。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -521,7 +521,7 @@ struct VideoDownloadPanel: View {
                 .font(.body)
             Text("会自动调用 `yt-dlp` 和 `ffmpeg` 完成下载与合并。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -546,10 +546,10 @@ struct VideoDownloadPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("保存目录")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text(viewModel.outputFolder.path)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .textSelection(.enabled)
                         .lineLimit(2)
                 }
@@ -585,12 +585,12 @@ struct VideoDownloadPanel: View {
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -618,7 +618,7 @@ struct VideoDownloadPanel: View {
             if viewModel.downloadedFiles.isEmpty {
                 Text("还没有下载结果。")
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
             } else {
                 ScrollView {
@@ -626,14 +626,14 @@ struct VideoDownloadPanel: View {
                         ForEach(viewModel.downloadedFiles) { item in
                             HStack(alignment: .top, spacing: 10) {
                                 Image(systemName: item.isDownloaded ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundStyle(item.isDownloaded ? .green : .red)
+                                    .foregroundStyle(item.isDownloaded ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.sourceURL.absoluteString)
                                         .font(.caption)
                                         .lineLimit(2)
                                     Text(item.destinationURL.path)
                                         .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                                         .textSelection(.enabled)
                                 }
 
@@ -845,26 +845,35 @@ struct ModelManagementPanel: View {
     @StateObject private var viewModel = ModelManagementViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            GeometryReader { proxy in
-                // Give the list column more room so the detail pane stays visually balanced.
-                let leftWidth = min(max(proxy.size.width * 0.52, 520), 900)
+        WorkspacePageShell(
+            title: "模型管理",
+            subtitle: "管理应用里真实可用的模型。",
+            headerActions: AnyView(
+                HStack(spacing: 12) {
+                    Text(viewModel.statusText)
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                HStack(spacing: 0) {
-                    leftPane
-                        .frame(width: leftWidth)
-
-                    Divider()
-
-                    detailPane
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Button {
+                        Task { await viewModel.refresh() }
+                    } label: {
+                        Label("刷新", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .background(AppSurfaceTokens.background)
+            ),
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                leftPane
+            },
+            content: {
+                detailPane
+            },
+            trailingRail: {
+                modelSummaryRail
             }
-        }
-        .frame(minWidth: 1220, idealWidth: 1360, minHeight: 860, idealHeight: 920)
+        )
         .background(AppSurfaceTokens.background)
         .task {
             await viewModel.refresh()
@@ -887,39 +896,6 @@ struct ModelManagementPanel: View {
         .onChange(of: viewModel.onlyDownloaded) { _, _ in
             viewModel.ensureSelectionVisible()
         }
-    }
-
-    private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("模型管理")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                Text("管理应用里真实可用的模型。")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(viewModel.statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("\(viewModel.filteredItems.count) / \(viewModel.items.count) 个条目")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Button {
-                Task { await viewModel.refresh() }
-            } label: {
-                Label("刷新", systemImage: "arrow.clockwise")
-            }
-            .buttonStyle(.bordered)
-        }
-        .padding(20)
     }
 
     private var leftPane: some View {
@@ -1020,6 +996,62 @@ struct ModelManagementPanel: View {
         .background(AppSurfaceTokens.background)
     }
 
+    private var modelSummaryRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "当前状态", subtitle: "固定外壳下的概要", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        summaryRow(title: "条目", value: "\(viewModel.filteredItems.count) / \(viewModel.items.count)")
+                        summaryRow(title: "默认项", value: "\(viewModel.summary.defaultCount)")
+                        summaryRow(title: "已下载", value: "\(viewModel.summary.downloadedCount)")
+                    }
+                }
+
+                AppSurfaceCard(title: "选中项", subtitle: "仅展示真实详情", padding: 14) {
+                    if let item = viewModel.selectedItem {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(item.displayName)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
+                            Text(item.domain.displayName)
+                                .font(.system(size: 12))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            Text(item.detailText ?? item.statusLabel)
+                                .font(.system(size: 12))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        }
+                    } else {
+                        Text("尚未选择模型")
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                }
+
+                AppSurfaceCard(title: "操作", subtitle: "保持当前构图稳定", padding: 14) {
+                    VStack(spacing: 8) {
+                        Button("清除筛选") { viewModel.clearFilters() }
+                            .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private func summaryRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+        }
+    }
+
     private var detailPane: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -1055,7 +1087,7 @@ struct ModelManagementPanel: View {
                         .font(.headline)
                     Text("从这里统一查看、筛选和控制应用里真实可用的模型。")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Spacer()
@@ -1117,12 +1149,12 @@ struct ModelManagementPanel: View {
 
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Text("语音克隆功能暂未开放。")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 18).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -1132,7 +1164,7 @@ struct ModelManagementPanel: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             Text(value)
                 .font(.headline)
                 .fontWeight(.semibold)
@@ -1140,7 +1172,7 @@ struct ModelManagementPanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.5)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private func summaryPill(label: String, value: String, icon: String, tint: Color) -> some View {
@@ -1157,7 +1189,7 @@ struct ModelManagementPanel: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 Text(value)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -1170,7 +1202,7 @@ struct ModelManagementPanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.5)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var filterBar: some View {
@@ -1178,7 +1210,7 @@ struct ModelManagementPanel: View {
             HStack(spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     TextField("搜索模型 / 提供商 / 关键词", text: $viewModel.searchQuery)
                         .textFieldStyle(.plain)
                 }
@@ -1218,7 +1250,7 @@ struct ModelManagementPanel: View {
 
             Text("统一查看本地 AI 和本地 ASR。")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             HStack(spacing: 12) {
                 Toggle("仅启用", isOn: $viewModel.onlyEnabled)
@@ -1232,7 +1264,7 @@ struct ModelManagementPanel: View {
 
                 Text("当前显示 \(viewModel.filteredItems.count) 项")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
         }
     }
@@ -1275,18 +1307,18 @@ struct ModelManagementPanel: View {
                         .font(.headline)
                     Text(description)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Spacer()
 
-                Text("\(count)")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 999).fill(Color.black.opacity(0.05)))
+                    Text("\(count)")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 999).fill(AppSurfaceTokens.primaryText.opacity(0.05)))
             }
 
             content()
@@ -1320,11 +1352,11 @@ struct ModelManagementPanel: View {
 
                     Text(item.detailText ?? item.statusLabel)
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 8) {
-                        badge(item.statusLabel, tint: item.isAvailable ? .green : .orange)
+                        badge(item.statusLabel, tint: item.isAvailable ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
                         badge(item.deploymentKind.displayName, tint: deploymentTint(for: item))
                         badge(item.sizeLabel, tint: .secondary)
                     }
@@ -1455,7 +1487,7 @@ struct ModelManagementPanel: View {
 
             Text(detailDescription(for: item))
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
@@ -1470,7 +1502,7 @@ struct ModelManagementPanel: View {
                 .fontWeight(.semibold)
             Text("选择左侧模型后，这里会显示状态和操作。")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
         .padding(24)
@@ -1481,13 +1513,13 @@ struct ModelManagementPanel: View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: 88, alignment: .leading)
-            Text(value)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
+                    Text(value)
+                        .font(.body)
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -1522,7 +1554,7 @@ struct ModelManagementPanel: View {
         Text(title)
             .font(.caption)
             .fontWeight(.semibold)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
             .padding(.top, 4)
     }
 
@@ -1533,7 +1565,7 @@ struct ModelManagementPanel: View {
                 .fontWeight(.medium)
             Text(subtitle)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity, minHeight: 88, alignment: .center)
         .padding(.vertical, 12)
@@ -1555,13 +1587,13 @@ struct ModelManagementPanel: View {
     private func iconTint(for item: ModelManagementItem) -> Color {
         switch item.deploymentKind {
         case .local:
-            return .green
+            return AppSurfaceTokens.accentGreen
         case .cloud:
-            return .blue
+            return AppSurfaceTokens.accentBlue
         case .api:
-            return .orange
+            return AppSurfaceTokens.accentOrange
         case .system:
-            return .gray
+            return AppSurfaceTokens.secondaryText
         }
     }
 
@@ -1572,14 +1604,14 @@ struct ModelManagementPanel: View {
     private func warningBanner(message: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppSurfaceTokens.accentOrange)
             Text(message)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.orange.opacity(0.08)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(AppSurfaceTokens.accentOrange.opacity(0.08)))
     }
 
     private func shouldShowSection(_ domain: ModelManagementDomain) -> Bool {
@@ -1619,20 +1651,20 @@ private struct ModelManagementListRow: View {
 
                     Text(item.detailText ?? item.statusLabel)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .lineLimit(2)
 
                     HStack(spacing: 8) {
-                        badge(item.statusLabel, tint: item.isAvailable ? .green : .orange)
+                        badge(item.statusLabel, tint: item.isAvailable ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
                         badge(item.deploymentKind.displayName, tint: deploymentTint)
                         if item.domain == .ai {
                             Text("\(availableModels.count) 个模型")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                             if item.modelId?.isEmpty == false {
-                                badge(item.modelId ?? "", tint: .secondary)
+                                badge(item.modelId ?? "", tint: AppSurfaceTokens.secondaryText)
                             } else if availableModels.isEmpty == false {
-                                badge("未选择模型", tint: .orange)
+                                badge("未选择模型", tint: AppSurfaceTokens.accentOrange)
                             }
                         }
                     }
@@ -1643,11 +1675,11 @@ private struct ModelManagementListRow: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(isSelected ? Color.accentColor.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft)
+                    .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.25) : AppSurfaceTokens.separator.opacity(0.65), lineWidth: 1)
+                    .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.25) : AppSurfaceTokens.separator.opacity(0.65), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -1680,13 +1712,13 @@ private struct ModelManagementListRow: View {
     private var iconTint: Color {
         switch item.deploymentKind {
         case .local:
-            return .green
+            return AppSurfaceTokens.accentGreen
         case .cloud:
-            return .blue
+            return AppSurfaceTokens.accentBlue
         case .api:
-            return .orange
+            return AppSurfaceTokens.accentOrange
         case .system:
-            return .gray
+            return AppSurfaceTokens.secondaryText
         }
     }
 
@@ -1774,6 +1806,9 @@ private struct FlowLayout: Layout {
 
 @MainActor
 final class ModelManagementViewModel: ObservableObject {
+    private let settingsService: SettingsServiceProtocol
+    private let aiRuntime: AIRuntimeProtocol
+
     @Published var items: [ModelManagementItem] = []
     @Published var statusText = "等待加载"
     @Published var busyItemID: String?
@@ -1793,6 +1828,14 @@ final class ModelManagementViewModel: ObservableObject {
     private var appSettings = AppSettings()
     private var voiceSettings = VoiceSettings()
     private var apiKeyAvailabilityByProviderID: [String: Bool] = [:]
+
+    init(
+        settingsService: SettingsServiceProtocol = SettingsService(),
+        aiRuntime: AIRuntimeProtocol = AIRuntimeService()
+    ) {
+        self.settingsService = settingsService
+        self.aiRuntime = aiRuntime
+    }
 
     var summary: ModelManagementSummary {
         ModelManagementSummary(items: filteredItems)
@@ -1889,9 +1932,9 @@ final class ModelManagementViewModel: ObservableObject {
         statusText = "正在加载模型数据..."
         errorMessage = nil
 
-        async let settingsTask = ServiceContainer.shared.settingsService.getSettings()
-        async let voiceTask = ServiceContainer.shared.settingsService.getVoiceSettings()
-        async let providersTask = ServiceContainer.shared.settingsService.listProviders()
+        async let settingsTask = settingsService.getSettings()
+        async let voiceTask = settingsService.getVoiceSettings()
+        async let providersTask = settingsService.listProviders()
         async let localTask = LocalASRManager.shared.listAvailableModels()
 
         do {
@@ -1922,10 +1965,8 @@ final class ModelManagementViewModel: ObservableObject {
 
         appSettings.defaultProviderId = providerId
         do {
-            try await ServiceContainer.shared.settingsService.updateSettings(appSettings)
-            if let runtime = ServiceContainer.shared.aiRuntime as? AIRuntimeService {
-                try? runtime.setDefaultProvider(id: providerId)
-            }
+            try await settingsService.updateSettings(appSettings)
+            try aiRuntime.setDefaultProvider(id: providerId)
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -1940,7 +1981,7 @@ final class ModelManagementViewModel: ObservableObject {
         var updated = provider
         updated.enabled.toggle()
         do {
-            try await ServiceContainer.shared.settingsService.updateProvider(updated, apiKey: nil)
+            try await settingsService.updateProvider(updated, apiKey: nil)
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -1955,7 +1996,7 @@ final class ModelManagementViewModel: ObservableObject {
         var updated = provider
         updated.modelId = modelID
         do {
-            try await ServiceContainer.shared.settingsService.updateProvider(updated, apiKey: nil)
+            try await settingsService.updateProvider(updated, apiKey: nil)
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -1969,7 +2010,7 @@ final class ModelManagementViewModel: ObservableObject {
 
         voiceSettings.defaultProvider = providerId
         do {
-            try await ServiceContainer.shared.settingsService.updateVoiceSettings(voiceSettings)
+            try await settingsService.updateVoiceSettings(voiceSettings)
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -2174,7 +2215,7 @@ final class ModelManagementViewModel: ObservableObject {
         case .openAI, .aliCloud, .doubao, .mimoASR:
             return "接口"
         case .googleCloud, .groq, .freeModel:
-            return "未接入"
+            return "暂未开放"
         }
     }
 
@@ -2201,9 +2242,9 @@ final class ModelManagementViewModel: ObservableObject {
         case .mimoASR:
             return "MiMo 云端识别。"
         case .googleCloud:
-            return "暂未开放。"
+            return "Google Cloud 语音能力暂未开放。"
         case .groq:
-            return "暂未开放。"
+            return "Groq Whisper 通道暂未开放。"
         case .freeModel:
             return "免费模型通道暂未开放。"
         }
@@ -2290,10 +2331,11 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     private func loadAvailableModels(for providers: [ProviderConfig]) async -> [String: [String]] {
-        await withTaskGroup(of: (String, [String]).self) { group in
+        let runtime = aiRuntime
+        return await withTaskGroup(of: (String, [String]).self) { group in
             for provider in providers {
                 group.addTask {
-                    let models = (try? await ServiceContainer.shared.aiRuntime.listModels(providerId: provider.id)) ?? []
+                    let models = (try? await runtime.listModels(providerId: provider.id)) ?? []
                     return (provider.id, models)
                 }
             }
@@ -2342,7 +2384,7 @@ struct APITestPanel: View {
 
                 Text("查看提供商连通性、模型和简短对话。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -2363,7 +2405,7 @@ struct APITestPanel: View {
                 .font(.body)
             Text("可快速确认连通性、查看模型，并做一次简短对话。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -2377,13 +2419,13 @@ struct APITestPanel: View {
                 Spacer()
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             if viewModel.providers.isEmpty {
                 Text("请先到设置里添加提供商。")
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
             } else {
                 Picker("提供商", selection: $viewModel.selectedProviderId) {
@@ -2400,7 +2442,7 @@ struct APITestPanel: View {
                         Text("基础地址: \(provider.baseURL.isEmpty ? provider.providerType.defaultBaseURL : provider.baseURL)")
                     }
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
         }
@@ -2486,7 +2528,7 @@ struct APITestPanel: View {
             TextEditor(text: $viewModel.outputText)
                 .font(.system(.body, design: .monospaced))
                 .frame(minHeight: 260)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.18), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1))
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -2495,6 +2537,8 @@ struct APITestPanel: View {
 
 @MainActor
 final class APITestViewModel: ObservableObject {
+    private let aiRuntime: AIRuntimeProtocol
+
     @Published var providers: [ProviderConfig] = []
     @Published var selectedProviderId: String?
     @Published var testPrompt = "请用一句话回答：AcMind 的连通检查成功了吗？"
@@ -2503,12 +2547,16 @@ final class APITestViewModel: ObservableObject {
     @Published var isRunning = false
     @Published var lastSavedURL: URL?
 
+    init(aiRuntime: AIRuntimeProtocol = AIRuntimeService()) {
+        self.aiRuntime = aiRuntime
+    }
+
     var selectedProvider: ProviderConfig? {
         providers.first(where: { $0.id == selectedProviderId })
     }
 
     func refreshProviders() async {
-        providers = await ServiceContainer.shared.aiRuntime.listProviders()
+        providers = await aiRuntime.listProviders()
         selectedProviderId = selectedProviderId ?? providers.first?.id
         statusText = providers.isEmpty ? "暂无提供商可检查" : "已加载 \(providers.count) 个提供商"
     }
@@ -2520,7 +2568,7 @@ final class APITestViewModel: ObservableObject {
         lastSavedURL = nil
         statusText = "正在进行连通检查..."
         do {
-            let ok = try await ServiceContainer.shared.aiRuntime.healthCheck(providerId: providerId)
+            let ok = try await aiRuntime.healthCheck(providerId: providerId)
             outputText = ok ? "连通检查：正常" : "连通检查：失败"
             statusText = ok ? "连通检查通过" : "连通检查失败"
         } catch {
@@ -2537,7 +2585,7 @@ final class APITestViewModel: ObservableObject {
         lastSavedURL = nil
         statusText = "正在拉取模型列表..."
         do {
-            let models = try await ServiceContainer.shared.aiRuntime.listModels(providerId: providerId)
+            let models = try await aiRuntime.listModels(providerId: providerId)
             outputText = models.isEmpty ? "没有返回模型列表" : models.joined(separator: "\n")
             statusText = "模型列表已获取"
         } catch {
@@ -2555,7 +2603,7 @@ final class APITestViewModel: ObservableObject {
         statusText = "正在发送对话验证..."
         do {
             let modelId = selectedProvider?.modelId.trimmingCharacters(in: .whitespacesAndNewlines)
-            let response = try await ServiceContainer.shared.aiRuntime.chat(
+            let response = try await aiRuntime.chat(
                 messages: [ChatMessage(role: "user", content: testPrompt)],
                 providerId: providerId,
                 model: (modelId?.isEmpty == false) ? modelId : nil

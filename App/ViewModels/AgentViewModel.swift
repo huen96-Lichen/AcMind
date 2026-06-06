@@ -67,14 +67,13 @@ class AgentViewModel: ObservableObject {
         aiRuntime: AIRuntimeProtocol? = nil,
         voiceService: VoiceServiceProtocol? = nil
     ) {
-        let container = ServiceContainer.isInitialized() ? ServiceContainer.shared : nil
-        self.storage = storage ?? container?.storageService ?? StorageService()
-        self.aiRuntime = aiRuntime ?? container?.aiRuntime ?? AIRuntimeService()
-        self.voiceService = voiceService ?? container?.voiceService ?? VoiceService()
-        self.distillService = container?.distillService ?? DistillService()
-        self.agentMemoryService = container?.agentMemoryService ?? AgentMemoryService(storage: self.storage)
-        self.agentSkillService = container?.agentSkillService ?? AgentSkillService(storage: self.storage)
-        self.agentTaskBoardService = container?.agentTaskBoardService ?? AgentTaskBoardService(storage: self.storage)
+        self.storage = storage ?? StorageService()
+        self.aiRuntime = aiRuntime ?? AIRuntimeService()
+        self.voiceService = voiceService ?? VoiceService()
+        self.distillService = DistillService(aiRuntime: self.aiRuntime, storage: self.storage)
+        self.agentMemoryService = AgentMemoryService(storage: self.storage)
+        self.agentSkillService = AgentSkillService(storage: self.storage)
+        self.agentTaskBoardService = AgentTaskBoardService(storage: self.storage)
         self.quickAskService = AgentQuickAskService(aiRuntime: self.aiRuntime, storage: self.storage)
         self.agentToolRouter = AgentToolRouter(storage: self.storage, voiceService: self.voiceService, aiRuntime: self.aiRuntime)
 
@@ -84,13 +83,11 @@ class AgentViewModel: ObservableObject {
     }
 
     private func setupVoiceStatusHandler() async {
-        if let service = voiceService as? VoiceService {
-            await service.setStatusHandler { [weak self] status in
-                Task { @MainActor in
-                    self?.recordingStatus = status
-                    if status == .idle || status == .error {
-                        self?.stopRecordingTimer()
-                    }
+        await voiceService.setStatusHandler { [weak self] status in
+            Task { @MainActor in
+                self?.recordingStatus = status
+                if status == .idle || status == .error {
+                    self?.stopRecordingTimer()
                 }
             }
         }

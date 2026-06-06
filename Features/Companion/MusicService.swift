@@ -91,7 +91,6 @@ private struct NowPlayingSnapshot: Sendable {
 /// 使用多种方式获取媒体信息（MRMediaRemote、AppleScript、Distributed Notifications）
 @MainActor
 public class MusicService: ObservableObject {
-    public static let shared = MusicService()
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AcMind", category: "MusicService")
 
     // MARK: - Published Properties
@@ -114,7 +113,7 @@ public class MusicService: ObservableObject {
 
     // MARK: - Initialization
 
-    private init() {
+    public init() {
         setupMediaMonitoring()
     }
 
@@ -156,7 +155,7 @@ public class MusicService: ObservableObject {
             return
         }
 
-        Self.logger.warning("No now playing source found")
+        Self.logger.debug("No now playing source found")
         if !songTitle.isEmpty || isPlaying {
             isPlaying = false
             timestampDate = Date()
@@ -1069,10 +1068,12 @@ public struct MusicVisualizer: NSViewRepresentable {
 
 /// 迷你音乐播放器视图
 public struct MiniMusicPlayerView: View {
-    @ObservedObject private var musicService = MusicService.shared
+    @ObservedObject private var musicService: MusicService
     @State private var isHovered = false
 
-    public init() {}
+    public init(musicService: MusicService = MusicService()) {
+        _musicService = ObservedObject(wrappedValue: musicService)
+    }
 
     public var body: some View {
         HStack(spacing: 10) {

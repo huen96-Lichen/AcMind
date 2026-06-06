@@ -14,11 +14,13 @@ public struct ServiceConfiguration {
     var knowledgeService: KnowledgeServiceProtocol?
     var voiceService: VoiceServiceProtocol?
     var settingsService: SettingsServiceProtocol?
+    var cloudSyncService: CloudSyncServiceProtocol?
     var assetStore: AssetStore?
     var scheduleService: ScheduleServiceProtocol?
     var agentMemoryService: AgentMemoryServiceProtocol?
     var agentSkillService: AgentSkillServiceProtocol?
     var agentTaskBoardService: AgentTaskBoardServiceProtocol?
+    var systemStatusService: SystemStatusService?
 
     public init(
         storageService: StorageServiceProtocol? = nil,
@@ -30,11 +32,13 @@ public struct ServiceConfiguration {
         knowledgeService: KnowledgeServiceProtocol? = nil,
         voiceService: VoiceServiceProtocol? = nil,
         settingsService: SettingsServiceProtocol? = nil,
+        cloudSyncService: CloudSyncServiceProtocol? = nil,
         assetStore: AssetStore? = nil,
         scheduleService: ScheduleServiceProtocol? = nil,
         agentMemoryService: AgentMemoryServiceProtocol? = nil,
         agentSkillService: AgentSkillServiceProtocol? = nil,
-        agentTaskBoardService: AgentTaskBoardServiceProtocol? = nil
+        agentTaskBoardService: AgentTaskBoardServiceProtocol? = nil,
+        systemStatusService: SystemStatusService? = nil
     ) {
         self.storageService = storageService
         self.captureService = captureService
@@ -45,11 +49,13 @@ public struct ServiceConfiguration {
         self.knowledgeService = knowledgeService
         self.voiceService = voiceService
         self.settingsService = settingsService
+        self.cloudSyncService = cloudSyncService
         self.assetStore = assetStore
         self.scheduleService = scheduleService
         self.agentMemoryService = agentMemoryService
         self.agentSkillService = agentSkillService
         self.agentTaskBoardService = agentTaskBoardService
+        self.systemStatusService = systemStatusService
     }
 
     /// 空配置，用于完全自定义注入
@@ -126,11 +132,16 @@ public final class ServiceContainer: ObservableObject, Sendable {
     public let knowledgeService: KnowledgeServiceProtocol
     public let voiceService: VoiceServiceProtocol
     public let settingsService: SettingsServiceProtocol
+    public let cloudSyncService: CloudSyncServiceProtocol
     public let assetStore: AssetStore
     public let scheduleService: ScheduleServiceProtocol
     public let agentMemoryService: AgentMemoryServiceProtocol
     public let agentSkillService: AgentSkillServiceProtocol
     public let agentTaskBoardService: AgentTaskBoardServiceProtocol
+    public let systemStatusService: SystemStatusService
+    public let batteryService: BatteryService
+    public let musicService: MusicService
+    let systemEventCenter: SystemEventCenter
 
     public var hotCornerSettingsStore: HotCornerSettingsStore? {
         settingsService as? HotCornerSettingsStore
@@ -153,6 +164,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
         // 阶段 1: 存储层（最底层，无依赖）
         self.storageService = configuration.storageService ?? StorageService()
         self.assetStore = configuration.assetStore ?? AssetStore()
+        self.cloudSyncService = configuration.cloudSyncService ?? CloudSyncService(storage: storageService)
 
         // 阶段 2: 设置服务（依赖存储层、权限管理器）
         self.settingsService = configuration.settingsService ?? SettingsService(
@@ -206,12 +218,16 @@ public final class ServiceContainer: ObservableObject, Sendable {
         self.agentMemoryService = configuration.agentMemoryService ?? AgentMemoryService(storage: storageService)
         self.agentSkillService = configuration.agentSkillService ?? AgentSkillService(storage: storageService)
         self.agentTaskBoardService = configuration.agentTaskBoardService ?? AgentTaskBoardService(storage: storageService)
+        self.systemStatusService = configuration.systemStatusService ?? SystemStatusService()
+        self.batteryService = BatteryService()
+        self.musicService = MusicService()
+        self.systemEventCenter = SystemEventCenter()
     }
 
     // MARK: - Setup
 
     /// 初始化容器，只能调用一次
-    public static func setup(configuration: ServiceConfiguration = ServiceConfiguration()) async throws {
+    public static func setup(configuration: ServiceConfiguration = ServiceConfiguration()) async throws -> ServiceContainer {
         guard _shared == nil else {
             throw ServiceContainerError.alreadyInitialized
         }
@@ -220,6 +236,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
         _shared = container
 
         try await container.initialize()
+        return container
     }
 
     /// 重置容器（主要用于测试）
@@ -237,9 +254,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
             do {
                 // 阶段 1: 存储层
                 try await transition(to: .storage) {
-                    if let storage = storageService as? StorageService {
-                        try await storage.setup()
-                    }
+                    try await storageService.setup()
                     try await assetStore.setup()
                 }
 
@@ -250,9 +265,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
                 // 阶段 3: 设置
                 try await transition(to: .settings) {
-                    if let settings = settingsService as? SettingsService {
-                        try await settings.setup()
-                    }
+                    try await settingsService.setup()
                 }
 
                 // 阶段 3: 权限（检查但不阻塞）
@@ -270,20 +283,14 @@ public final class ServiceContainer: ObservableObject, Sendable {
                 await transition(to: .ai) {
                     _ = aiRuntime
                     // 加载知识卡片历史
-                    if let knowledge = knowledgeService as? KnowledgeService {
-                        try? await knowledge.setup()
-                    }
+                    try? await knowledgeService.setup()
                 }
 
                 // 阶段 6: UI（标记完成）
                 await transition(to: .ui) {
                     // UI 初始化在 SwiftUI 层完成
-                    if let schedule = scheduleService as? ScheduleService {
-                        try? await schedule.setup()
-                    }
-                    if let skillService = agentSkillService as? AgentSkillService {
-                        try? await skillService.initializeBuiltinSkills()
-                    }
+                    try? await scheduleService.setup()
+                    try? await agentSkillService.initializeBuiltinSkills()
                 }
 
                 await MainActor.run {
@@ -354,11 +361,12 @@ public final class ServiceContainer: ObservableObject, Sendable {
         // 停止采集监听
         await clipboardService.stopWatching()
 
+        // 停止系统状态采样
+        systemStatusService.stop()
+
         // 取消正在进行的 AI 任务
         // 持久化设置
-        if let settings = settingsService as? SettingsService {
-            await settings.save()
-        }
+        await settingsService.save()
 
         initializationTask?.cancel()
         initializationTask = nil
@@ -388,6 +396,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
         if agentMemoryService is AgentMemoryService { issues.append("✓ AgentMemoryService") }
         if agentSkillService is AgentSkillService { issues.append("✓ AgentSkillService") }
         if agentTaskBoardService is AgentTaskBoardService { issues.append("✓ AgentTaskBoardService") }
+        issues.append("✓ SystemStatusService")
         issues.append("✓ VoiceService")
 
         return issues

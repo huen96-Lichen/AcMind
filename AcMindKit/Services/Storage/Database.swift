@@ -186,6 +186,11 @@ internal final class SQLiteConnection {
         return rows.contains(column)
     }
 
+    func addColumnIfMissing(to table: String, column: String, definition: String) throws {
+        guard try !columnExists(table, column: column) else { return }
+        try execute("ALTER TABLE \(table) ADD COLUMN \(definition)")
+    }
+
     private func prepare(_ sql: String, arguments: [Any?]) throws -> OpaquePointer? {
         guard let handle else { throw SQLiteError.notOpen }
 
@@ -319,7 +324,7 @@ public actor Database {
     public static let shared = Database()
 
     nonisolated public let path: String
-    nonisolated public let version: Int = 23
+    nonisolated public let version: Int = 24
 
     private var connection: SQLiteConnection?
     private var isReady = false
@@ -634,6 +639,15 @@ public actor Database {
             "CREATE INDEX IF NOT EXISTS idx_clipboard_items_created_at ON clipboard_items(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_clipboard_items_is_pinned ON clipboard_items(is_pinned)",
             """
+            CREATE TABLE IF NOT EXISTS clipboard_tags (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                color TEXT NOT NULL DEFAULT '#3B82F6',
+                created_at INTEGER NOT NULL DEFAULT (unixepoch())
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_clipboard_tags_name ON clipboard_tags(name)",
+            """
             CREATE TABLE IF NOT EXISTS shelf_items (
                 id TEXT PRIMARY KEY,
                 source_item_id TEXT REFERENCES source_items(id) ON DELETE CASCADE,
@@ -709,23 +723,21 @@ public actor Database {
         }
 
         // Migration v22: add missing columns to source_items (idempotent)
-        let v22Migrations: [String] = [
-            "ALTER TABLE source_items ADD COLUMN transcript TEXT",
-            "ALTER TABLE source_items ADD COLUMN polished_transcript TEXT",
-            "ALTER TABLE source_items ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'"
-        ]
-        for sql in v22Migrations {
-            try? db().execute(sql)  // ignore "duplicate column" errors for existing DBs
-        }
+        try db().addColumnIfMissing(to: "source_items", column: "transcript", definition: "transcript TEXT")
+        try db().addColumnIfMissing(to: "source_items", column: "polished_transcript", definition: "polished_transcript TEXT")
+        try db().addColumnIfMissing(to: "source_items", column: "metadata", definition: "metadata TEXT NOT NULL DEFAULT '{}'")
 
         // Migration v23: add progress/result columns to process_jobs (idempotent)
-        let v23Migrations: [String] = [
-            "ALTER TABLE process_jobs ADD COLUMN progress REAL",
-            "ALTER TABLE process_jobs ADD COLUMN result TEXT"
-        ]
-        for sql in v23Migrations {
-            try? db().execute(sql)
-        }
+        try db().addColumnIfMissing(to: "process_jobs", column: "progress", definition: "progress REAL")
+        try db().addColumnIfMissing(to: "process_jobs", column: "result", definition: "result TEXT")
+
+        // Migration v24: extend clipboard_items with new columns (idempotent)
+        try db().addColumnIfMissing(to: "clipboard_items", column: "html_content", definition: "html_content TEXT")
+        try db().addColumnIfMissing(to: "clipboard_items", column: "code_language", definition: "code_language TEXT")
+        try db().addColumnIfMissing(to: "clipboard_items", column: "is_sensitive", definition: "is_sensitive INTEGER NOT NULL DEFAULT 0")
+        try db().addColumnIfMissing(to: "clipboard_items", column: "tags", definition: "tags TEXT")
+        try db().addColumnIfMissing(to: "clipboard_items", column: "use_count", definition: "use_count INTEGER NOT NULL DEFAULT 0")
+        try db().addColumnIfMissing(to: "clipboard_items", column: "visual_hash", definition: "visual_hash TEXT")
     }
 
     private func databaseCandidateURLs() -> [URL] {
@@ -995,10 +1007,11 @@ public actor Database {
     // MARK: - Clipboard Items
 
     public func insertClipboardItem(_ item: ClipboardItem) async throws {
+        let tagsJSON = String(data: (try? JSONEncoder().encode(item.tags)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
         try db().execute(
             """
-            INSERT INTO clipboard_items (id, type, content, text_content, source_app, is_pinned, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO clipboard_items (id, type, content, text_content, source_app, is_pinned, created_at, html_content, code_language, is_sensitive, tags, use_count, visual_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             arguments: [
                 item.id,
@@ -1007,7 +1020,13 @@ public actor Database {
                 item.textContent,
                 item.sourceApp ?? NSNull(),
                 item.isPinned ? 1 : 0,
-                Int(item.createdAt.timeIntervalSince1970)
+                Int(item.createdAt.timeIntervalSince1970),
+                item.htmlContent ?? NSNull(),
+                item.codeLanguage ?? NSNull(),
+                item.isSensitive ? 1 : 0,
+                tagsJSON,
+                item.useCount,
+                item.visualHash ?? NSNull()
             ]
         )
     }
@@ -1017,23 +1036,17 @@ public actor Database {
         return try db().query(
             "SELECT * FROM clipboard_items ORDER BY is_pinned DESC, created_at DESC \(limitClause)"
         ) { row in
-            ClipboardItem(
-                id: row.string("id") ?? UUID().uuidString,
-                type: ClipboardContentType(rawValue: row.string("type") ?? "text") ?? .text,
-                content: row.string("content"),
-                textContent: row.string("text_content"),
-                sourceApp: row.string("source_app"),
-                isPinned: row.int("is_pinned") == 1,
-                createdAt: Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? 0))
-            )
+            self.rowToClipboardItem(row)
         }
     }
 
     public func updateClipboardItem(_ item: ClipboardItem) async throws {
+        let tagsJSON = String(data: (try? JSONEncoder().encode(item.tags)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
         try db().execute(
             """
             UPDATE clipboard_items SET
-                type = ?, content = ?, text_content = ?, source_app = ?, is_pinned = ?
+                type = ?, content = ?, text_content = ?, source_app = ?, is_pinned = ?,
+                html_content = ?, code_language = ?, is_sensitive = ?, tags = ?, use_count = ?, visual_hash = ?
             WHERE id = ?
             """,
             arguments: [
@@ -1042,6 +1055,12 @@ public actor Database {
                 item.textContent ?? NSNull(),
                 item.sourceApp ?? NSNull(),
                 item.isPinned ? 1 : 0,
+                item.htmlContent ?? NSNull(),
+                item.codeLanguage ?? NSNull(),
+                item.isSensitive ? 1 : 0,
+                tagsJSON,
+                item.useCount,
+                item.visualHash ?? NSNull(),
                 item.id
             ]
         )
@@ -1049,6 +1068,100 @@ public actor Database {
 
     public func deleteClipboardItem(id: String) async throws {
         try db().execute("DELETE FROM clipboard_items WHERE id = ?", arguments: [id])
+    }
+
+    // MARK: - Clipboard Tags
+
+    public func insertClipboardTag(_ tag: ClipboardTag) async throws {
+        try db().execute(
+            """
+            INSERT INTO clipboard_tags (id, name, color, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET name = excluded.name, color = excluded.color
+            """,
+            arguments: [tag.id, tag.name, tag.color, Int(Date().timeIntervalSince1970)]
+        )
+    }
+
+    public func listClipboardTags() async throws -> [ClipboardTag] {
+        try db().query("SELECT * FROM clipboard_tags ORDER BY name ASC") { row in
+            ClipboardTag(
+                id: row.string("id") ?? UUID().uuidString,
+                name: row.string("name") ?? "",
+                color: row.string("color") ?? "#3B82F6"
+            )
+        }
+    }
+
+    public func deleteClipboardTag(id: String) async throws {
+        try db().execute("DELETE FROM clipboard_tags WHERE id = ?", arguments: [id])
+    }
+
+    public func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem] {
+        let limitClause = limit != nil ? "LIMIT \(limit!)" : ""
+        let sanitized = tagName.replacingOccurrences(of: "\"", with: "")
+        let pattern = "%\"\(sanitized)\"%"
+        return try db().query(
+            "SELECT * FROM clipboard_items WHERE tags LIKE ? ORDER BY is_pinned DESC, created_at DESC \(limitClause)",
+            arguments: [pattern]
+        ) { row in
+            self.rowToClipboardItem(row)
+        }
+    }
+
+    public func addTagToClipboardItem(itemId: String, tagName: String) async throws {
+        guard let item = try await queryClipboardItem(id: itemId) else { return }
+        var tags = item.tags
+        if !tags.contains(tagName) {
+            tags.append(tagName)
+            try await updateClipboardItemTags(itemId: itemId, tags: tags)
+        }
+    }
+
+    public func removeTagFromClipboardItem(itemId: String, tagName: String) async throws {
+        guard let item = try await queryClipboardItem(id: itemId) else { return }
+        var tags = item.tags
+        tags.removeAll { $0 == tagName }
+        try await updateClipboardItemTags(itemId: itemId, tags: tags)
+    }
+
+    private func queryClipboardItem(id: String) async throws -> ClipboardItem? {
+        try db().queryOne(
+            "SELECT * FROM clipboard_items WHERE id = ? LIMIT 1",
+            arguments: [id]
+        ) { row in
+            self.rowToClipboardItem(row)
+        }
+    }
+
+    private func updateClipboardItemTags(itemId: String, tags: [String]) async throws {
+        let tagsJSON = String(data: (try? JSONEncoder().encode(tags)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
+        try db().execute(
+            "UPDATE clipboard_items SET tags = ? WHERE id = ?",
+            arguments: [tagsJSON, itemId]
+        )
+    }
+
+    private func rowToClipboardItem(_ row: SQLiteRow) -> ClipboardItem {
+        let tagsString = row.string("tags") ?? "[]"
+        let tagsData = tagsString.data(using: .utf8) ?? Data()
+        let tags = (try? JSONDecoder().decode([String].self, from: tagsData)) ?? []
+
+        return ClipboardItem(
+            id: row.string("id") ?? UUID().uuidString,
+            type: ClipboardContentType(rawValue: row.string("type") ?? "text") ?? .text,
+            content: row.string("content"),
+            textContent: row.string("text_content"),
+            sourceApp: row.string("source_app"),
+            isPinned: row.int("is_pinned") == 1,
+            createdAt: Date(timeIntervalSince1970: TimeInterval(row.int("created_at") ?? 0)),
+            htmlContent: row.string("html_content"),
+            codeLanguage: row.string("code_language"),
+            isSensitive: row.int("is_sensitive") == 1,
+            tags: tags,
+            useCount: row.int("use_count") ?? 0,
+            visualHash: row.string("visual_hash")
+        )
     }
 
     // MARK: - Provider Configs

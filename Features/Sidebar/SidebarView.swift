@@ -6,18 +6,27 @@ import enum AcMindKit.SidebarItem
 // MARK: - Sidebar View
 
 /// 侧边栏导航视图
-/// 使用原生 macOS 风格，支持快捷键导航
+/// 使用固定宽度的自绘布局，避免 macOS sidebar 样式在窗口变窄时自动折叠成图标栏。
 struct SidebarView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var container: ServiceContainer
+    @State private var hoveredItem: SidebarItem?
 
     var body: some View {
-        List(SidebarItem.mainItems, selection: $appState.sidebarSelection) { item in
-            SidebarItemRow(item: item, isSelected: appState.sidebarSelection == item)
-                .tag(item)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                sidebarHeader
+                sidebarSection(title: "核心工作流", items: SidebarItem.coreWorkflow)
+                sidebarSection(title: "伴随能力", items: SidebarItem.companionCapabilities)
+                sidebarSection(title: "系统", items: SidebarItem.systemItems)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
         }
-        .listStyle(.sidebar)
-        .navigationTitle("AcMind")
+        .scrollIndicators(.hidden)
+        .frame(width: AppSurfaceTokens.Layout.sidebarWidth, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(AppSurfaceTokens.sidebarBackground.ignoresSafeArea())
         .toolbar {
             ToolbarItem {
                 Button(action: toggleSidebar) {
@@ -27,16 +36,59 @@ struct SidebarView: View {
             }
         }
         .onAppear {
-            // 设置快捷键处理
             setupKeyboardShortcuts()
         }
     }
 
+    private func sidebarSection(title: String, items: [SidebarItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sidebarSectionHeader(title)
+
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(items) { item in
+                    Button {
+                        appState.selectSidebarItem(item)
+                    } label: {
+                        SidebarItemRow(
+                            item: item,
+                            isSelected: appState.sidebarSelection == item,
+                            isHovered: hoveredItem == item
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHovered in
+                        hoveredItem = isHovered ? item : nil
+                    }
+                }
+            }
+        }
+    }
+
+    private var sidebarHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("AcMind")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+
+            Text("主导航")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 8)
+    }
+
+    private func sidebarSectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .textCase(nil)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
+    }
+
     private func toggleSidebar() {
-        NSApp.keyWindow?.firstResponder?.tryToPerform(
-            #selector(NSSplitViewController.toggleSidebar(_:)),
-            with: nil
-        )
+        appState.toggleSidebar()
     }
 
     private func setupKeyboardShortcuts() {
@@ -49,33 +101,66 @@ struct SidebarView: View {
 struct SidebarItemRow: View {
     let item: SidebarItem
     let isSelected: Bool
+    let isHovered: Bool
+
+    init(item: SidebarItem, isSelected: Bool, isHovered: Bool = false) {
+        self.item = item
+        self.isSelected = isSelected
+        self.isHovered = isHovered
+    }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: item.icon)
-                .frame(width: 20, height: 20)
-                .foregroundStyle(isSelected ? .white : .primary)
+        HStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? Color.accentColor.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+                    .frame(width: 24, height: 24)
 
-            Text(item.title)
-                .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                Image(systemName: item.icon)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(isSelected ? Color.accentColor : AppSurfaceTokens.secondaryText)
+            }
 
-            Spacer()
+            VStack(alignment: .leading, spacing: 0) {
+                Text(item.title)
+                    .font(.system(size: 12.75, weight: isSelected ? .semibold : .regular))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.72)
+                    .layoutPriority(1)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
-            // 快捷键提示
+                if item.group == .companionCapabilities {
+                    Text("伴随能力")
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 6)
+
             if let shortcut = item.shortcut {
                 Text(shortcutDisplay(shortcut))
-                    .font(.system(size: 11))
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
+                    .font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.accentColor : AppSurfaceTokens.secondaryText)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(isSelected ? Color.white.opacity(0.2) : Color.secondary.opacity(0.1))
-                    .cornerRadius(4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isSelected ? Color.accentColor.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
+                    )
             }
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
-        .background(isSelected ? Color.accentColor : Color.clear)
-        .cornerRadius(6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft.opacity(0.72) : Color.clear))
+        )
+        .foregroundStyle(AppSurfaceTokens.primaryText)
         .contentShape(Rectangle())
     }
 

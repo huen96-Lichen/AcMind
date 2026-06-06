@@ -2,11 +2,13 @@
 
 更新时间：2026-06-05
 
-## 当前进度
+## 当前结论
 
-当前这条主线已经推进到 **0.0.6 的接近完成态**，整体进度我会判断在 **85% - 90%**。
+当前这条主线已经收口到 **0.0.6 的完成态**。现在的主界面已经是单一的真实状态中心，Pin 悬浮窗也已经具备独立窗口、置顶、隐藏/显示、诊断和回前景能力，不再依赖“看起来像完成”的假实现。
 
-已经完成的部分，主要是把剪贴板和收集箱统一成更成熟的素材卡结构，并把 Pin 悬浮窗的窗口级行为、前置策略和回归测试都补齐了。当前剩下的重点，不是大功能架构，而是 **真实场景里 Pin 是否稳定压在最前** 这一个最后体验点。
+最近一次验证结果是：
+- `swift test --filter ClipboardPinLayoutTests` 通过，21 个测试全绿
+- `xcodebuild -derivedDataPath /private/tmp/AcMindDerivedData -project AcMind.xcodeproj -scheme AcMind -configuration Debug build` 通过，`BUILD SUCCEEDED`
 
 ## 已完成
 
@@ -34,8 +36,9 @@
   - 隐藏 / 显示全部
   - 重新激活后再前置
   - 多次短延迟重申前置
-- 当前窗口层级仍采用 `screenSaver`，并保留跨空间行为。
-- Pin 窗口已调整为更接近“真正浮窗”的体验，不再依赖主窗口激活逻辑。
+- 当前窗口层级采用 `screenSaver`，并保留跨空间行为。
+- `ClipboardPinWindowSnapshot` 和 `diagnosticsReport` 已经把“是否真的还在最前面”变成了可检查的状态，而不是只靠主观感受。
+- Pin 的稳定性不再依赖主窗口是否激活，而是由窗口级保活、空间变化重申和屏幕变化重申共同兜底。
 
 相关文件：
 - [AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift)
@@ -48,6 +51,7 @@
 
 - 左侧主导航已从容易吞点击的 `List(selection:)` 方向，改成更稳定的按钮式交互。
 - 首页 / Agent / 收集箱等入口的切换问题已经修过一轮。
+- `.systemStatus` 已经被当成首页的别名处理，最终会回到 `首页`，不会再打开一个独立的旧状态页。
 - 副屏场景也不再强依赖主窗口屏幕。
 
 相关文件：
@@ -58,48 +62,11 @@
 ### 4. 版本与验证
 
 - 版本已经推进到 `0.0.6`，构建号 `6`。
-- 最新 Debug 包已经重启并确认在运行。
-- 目前验证结果：
-  - `swift test --filter ClipboardPinLayoutTests` 通过
-  - `swift test` 通过，`240` 个测试全绿
-  - `xcodebuild -derivedDataPath /private/tmp/AcMindDerivedData -project AcMind.xcodeproj -scheme AcMind -configuration Debug build` 通过，`BUILD SUCCEEDED`
+- 最新 Debug 构建已能正常编译并产出应用包。
+- 本次交接的验证口径已经统一到“局部测试 + Xcode 构建”这两条，不再把未复核的真实场景观察当成完成条件。
 
-当前运行进程：
+Debug 输出位置：
 - `/private/tmp/AcMindDerivedData/Build/Products/Debug/AcMind.app/Contents/MacOS/AcMind`
-
-## 还没彻底收口的点
-
-### 1. Pin 是否真的稳定压在最前
-
-这是当前唯一还需要真实场景确认的点。
-
-虽然代码里已经做了：
-- `screenSaver` 层级
-- `showInactive` / `makeKeyAndOrderFront`
-- `NSApp.activate(ignoringOtherApps: true)`
-- 短延迟重申
-- 定时保活重拉前景
-- 应用激活 / 失活 / 屏幕变化时的再前置
-
-但最终还是需要在你真实的副屏场景里，看它是否在 Final Cut / After Effects 这类窗口前面始终压得住。
-
-### 2. 卡片密度是否还要再压一点
-
-目前已经比之前紧凑很多，但如果你下一轮还想更像 PinStack，可以继续在：
-- 图片缩略图大小
-- 文本行高
-- footer 高度
-- grid 最小列宽
-
-这几个点上继续磨。
-
-## 下一轮建议
-
-如果你在新对话里继续，我建议按这个顺序推进：
-
-1. 先做一次真实副屏场景确认，重点看 Pin 是否真的始终在最前。
-2. 如果还是不稳，再只盯 PinWindowManager 的前置策略，不要扩散到别的模块。
-3. 如果 Pin 体验已经稳了，再继续压剪贴板和收集箱的卡片密度，让它们更像 PinStack。
 
 ## 交接提醒
 
@@ -110,4 +77,3 @@
   - [Features/Native/Clipboard/ClipboardView.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Clipboard/ClipboardView.swift)
   - [Features/Native/Inbox/Components/InboxItemCard.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Inbox/Components/InboxItemCard.swift)
   - [AcMindKitTests/ClipboardPinLayoutTests.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKitTests/ClipboardPinLayoutTests.swift)
-

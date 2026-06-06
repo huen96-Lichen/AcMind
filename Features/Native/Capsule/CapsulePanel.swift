@@ -12,8 +12,18 @@ import AcMindKit
 /// 4. 展开更多选项（网页/文件/语音）
 final class CapsulePanel: NSPanel {
     static let shared = CapsulePanel()
+    private let captureService: CaptureServiceProtocol
+    private let voiceService: VoiceServiceProtocol
+    private let storageService: StorageServiceProtocol
 
-    private init() {
+    private init(
+        captureService: CaptureServiceProtocol = CaptureService(),
+        voiceService: VoiceServiceProtocol = VoiceService(),
+        storageService: StorageServiceProtocol = StorageService()
+    ) {
+        self.captureService = captureService
+        self.voiceService = voiceService
+        self.storageService = storageService
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 48),
             styleMask: [.titled, .nonactivatingPanel, .utilityWindow, .hudWindow],
@@ -30,7 +40,11 @@ final class CapsulePanel: NSPanel {
         self.backgroundColor = .clear
 
         // 设置内容视图
-        let contentView = CapsuleContentView()
+        let contentView = CapsuleContentView(
+            captureService: captureService,
+            voiceService: voiceService,
+            storageService: storageService
+        )
         self.contentView = NSHostingView(rootView: contentView)
 
         // 居中显示
@@ -57,6 +71,10 @@ final class CapsulePanel: NSPanel {
 // MARK: - Capsule Content View
 
 struct CapsuleContentView: View {
+    private let captureService: CaptureServiceProtocol
+    private let voiceService: VoiceServiceProtocol
+    private let storageService: StorageServiceProtocol
+
     @State private var isExpanded = false
     @State private var inputText = ""
     @State private var showingScreenshotOptions = false
@@ -73,7 +91,7 @@ struct CapsuleContentView: View {
                 Button(action: { toggleExpand() }) {
                     Image(systemName: isExpanded ? "xmark.circle.fill" : "plus.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
                 }
                 .buttonStyle(PlainButtonStyle())
 
@@ -153,7 +171,7 @@ struct CapsuleContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .frame(width: 400)
+        .frame(width: 360)
         .alert("错误", isPresented: $showError) {
             Button("确定") { errorMessage = nil }
         } message: {
@@ -187,7 +205,6 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
                 let result = try await captureService.captureScreenshot(mode: mode)
                 print("截图成功: \(result.sourceItem.id)")
 
@@ -211,7 +228,6 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
                 if let result = try await captureService.captureFromClipboard() {
                     print("剪贴板采集成功: \(result.sourceItem.id)")
                 } else {
@@ -238,7 +254,6 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
                 let result = try await captureService.captureFromManualText(inputText)
                 print("文本采集成功: \(result.sourceItem.id)")
 
@@ -262,7 +277,6 @@ struct CapsuleContentView: View {
 
         Task {
             do {
-                let captureService = ServiceContainer.shared.captureService
                 let result = try await captureService.captureFromWebpage(url: url)
                 print("网页采集成功: \(result.sourceItem.id)")
 
@@ -297,7 +311,6 @@ struct CapsuleContentView: View {
 
                 Task {
                     do {
-                        let captureService = ServiceContainer.shared.captureService
                         let result = try await captureService.captureFromFile(url: url)
                         print("文件采集成功: \(result.sourceItem.id)")
 
@@ -323,6 +336,16 @@ struct CapsuleContentView: View {
     @State private var recordingDuration: TimeInterval = 0
     @State private var recordingTimer: Timer?
 
+    init(
+        captureService: CaptureServiceProtocol = CaptureService(),
+        voiceService: VoiceServiceProtocol = VoiceService(),
+        storageService: StorageServiceProtocol = StorageService()
+    ) {
+        self.captureService = captureService
+        self.voiceService = voiceService
+        self.storageService = storageService
+    }
+
     private func captureVoice() {
         guard SettingsLocalPreferences.isVoiceInputEnabled() else {
             errorMessage = "说入法输入已在设置中关闭"
@@ -341,7 +364,6 @@ struct CapsuleContentView: View {
 
     private func startVoiceRecording() async {
         do {
-            let voiceService = ServiceContainer.shared.voiceService
             try await voiceService.startRecording()
 
             await MainActor.run {
@@ -359,7 +381,6 @@ struct CapsuleContentView: View {
 
     private func stopVoiceRecording() async {
         do {
-            let voiceService = ServiceContainer.shared.voiceService
             let sourceItemId = try await voiceService.stopRecording()
 
             await MainActor.run {
@@ -394,7 +415,7 @@ struct CapsuleContentView: View {
     }
 
     private func waitForVoiceTranscription(sourceItemId: String) async {
-        let storage = ServiceContainer.shared.storageService
+        let storage = storageService
         var attempts = 0
         let maxAttempts = 30
 
@@ -456,7 +477,7 @@ struct ScreenshotOptionsView: View {
             }
         }
         .padding()
-        .frame(width: 280)
+        .frame(width: 240)
     }
 }
 
@@ -474,7 +495,7 @@ struct ScreenshotModeButton: View {
                     .font(.caption)
             }
             .frame(width: 70, height: 60)
-            .background(Color.secondary.opacity(0.1))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())

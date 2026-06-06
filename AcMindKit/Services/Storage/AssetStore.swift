@@ -223,13 +223,13 @@ public actor AssetStore: AssetStoreProtocol {
     // MARK: - File Operations
     
     /// Load image from asset
-    public func loadImage(asset: AssetFile) -> NSImage? {
+    public nonisolated func loadImage(asset: AssetFile) -> NSImage? {
         guard asset.kind == .image else { return nil }
         return NSImage(contentsOfFile: asset.filePath)
     }
 
     /// Load a display-sized image without decoding the original full-resolution bitmap.
-    public func loadImage(asset: AssetFile, maxPixelSize: CGFloat) -> NSImage? {
+    public nonisolated func loadImage(asset: AssetFile, maxPixelSize: CGFloat) -> NSImage? {
         guard asset.kind == .image else { return nil }
         guard maxPixelSize > 0 else { return loadImage(asset: asset) }
 

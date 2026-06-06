@@ -27,7 +27,7 @@ struct EventEditorView: View {
                     dismiss()
                 }
                 .font(.system(size: 13))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 
@@ -40,10 +40,10 @@ struct EventEditorView: View {
                     validateAndCreate()
                 }
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppSurfaceTokens.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 5)
-                .background(Color.accentColor)
+                .background(AppSurfaceTokens.accentBlue)
                 .cornerRadius(6)
                 .disabled(!canCreate)
             }
@@ -56,7 +56,7 @@ struct EventEditorView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("标题")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     TextField("输入日程标题", text: $title)
                         .font(.system(size: 14))
@@ -67,7 +67,7 @@ struct EventEditorView: View {
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                         )
                         .onAppear {
                             DispatchQueue.main.async {
@@ -79,7 +79,7 @@ struct EventEditorView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("分类")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     HStack(spacing: 6) {
                         ForEach(viewModel.categories) { category in
@@ -103,7 +103,7 @@ struct EventEditorView: View {
                                     RoundedRectangle(cornerRadius: 6)
                                         .stroke(selectedCategoryId == category.id
                                             ? category.color.opacity(0.3)
-                                            : Color(NSColor.separatorColor), lineWidth: 0.5)
+                                            : AppSurfaceTokens.separator, lineWidth: 0.5)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -120,7 +120,7 @@ struct EventEditorView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("开始时间")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             HStack(spacing: 4) {
                                 Picker("时", selection: $startHour) {
@@ -150,14 +150,14 @@ struct EventEditorView: View {
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                    .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                             )
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("时长")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             Picker("时长", selection: $durationMinutes) {
                                 ForEach(durationOptions, id: \.self) { mins in
@@ -173,18 +173,18 @@ struct EventEditorView: View {
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                    .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                             )
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("结束时间")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             Text(endTimeString)
                                 .font(.system(size: 13))
-                                .foregroundStyle(Color.primary)
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(AppSurfaceTokens.cardBackgroundSoft)
@@ -196,25 +196,25 @@ struct EventEditorView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
                         .font(.system(size: 12))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text(dateString)
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 if let error = validationError ?? viewModel.createError {
                     VStack(alignment: .leading, spacing: 4) {
                         Image(systemName: "exclamationmark.circle")
                             .font(.system(size: 12))
-                            .foregroundStyle(Color.red)
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
                         Text(error)
                             .font(.system(size: 12))
-                            .foregroundStyle(Color.red)
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
                             .lineLimit(nil)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
-                    .background(Color.red.opacity(0.08))
+                    .background(AppSurfaceTokens.accentOrange.opacity(0.08))
                     .cornerRadius(8)
                 }
             }

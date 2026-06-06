@@ -163,6 +163,26 @@ final class ContextCaptureServiceTests: XCTestCase {
         XCTAssertEqual(detectAppType(from: "com.spotify.client"), .other)
     }
 
+    // MARK: - Surrounding Text
+
+    func testSurroundingTextClampsOutOfBoundsSelectionWithoutCrashing() {
+        let result = ContextCaptureService.surroundingText(
+            from: "",
+            selectedRange: CFRange(location: 3_254, length: 50)
+        )
+
+        XCTAssertNil(result)
+    }
+
+    func testSurroundingTextClampsSelectionAtEndOfText() {
+        let result = ContextCaptureService.surroundingText(
+            from: "Hello world",
+            selectedRange: CFRange(location: 99, length: 10)
+        )
+
+        XCTAssertEqual(result, "Hello world[光标]")
+    }
+
     // MARK: - AppType Properties
 
     func testAppTypeRecommendedPolishModes() {

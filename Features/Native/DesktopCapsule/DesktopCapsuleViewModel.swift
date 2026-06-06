@@ -13,6 +13,9 @@ final class DesktopCapsuleViewModel: ObservableObject {
     @Published var isExecuting: Bool = false
     @Published var isHoveringPanel: Bool = false
 
+    private let captureService: CaptureServiceProtocol
+    private let panelController: DesktopCapsulePanelControlling
+
     // MARK: - Settings
 
     @Published private(set) var settings: DesktopCapsuleSettings = .default
@@ -22,7 +25,12 @@ final class DesktopCapsuleViewModel: ObservableObject {
         settings.enabledActions
     }
 
-    init() {
+    init(
+        captureService: CaptureServiceProtocol = CaptureService(),
+        panelController: DesktopCapsulePanelControlling
+    ) {
+        self.captureService = captureService
+        self.panelController = panelController
         settingsObserver = NotificationCenter.default.addObserver(
             forName: .desktopCapsuleSettingsDidChange,
             object: nil,
@@ -61,9 +69,9 @@ final class DesktopCapsuleViewModel: ObservableObject {
         // 调整窗口大小
         if isExpanded {
             let width = calculateExpandedWidth()
-            DesktopCapsulePanel.shared.resizeToExpanded(width: width)
+            panelController.resizeToExpanded(width: width)
         } else {
-            DesktopCapsulePanel.shared.resizeToCollapsed()
+            panelController.resizeToCollapsed()
         }
     }
 
@@ -72,7 +80,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
         withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
             isExpanded = false
         }
-        DesktopCapsulePanel.shared.resizeToCollapsed()
+        panelController.resizeToCollapsed()
     }
 
     private func calculateExpandedWidth() -> CGFloat {
@@ -126,21 +134,20 @@ final class DesktopCapsuleViewModel: ObservableObject {
         }
 
         // 隐藏胶囊
-        DesktopCapsulePanel.shared.hide()
+        panelController.hide()
 
         do {
-            let captureService = ServiceContainer.shared.captureService
             let result = try await captureService.captureScreenshot(mode: .fullscreen)
             print("截图成功: \(result.sourceItem.id)")
 
             // 重新显示胶囊
             await MainActor.run {
-                DesktopCapsulePanel.shared.show()
+                self.panelController.show(at: nil)
             }
         } catch {
             print("截图失败: \(error)")
             await MainActor.run {
-                DesktopCapsulePanel.shared.show()
+                self.panelController.show(at: nil)
             }
         }
     }
@@ -151,20 +158,19 @@ final class DesktopCapsuleViewModel: ObservableObject {
             return
         }
 
-        DesktopCapsulePanel.shared.hide()
+        panelController.hide()
 
         do {
-            let captureService = ServiceContainer.shared.captureService
             let result = try await captureService.captureScrollingScreenshot()
             print("滚动截图成功: \(result.sourceItem.id)")
 
             await MainActor.run {
-                DesktopCapsulePanel.shared.show()
+                self.panelController.show(at: nil)
             }
         } catch {
             print("滚动截图失败: \(error)")
             await MainActor.run {
-                DesktopCapsulePanel.shared.show()
+                self.panelController.show(at: nil)
             }
         }
     }
@@ -187,7 +193,6 @@ final class DesktopCapsuleViewModel: ObservableObject {
         }
 
         do {
-            let captureService = ServiceContainer.shared.captureService
             let result = try await captureService.captureFromWebpage(url: url)
             print("URL转换成功: \(result.sourceItem.id)")
 
@@ -205,7 +210,6 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private func executeClipboard() async {
         do {
-            let captureService = ServiceContainer.shared.captureService
             if let result = try await captureService.captureFromClipboard() {
                 print("剪贴板采集成功: \(result.sourceItem.id)")
             }
@@ -221,7 +225,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private func executeFileCapture() async {
         // 隐藏胶囊
-        DesktopCapsulePanel.shared.hide()
+        panelController.hide()
 
         await MainActor.run {
             let panel = NSOpenPanel()
@@ -229,14 +233,13 @@ final class DesktopCapsuleViewModel: ObservableObject {
             panel.canChooseDirectories = false
             panel.allowsMultipleSelection = false
 
-            guard panel.runModal() == .OK, let url = panel.url else {
-                DesktopCapsulePanel.shared.show()
+                guard panel.runModal() == .OK, let url = panel.url else {
+                self.panelController.show(at: nil)
                 return
             }
 
             Task {
                 do {
-                    let captureService = ServiceContainer.shared.captureService
                     let result = try await captureService.captureFromFile(url: url)
                     print("文件采集成功: \(result.sourceItem.id)")
                 } catch {
@@ -244,7 +247,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
                 }
 
                 await MainActor.run {
-                    DesktopCapsulePanel.shared.show()
+                    self.panelController.show(at: nil)
                 }
             }
         }
@@ -301,7 +304,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
         guard wasExpanded else { return }
         let width = calculateExpandedWidth()
-        DesktopCapsulePanel.shared.resizeToExpanded(width: width)
+        panelController.resizeToExpanded(width: width)
     }
 
     private func promptForWebpageURL() async -> String? {

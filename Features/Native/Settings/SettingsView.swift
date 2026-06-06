@@ -47,74 +47,50 @@ struct SettingsView: View {
     @State private var selectedCategory: SettingsCategory = .general
     @State private var searchQuery = ""
     @State private var recordingShortcutTarget: ShortcutRecordingTarget?
+    private let cloudSyncService: CloudSyncServiceProtocol
+
+    init(cloudSyncService: CloudSyncServiceProtocol = CloudSyncService(storage: StorageService())) {
+        self.cloudSyncService = cloudSyncService
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // 左侧导航
-            VStack(spacing: 0) {
-                // 搜索框
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(Color.secondary)
-                    TextField("搜索设置...", text: $searchQuery)
-                        .textFieldStyle(.plain)
-                        .font(.caption)
-                }
-                .padding(8)
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
-                .padding(12)
+        WorkspacePageShell(
+            title: "设置",
+            subtitle: "管理应用偏好",
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                settingsSidebar
+            },
+            content: {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        settingsHeader
 
-                Divider()
-
-                // 导航列表
-                List(selection: $selectedCategory) {
-                    ForEach(SettingsCategory.allCases) { category in
-                        HStack(spacing: 12) {
-                            Image(systemName: category.icon)
-                                .foregroundStyle(AppSurfaceTokens.accentBlue)
-                            Text(category.displayName)
+                        switch selectedCategory {
+                        case .general:
+                            GeneralSettingsPage(viewModel: viewModel)
+                        case .companion:
+                            CompanionSettingsPage(viewModel: viewModel, recordingShortcutTarget: $recordingShortcutTarget)
+                        case .aiModels:
+                            AIModelsSettingsPage(viewModel: viewModel)
+                        case .dataKnowledge:
+                            DataKnowledgeSettingsPage(viewModel: viewModel)
+                        case .captureInput:
+                            CaptureInputSettingsPage(viewModel: viewModel, cloudSyncService: cloudSyncService)
+                        case .security:
+                            SecuritySettingsPage(viewModel: viewModel)
+                        case .about:
+                            AboutSettingsPage(viewModel: viewModel)
                         }
-                        .tag(category)
-                        .padding(.vertical, 6)
                     }
+                    .padding(24)
                 }
-                .listStyle(.sidebar)
-                .scrollDisabled(true)
+            },
+            trailingRail: {
+                settingsSummaryRail
             }
-            .frame(width: 180)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-
-            // 右侧内容
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    // 页面标题区域
-                    settingsHeader
-
-                    // 设置内容
-                    switch selectedCategory {
-                    case .general:
-                        GeneralSettingsPage(viewModel: viewModel)
-                    case .companion:
-                        CompanionSettingsPage(viewModel: viewModel, recordingShortcutTarget: $recordingShortcutTarget)
-                    case .aiModels:
-                        AIModelsSettingsPage(viewModel: viewModel)
-                    case .dataKnowledge:
-                        DataKnowledgeSettingsPage(viewModel: viewModel)
-                    case .captureInput:
-                        CaptureInputSettingsPage(viewModel: viewModel)
-                    case .security:
-                        SecuritySettingsPage(viewModel: viewModel)
-                    case .about:
-                        AboutSettingsPage(viewModel: viewModel)
-                    }
-                }
-                .padding(24)
-            }
-            .frame(minWidth: 500)
-        }
-        .frame(minWidth: 700, minHeight: 600)
+        )
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -129,6 +105,68 @@ struct SettingsView: View {
         }
     }
 
+    private var settingsSidebar: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                TextField("搜索设置...", text: $searchQuery)
+                    .textFieldStyle(.plain)
+                    .font(.caption)
+            }
+            .padding(8)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+            .padding(12)
+
+            Divider()
+
+            List(selection: $selectedCategory) {
+                ForEach(SettingsCategory.allCases) { category in
+                    HStack(spacing: 12) {
+                        Image(systemName: category.icon)
+                            .foregroundStyle(AppSurfaceTokens.accentBlue)
+                        Text(category.displayName)
+                    }
+                    .tag(category)
+                    .padding(.vertical, 6)
+                }
+            }
+            .listStyle(.sidebar)
+            .scrollDisabled(true)
+        }
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+    }
+
+    private var settingsSummaryRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "当前分类", subtitle: "固定结构中的上下文提示", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(selectedCategory.displayName)
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(selectedCategory.description)
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                }
+
+                AppSurfaceCard(title: "视图状态", subtitle: "真实可见内容", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("搜索: \(searchQuery.isEmpty ? "无" : searchQuery)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Text("快捷键录制: \(recordingShortcutTarget == nil ? "未开启" : "进行中")")
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
     private var settingsHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(selectedCategory.displayName)
@@ -136,7 +174,7 @@ struct SettingsView: View {
                 .fontWeight(.semibold)
             Text(selectedCategory.description)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(.bottom, 20)
     }
@@ -195,16 +233,16 @@ struct ShortcutRecorderSheet: View {
                     .fontWeight(.semibold)
                 Text("按下你想要绑定的组合键，然后点击保存。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             ShortcutCaptureField(shortcut: $shortcut)
                 .frame(height: 120)
-                .background(Color.secondary.opacity(0.06))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                 .overlay(
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
-                        .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
                 )
 
             HStack {
@@ -340,7 +378,7 @@ struct SettingsCard<Content: View>: View {
                 if let description = description {
                     Text(description)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
             content
@@ -348,7 +386,7 @@ struct SettingsCard<Content: View>: View {
         .padding(16)
         .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .shadow(color: AppSurfaceTokens.primaryText.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -387,10 +425,11 @@ struct GeneralSettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("启用通知", isOn: $viewModel.notificationsEnabled)
                     Toggle("任务完成时通知", isOn: $viewModel.taskCompletedNotificationsEnabled)
-                    SettingsInfoRow(
-                        label: "更新可用时通知",
-                        value: "仅为偏好，更新检查暂未接入"
-                    )
+                    Toggle("更新可用时通知", isOn: $viewModel.updateAvailableNotificationsEnabled)
+                    Text("该开关只控制检查更新时是否弹出提醒，下方的「检查更新」按钮已经可以直接使用。")
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -602,7 +641,7 @@ struct AIModelsSettingsPage: View {
 
                     if viewModel.providers.isEmpty {
                         Text("暂无提供商，请添加")
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
@@ -635,7 +674,7 @@ struct AIModelsSettingsPage: View {
                             Spacer()
                             Text("实时")
                                 .font(.caption)
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
 
                         HStack(spacing: 10) {
@@ -722,10 +761,10 @@ struct DataKnowledgeSettingsPage: View {
                         if !viewModel.vaultPath.isEmpty {
                             HStack {
                                 Image(systemName: viewModel.validateVaultPath() ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundStyle(viewModel.validateVaultPath() ? .green : .red)
+                                    .foregroundStyle(viewModel.validateVaultPath() ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
                                 Text(viewModel.validateVaultPath() ? "路径有效" : "路径无效")
                                     .font(.caption)
-                                    .foregroundStyle(viewModel.validateVaultPath() ? .green : .red)
+                                    .foregroundStyle(viewModel.validateVaultPath() ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
                             }
                         }
                     }
@@ -771,7 +810,7 @@ struct DataKnowledgeSettingsPage: View {
                             .font(.system(.body, design: .monospaced))
                             .frame(minHeight: 120)
                             .padding(8)
-                            .background(Color.secondary.opacity(0.08))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
                 }
@@ -826,6 +865,15 @@ struct DataKnowledgeSettingsPage: View {
 struct CaptureInputSettingsPage: View {
     @ObservedObject var viewModel: SettingsViewModel
     @State private var cloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "com.acmind.cloudSync.enabled")
+    private let cloudSyncService: CloudSyncServiceProtocol
+
+    init(
+        viewModel: SettingsViewModel,
+        cloudSyncService: CloudSyncServiceProtocol = CloudSyncService(storage: StorageService())
+    ) {
+        self.viewModel = viewModel
+        self.cloudSyncService = cloudSyncService
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -841,31 +889,36 @@ struct CaptureInputSettingsPage: View {
                     Toggle("启用截图捕获", isOn: $viewModel.captureScreenshotEnabled)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("截图打码")
-                                .font(.subheadline)
-                            Text("即将推出")
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(.orange.opacity(0.2))
-                                .foregroundStyle(.orange)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        Toggle("自动打码敏感内容", isOn: $viewModel.captureAutoRedactionEnabled)
+
+                        if viewModel.captureAutoRedactionEnabled {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("打码模式")
+                                    .font(.subheadline)
+
+                                Picker("", selection: $viewModel.captureCensorMode) {
+                                    ForEach(CensorMode.allCases, id: \.self) { mode in
+                                        Text(mode.displayName).tag(mode)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+
+                                Text("截图会先在本地识别敏感内容，再按当前打码模式处理后保存。")
+                                    .font(.caption)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        } else {
+                            Text("关闭后截图会直接保存，不再进行自动打码。")
+                                .font(.caption)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        SettingsInfoRow(
-                            label: "自动打码敏感内容",
-                            value: "暂未接入"
-                        )
-
-                        SettingsInfoRow(
-                            label: "打码模式",
-                            value: "暂不生效"
-                        )
-
-                        Text("截图会先在本地识别敏感内容，再按当前打码模式处理后保存。当前仅展示状态，控制暂未接入。")
+                        Text("截图捕获会受系统屏幕录制权限影响。")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -908,10 +961,10 @@ struct CaptureInputSettingsPage: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("截图自动打码人脸、个人信息检测和打码模式已经接入截图保存流程。")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("功能仍在持续完善。")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
                 }
             }
 
@@ -974,15 +1027,15 @@ struct CaptureInputSettingsPage: View {
             }
 
             SettingsCard(title: "云端同步", description: "配置数据云端同步") {
-                Toggle("启用云端同步", isOn: $cloudSyncEnabled)
+                    Toggle("启用云端同步", isOn: $cloudSyncEnabled)
                     .onChange(of: cloudSyncEnabled) { _, newValue in
-                        Task {
-                            UserDefaults.standard.set(newValue, forKey: "com.acmind.cloudSync.enabled")
+                        Task { @MainActor in
+                            await cloudSyncService.setSyncEnabled(newValue)
                         }
                     }
                 Text(cloudSyncEnabled ? "已开启：数据将通过 iCloud 同步" : "已关闭：数据仅保存在本地")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             saveButton
@@ -1157,10 +1210,10 @@ struct AboutSettingsPage: View {
                                 .fontWeight(.bold)
                             Text("AI 驱动的知识助手")
                                 .font(.caption)
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Text("版本 \(viewModel.diagnosticAppVersionString)")
                                 .font(.caption)
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
                     }
 
@@ -1190,7 +1243,7 @@ struct AboutSettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("这里不再展示诊断看板，只保留跳转。")
                         .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Button("查看状态") {
                         (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                     }
@@ -1225,7 +1278,7 @@ struct SettingsShortcutRow: View {
                 .font(.system(.body, design: .monospaced))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.2))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(4)
         }
         .padding(.vertical, 4)
@@ -1247,7 +1300,7 @@ struct ShortcutConfigRow: View {
                     .font(.system(.body, design: .monospaced))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.2))
+                    .background(AppSurfaceTokens.cardBackgroundSoft)
                     .cornerRadius(4)
                 Button("录制", action: onRecord)
                     .controlSize(.small)
@@ -1267,8 +1320,8 @@ struct PositionButton: View {
         Button(title, action: action)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isSelected ? AppSurfaceTokens.accentBlue : Color.secondary.opacity(0.1))
-            .foregroundColor(isSelected ? .white : .primary)
+            .background(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.cardBackgroundSoft)
+            .foregroundStyle(isSelected ? .white : AppSurfaceTokens.primaryText)
             .cornerRadius(6)
             .font(.caption)
             .fontWeight(isSelected ? .semibold : .regular)
@@ -1292,11 +1345,11 @@ struct StrategyButton: View {
                     .fontWeight(.medium)
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             .padding(12)
-            .background(selected ? AppSurfaceTokens.accentBlue.opacity(0.1) : Color.secondary.opacity(0.05))
-            .foregroundStyle(selected ? AppSurfaceTokens.accentBlue : Color.primary)
+            .background(selected ? AppSurfaceTokens.accentBlue.opacity(0.1) : AppSurfaceTokens.cardBackgroundSoft)
+            .foregroundStyle(selected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.primaryText)
             .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             .frame(width: 90)
         }
@@ -1317,19 +1370,19 @@ struct ProviderCard: View {
                         .fontWeight(.medium)
                     if provider.enabled {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.green)
+                            .foregroundStyle(AppSurfaceTokens.accentGreen)
                     } else {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
                 HStack(spacing: 8) {
                     Text(provider.providerType.displayName)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("模型：\(provider.modelId)")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
 
@@ -1351,11 +1404,11 @@ struct ProviderCard: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .foregroundStyle(Color.red)
+                .foregroundStyle(AppSurfaceTokens.accentOrange)
             }
         }
         .padding(12)
-        .background(Color.secondary.opacity(0.05))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
     }
 }
@@ -1369,16 +1422,16 @@ struct StatBox: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             Text(value)
                 .font(.title2)
                 .fontWeight(.semibold)
             Text(change)
                 .font(.caption)
-                .foregroundStyle(.green)
+                .foregroundStyle(AppSurfaceTokens.accentGreen)
         }
         .padding(12)
-        .background(Color.secondary.opacity(0.05))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
         .frame(maxWidth: .infinity)
     }
@@ -1392,7 +1445,7 @@ struct SettingsInfoRow: View {
         HStack {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
             Text(value)
                 .font(.caption)
@@ -1430,12 +1483,12 @@ struct SettingsPathRow: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
-                .background(Color.secondary.opacity(0.08))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
 
             Text(note)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
     }
 }
@@ -1454,7 +1507,7 @@ struct PermissionRow: View {
                     .font(.body)
                 Text(description)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -1484,7 +1537,7 @@ struct PermissionRow: View {
 
                 case .authorized:
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.green)
+                        .foregroundStyle(AppSurfaceTokens.accentGreen)
                 }
             }
         }
@@ -1517,19 +1570,19 @@ struct StatusBadge: View {
 
     private var backgroundColor: Color {
         switch status {
-        case .unknown: return Color.gray.opacity(0.2)
-        case .notDetermined, .requesting: return Color.orange.opacity(0.2)
-        case .denied, .restricted, .needsSystemSettings, .failed: return Color.red.opacity(0.2)
-        case .authorized: return Color.green.opacity(0.2)
+        case .unknown: return AppSurfaceTokens.secondaryText.opacity(0.16)
+        case .notDetermined, .requesting: return AppSurfaceTokens.accentOrange.opacity(0.18)
+        case .denied, .restricted, .needsSystemSettings, .failed: return AppSurfaceTokens.accentOrange.opacity(0.22)
+        case .authorized: return AppSurfaceTokens.accentGreen.opacity(0.18)
         }
     }
 
     private var foregroundColor: Color {
         switch status {
-        case .unknown: return .gray
-        case .notDetermined, .requesting: return .orange
-        case .denied, .restricted, .needsSystemSettings, .failed: return .red
-        case .authorized: return .green
+        case .unknown: return AppSurfaceTokens.secondaryText
+        case .notDetermined, .requesting: return AppSurfaceTokens.accentOrange
+        case .denied, .restricted, .needsSystemSettings, .failed: return AppSurfaceTokens.accentOrange
+        case .authorized: return AppSurfaceTokens.accentGreen
         }
     }
 }

@@ -94,6 +94,7 @@ private final class AgentQuickAskAIRuntimeMock: AIRuntimeProtocol, @unchecked Se
     func addProvider(_ config: ProviderConfig) async throws {}
     func updateProvider(_ config: ProviderConfig) async throws {}
     func removeProvider(id: String) async throws {}
+    func setDefaultProvider(id: String) throws {}
     func healthCheck(providerId: String) async throws -> Bool { true }
     func listModels(providerId: String) async throws -> [String] { [] }
     func listJobs() async throws -> [ProcessJob] { [] }

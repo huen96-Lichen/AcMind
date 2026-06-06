@@ -263,7 +263,11 @@ struct DynamicContinentSchedulePage: View {
 }
 
 struct DynamicContinentSystemStatusPage: View {
-    @StateObject private var viewModel = SystemStatusViewModel()
+    @StateObject private var viewModel: SystemStatusViewModel
+
+    init(systemStatusService: SystemStatusService) {
+        _viewModel = StateObject(wrappedValue: SystemStatusViewModel(service: systemStatusService))
+    }
 
     var body: some View {
         NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {

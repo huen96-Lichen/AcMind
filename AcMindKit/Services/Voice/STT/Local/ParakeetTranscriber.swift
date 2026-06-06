@@ -70,6 +70,7 @@ private final class ParakeetRealtimeSession: RealtimeTranscriptionSession, @unch
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var accumulatedText: String = ""
+    public var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)?
     
     init(modelFolder: String) {
         self.modelFolder = modelFolder

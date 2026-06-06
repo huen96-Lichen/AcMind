@@ -35,7 +35,7 @@ struct JSONFormatterPanel: View {
 
                 Text("粘贴 JSON，直接美化、压缩、校验并复制结果。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -57,7 +57,7 @@ struct JSONFormatterPanel: View {
 
             Text("如果是 JSON 片段，面板会先解析再重新输出；如果解析失败，会直接告诉你哪里不合法。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -87,7 +87,7 @@ struct JSONFormatterPanel: View {
                 .frame(minHeight: 220)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
 
             HStack(spacing: 10) {
@@ -111,13 +111,13 @@ struct JSONFormatterPanel: View {
 
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -166,7 +166,7 @@ struct JSONFormatterPanel: View {
                 .frame(minHeight: 220)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
         }
         .padding(16)
@@ -330,7 +330,7 @@ struct Base64CodecPanel: View {
 
                 Text("文本和 Base64 互转，支持直接复制结果。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -352,7 +352,7 @@ struct Base64CodecPanel: View {
 
             Text("如果解码后的内容不是 UTF-8 文本，面板会转成十六进制预览，方便你确认原始字节。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -383,7 +383,7 @@ struct Base64CodecPanel: View {
                 .frame(minHeight: 220)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
 
             HStack(spacing: 10) {
@@ -406,13 +406,13 @@ struct Base64CodecPanel: View {
 
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -461,7 +461,7 @@ struct Base64CodecPanel: View {
                 .frame(minHeight: 220)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
         }
         .padding(16)
@@ -640,7 +640,7 @@ struct MarkdownCleanerPanel: View {
 
                 Text("清理多余空行、尾随空格和一些常见排版噪音。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -662,7 +662,7 @@ struct MarkdownCleanerPanel: View {
 
             Text("会保留代码块内容，减少连着的空行，并清掉尾随空格。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -692,7 +692,7 @@ struct MarkdownCleanerPanel: View {
                 .frame(minHeight: 220)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
 
             HStack(spacing: 10) {
@@ -708,13 +708,13 @@ struct MarkdownCleanerPanel: View {
 
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -747,7 +747,7 @@ struct MarkdownCleanerPanel: View {
                 .frame(minHeight: 240)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
         }
         .padding(16)
@@ -968,7 +968,7 @@ struct TextComparePanel: View {
 
                 Text("逐行比较两段文本，并给出删除、插入和相同内容。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -990,7 +990,7 @@ struct TextComparePanel: View {
 
             Text("这是逐行 LCS 对比，足够应付大多数文案、配置和 Markdown 变化。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -1020,40 +1020,40 @@ struct TextComparePanel: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("左侧文本")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     TextEditor(text: $viewModel.leftText)
                         .font(.system(.body, design: .monospaced))
                         .frame(minHeight: 210)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                         )
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("右侧文本")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     TextEditor(text: $viewModel.rightText)
                         .font(.system(.body, design: .monospaced))
                         .frame(minHeight: 210)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                         )
                 }
             }
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1107,7 +1107,7 @@ struct TextComparePanel: View {
 
             Text(viewModel.summaryText.isEmpty ? "比较完成后会显示摘要" : viewModel.summaryText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 6) {
@@ -1120,7 +1120,7 @@ struct TextComparePanel: View {
             .frame(minHeight: 260)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
             )
         }
         .padding(16)
@@ -1395,9 +1395,9 @@ struct DiffLineRow: View {
         case .same:
             return Color.clear
         case .insert:
-            return Color.green.opacity(0.08)
+            return AppSurfaceTokens.accentGreen.opacity(0.08)
         case .delete:
-            return Color.red.opacity(0.08)
+            return AppSurfaceTokens.accentOrange.opacity(0.08)
         }
     }
 
@@ -1416,12 +1416,12 @@ struct DiffLineRow: View {
         HStack(alignment: .top, spacing: 12) {
             Text(line.leftLineNumber.map(String.init) ?? " ")
                 .font(.caption2.monospacedDigit())
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: 36, alignment: .trailing)
 
             Text(line.rightLineNumber.map(String.init) ?? " ")
                 .font(.caption2.monospacedDigit())
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: 36, alignment: .trailing)
 
             Text(marker)
@@ -1431,7 +1431,7 @@ struct DiffLineRow: View {
 
             Text(line.text.isEmpty ? " " : line.text)
                 .font(.system(.body, design: .monospaced))
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(AppSurfaceTokens.primaryText)
                 .textSelection(.enabled)
 
             Spacer(minLength: 0)
@@ -1832,7 +1832,7 @@ struct SRTTFCPXMLPanel: View {
                     .frame(height: 600)
 
                 rightPanel
-                    .frame(width: 280)
+                    .frame(width: 240)
             }
             .padding(20)
 
@@ -1840,7 +1840,7 @@ struct SRTTFCPXMLPanel: View {
 
             bottomBar
         }
-        .frame(width: 1100, height: 700)
+        .frame(width: 1040, height: 700)
         .background(AppSurfaceTokens.background)
     }
 
@@ -1853,7 +1853,7 @@ struct SRTTFCPXMLPanel: View {
 
                 Text("将 SRT 字幕文件转换为 Final Cut Pro 的 FCPXML 格式。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -1878,7 +1878,7 @@ struct SRTTFCPXMLPanel: View {
 
                 Text("\(viewModel.subtitles.count) 条")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Button {
                     viewModel.loadFromClipboard()
@@ -1902,7 +1902,7 @@ struct SRTTFCPXMLPanel: View {
             .frame(minHeight: 340)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
             )
 
             if !viewModel.originalSubtitles.isEmpty {
@@ -1995,7 +1995,7 @@ struct SRTTFCPXMLPanel: View {
                     HStack {
                         Text("\(viewModel.width) × \(viewModel.height)")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
             }
@@ -2107,12 +2107,12 @@ struct SRTTFCPXMLPanel: View {
             if let error = viewModel.errorMessage {
                 Text(error)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
             }
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
     }
@@ -2126,7 +2126,7 @@ struct SubtitleRow: View {
         HStack(alignment: .top, spacing: 12) {
             Text("\(subtitle.index)")
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: 30, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -2137,7 +2137,7 @@ struct SubtitleRow: View {
 
                 Text("\(subtitle.startTimeString) → \(subtitle.endTimeString)")
                     .font(.caption2.monospacedDigit())
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -2147,7 +2147,7 @@ struct SubtitleRow: View {
             } label: {
                 Image(systemName: "trash")
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
             }
             .buttonStyle(.plain)
         }

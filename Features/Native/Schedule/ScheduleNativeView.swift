@@ -86,7 +86,7 @@ private struct ScheduleEventEditorView: View {
                     viewModel.closeCreateEvent()
                     dismiss()
                 }
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 

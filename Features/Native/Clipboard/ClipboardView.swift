@@ -3,16 +3,20 @@ import AppKit
 import AcMindKit
 
 struct ClipboardView: View {
-    @StateObject private var viewModel = ClipboardViewModel()
+    @EnvironmentObject private var serviceContainer: ServiceContainer
+    @StateObject private var viewModel: ClipboardViewModel
     let clipboardPinActions: ClipboardPinActions
     @State private var selectedSidebarItem: String? = "all"
     @State private var viewMode: ViewMode = .grid
     @State private var selectedItem: ClipboardItem?
     @State private var pinWindowCount: Int = 0
-    private let contentTypeFilters: [ClipboardContentType?] = [nil, .text, .image, .file, .url]
+    private let contentTypeFilters: [ClipboardContentType?] = [nil, .text, .image, .file, .url, .richText, .code, .video]
 
     init(clipboardPinActions: ClipboardPinActions) {
         self.clipboardPinActions = clipboardPinActions
+        _viewModel = StateObject(wrappedValue: ClipboardViewModel(
+            clipboardService: ServiceContainer.shared.clipboardService
+        ))
     }
 
     private var sidebarSections: [SecondarySidebarSection] {
@@ -25,7 +29,9 @@ struct ClipboardView: View {
                     SecondarySidebarItem(id: "text", title: "文本", icon: "text.quote"),
                     SecondarySidebarItem(id: "link", title: "链接", icon: "link"),
                     SecondarySidebarItem(id: "image", title: "图片", icon: "photo"),
-                    SecondarySidebarItem(id: "code", title: "代码", icon: "chevron.left.forwardslash.chevron.right")
+                    SecondarySidebarItem(id: "richText", title: "富文本", icon: "doc.richtext"),
+                    SecondarySidebarItem(id: "code", title: "代码", icon: "chevron.left.forwardslash.chevron.right"),
+                    SecondarySidebarItem(id: "video", title: "视频", icon: "video")
                 ]
             ),
             SecondarySidebarSection(
@@ -47,78 +53,76 @@ struct ClipboardView: View {
     }
 
     var body: some View {
-        HSplitView {
-            SecondarySidebarWithHeader(
-                title: "剪贴板 & 手机同步",
-                subtitle: "\(viewModel.items.count) 条内容",
-                sections: sidebarSections,
-                selectedItem: $selectedSidebarItem
-            )
-            .frame(width: 220)
-
-            contentArea
-        }
+        WorkspacePageShell(
+            title: "剪贴板 & 手机同步",
+            subtitle: "\(viewModel.items.count) 条内容",
+            headerActions: AnyView(headerActions),
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                SecondarySidebarWithHeader(
+                    title: "剪贴板 & 手机同步",
+                    subtitle: "\(viewModel.items.count) 条内容",
+                    sections: sidebarSections,
+                    selectedItem: $selectedSidebarItem
+                )
+            },
+            content: {
+                contentArea
+            },
+            trailingRail: {
+                clipboardSummaryRail
+            }
+        )
         .background(AppSurfaceTokens.background)
         .onAppear {
             refreshPinWindowCount()
         }
+        .task {
+            await viewModel.loadItems()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .acmindClipboardPinWindowsChanged)) { _ in
             refreshPinWindowCount()
+        }
+        .onKeyPress(.escape) {
+            selectedItem = nil
+            return .handled
+        }
+        .onKeyPress(.delete) {
+            if let item = selectedItem {
+                deleteClipboardItem(item)
+                return .handled
+            }
+            return .ignored
         }
     }
 
     private var contentArea: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-            Divider()
-
             filterBar
 
-            if viewModel.filteredItems.isEmpty {
-                emptyState
-            } else {
-                switch viewMode {
-                case .list:
-                    clipboardList
-                case .grid:
-                    clipboardGrid
+            ZStack {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.filteredItems.isEmpty {
+                    emptyState
+                } else {
+                    clipboardContent
                 }
             }
+            .animation(.easeOut(duration: 0.15), value: viewModel.isLoading)
         }
     }
 
-    private var header: some View {
+    private var headerActions: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("剪贴板历史")
-                        .font(.system(size: 17, weight: .semibold))
-
-                    Text("\(viewModel.items.count)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.1))
-                        .cornerRadius(4)
-                }
-
-                Text("自动保存剪贴板内容")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             Spacer()
 
             HStack(spacing: 8) {
-                pinWindowManagementCluster
                 pinWindowCountBadge
-
                 searchField
-
                 viewModePicker
 
                 Button {
@@ -126,7 +130,7 @@ struct ClipboardView: View {
                 } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
                 .help("清空历史")
@@ -134,40 +138,97 @@ struct ClipboardView: View {
         }
     }
 
-    private var pinWindowManagementCluster: some View {
-        HStack(spacing: 6) {
-            managementButton(title: "全部显示", icon: "rectangle.stack.badge.play") {
-                clipboardPinActions.showAll()
+    private var clipboardSummaryRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("概览")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Spacer()
+                    }
+
+                    HStack(spacing: 12) {
+                        statBadge(
+                            count: viewModel.items.count,
+                            label: "总计",
+                            color: AppSurfaceTokens.accentBlue
+                        )
+                        statBadge(
+                            count: viewModel.filteredItems.count,
+                            label: "显示",
+                            color: AppSurfaceTokens.accentGreen
+                        )
+                        statBadge(
+                            count: pinWindowCount,
+                            label: "Pin",
+                            color: AppSurfaceTokens.accentOrange
+                        )
+                    }
+                }
+                .padding(12)
+                .background(AppSurfaceTokens.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Pin 管理")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                    HStack(spacing: 6) {
+                        pinQuickAction(icon: "eye", title: "显示") {
+                            clipboardPinActions.showAll()
+                        }
+                        pinQuickAction(icon: "eye.slash", title: "隐藏") {
+                            clipboardPinActions.hideAll()
+                        }
+                        pinQuickAction(icon: "xmark.circle", title: "关闭") {
+                            clipboardPinActions.closeAll()
+                        }
+                    }
+                }
+                .padding(12)
+                .background(AppSurfaceTokens.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                PasteQueuePanel(viewModel: viewModel)
             }
-            managementButton(title: "全部隐藏", icon: "rectangle.stack.badge.minus") {
-                clipboardPinActions.hideAll()
-            }
-            managementButton(title: "全部关闭", icon: "xmark.circle") {
-                clipboardPinActions.closeAll()
-            }
-            managementButton(title: "复制诊断", icon: "doc.text.magnifyingglass") {
-                clipboardPinActions.copyDiagnostics()
-            }
+            .padding(12)
         }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 
-    private func managementButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func statBadge(count: Int, label: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(count)")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func pinQuickAction(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackgroundSoft)
-            )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(AppSurfaceTokens.secondaryText)
     }
 
     private var pinWindowCountBadge: some View {
@@ -181,9 +242,9 @@ struct ClipboardView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(pinWindowCount > 0 ? Color.orange.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
+                .fill(pinWindowCount > 0 ? AppSurfaceTokens.accentOrange.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
         )
-        .foregroundStyle(pinWindowCount > 0 ? Color.orange : .secondary)
+        .foregroundStyle(pinWindowCount > 0 ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText)
     }
 
     private func refreshPinWindowCount() {
@@ -193,12 +254,13 @@ struct ClipboardView: View {
     private var searchField: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .font(.caption)
 
             TextField("搜索...", text: $viewModel.searchQuery)
                 .textFieldStyle(.plain)
                 .frame(width: 160)
+                .font(.system(size: 12))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -211,22 +273,24 @@ struct ClipboardView: View {
                 Image(systemName: "list.bullet")
                     .font(.system(size: 12))
                     .padding(6)
-                    .background(viewMode == .list ? Color.accentColor.opacity(0.1) : Color.clear)
-                    .foregroundStyle(viewMode == .list ? Color.accentColor : Color.secondary)
+                    .background(viewMode == .list ? AppSurfaceTokens.accentBlue.opacity(0.1) : Color.clear)
+                    .foregroundStyle(viewMode == .list ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
                     .cornerRadius(4)
             }
             .buttonStyle(PlainButtonStyle())
+            .keyboardShortcut("l", modifiers: .command)
             .help("列表视图")
 
             Button(action: { viewMode = .grid }) {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 12))
                     .padding(6)
-                    .background(viewMode == .grid ? Color.accentColor.opacity(0.1) : Color.clear)
-                    .foregroundStyle(viewMode == .grid ? Color.accentColor : Color.secondary)
+                    .background(viewMode == .grid ? AppSurfaceTokens.accentBlue.opacity(0.1) : Color.clear)
+                    .foregroundStyle(viewMode == .grid ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
                     .cornerRadius(4)
             }
             .buttonStyle(PlainButtonStyle())
+            .keyboardShortcut("g", modifiers: .command)
             .help("网格视图")
         }
         .background(AppSurfaceTokens.cardBackgroundSoft)
@@ -251,11 +315,41 @@ struct ClipboardView: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(isActive ? Color.accentColor : Color.secondary.opacity(0.1))
-                        .foregroundStyle(isActive ? Color.white : Color.primary)
-                        .cornerRadius(6)
+                        .background(isActive ? AppSurfaceTokens.accentBlue : Color.clear)
+                        .foregroundStyle(isActive ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(isActive ? Color.clear : AppSurfaceTokens.secondaryText.opacity(0.2), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(PlainButtonStyle())
+                }
+                
+                if !viewModel.availableTags.isEmpty {
+                    Divider()
+                        .frame(height: 16)
+                    
+                    ForEach(viewModel.availableTags) { tag in
+                        let isActive = viewModel.selectedTag == tag.name
+                        Button {
+                            viewModel.selectedTag = isActive ? nil : tag.name
+                        } label: {
+                            HStack(spacing: 3) {
+                                Circle()
+                                    .fill(tag.swiftColor)
+                                    .frame(width: 6, height: 6)
+                                Text(tag.name)
+                                    .font(.caption)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                        .background(isActive ? tag.swiftColor : AppSurfaceTokens.cardBackgroundSoft)
+                        .foregroundStyle(isActive ? AppSurfaceTokens.background : AppSurfaceTokens.primaryText)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -265,26 +359,53 @@ struct ClipboardView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary.opacity(0.3))
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(AppSurfaceTokens.secondaryText.opacity(0.06))
+                    .frame(width: 80, height: 80)
 
-            Text("剪贴板为空")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText.opacity(0.5))
+            }
 
-            Text("复制内容后将自动记录")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            VStack(spacing: 6) {
+                Text(viewModel.searchQuery.isEmpty ? "剪贴板为空" : "未找到匹配内容")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                Text(viewModel.searchQuery.isEmpty ? "复制内容后将自动记录在此处" : "尝试修改搜索关键词或筛选条件")
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppSurfaceTokens.tertiaryText)
+            }
+
+            if !viewModel.searchQuery.isEmpty {
+                Button("清除搜索") {
+                    viewModel.searchQuery = ""
+                    viewModel.selectedType = nil
+                    viewModel.selectedTag = nil
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.accentBlue)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(AppSurfaceTokens.accentBlue.opacity(0.1)))
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .transition(.opacity)
     }
 
-    private var clipboardList: some View {
+    private var clipboardContent: some View {
         GeometryReader { proxy in
             ScrollView {
-                LazyVGrid(columns: clipboardColumns(availableWidth: proxy.size.width, minimumWidth: 240), spacing: ContentCardPresentation.cardSpacing) {
+                let columns = clipboardColumns(
+                    availableWidth: proxy.size.width,
+                    minimumWidth: viewMode == .list ? 240 : 220
+                )
+                LazyVGrid(columns: columns, spacing: ContentCardPresentation.cardSpacing) {
                     ForEach(viewModel.filteredItems) { item in
                         ClipboardItemCard(
                             item: item,
@@ -293,36 +414,19 @@ struct ClipboardView: View {
                             onCopy: { Task { await viewModel.copyItem(id: item.id) } },
                             onPin: { pinItemToDesktop(item) },
                             onUnpin: { Task { await viewModel.unpinItem(id: item.id) } },
-                            onDelete: { deleteClipboardItem(item) }
+                            onDelete: { deleteClipboardItem(item) },
+                            onInbox: { Task { await viewModel.saveToInbox(id: item.id) } },
+                            onAddToQueue: { viewModel.enqueueForSequentialPaste(ids: [item.id]) }
                         )
+                        .id(item.id)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.95)),
+                            removal: .opacity.combined(with: .scale(scale: 0.95))
+                        ))
                     }
                 }
                 .padding(16)
-            }
-        }
-    }
-
-    private var clipboardGrid: some View {
-        GeometryReader { proxy in
-            ScrollView {
-                LazyVGrid(columns: clipboardColumns(availableWidth: proxy.size.width, minimumWidth: 220), spacing: ContentCardPresentation.cardSpacing) {
-                    ForEach(viewModel.filteredItems) { item in
-                        ClipboardItemCard(
-                            item: item,
-                            isSelected: selectedItem?.id == item.id,
-                            onSelect: { selectedItem = item },
-                            onCopy: {
-                                Task { await viewModel.copyItem(id: item.id) }
-                            },
-                            onPin: {
-                                pinItemToDesktop(item)
-                            },
-                            onUnpin: { Task { await viewModel.unpinItem(id: item.id) } },
-                            onDelete: { deleteClipboardItem(item) }
-                        )
-                    }
-                }
-                .padding(16)
+                .animation(.easeOut(duration: 0.2), value: viewModel.filteredItems.map(\.id))
             }
         }
     }
@@ -371,6 +475,8 @@ struct ClipboardItemCard: View {
     let onPin: () -> Void
     let onUnpin: () -> Void
     let onDelete: () -> Void
+    var onInbox: () -> Void = {}
+    let onAddToQueue: () -> Void
     @State private var isHovered = false
     private var metadata: MaterialCardMetadata {
         MaterialCardMetadataFactory.clipboard(item: item)
@@ -409,12 +515,26 @@ struct ClipboardItemCard: View {
 
             Text("·")
                 .font(.caption)
-                .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             Text(item.createdAt.formatted(date: .omitted, time: .shortened))
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .lineLimit(1)
+
+            if item.useCount > 0 {
+                Text("·")
+                    .font(.caption)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                HStack(spacing: 2) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 9))
+                    Text("\(item.useCount)")
+                        .font(.system(size: 10))
+                }
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: ContentCardPresentation.materialMetadataMinHeight, alignment: .topLeading)
     }
@@ -432,10 +552,36 @@ struct ClipboardItemCard: View {
             if item.isPinned {
                 Text("Pinned")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.orange.opacity(0.10)))
+                    .background(Capsule().fill(AppSurfaceTokens.accentOrange.opacity(0.10)))
+            }
+
+            if !item.tags.isEmpty {
+                ForEach(item.tags.prefix(2), id: \.self) { tag in
+                    Text(tag)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(AppSurfaceTokens.accentBlue.opacity(0.10)))
+                }
+            }
+
+            if item.isSensitive {
+                Image(systemName: "lock.shield")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+            }
+
+            if item.type == .code, let lang = item.codeLanguage {
+                Text(lang)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.accentCyan)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(AppSurfaceTokens.accentCyan.opacity(0.10)))
             }
 
             Spacer(minLength: 0)
@@ -451,7 +597,7 @@ struct ClipboardItemCard: View {
                     .background(Circle().fill(AppSurfaceTokens.cardBackground.opacity(0.92)))
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(.orange)
+            .foregroundStyle(AppSurfaceTokens.accentOrange)
             .contentShape(Circle())
             .help("Pin 到桌面")
             .accessibilityLabel(Text("Pin 悬浮窗"))
@@ -483,6 +629,20 @@ struct ClipboardItemCard: View {
 
         Divider()
 
+        Button("添加到粘贴队列", action: onAddToQueue)
+
+        Button("保存到 Inbox") {
+            onInbox()
+        }
+
+        if item.isSensitive {
+            Text("⚠️ 包含敏感信息")
+                .font(.caption)
+                .foregroundStyle(AppSurfaceTokens.accentOrange)
+        }
+
+        Divider()
+
         Button("删除", role: .destructive, action: onDelete)
     }
 
@@ -497,23 +657,80 @@ struct ClipboardItemCard: View {
             )
             .frame(maxWidth: .infinity)
             .frame(height: previewHeight)
+        } else if item.type == .code {
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.primaryText.opacity(0.04))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if let lang = item.codeLanguage {
+                        Text(lang.uppercased())
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(AppSurfaceTokens.accentCyan)
+                    }
+
+                    Text(item.textContent ?? item.content ?? "")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .lineLimit(ClipboardCardPresentation.previewLineLimit(for: item))
+                        .truncationMode(.tail)
+                }
+                .padding(10)
+            }
+            .frame(height: previewHeight)
+            .frame(maxWidth: .infinity)
+            .overlay(
+                RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                    .stroke(Color.cyan.opacity(0.18), lineWidth: 1)
+            )
+            .clipped()
+        } else if item.type == .richText {
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                    .fill(Color.pink.opacity(0.05))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.richtext")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.pink)
+                        Text("富文本")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.pink)
+                    }
+
+                    Text(item.textContent ?? "")
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .lineLimit(ClipboardCardPresentation.previewLineLimit(for: item))
+                        .truncationMode(.tail)
+                }
+                .padding(10)
+            }
+            .frame(height: previewHeight)
+            .frame(maxWidth: .infinity)
+            .overlay(
+                RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
+                    .stroke(Color.pink.opacity(0.18), lineWidth: 1)
+            )
+            .clipped()
         } else {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
                     .fill(item.type.color.opacity(0.10))
 
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     Text(ClipboardCardPresentation.previewText(for: item))
                         .font(.system(size: 14))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
-                        .lineLimit(3)
+                        .lineLimit(2)
                         .truncationMode(.tail)
                         .minimumScaleFactor(0.92)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Spacer(minLength: 0)
                 }
-                .padding(14)
+                .padding(12)
             }
             .frame(height: previewHeight)
             .frame(maxWidth: .infinity)
@@ -533,7 +750,23 @@ struct ClipboardItemThumbnailView: View {
     let cornerRadius: CGFloat
     var expandToWidth: Bool = false
 
+    private let assetStore: AssetStoreProtocol
+
     @State private var thumbnail: NSImage?
+
+    init(
+        item: ClipboardItem,
+        size: CGSize,
+        cornerRadius: CGFloat,
+        expandToWidth: Bool = false,
+        assetStore: AssetStoreProtocol = AssetStore()
+    ) {
+        self.item = item
+        self.size = size
+        self.cornerRadius = cornerRadius
+        self.expandToWidth = expandToWidth
+        self.assetStore = assetStore
+    }
 
     var body: some View {
         Group {
@@ -570,10 +803,11 @@ struct ClipboardItemThumbnailView: View {
     }
 
     private func loadThumbnailIfNeeded() async {
-        guard item.type == .image, let assetId = item.content, ServiceContainer.isInitialized() else { return }
-        guard let asset = try? await ServiceContainer.shared.assetStore.getAsset(id: assetId) else { return }
+        guard item.type == .image, let assetId = item.content else { return }
+        let store = assetStore
+        guard let asset = try? await store.getAsset(id: assetId) else { return }
         let maxPixelSize = max(ContentCardPresentation.thumbnailHeight * 2.4, 480)
-        guard let image = await ServiceContainer.shared.assetStore.loadImage(asset: asset, maxPixelSize: maxPixelSize) else { return }
+        guard let image = store.loadImage(asset: asset, maxPixelSize: maxPixelSize) else { return }
         await MainActor.run {
             thumbnail = image
         }

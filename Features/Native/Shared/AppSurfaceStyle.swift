@@ -41,7 +41,10 @@ enum AppSurfaceTokens {
     }
 
     enum Layout {
-        static let pageMaxWidth: CGFloat = 1360
+        static let pageMaxWidth: CGFloat = 1040
+        static let sidebarWidth: CGFloat = 208
+        static let leadingRailWidth: CGFloat = 200
+        static let trailingRailWidth: CGFloat = 224
         static let pagePadding: CGFloat = 24
         static let sectionSpacing: CGFloat = 16
         static let cardSpacing: CGFloat = 12
@@ -52,7 +55,7 @@ enum AppSurfaceTokens {
         static let chipHeight: CGFloat = 28
         static let buttonHeight: CGFloat = 32
         static let keycapHeight: CGFloat = 28
-        static let summaryWidth: CGFloat = 300
+        static let summaryWidth: CGFloat = 224
     }
 }
 
@@ -75,7 +78,7 @@ struct AppSurfaceCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             if let title {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
@@ -305,6 +308,93 @@ struct AppSurfaceEmptyState: View {
                 .stroke(AppSurfaceTokens.separator.opacity(0.9), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.04), radius: 10, x: 0, y: 4)
+    }
+}
+
+struct WorkspacePageShell<Leading: View, Content: View, Trailing: View>: View {
+    let title: String
+    let subtitle: String?
+    let headerActions: AnyView?
+    let leadingRailWidth: CGFloat
+    let trailingRailWidth: CGFloat
+    @ViewBuilder let leadingRail: () -> Leading
+    @ViewBuilder let content: () -> Content
+    @ViewBuilder let trailingRail: () -> Trailing
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        headerActions: AnyView? = nil,
+        leadingRailWidth: CGFloat = AppSurfaceTokens.Layout.leadingRailWidth,
+        trailingRailWidth: CGFloat = AppSurfaceTokens.Layout.trailingRailWidth,
+        @ViewBuilder leadingRail: @escaping () -> Leading,
+        @ViewBuilder content: @escaping () -> Content,
+        @ViewBuilder trailingRail: @escaping () -> Trailing
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.headerActions = headerActions
+        self.leadingRailWidth = leadingRailWidth
+        self.trailingRailWidth = trailingRailWidth
+        self.leadingRail = leadingRail
+        self.content = content
+        self.trailingRail = trailingRail
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+
+                Divider()
+
+                HStack(spacing: 0) {
+                    leadingRail()
+                        .frame(width: leadingRailWidth, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
+
+                    Divider()
+
+                    content()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                    Divider()
+
+                    trailingRail()
+                        .frame(width: trailingRailWidth, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .clipped()
+            .background(AppSurfaceTokens.background)
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if let headerActions {
+                headerActions
+            }
+        }
     }
 }
 

@@ -19,7 +19,7 @@ struct CompanionCapturePanel: View {
 
             // 主内容
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 18) {
                     // 捕获类型网格
                     captureTypesGrid
 
@@ -31,10 +31,10 @@ struct CompanionCapturePanel: View {
                     // 快速设置
                     quickSettingsSection
                 }
-                .padding(24)
+                .padding(20)
             }
         }
-        .frame(width: 480, height: 580)
+        .frame(width: 460, height: 540)
         .background(AppSurfaceTokens.background)
         .onChange(of: viewModel.openDetailAfterCapture) { _, _ in
             viewModel.saveCapturePreferences()
@@ -67,7 +67,8 @@ struct CompanionCapturePanel: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Capture Types Grid

@@ -126,7 +126,10 @@ struct NotchV2TopBar: View {
         case .idle:
             return "说入法"
         case .listening:
-            return "收音中"
+            if viewModel.realtimeTranscript.isEmpty {
+                return "收音中"
+            }
+            return "收音中 · \(viewModel.realtimeTranscript)"
         case .processing:
             return "清洗中"
         case .completed:

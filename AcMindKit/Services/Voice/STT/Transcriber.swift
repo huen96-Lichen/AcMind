@@ -47,6 +47,10 @@ public protocol Transcriber: Sendable {
         audioFile: AudioFile,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
     ) async throws -> String
+    
+    /// 创建实时转写会话
+    /// - Returns: 会话实例，不支持时返回 nil
+    func createRealtimeSession() -> RealtimeTranscriptionSession?
 }
 
 // MARK: - Default Implementation
@@ -60,6 +64,8 @@ extension Transcriber {
         await onUpdate(TranscriptionSnapshot(text: text, isFinal: true))
         return text
     }
+    
+    public func createRealtimeSession() -> RealtimeTranscriptionSession? { nil }
 }
 
 // MARK: - Recording Prewarming Protocol
@@ -77,6 +83,9 @@ public protocol RecordingPrewarmingTranscriber: Transcriber {
 
 /// 实时转写会话
 public protocol RealtimeTranscriptionSession: Sendable {
+    /// 转写结果更新回调
+    var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)? { get set }
+    
     /// 发送音频数据
     func sendAudioData(_ data: Data) async throws
     

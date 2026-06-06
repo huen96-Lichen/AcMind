@@ -57,17 +57,26 @@ struct InboxView: View {
     }
 
     var body: some View {
-        HSplitView {
-            SecondarySidebarWithHeader(
-                title: "收集箱",
-                subtitle: "\(viewModel.items.count) 条内容",
-                sections: sidebarSections,
-                selectedItem: $selectedSidebarItem
-            )
-            .frame(width: 220)
-
-            itemList
-        }
+        WorkspacePageShell(
+            title: "收集箱",
+            subtitle: "\(viewModel.items.count) 条内容",
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                SecondarySidebarWithHeader(
+                    title: "收集箱",
+                    subtitle: "\(viewModel.items.count) 条内容",
+                    sections: sidebarSections,
+                    selectedItem: $selectedSidebarItem
+                )
+            },
+            content: {
+                itemList
+            },
+            trailingRail: {
+                inboxSummaryRail
+            }
+        )
         .background(AppVisualBackdrop())
         .onAppear {
             Task {
@@ -111,7 +120,7 @@ struct InboxView: View {
                 }
             }
         }
-        .frame(minWidth: 320)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private func inboxColumns(availableWidth: CGFloat) -> [GridItem] {
@@ -121,7 +130,7 @@ struct InboxView: View {
     private var searchBar: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .font(.caption)
 
             TextField("搜索收集箱...", text: $searchQuery)
@@ -130,7 +139,7 @@ struct InboxView: View {
             if !searchQuery.isEmpty {
                 Button(action: { searchQuery = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
@@ -148,6 +157,41 @@ struct InboxView: View {
             message: "通过语音、截图、剪贴板或 Agent 生成内容后，会先进入这里等待整理。",
             tint: AppSurfaceTokens.accentBlue
         )
+    }
+
+    private var inboxSummaryRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "状态摘要", subtitle: "固定外壳下的轻量信息", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        summaryRow(title: "全部", value: "\(viewModel.items.count)")
+                        summaryRow(title: "当前筛选", value: "\(filteredItems.count)")
+                        summaryRow(title: "已选中", value: selectedItem == nil ? "无" : "1")
+                    }
+                }
+
+                AppSurfaceCard(title: "整理提示", subtitle: "只展示真实状态", padding: 14) {
+                    Text(selectedItem == nil ? "请选择一条内容查看细节。" : (selectedItem?.status.displayName ?? "未知"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private func summaryRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+        }
     }
 
     @MainActor

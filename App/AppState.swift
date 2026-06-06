@@ -67,41 +67,34 @@ public final class AppState: ObservableObject, Sendable {
 
     // MARK: - Setup
 
-    private func setupBindings() {
-        // 监听 ServiceContainer 的初始化状态
-        // 注意：由于 ServiceContainer 也是 @MainActor，这里使用定时轮询
-        Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    await self?.syncWithServiceContainer()
+    private func setupBindings() {}
+
+    public func bindServiceContainerState(_ container: ServiceContainer) {
+        container.$currentPhase
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] phase in
+                guard let self else { return }
+                self.initializationPhase = phase
+                self.isInitializing = phase != .idle && phase != .completed && phase != .failed
+            }
+            .store(in: &cancellables)
+
+        container.$initializationError
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                guard let self else { return }
+                if let error {
+                    self.initializationError = error
+                    self.showError(AppError.initializationFailed(error))
+                } else {
+                    self.initializationError = nil
                 }
             }
             .store(in: &cancellables)
-    }
 
-    private func syncWithServiceContainer() async {
-        guard ServiceContainer.isInitialized() else { return }
-
-        let container = ServiceContainer.shared
-
-        if initializationPhase != container.currentPhase {
-            initializationPhase = container.currentPhase
-        }
-        if isInitializing != (container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed) {
-            isInitializing = container.currentPhase != .idle && container.currentPhase != .completed && container.currentPhase != .failed
-        }
-        if let containerError = container.initializationError {
-            if initializationError?.localizedDescription != containerError.localizedDescription {
-                initializationError = containerError
-                showError(AppError.initializationFailed(containerError))
-            }
-        } else if initializationError != nil {
-            initializationError = nil
-        }
-        if isAppReady != container.isInitialized {
-            isAppReady = container.isInitialized
-        }
+        container.$isInitialized
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$isAppReady)
     }
 
     private func checkFirstLaunch() {
@@ -198,7 +191,8 @@ public final class AppState: ObservableObject, Sendable {
     public func retryInitialization() async {
         initializationError = nil
         do {
-            try await ServiceContainer.setup()
+            let container = try await ServiceContainer.setup()
+            bindServiceContainerState(container)
         } catch {
             showError(AppError.initializationFailed(error))
         }

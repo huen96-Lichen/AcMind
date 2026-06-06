@@ -33,7 +33,7 @@ struct CalendarCategoryList: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("日程分类")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
                 .padding(.horizontal, 4)
 
@@ -68,24 +68,24 @@ private struct CategoryRow: View {
                 // 彩色 checkbox
                 Image(systemName: isVisible ? "checkmark.square.fill" : "square")
                     .font(.system(size: 13))
-                    .foregroundStyle(isVisible ? category.color : Color.secondary.opacity(0.4))
+                    .foregroundStyle(isVisible ? category.color : AppSurfaceTokens.secondaryText.opacity(0.4))
 
                 Text(category.name)
                     .font(.system(size: 13))
-                    .foregroundStyle(isVisible ? Color.primary : Color.secondary.opacity(0.5))
+                    .foregroundStyle(isVisible ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText.opacity(0.5))
                     .lineLimit(1)
 
                 Spacer()
 
                 Text("\(todayCount)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(isVisible ? Color.secondary : Color.secondary.opacity(0.4))
+                    .foregroundStyle(isVisible ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.secondaryText.opacity(0.4))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
                         (todayCount > 0 && isVisible)
                             ? category.color.opacity(0.12)
-                            : Color.secondary.opacity(0.06)
+                            : AppSurfaceTokens.secondaryText.opacity(0.06)
                     )
                     .cornerRadius(4)
             }
@@ -106,7 +106,7 @@ struct TodayOverview: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("今日总览")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
                 .padding(.horizontal, 4)
 
@@ -123,17 +123,17 @@ struct TodayOverview: View {
                     HStack {
                         Text("饱和度")
                             .font(.system(size: 12))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                         Spacer()
                         Text("\(viewModel.todayWorkloadPercent)%")
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(viewModel.todayWorkloadLevel.color == Color(red: 0.93, green: 0.94, blue: 0.95) ? .secondary : .primary)
+                            .foregroundStyle(viewModel.todayWorkloadLevel.color == AppSurfaceTokens.cardBackgroundSoft ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
                     }
 
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(Color.secondary.opacity(0.1))
+                                .fill(AppSurfaceTokens.secondaryText.opacity(0.1))
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(viewModel.todayWorkloadLevel.color)
                                 .frame(width: geo.size.width * min(CGFloat(viewModel.todayWorkloadPercent) / 100.0, 1.0))
@@ -143,7 +143,7 @@ struct TodayOverview: View {
 
                     Text(viewModel.todayWorkloadLevel.displayName)
                         .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
                 }
             }
             .padding(12)
@@ -165,11 +165,11 @@ private struct StatItem: View {
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                 Text(unit)
                     .font(.system(size: 11))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             Text(label)
                 .font(.system(size: 11))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity)
     }
@@ -185,15 +185,15 @@ struct TodayTodoList: View {
             HStack {
                 Text("今日待办")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .textCase(.uppercase)
                 Spacer()
                 Text("\(viewModel.todayEvents.count)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.08))
+                    .background(AppSurfaceTokens.secondaryText.opacity(0.08))
                     .cornerRadius(4)
             }
             .padding(.horizontal, 4)
@@ -226,10 +226,10 @@ struct TodayTodoList: View {
                     VStack(spacing: 6) {
                         Image(systemName: "checkmark.circle")
                             .font(.system(size: 20))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                         Text("今天暂无安排")
                             .font(.system(size: 12))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
@@ -273,7 +273,7 @@ private struct TodoRow: View {
                 } label: {
                     Image(systemName: event.status == .done ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 14))
-                        .foregroundStyle(event.status == .done ? .green : .secondary.opacity(0.4))
+                        .foregroundStyle(event.status == .done ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.secondaryText.opacity(0.4))
                 }
                 .buttonStyle(.plain)
 
@@ -286,11 +286,11 @@ private struct TodoRow: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(timeString)
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(event.status == .done ? .tertiary : .primary)
+                        .foregroundStyle(event.status == .done ? AppSurfaceTokens.tertiaryText : AppSurfaceTokens.primaryText)
                     if !event.isAllDay {
                         Text(durationString)
                             .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     }
                 }
                 .frame(width: 42, alignment: .leading)
@@ -299,7 +299,7 @@ private struct TodoRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.title)
                         .font(.system(size: 13))
-                        .foregroundStyle(event.status == .done ? .tertiary : .primary)
+                        .foregroundStyle(event.status == .done ? AppSurfaceTokens.tertiaryText : AppSurfaceTokens.primaryText)
                         .strikethrough(event.status == .done)
                         .lineLimit(1)
 
@@ -307,19 +307,19 @@ private struct TodoRow: View {
                         if let tag = event.tag {
                             Text(tag)
                                 .font(.system(size: 10))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
-                                .background(Color.secondary.opacity(0.08))
+                                .background(AppSurfaceTokens.secondaryText.opacity(0.08))
                                 .cornerRadius(3)
                         }
                         if event.isAllDay {
                             Text("全天")
                                 .font(.system(size: 10))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
-                                .background(Color.secondary.opacity(0.08))
+                                .background(AppSurfaceTokens.secondaryText.opacity(0.08))
                                 .cornerRadius(3)
                         }
                     }
@@ -364,7 +364,7 @@ struct MiniMonthCalendar: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
@@ -383,7 +383,7 @@ struct MiniMonthCalendar: View {
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
@@ -395,7 +395,7 @@ struct MiniMonthCalendar: View {
                 ForEach(weekdaySymbols, id: \.self) { sym in
                     Text(sym)
                         .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -472,25 +472,25 @@ private struct MiniDayCell: View {
             // 选中背景
             if isSelected {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.15))
+                    .fill(AppSurfaceTokens.accentBlue.opacity(0.15))
             }
 
             // 今天指示器
             if isToday {
                 Circle()
-                    .fill(Color.accentColor)
+                    .fill(AppSurfaceTokens.accentBlue)
                     .frame(width: 18, height: 18)
             }
 
             // 日期文字
             Text(dayString)
                 .font(.system(size: 11, weight: isToday ? .semibold : .regular))
-                .foregroundStyle(isToday ? .white : .primary)
+                .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
 
             // 事件小点
             if hasEvents && !isToday {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.6))
+                    .fill(AppSurfaceTokens.accentBlue.opacity(0.6))
                     .frame(width: 4, height: 4)
                     .offset(x: 0, y: 8)
             }
@@ -510,7 +510,7 @@ struct WorkloadSummary: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("本周饱和度")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
                 .padding(.horizontal, 4)
 
@@ -522,13 +522,13 @@ struct WorkloadSummary: View {
                     HStack(spacing: 8) {
                         Text(weekdayLabels[labelIndex])
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Calendar.current.isDateInToday(day.date) ? .primary : .secondary)
+                            .foregroundStyle(Calendar.current.isDateInToday(day.date) ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
                             .frame(width: 28, alignment: .leading)
 
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.secondary.opacity(0.08))
+                                    .fill(AppSurfaceTokens.secondaryText.opacity(0.08))
                                 RoundedRectangle(cornerRadius: 2)
                                     .fill(day.workloadLevel.color)
                                     .frame(width: geo.size.width * min(CGFloat(day.workloadPercent) / 100.0, 1.0))
@@ -538,7 +538,7 @@ struct WorkloadSummary: View {
 
                         Text("\(day.workloadPercent)%")
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .frame(width: 32, alignment: .trailing)
                     }
                 }

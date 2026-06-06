@@ -15,7 +15,7 @@ struct MonthCalendarView: View {
                 ForEach(weekdaySymbols, id: \.self) { sym in
                     Text(sym)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                 }
@@ -75,10 +75,10 @@ private struct MonthDayCell: View {
             HStack {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.system(size: isToday ? 14 : 13, weight: isToday ? .bold : .regular))
-                    .foregroundStyle(isToday ? .white : .primary)
+                    .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
                     .frame(width: isToday ? 24 : 20, height: isToday ? 24 : 20)
                     .background(
-                        isToday ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.clear)
+                        isToday ? AnyShapeStyle(AppSurfaceTokens.accentBlue) : AnyShapeStyle(Color.clear)
                     )
                     .cornerRadius(isToday ? 12 : 0)
 
@@ -98,7 +98,7 @@ private struct MonthDayCell: View {
 
                         Text(event.title)
                             .font(.system(size: 10))
-                            .foregroundStyle(event.status == .done ? .tertiary : .primary)
+                            .foregroundStyle(event.status == .done ? AppSurfaceTokens.tertiaryText : AppSurfaceTokens.primaryText)
                             .lineLimit(1)
                     }
                 }
@@ -106,7 +106,7 @@ private struct MonthDayCell: View {
                 if overflowCount > 0 {
                     Text("+\(overflowCount)")
                         .font(.system(size: 10))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .padding(.leading, 6)
                 }
             }
@@ -119,7 +119,7 @@ private struct MonthDayCell: View {
         .frame(maxWidth: .infinity, minHeight: 100)
         .background(
             isSelected && !isToday
-                ? Color.accentColor.opacity(0.06)
+                ? AppSurfaceTokens.accentBlue.opacity(0.06)
                 : Color.clear
         )
         .cornerRadius(4)

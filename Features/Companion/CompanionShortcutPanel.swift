@@ -22,7 +22,7 @@ struct CompanionShortcutPanel: View {
                 .padding(24)
             }
         }
-        .frame(width: 620, height: 680)
+        .frame(width: 560, height: 620)
         .background(AppSurfaceTokens.background)
         .onChange(of: viewModel.companionShortcuts) { _, _ in
             persistCompanionSettings()
@@ -63,7 +63,8 @@ struct CompanionShortcutPanel: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Info Banner

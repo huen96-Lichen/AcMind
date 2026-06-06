@@ -45,20 +45,22 @@ struct MaterialCardShell<Header: View, Preview: View, Footer: View, Actions: Vie
             }
 
             preview()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
             footer()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
         }
         .padding(ContentCardPresentation.innerPadding)
         .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .topLeading)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
         .background(
             RoundedRectangle(cornerRadius: ContentCardPresentation.cornerRadius, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackground))
+                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackground))
         )
         .clipShape(RoundedRectangle(cornerRadius: ContentCardPresentation.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.cornerRadius, style: .continuous)
-                .stroke(isSelected ? Color.accentColor.opacity(0.30) : AppSurfaceTokens.separator, lineWidth: 1)
+                .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.30) : AppSurfaceTokens.separator, lineWidth: 1)
         )
     }
 }

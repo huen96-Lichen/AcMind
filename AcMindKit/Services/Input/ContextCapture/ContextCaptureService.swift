@@ -138,22 +138,35 @@ public actor ContextCaptureService {
         guard AXValueGetValue(range as! AXValue, .cfRange, &rangeValueStruct) else {
             return nil
         }
-        
-        // 获取周围文本
+
+        return Self.surroundingText(from: text, selectedRange: rangeValueStruct)
+    }
+
+    nonisolated static func surroundingText(from text: String, selectedRange: CFRange) -> String? {
+        guard text.isEmpty == false else { return nil }
+
         let nsString = text as NSString
         let maxLength = nsString.length
-        
-        // 前50字
-        let start = max(0, rangeValueStruct.location - 50)
-        let beforeLength = min(50, rangeValueStruct.location - start)
-        let beforeText = nsString.substring(with: NSRange(location: start, length: beforeLength))
-        
-        // 后50字
-        let cursorEnd = rangeValueStruct.location + rangeValueStruct.length
-        let end = min(maxLength, cursorEnd + 50)
-        let afterLength = end - cursorEnd
-        let afterText = afterLength > 0 ? nsString.substring(with: NSRange(location: cursorEnd, length: afterLength)) : ""
-        
+        guard maxLength > 0 else { return nil }
+
+        let safeLocation = max(0, min(selectedRange.location, maxLength))
+        let safeLength = max(0, selectedRange.length)
+        let cursorStart = min(safeLocation, maxLength)
+        let cursorEnd = min(maxLength, cursorStart + safeLength)
+
+        let start = max(0, cursorStart - 50)
+        let beforeLength = cursorStart - start
+        let beforeText = beforeLength > 0
+            ? nsString.substring(with: NSRange(location: start, length: beforeLength))
+            : ""
+
+        let afterStart = cursorEnd
+        let afterEnd = min(maxLength, cursorEnd + 50)
+        let afterLength = max(0, afterEnd - afterStart)
+        let afterText = afterLength > 0
+            ? nsString.substring(with: NSRange(location: afterStart, length: afterLength))
+            : ""
+
         return beforeText + "[光标]" + afterText
     }
     

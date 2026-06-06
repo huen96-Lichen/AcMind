@@ -351,7 +351,48 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
 
     private func pushSettings() async {
         guard let settingsJson = try? await storage.getSetting(key: "settings.backup") else { return }
-        Self.ubiquitousStore.set(settingsJson, forKey: settingsKey)
+        let preferences = SettingsLocalPreferences.loadOrDefault(from: userDefaults)
+        guard let sanitizedJson = Self.sanitizedSettingsBackupJSON(
+            from: settingsJson,
+            preferences: preferences
+        ) else {
+            return
+        }
+
+        Self.ubiquitousStore.set(sanitizedJson, forKey: settingsKey)
         lastSyncByType[.settings] = Date()
+    }
+
+    nonisolated static func sanitizedSettingsBackupJSON(
+        from json: String,
+        preferences: SettingsLocalPreferences
+    ) -> String? {
+        guard let data = json.data(using: .utf8),
+              let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
+            return nil
+        }
+
+        let sanitized = sanitizedSettingsBackup(settings, preferences: preferences)
+        guard let encoded = try? JSONEncoder().encode(sanitized) else {
+            return nil
+        }
+
+        return String(data: encoded, encoding: .utf8)
+    }
+
+    nonisolated static func sanitizedSettingsBackup(
+        _ settings: AppSettings,
+        preferences: SettingsLocalPreferences
+    ) -> AppSettings {
+        guard preferences.sensitiveContentNotUpload else {
+            return settings
+        }
+
+        var sanitized = settings
+        sanitized.defaultProviderId = nil
+        sanitized.defaultModelId = nil
+        sanitized.vaultPath = ""
+        sanitized.captureScreenshotHotkey = nil
+        return sanitized
     }
 }

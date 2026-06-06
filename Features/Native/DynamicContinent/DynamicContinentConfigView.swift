@@ -32,21 +32,25 @@ struct DynamicContinentConfigView: View {
         }
     }
 
+    private typealias T = AcMindDesignTokens.Native
+    private typealias Typo = AcMindDesignTokens.Native.Typography
+    private typealias Lay = AcMindDesignTokens.Native.Layout
+
     private enum LocalTokens {
-        static let pageMaxWidth: CGFloat = 1360
+        static let pageMaxWidth: CGFloat = 1040
         static let pagePadding: CGFloat = 20
         static let sectionSpacing: CGFloat = 12
         static let cardSpacing: CGFloat = 10
-        static let mainCardRadius: CGFloat = 18
-        static let secondaryCardRadius: CGFloat = 14
-        static let inlineBlockRadius: CGFloat = 10
-        static let pageTitleSize: CGFloat = 28
-        static let pageSubtitleSize: CGFloat = 13
-        static let sectionTitleSize: CGFloat = 16
-        static let sectionDescSize: CGFloat = 12
-        static let cardTitleSize: CGFloat = 14
-        static let bodySize: CGFloat = 13
-        static let captionSize: CGFloat = 11
+        static let mainCardRadius: CGFloat = T.mainCardRadius
+        static let secondaryCardRadius: CGFloat = T.secondaryCardRadius
+        static let inlineBlockRadius: CGFloat = T.inlineBlockRadius
+        static let pageTitleSize: CGFloat = Typo.pageTitle
+        static let pageSubtitleSize: CGFloat = Typo.pageSubtitle
+        static let sectionTitleSize: CGFloat = Typo.sectionTitle
+        static let sectionDescSize: CGFloat = Typo.sectionDesc
+        static let cardTitleSize: CGFloat = Typo.cardTitle
+        static let bodySize: CGFloat = Typo.body
+        static let captionSize: CGFloat = Typo.caption
         static let tabHeight: CGFloat = 40
         static let tabMinWidth: CGFloat = 132
         static let tabSpacing: CGFloat = 10
@@ -54,12 +58,12 @@ struct DynamicContinentConfigView: View {
         static let tabPaddingH: CGFloat = 12
         static let tabPaddingV: CGFloat = 8
         static let tabIconSize: CGFloat = 12
-        static let tabTextSize: CGFloat = 13
+        static let tabTextSize: CGFloat = Typo.body
         static let statusCardHeight: CGFloat = 80
         static let notchPreviewHeight: CGFloat = 130
         static let moduleCardHeight: CGFloat = 116
         static let permissionRowHeight: CGFloat = 48
-        static let summaryWidth: CGFloat = 260
+        static let summaryWidth: CGFloat = 224
         static let summaryBlockGap: CGFloat = 10
         static let moduleListRowHeight: CGFloat = 42
         static let inlineButtonHeight: CGFloat = 32
@@ -72,17 +76,31 @@ struct DynamicContinentConfigView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: LocalTokens.sectionSpacing) {
-                header
-                    .padding(.bottom, LocalTokens.headerTabGap)
-                sectionTabs
-                sectionContent
+        WorkspacePageShell(
+            title: "灵动大陆 & 配置",
+            subtitle: "伴随能力的配置中心。",
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                dynamicContinentSummaryRail
+            },
+            content: {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: LocalTokens.sectionSpacing) {
+                        header
+                            .padding(.bottom, LocalTokens.headerTabGap)
+                        sectionTabs
+                        sectionContent
+                    }
+                    .padding(LocalTokens.pagePadding)
+                    .frame(maxWidth: LocalTokens.pageMaxWidth, alignment: .leading)
+                }
+                .background(AppSurfaceTokens.background)
+            },
+            trailingRail: {
+                dynamicContinentStatusRail
             }
-            .padding(LocalTokens.pagePadding)
-            .frame(maxWidth: LocalTokens.pageMaxWidth, alignment: .leading)
-        }
-        .background(AppSurfaceTokens.background)
+        )
         .onChange(of: viewModel.isEnabled) { _, _ in
             viewModel.persistDisplaySettings()
         }
@@ -121,6 +139,67 @@ struct DynamicContinentConfigView: View {
         }
         .task {
             await permissionManager.refreshAll()
+        }
+    }
+
+    private var dynamicContinentSummaryRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "当前分区", subtitle: "固定外壳摘要", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        railRow(title: "选中", value: selectedSection.rawValue)
+                        railRow(title: "模块", value: "\(viewModel.activeModuleCount)")
+                        railRow(title: "展示", value: "\(viewModel.overviewVisibleModules.count)/\(viewModel.modules.count)")
+                    }
+                }
+
+                AppSurfaceCard(title: "开关状态", subtitle: "只读摘要", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        railRow(title: "启用", value: viewModel.isEnabled ? "已启用" : "已关闭")
+                        railRow(title: "自动展开", value: viewModel.autoExpand ? "开启" : "关闭")
+                        railRow(title: "全屏隐藏", value: viewModel.hideInFullscreen ? "开启" : "关闭")
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private var dynamicContinentStatusRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "权限", subtitle: "调试可见", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        railRow(title: "EventKit", value: calendarPermissionText)
+                        railRow(title: "麦克风", value: permissionManager.statuses[.microphone]?.displayName ?? "未知")
+                        railRow(title: "通知", value: permissionManager.statuses[.notifications]?.displayName ?? "未知")
+                    }
+                }
+
+                AppSurfaceCard(title: "调试", subtitle: "实时状态", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        railRow(title: "热区", value: viewModel.hoverExpandDelay.formatted(.number.precision(.fractionLength(1))))
+                        railRow(title: "收起宽度", value: "\(Int(viewModel.nonNotchCollapsedWidth))")
+                        railRow(title: "HUD", value: viewModel.showSystemEventHUD ? "开启" : "关闭")
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private func railRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
         }
     }
 
@@ -248,7 +327,7 @@ struct DynamicContinentConfigView: View {
                     }
                 }
             }
-            .frame(width: 280)
+            .frame(width: 240)
         }
     }
 
@@ -256,9 +335,9 @@ struct DynamicContinentConfigView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(AppSurfaceTokens.accentBlue)
                 .frame(width: 24, height: 24)
-                .background(Color.accentColor.opacity(0.12))
+                .background(AppSurfaceTokens.accentBlue.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -309,7 +388,7 @@ struct DynamicContinentConfigView: View {
                     HStack(spacing: 12) {
                         Image(systemName: module.id.icon)
                             .font(.system(size: 13))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(AppSurfaceTokens.accentBlue)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(module.id.displayName)
@@ -416,7 +495,7 @@ struct DynamicContinentConfigView: View {
                 HStack(spacing: 12) {
                     Image(systemName: iconName)
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
                         .frame(width: 24)
 
                     VStack(alignment: .leading, spacing: 1) {
@@ -586,7 +665,7 @@ struct DynamicContinentConfigView: View {
                     }
                 }
             }
-            .frame(width: 280)
+            .frame(width: 240)
         }
     }
 
@@ -711,7 +790,7 @@ struct DynamicContinentConfigView: View {
                     }
                 }
             }
-            .frame(width: 280)
+            .frame(width: 240)
         }
     }
 
@@ -963,8 +1042,8 @@ struct DynamicContinentConfigView: View {
             Image(systemName: isWarning ? "exclamationmark.triangle.fill" : "checkmark.shield.fill")
                 .font(.system(size: 12, weight: .semibold))
                 .frame(width: 24, height: 24)
-                .foregroundStyle(isWarning ? .orange : accent)
-                .background((isWarning ? Color.orange : accent).opacity(0.12))
+                .foregroundStyle(isWarning ? AppSurfaceTokens.accentOrange : accent)
+                .background((isWarning ? AppSurfaceTokens.accentOrange : accent).opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1086,28 +1165,28 @@ struct NotchPreviewCard: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: LocalTokens.cardRadius)
-                    .fill(Color.black)
+                    .fill(AppSurfaceTokens.primaryText.opacity(0.96))
                     .frame(height: LocalTokens.previewHeight)
                     .overlay(
                         RoundedRectangle(cornerRadius: LocalTokens.cardRadius)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                            .stroke(AppSurfaceTokens.background.opacity(0.08), lineWidth: 1)
                     )
 
                 HStack {
                     Circle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(AppSurfaceTokens.secondaryText.opacity(0.3))
                         .frame(width: 8, height: 8)
 
                     Spacer()
 
                     Text("灵动大陆")
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(AppSurfaceTokens.background.opacity(0.7))
 
                     Spacer()
 
                     Circle()
-                        .fill(Color.green)
+                        .fill(AppSurfaceTokens.accentGreen)
                         .frame(width: 8, height: 8)
                 }
                 .padding(.horizontal, 20)
@@ -1131,16 +1210,10 @@ final class HotCornerConfigViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
 
-    private let settingsService: HotCornerSettingsStore?
+    private let settingsService: HotCornerSettingsStore
 
-    init(settingsService: HotCornerSettingsStore? = nil) {
-        if let settingsService {
-            self.settingsService = settingsService
-        } else if ServiceContainer.isInitialized() {
-            self.settingsService = ServiceContainer.shared.hotCornerSettingsStore
-        } else {
-            self.settingsService = nil
-        }
+    init(settingsService: HotCornerSettingsStore = SettingsService()) {
+        self.settingsService = settingsService
 
         Task {
             await load()
@@ -1150,11 +1223,6 @@ final class HotCornerConfigViewModel: ObservableObject {
     func load() async {
         isLoading = true
         defer { isLoading = false }
-
-        guard let settingsService else {
-            settings = .defaultSettings
-            return
-        }
 
         settings = await settingsService.getHotCornerSettings()
         normalizeBindings()
@@ -1181,10 +1249,6 @@ final class HotCornerConfigViewModel: ObservableObject {
     }
 
     func save() async {
-        guard let settingsService else {
-            return
-        }
-
         isSaving = true
         defer { isSaving = false }
 
@@ -1311,7 +1375,7 @@ struct HotCornerBindingEditorSheet: View {
                     .fontWeight(.semibold)
                 Text("停留 1.5 秒后触发。")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             VStack(alignment: .leading, spacing: 12) {
@@ -1339,7 +1403,7 @@ struct HotCornerBindingEditorSheet: View {
                 case .none:
                     Text("当前不会触发任何动作。")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 case .openApp:
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("Bundle Identifier", text: $bundleIdentifier)
@@ -1351,7 +1415,7 @@ struct HotCornerBindingEditorSheet: View {
                             .buttonStyle(.bordered)
                             Text(bundleIdentifier.isEmpty ? "请选择一个 .app" : bundleIdentifier)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Spacer()
                         }
                     }

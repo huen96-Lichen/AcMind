@@ -138,7 +138,7 @@ struct DocumentConverterPanel: View {
 
                 Text("把 PDF、Word、网页导出文档和 Markdown 文件转换成可编辑的 Markdown。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -160,7 +160,7 @@ struct DocumentConverterPanel: View {
 
             Text("PDF 会用 PDFKit 抽取文本，DOCX / DOC / RTF / HTML 会优先用 `textutil`，Markdown 和纯文本直接读取。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -199,19 +199,19 @@ struct DocumentConverterPanel: View {
                         .font(.headline)
                     Text(sourceURL.path)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .textSelection(.enabled)
                 }
             } else {
                 Text("还没有选择文档。")
                     .font(.body)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             HStack(spacing: 12) {
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 
@@ -219,14 +219,14 @@ struct DocumentConverterPanel: View {
                     .font(.caption2)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.12))
+                    .background(AppSurfaceTokens.secondaryText.opacity(0.12))
                     .cornerRadius(999)
             }
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -275,7 +275,7 @@ struct DocumentConverterPanel: View {
                 .frame(minHeight: 360)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
         }
         .padding(16)
@@ -550,7 +550,7 @@ struct OCRPanel: View {
 
                 Text("从图片中提取文字，支持文件和剪贴板图片。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -572,7 +572,7 @@ struct OCRPanel: View {
 
             Text("如果你已经把截图放进剪贴板，也可以直接从剪贴板识别。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -618,23 +618,23 @@ struct OCRPanel: View {
                         .font(.headline)
                     Text(sourceURL.path)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .textSelection(.enabled)
                 }
             } else {
                 Text("还没有选择图片。")
                     .font(.body)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -683,7 +683,7 @@ struct OCRPanel: View {
                 .frame(minHeight: 380)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
                 )
         }
         .padding(16)
@@ -863,7 +863,7 @@ struct ImageProcessingPanel: View {
 
                 Text("压缩、缩放和格式转换。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -885,7 +885,7 @@ struct ImageProcessingPanel: View {
 
             Text("可以设置最大边长和 JPEG 压缩质量，适合先把大图压一遍再导出。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -923,27 +923,27 @@ struct ImageProcessingPanel: View {
                         .font(.headline)
                     Text(sourceURL.path)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .textSelection(.enabled)
                 }
             } else if let clipboardInfo = viewModel.clipboardInfo {
                 Text(clipboardInfo)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             } else {
                 Text("还没有选择图片。")
                     .font(.body)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -963,7 +963,7 @@ struct ImageProcessingPanel: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("输出格式")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     Picker("输出格式", selection: $viewModel.outputFormat) {
                         ForEach(ImageOutputFormat.allCases) { format in
@@ -976,7 +976,7 @@ struct ImageProcessingPanel: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("最大边长")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     TextField("例如 1600", text: $viewModel.maxDimensionText)
                         .textFieldStyle(.roundedBorder)
@@ -986,7 +986,7 @@ struct ImageProcessingPanel: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("JPEG 质量")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     Slider(value: $viewModel.quality, in: 0.1...1.0)
                         .frame(width: 180)
@@ -1031,7 +1031,7 @@ struct ImageProcessingPanel: View {
                 if let summary = viewModel.outputSummary {
                     Text(summary)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Button {
@@ -1048,14 +1048,14 @@ struct ImageProcessingPanel: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxHeight: 300)
-                    .background(Color.black.opacity(0.02))
+                    .background(AppSurfaceTokens.primaryText.opacity(0.02))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 Text("处理后会显示预览图。")
                     .font(.body)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 240)
-                    .background(Color.black.opacity(0.02))
+                    .background(AppSurfaceTokens.primaryText.opacity(0.02))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
@@ -1382,7 +1382,7 @@ struct BatchRenamePanel: View {
 
                 Text("对文件夹中的一级项目批量改名，支持前缀、后缀、替换和预览。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -1404,7 +1404,7 @@ struct BatchRenamePanel: View {
 
             Text("这样能尽量避免误改和路径连锁反应。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -1459,23 +1459,23 @@ struct BatchRenamePanel: View {
                         .font(.headline)
                     Text(folderURL.path)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .textSelection(.enabled)
                 }
             } else {
                 Text("还没有选择文件夹。")
                     .font(.body)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Text(viewModel.statusText)
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1495,7 +1495,7 @@ struct BatchRenamePanel: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("前缀")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     TextField("例如 new_", text: $viewModel.prefixText)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -1503,7 +1503,7 @@ struct BatchRenamePanel: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("查找")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     TextField("要替换的文字", text: $viewModel.searchText)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -1511,7 +1511,7 @@ struct BatchRenamePanel: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("替换为")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     TextField("替换成", text: $viewModel.replaceText)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -1519,7 +1519,7 @@ struct BatchRenamePanel: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("后缀")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     TextField("例如 _done", text: $viewModel.suffixText)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -1556,7 +1556,7 @@ struct BatchRenamePanel: View {
 
                 Text("共 \(viewModel.previewItems.count) 项")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             ScrollView {
@@ -1570,7 +1570,7 @@ struct BatchRenamePanel: View {
             .frame(minHeight: 260)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
             )
         }
         .padding(16)
@@ -1747,38 +1747,38 @@ struct RenamePreviewRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: item.isDirectory ? "folder" : "doc")
-                .foregroundStyle(item.isDirectory ? Color.orange : Color.blue)
+                .foregroundStyle(item.isDirectory ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentBlue)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.originalURL.lastPathComponent)
                     .font(.body)
-                    .foregroundStyle(Color.primary)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text(item.originalURL.path)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .textSelection(.enabled)
             }
 
             Spacer()
 
             Image(systemName: "arrow.right")
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.proposedURL.lastPathComponent)
                     .font(.body)
-                    .foregroundStyle(Color.primary)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text(item.proposedURL.path)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .textSelection(.enabled)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.secondary.opacity(0.05))
+        .background(AppSurfaceTokens.secondaryText.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 8)
     }
@@ -1799,7 +1799,7 @@ struct SRTToFCPXMLPanel: View {
 
             Text("将 SRT 字幕文件转换为 Final Cut Pro 可用的 FCPXML 格式")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -1810,7 +1810,7 @@ struct SRTToFCPXMLPanel: View {
                         .frame(minHeight: 200)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.3), lineWidth: 1)
                         )
                 }
 
@@ -1822,7 +1822,7 @@ struct SRTToFCPXMLPanel: View {
                         .frame(minHeight: 200)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.3), lineWidth: 1)
                         )
                         .disabled(true)
                 }

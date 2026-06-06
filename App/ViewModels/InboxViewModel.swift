@@ -26,19 +26,24 @@ class InboxViewModel: ObservableObject {
     @Published var showError: Bool = false
     
     // MARK: - Dependencies
-    
+
     private let storage: StorageServiceProtocol
     private let exportService: ExportServiceProtocol
+    private let distillService: DistillServiceProtocol
+    private let knowledgeService: KnowledgeServiceProtocol
     
     // MARK: - Init
     
     init(
         storage: StorageServiceProtocol? = nil,
-        exportService: ExportServiceProtocol? = nil
+        exportService: ExportServiceProtocol? = nil,
+        distillService: DistillServiceProtocol? = nil,
+        knowledgeService: KnowledgeServiceProtocol? = nil
     ) {
-        let container = ServiceContainer.isInitialized() ? ServiceContainer.shared : nil
-        self.storage = storage ?? container?.storageService ?? StorageService()
-        self.exportService = exportService ?? container?.exportService ?? ExportService()
+        self.storage = storage ?? StorageService()
+        self.exportService = exportService ?? ExportService()
+        self.distillService = distillService ?? DistillService(storage: self.storage)
+        self.knowledgeService = knowledgeService ?? KnowledgeService(storage: self.storage)
     }
     
     // MARK: - Load
@@ -132,7 +137,6 @@ class InboxViewModel: ObservableObject {
     
     func distillItem(_ item: SourceItem) async {
         do {
-            let distillService = ServiceContainer.shared.distillService
             let note = try await distillService.distill(sourceItem: item)
             
             // 更新 SourceItem 状态
@@ -167,7 +171,7 @@ class InboxViewModel: ObservableObject {
                 throw NSError(domain: "InboxViewModel", code: 1, userInfo: [NSLocalizedDescriptionKey: "未找到可发送的蒸馏笔记"])
             }
 
-            _ = try await ServiceContainer.shared.knowledgeService.createCard(from: note)
+            _ = try await knowledgeService.createCard(from: note)
             AppState.shared.selectSidebarItem(.agent)
         } catch {
             errorMessage = "发送到知识库失败: \(error.localizedDescription)"

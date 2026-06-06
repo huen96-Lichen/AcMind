@@ -16,7 +16,7 @@ struct ScheduleToolbar: View {
                     .font(.system(size: 17, weight: .semibold))
                 Text(viewModel.viewSubtitle)
                     .font(.system(size: 11))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(1)
             }
 
@@ -36,7 +36,7 @@ struct ScheduleToolbar: View {
                         .cornerRadius(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                         )
                 }
                 .buttonStyle(.plain)
@@ -65,7 +65,7 @@ struct ScheduleToolbar: View {
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                        .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                 )
 
                 // 分段控件：周 / 月 / 年
@@ -76,7 +76,7 @@ struct ScheduleToolbar: View {
                         HStack(spacing: 6) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             TextField("搜索日程", text: $viewModel.searchText)
                                 .textFieldStyle(.plain)
@@ -89,7 +89,7 @@ struct ScheduleToolbar: View {
                         .cornerRadius(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                         )
 
                         Button {
@@ -99,7 +99,7 @@ struct ScheduleToolbar: View {
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 13))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .frame(width: 24, height: 24)
                         }
                         .buttonStyle(.plain)
@@ -161,12 +161,12 @@ struct ScheduleSegmentedControl: View {
                 } label: {
                     Text(mode.displayName)
                         .font(.system(size: 12, weight: selection == mode ? .medium : .regular))
-                        .foregroundStyle(selection == mode ? .primary : .secondary)
+                        .foregroundStyle(selection == mode ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
                         .background(
                             selection == mode
-                                ? AppSurfaceTokens.cardBackgroundSoft
+                                ? AppSurfaceTokens.cardBackground
                                 : Color.clear
                         )
                         .cornerRadius(5)

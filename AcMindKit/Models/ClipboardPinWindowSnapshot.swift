@@ -33,4 +33,37 @@ public struct ClipboardPinWindowSnapshot: Equatable, Sendable {
     public var isAtExpectedAlwaysOnTopLevel: Bool {
         isAlwaysOnTop && levelRawValue == expectedAlwaysOnTopLevelRawValue
     }
+
+    public var diagnosticReason: String {
+        if isVisible == false {
+            return "hidden"
+        }
+        if isAlwaysOnTop == false {
+            return "not always-on-top"
+        }
+        if isAtExpectedAlwaysOnTopLevel == false {
+            return "level mismatch"
+        }
+        if screenFrame == nil {
+            return "missing screen frame"
+        }
+        return "ok"
+    }
+
+    public var diagnosticPriority: Int {
+        switch diagnosticReason {
+        case "ok":
+            return 0
+        case "missing screen frame":
+            return 1
+        case "level mismatch":
+            return 2
+        case "not always-on-top":
+            return 3
+        case "hidden":
+            return 4
+        default:
+            return 5
+        }
+    }
 }

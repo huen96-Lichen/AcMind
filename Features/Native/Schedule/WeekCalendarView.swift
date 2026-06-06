@@ -50,14 +50,14 @@ private struct WeekHeader: View {
                 VStack(spacing: 2) {
                     Text(weekdaySymbols[weekdayIndex])
                         .font(.system(size: 10))
-                        .foregroundStyle(isToday ? .primary : .secondary)
+                        .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
 
                     Text("\(calendar.component(.day, from: date))")
                         .font(.system(size: isToday ? 16 : 14, weight: isToday ? .bold : .medium))
-                        .foregroundStyle(isToday ? .white : .primary)
+                        .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
                         .frame(width: isToday ? 28 : 24, height: isToday ? 28 : 24)
                         .background(
-                            isToday ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.clear)
+                            isToday ? AnyShapeStyle(AppSurfaceTokens.accentBlue) : AnyShapeStyle(Color.clear)
                         )
                         .cornerRadius(isToday ? 14 : 0)
                 }
@@ -83,7 +83,7 @@ private struct AllDayEventRow: View {
         HStack(spacing: 0) {
             Text("全天")
                 .font(.system(size: 10))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: ScheduleLayout.weekTimeColumnWidth, alignment: .trailing)
                 .padding(.trailing, 8)
 
@@ -94,7 +94,7 @@ private struct AllDayEventRow: View {
                     ForEach(dayAllDayEvents) { event in
                         Text(event.title)
                             .font(.system(size: 10))
-                            .foregroundStyle(Color.primary)
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(viewModel.categoryColor(for: event.categoryId).opacity(0.15))
@@ -152,7 +152,7 @@ private struct HourRow: View {
         HStack(spacing: 0) {
             Text(String(format: "%02d:00", hour))
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(AppSurfaceTokens.tertiaryText)
                 .frame(width: ScheduleLayout.weekTimeColumnWidth, alignment: .trailing)
                 .padding(.trailing, 8)
 
@@ -211,7 +211,7 @@ private struct TimeSlotBackground: View {
                 }
 
             Rectangle()
-                .fill(Color(NSColor.separatorColor).opacity(0.3))
+                .fill(AppSurfaceTokens.separator.opacity(0.3))
                 .frame(height: 0.5)
 
             // 下半部分（30分）
@@ -293,22 +293,22 @@ private struct EventCard: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(event.title)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(event.status == .done ? .tertiary : .primary)
+                .foregroundStyle(event.status == .done ? AppSurfaceTokens.tertiaryText : AppSurfaceTokens.primaryText)
                 .lineLimit(1)
 
             if placement.height > 24 {
                 HStack(alignment: .center, spacing: 4) {
                     Text(timeRange)
                         .font(.system(size: 9))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .lineLimit(1)
                     if placement.height > 40 {
                         Text("·")
                             .font(.system(size: 9))
-                            .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                         Text(durationText)
                             .font(.system(size: 9))
-                            .foregroundStyle(Color(NSColor.tertiaryLabelColor))
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                             .lineLimit(1)
                     }
                 }

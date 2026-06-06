@@ -60,8 +60,8 @@ struct SettingsSuiteView: View {
                 sectionContent
                 saveButton
             }
-            .padding(28)
-            .frame(maxWidth: 1120, alignment: .leading)
+            .padding(24)
+            .frame(maxWidth: 960, alignment: .leading)
         }
         .background(AppVisualBackdrop())
         .alert("设置错误", isPresented: $viewModel.showError) {
@@ -71,8 +71,8 @@ struct SettingsSuiteView: View {
         }
         .sheet(isPresented: $showingDesktopCapsuleSettings) {
             DesktopCapsuleSettingsSection()
-                .frame(minWidth: 760, minHeight: 640)
-                .padding(20)
+                .frame(minWidth: 700, minHeight: 560)
+                .padding(16)
         }
         .task {
             await viewModel.loadSettings()
@@ -203,14 +203,14 @@ struct SettingsSuiteView: View {
             HStack(spacing: 10) {
                 Image(systemName: selectedSection.icon)
                     .font(.title2)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(AppSurfaceTokens.accentBlue)
                 Text(selectedSection.title)
                     .font(.title2)
                     .fontWeight(.semibold)
             }
             Text(selectedSection.subtitle)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
     }
 
@@ -259,9 +259,9 @@ struct SettingsSuiteView: View {
 
             settingsCard(title: "权限", subtitle: "Agent 运行所需") {
                 VStack(alignment: .leading, spacing: 8) {
-                    settingsStatusRow(label: "麦克风", status: viewModel.microphonePermissionStatus.displayName, color: viewModel.microphonePermissionStatus.color)
-                    settingsStatusRow(label: "无障碍", status: viewModel.accessibilityPermissionStatus.displayName, color: viewModel.accessibilityPermissionStatus.color)
-                    settingsStatusRow(label: "录屏", status: viewModel.screenRecordingPermissionStatus.displayName, color: viewModel.screenRecordingPermissionStatus.color)
+                    settingsStatusRow(label: "麦克风", status: viewModel.microphonePermissionStatus.displayName, color: permissionBadgeColor(for: viewModel.microphonePermissionStatus))
+                    settingsStatusRow(label: "无障碍", status: viewModel.accessibilityPermissionStatus.displayName, color: permissionBadgeColor(for: viewModel.accessibilityPermissionStatus))
+                    settingsStatusRow(label: "录屏", status: viewModel.screenRecordingPermissionStatus.displayName, color: permissionBadgeColor(for: viewModel.screenRecordingPermissionStatus))
                 }
             }
 
@@ -356,7 +356,7 @@ struct SettingsSuiteView: View {
                     Toggle("自动监听剪贴板", isOn: $viewModel.autoCaptureClipboard)
                     Text("截图自动打码和敏感信息检测已经接入实际捕获流程；滚动截图仍在继续补齐。")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Button("打开桌面小胶囊设置") {
                         showingDesktopCapsuleSettings = true
                     }
@@ -458,7 +458,7 @@ struct SettingsSuiteView: View {
         HStack {
             Text(key)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
             Text(value)
                 .font(.system(size: 13, weight: .medium))
@@ -480,6 +480,14 @@ struct SettingsSuiteView: View {
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
+    }
+
+    private func permissionBadgeColor(for status: CompanionPermissionStatus) -> Color {
+        switch status {
+        case .notDetermined: return AppSurfaceTokens.accentOrange
+        case .authorized: return AppSurfaceTokens.accentGreen
+        case .denied, .restricted: return AppSurfaceTokens.accentOrange
+        }
     }
 
     private func translationLanguageDisplayName(_ id: String) -> String {

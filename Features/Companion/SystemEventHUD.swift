@@ -62,8 +62,6 @@ struct SystemEventHUDItem: Identifiable {
 
 @MainActor
 final class SystemEventCenter: ObservableObject {
-    static let shared = SystemEventCenter()
-
     @Published var currentHUD: SystemEventHUDItem?
     @Published var volumeLevel: Double?
     @Published var brightnessLevel: Double?
@@ -260,7 +258,11 @@ final class SystemEventCenter: ObservableObject {
 // MARK: - HUD View
 
 struct SystemEventHUDView: View {
-    @ObservedObject private var center = SystemEventCenter.shared
+    @ObservedObject private var center: SystemEventCenter
+
+    init(center: SystemEventCenter) {
+        _center = ObservedObject(wrappedValue: center)
+    }
 
     var body: some View {
         if let event = center.currentHUD {

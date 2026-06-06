@@ -1,6 +1,26 @@
 import Foundation
+import OSLog
 
 // MARK: - AI Runtime Service
+
+public protocol AIRuntimeLoggingSink: Sendable {
+    func logAI(_ message: String)
+    func logError(_ message: String)
+}
+
+public final class AIRuntimeOSLogSink: AIRuntimeLoggingSink, @unchecked Sendable {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AcMind", category: "AIRuntime")
+
+    public init() {}
+
+    public func logAI(_ message: String) {
+        logger.debug("\(message, privacy: .public)")
+    }
+
+    public func logError(_ message: String) {
+        logger.error("\(message, privacy: .public)")
+    }
+}
 
 /// AI 运行时服务
 /// 职责：
@@ -19,6 +39,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     private let storage: StorageServiceProtocol
     private let settingsDefaults: UserDefaults
     private let modelRouter: AgentModelRouterProtocol?
+    private let loggingSink: AIRuntimeLoggingSink
     
     // MARK: - Initialization
     
@@ -26,11 +47,17 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         self.init(storage: storage, settingsDefaults: .standard, modelRouter: modelRouter)
     }
 
-    public init(storage: StorageServiceProtocol? = nil, settingsDefaults: UserDefaults = .standard, modelRouter: AgentModelRouterProtocol? = nil) {
+    public init(
+        storage: StorageServiceProtocol? = nil,
+        settingsDefaults: UserDefaults = .standard,
+        modelRouter: AgentModelRouterProtocol? = nil,
+        loggingSink: AIRuntimeLoggingSink = AIRuntimeOSLogSink()
+    ) {
         self.storage = storage ?? StorageService()
         self.taskQueue = TaskQueue(maxConcurrent: 2)
         self.settingsDefaults = settingsDefaults
         self.modelRouter = modelRouter
+        self.loggingSink = loggingSink
     }
     
     // MARK: - Provider Management
@@ -126,15 +153,15 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     
     public func chat(messages: [ChatMessage]) async throws -> ChatResponse {
         guard let providerId = preferredProviderId(),
-              let provider = providers[providerId] else {
+              providers[providerId] != nil else {
             throw AIError.noProvider
         }
-        
-        let config = ChatConfig(
+
+        return try await chat(
+            messages: messages,
+            providerId: providerId,
             model: configs.first(where: { $0.id == providerId })?.modelId
         )
-        
-        return try await provider.chat(messages: messages, config: config)
     }
     
     public func chat(
@@ -150,6 +177,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         let config = ChatConfig(model: modelId.isEmpty ? nil : modelId)
 
         let startTime = Date()
+        logAI("chat start provider=\(providerId) model=\(modelId.isEmpty ? "unknown" : modelId) messages=\(messages.count)")
         do {
             let response = try await provider.chat(messages: messages, config: config)
             let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
@@ -164,6 +192,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                 latencyMs: response.latencyMs ?? elapsed,
                 success: true
             )
+            logAI("chat success provider=\(providerId) model=\(response.model ?? modelId) promptTokens=\(promptTokens) completionTokens=\(completionTokens) latencyMs=\(response.latencyMs ?? elapsed)")
             return response
         } catch {
             let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
@@ -177,6 +206,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                 success: false,
                 errorMessage: error.localizedDescription
             )
+            logError("chat failed provider=\(providerId) model=\(modelId) error=\(error.localizedDescription)")
             throw error
         }
     }
@@ -195,13 +225,23 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                         model: configs.first(where: { $0.id == providerId })?.modelId,
                         stream: true
                     )
+
+                    let modelId = config.model ?? "unknown"
+                    logAI("chat stream start provider=\(providerId) model=\(modelId) messages=\(messages.count)")
                     
+                    var chunkCount = 0
                     for try await response in provider.chatStream(messages: messages, config: config) {
+                        chunkCount += 1
                         continuation.yield(response)
                     }
                     
+                    logAI("chat stream success provider=\(providerId) model=\(modelId) chunks=\(chunkCount)")
                     continuation.finish()
                 } catch {
+                    if let providerId = self.preferredProviderId() {
+                        let modelId = configs.first(where: { $0.id == providerId })?.modelId ?? "unknown"
+                        logError("chat stream failed provider=\(providerId) model=\(modelId) error=\(error.localizedDescription)")
+                    }
                     continuation.finish(throwing: error)
                 }
             }
@@ -222,6 +262,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         let messages = buildDistillationMessages(sourceItem: sourceItem)
 
         let startTime = Date()
+        logAI("distill start provider=\(providerId) item=\(sourceItem.id)")
         do {
             let response = try await provider.chat(messages: messages, config: config)
             let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
@@ -236,6 +277,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                 latencyMs: response.latencyMs ?? elapsed,
                 success: true
             )
+            logAI("distill success provider=\(providerId) item=\(sourceItem.id) model=\(response.model ?? modelId) promptTokens=\(promptTokens) completionTokens=\(completionTokens) latencyMs=\(response.latencyMs ?? elapsed)")
             return parseDistillationResult(content: response.content, sourceItem: sourceItem)
         } catch {
             let elapsed = Int(Date().timeIntervalSince(startTime) * 1000)
@@ -249,6 +291,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                 success: false,
                 errorMessage: error.localizedDescription
             )
+            logError("distill failed provider=\(providerId) item=\(sourceItem.id) error=\(error.localizedDescription)")
             throw error
         }
     }
@@ -423,6 +466,24 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         await router.recordUsage(usage)
     }
 
+    private func aiCallLoggingEnabled() -> Bool {
+        SettingsLocalPreferences.loadOrDefault(from: settingsDefaults).aiCallLogEnabled
+    }
+
+    private func errorLoggingEnabled() -> Bool {
+        SettingsLocalPreferences.loadOrDefault(from: settingsDefaults).errorLogEnabled
+    }
+
+    private func logAI(_ message: String) {
+        guard aiCallLoggingEnabled() else { return }
+        loggingSink.logAI(message)
+    }
+
+    private func logError(_ message: String) {
+        guard errorLoggingEnabled() else { return }
+        loggingSink.logError(message)
+    }
+
     private func initProvider(_ config: ProviderConfig) async throws {
         let resolvedBaseURL = config.baseURL.isEmpty ? config.providerType.defaultBaseURL : config.baseURL
         switch config.providerType {
@@ -461,6 +522,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                 try await initProvider(config)
             } catch {
                 // 没有 API Key 或 Provider 初始化失败时，仍保留配置供 UI 展示
+                logError("init provider failed id=\(config.id) error=\(error.localizedDescription)")
             }
         }
 
@@ -483,5 +545,26 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         }
 
         return defaultProviderId ?? configs.first?.id
+    }
+
+    // MARK: - Test Support
+
+    func installTestProvider(id: String, provider: any AIProvider, modelId: String = "mock-model") {
+        providers[id] = provider
+        if configs.contains(where: { $0.id == id }) == false {
+            configs.append(
+                ProviderConfig(
+                    id: id,
+                    name: id,
+                    providerType: .local,
+                    tier: .localLight,
+                    modelId: modelId,
+                    enabled: true
+                )
+            )
+        }
+        if defaultProviderId == nil {
+            defaultProviderId = id
+        }
     }
 }

@@ -72,14 +72,14 @@ private struct MiniMonthCard: View {
             // 月份标题
             Text(monthTitle)
                 .font(.system(size: 12, weight: isCurrentMonth ? .semibold : .medium))
-                .foregroundStyle(isCurrentMonth ? Color.accentColor : .primary)
+                .foregroundStyle(isCurrentMonth ? AppSurfaceTokens.accentBlue : .primary)
 
             // 星期头
             HStack(spacing: 0) {
                 ForEach(shortWeekdays, id: \.self) { sym in
                     Text(sym)
                         .font(.system(size: 8))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -95,19 +95,19 @@ private struct MiniMonthCard: View {
                         ZStack {
                             if isToday {
                                 Circle()
-                                    .fill(Color.accentColor)
+                                    .fill(AppSurfaceTokens.accentBlue)
                                     .frame(width: 14, height: 14)
                             }
 
                             Text("\(calendar.component(.day, from: date))")
                                 .font(.system(size: 9, weight: isToday ? .bold : .regular))
-                                .foregroundStyle(isToday ? .white : .primary)
+                                .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
                         }
                         .frame(height: 16)
 
                         if hasEvents && !isToday {
                             Circle()
-                                .fill(Color.accentColor.opacity(0.5))
+                                .fill(AppSurfaceTokens.accentBlue.opacity(0.5))
                                 .frame(width: 3, height: 3)
                                 .padding(.top, -2)
                         }
@@ -120,13 +120,13 @@ private struct MiniMonthCard: View {
         .padding(8)
         .background(
             isCurrentMonth
-                ? Color.accentColor.opacity(0.05)
+                ? AppSurfaceTokens.accentBlue.opacity(0.05)
                 : AppSurfaceTokens.cardBackgroundSoft
         )
         .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         .overlay(
             RoundedRectangle(cornerRadius: AcMindDesignTokens.Layout.inlineBlockRadius)
-                .stroke(isCurrentMonth ? Color.accentColor.opacity(0.2) : Color(NSColor.separatorColor).opacity(0.5), lineWidth: 0.5)
+                .stroke(isCurrentMonth ? AppSurfaceTokens.accentBlue.opacity(0.2) : AppSurfaceTokens.separator.opacity(0.5), lineWidth: 0.5)
         )
     }
 
@@ -182,7 +182,7 @@ private struct WorkloadHeatmap: View {
                 let stats = viewModel.yearlyStats
                 Text("最近 365 天中有 \(stats.activeDays) 天安排了日程，平均饱和度 \(stats.avgWorkload)%")
                     .font(.system(size: 12))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             // 热力图
@@ -192,7 +192,7 @@ private struct WorkloadHeatmap: View {
                     ForEach(0..<7, id: \.self) { index in
                         Text(weekdayLabels[index])
                             .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                             .frame(height: cellSize)
                     }
                 }
@@ -233,23 +233,23 @@ private struct WorkloadHeatmap: View {
                         .font(.system(size: 12, weight: .medium))
                     Text("已安排 \(day.eventCount) 项")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("总时长 \(String(format: "%.1f", Double(day.scheduledMinutes) / 60.0))h")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("饱和度 \(day.workloadPercent)%")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(day.workloadLevel.color == Color(red: 0.93, green: 0.94, blue: 0.95) ? .secondary : .primary)
+                        .foregroundStyle(day.workloadLevel.color == AppSurfaceTokens.cardBackgroundSoft ? .secondary : .primary)
                     Text("状态：\(day.statusText)")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .padding(10)
                 .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                        .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                 )
                 .transition(.opacity)
             }
@@ -258,7 +258,7 @@ private struct WorkloadHeatmap: View {
             HStack(spacing: 16) {
                 Text("少")
                     .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppSurfaceTokens.tertiaryText)
 
                 ForEach(WorkloadLevel.allCases, id: \.rawValue) { level in
                     HStack(spacing: 4) {
@@ -267,13 +267,13 @@ private struct WorkloadHeatmap: View {
                             .frame(width: 12, height: 12)
                         Text(level.displayName)
                             .font(.system(size: 10))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
 
                 Text("多")
                     .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppSurfaceTokens.tertiaryText)
             }
         }
     }
@@ -324,7 +324,7 @@ private struct HeatmapCell: View {
             .frame(width: 12, height: 12)
             .overlay(
                 RoundedRectangle(cornerRadius: 2)
-                    .stroke(isHovered ? Color.primary.opacity(0.3) : Color.clear, lineWidth: 1)
+                    .stroke(isHovered ? AppSurfaceTokens.primaryText.opacity(0.3) : Color.clear, lineWidth: 1)
             )
             .scaleEffect(isHovered ? 1.3 : 1.0)
             .animation(.easeInOut(duration: 0.15), value: isHovered)

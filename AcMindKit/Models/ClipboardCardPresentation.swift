@@ -10,9 +10,9 @@ public enum ClipboardCardPresentation {
         switch item.type {
         case .image:
             return 1
-        case .text:
+        case .text, .richText, .code:
             return 2
-        case .file, .url:
+        case .file, .url, .video:
             return 2
         }
     }
@@ -112,10 +112,16 @@ public extension ClipboardContentType {
             return .image
         case .text:
             return .text
+        case .richText:
+            return .text
+        case .code:
+            return .text
         case .file:
             return .unknownFile
         case .url:
             return .webpage
+        case .video:
+            return .video
         }
     }
 }

@@ -45,22 +45,31 @@ struct AgentDashboardView: View {
     }
 
     var body: some View {
-        HSplitView {
-            SecondarySidebarWithHeader(
-                title: "Agent",
-                subtitle: "对话与任务执行",
-                sections: sidebarSections(recentItems: viewModel.recentItems, projectContextItems: viewModel.projectContextItems),
-                selectedItem: $selectedSidebarItem
-            )
-            .frame(width: 240)
-
-            mainContent
-
-            if showRightPanel {
-                rightPanel
-                    .frame(width: 280)
+        WorkspacePageShell(
+            title: currentModeTitle,
+            subtitle: "AcMind · \(viewModel.currentWorkspaceTitle)",
+            headerActions: AnyView(headerActions),
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                SecondarySidebarWithHeader(
+                    title: "Agent",
+                    subtitle: "对话与任务执行",
+                    sections: sidebarSections(recentItems: viewModel.recentItems, projectContextItems: viewModel.projectContextItems),
+                    selectedItem: $selectedSidebarItem
+                )
+            },
+            content: {
+                conversationPane
+            },
+            trailingRail: {
+                if showRightPanel {
+                    rightPanel
+                } else {
+                    EmptyRailPlaceholder(title: "任务面板", subtitle: "已收起")
+                }
             }
-        }
+        )
         .background(AppVisualBackdrop())
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
@@ -72,43 +81,25 @@ struct AgentDashboardView: View {
         }
     }
 
-    private var mainContent: some View {
+    private var conversationPane: some View {
         VStack(spacing: 0) {
-            topBar
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-
-            Divider()
-
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     messageStream
                     executionFeedback
                 }
                 .padding(20)
-                .frame(maxWidth: 780, alignment: .leading)
+                .frame(maxWidth: 760, alignment: .leading)
             }
             .frame(maxWidth: .infinity)
-
-            Divider()
 
             composerBar
                 .padding(16)
         }
     }
 
-    private var topBar: some View {
+    private var headerActions: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(currentModeTitle)
-                    .font(.system(size: 17, weight: .semibold))
-                Text("AcMind · \(viewModel.currentWorkspaceTitle)")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
             HStack(spacing: 12) {
                 StatusPill(label: viewModel.isLoading ? "忙碌" : "待命", color: viewModel.isLoading ? .orange : AppSurfaceTokens.accentGreen)
 
@@ -138,14 +129,14 @@ struct AgentDashboardView: View {
                 Button(action: { showRightPanel.toggle() }) {
                     Image(systemName: showRightPanel ? "sidebar.right" : "sidebar.right")
                         .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
 
                 Button(action: { viewModel.clear() }) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
             }
@@ -184,7 +175,7 @@ struct AgentDashboardView: View {
                         .scaleEffect(0.8)
                     Text("正在处理...")
                         .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,21 +190,21 @@ struct AgentDashboardView: View {
                 Button(action: { Task { await viewModel.toggleRecording() } }) {
                     Image(systemName: viewModel.recordingStatus == .recording ? "stop.circle.fill" : "mic.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(viewModel.recordingStatus == .recording ? .red : .secondary)
+                        .foregroundStyle(viewModel.recordingStatus == .recording ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
 
                 Button(action: { Task { await viewModel.saveToInbox() } }) {
                     Image(systemName: "paperclip")
                         .font(.system(size: 16))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
 
                 Button(action: { viewModel.clear() }) {
                     Image(systemName: "wrench")
                         .font(.system(size: 16))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
 
@@ -266,7 +257,7 @@ struct AgentDashboardView: View {
                 Button(action: { showRightPanel = false }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
             }
@@ -294,13 +285,13 @@ struct AgentDashboardView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
 
             if items.isEmpty {
                 Text("暂无任务")
                     .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -325,7 +316,7 @@ struct AgentDashboardView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("最近任务")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
 
             ForEach(viewModel.recentItems.prefix(5), id: \.id) { item in
@@ -335,7 +326,7 @@ struct AgentDashboardView: View {
                         .lineLimit(1)
                     Text(item.status.displayName)
                         .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -348,7 +339,7 @@ struct AgentDashboardView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("快捷功能")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
 
             VStack(spacing: 6) {
@@ -401,7 +392,7 @@ struct AgentDashboardView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("工具调用结果")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
 
             Text(result)
@@ -464,6 +455,25 @@ struct AgentDashboardView: View {
     }
 }
 
+private struct EmptyRailPlaceholder: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+}
+
 struct MessageBubble: View {
     let isUser: Bool
     let content: String
@@ -478,13 +488,13 @@ struct MessageBubble: View {
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
-                            .fill(isUser ? Color.accentColor.opacity(0.15) : AppSurfaceTokens.cardBackgroundSoft)
+                            .fill(isUser ? AppSurfaceTokens.accentBlue.opacity(0.15) : AppSurfaceTokens.cardBackgroundSoft)
                     )
 
-                Text(isUser ? "你" : "Agent")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
+                    Text(isUser ? "你" : "Agent")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
 
             if !isUser { Spacer() }
         }
@@ -509,13 +519,13 @@ private struct StatusPill: View {
 
 private func recordingColor(for status: RecordingStatus) -> Color {
     switch status {
-    case .idle:
-        return AppSurfaceTokens.secondaryText
-    case .recording:
-        return .red
-    case .processing:
-        return AppSurfaceTokens.accentPrimary
-    case .error:
-        return .red
-    }
-}
+            case .idle:
+                return AppSurfaceTokens.secondaryText
+            case .recording:
+                return AppSurfaceTokens.accentOrange
+            case .processing:
+                return AppSurfaceTokens.accentPrimary
+            case .error:
+                return AppSurfaceTokens.accentOrange
+            }
+        }

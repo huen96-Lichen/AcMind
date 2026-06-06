@@ -19,6 +19,16 @@ public final class ClipboardService: ClipboardServiceProtocol {
     private let storage: StorageServiceProtocol
     private let assetStore: AssetStore
     private let settingsDefaults: UserDefaults
+    private let pipeline: ClipboardPipeline
+    private let cleaningRulesStore: CleaningRulesStore
+    private lazy var transientPaster: TransientPaster = {
+        TransientPaster(
+            pauseMonitoring: { [weak self] in await self?.pauseWatching() },
+            resumeMonitoring: { [weak self] in await self?.resumeWatching() }
+        )
+    }()
+    private let pasteQueue = PasteQueue()
+    private let focusManager = FocusManager()
     
     // MARK: - State
     
@@ -27,10 +37,13 @@ public final class ClipboardService: ClipboardServiceProtocol {
     private var items: [ClipboardItem] = []
     private var isWatching = false
     private var isPaused = false
-    
-    /// 最近处理的剪贴板内容哈希，用于去重
-    private var recentHashes: [String] = []
-    private let maxRecentHashes = 50
+
+    public var itemPublisher: AnyPublisher<ClipboardItem, Never> {
+        pipeline.distribution.itemCaptured.eraseToAnyPublisher()
+    }
+
+    var isWatchingActiveForTesting: Bool { isWatching }
+    var isWatchingPausedForTesting: Bool { isPaused }
     
     // MARK: - Constants
     
@@ -44,46 +57,62 @@ public final class ClipboardService: ClipboardServiceProtocol {
         assetStore: AssetStore? = nil,
         settingsDefaults: UserDefaults = .standard
     ) {
-        self.storage = storage ?? StorageService()
-        self.assetStore = assetStore ?? AssetStore()
+        let resolvedStorage = storage ?? StorageService()
+        let resolvedAssetStore = assetStore ?? AssetStore()
+        let resolvedCleaningRulesStore = CleaningRulesStore(storage: resolvedStorage)
+        self.storage = resolvedStorage
+        self.assetStore = resolvedAssetStore
         self.settingsDefaults = settingsDefaults
+        self.cleaningRulesStore = resolvedCleaningRulesStore
+        self.pipeline = ClipboardPipeline(
+            assetStore: resolvedAssetStore,
+            storage: resolvedStorage,
+            cleaningRulesEvaluator: { [resolvedCleaningRulesStore] text, sourceApp in
+                switch resolvedCleaningRulesStore.evaluate(text: text, sourceApp: sourceApp) {
+                case .ignore:
+                    return .ignore
+                case .clean(let cleanedText):
+                    return .clean(cleanedText)
+                case .pass:
+                    return .pass
+                }
+            }
+        )
     }
     
     // MARK: - Lifecycle
     
     public func startWatching() async {
         guard !isWatching else { return }
-        
-        // 加载历史记录
+
+        await cleaningRulesStore.loadRules()
         await loadHistory()
         
         // 启动轮询
-        await MainActor.run {
-            self.timer = Timer.scheduledTimer(withTimeInterval: self.pollInterval, repeats: true) { _ in
-                Task { await self.checkClipboard() }
-            }
-        }
+        await startPollingTimer()
         
         isWatching = true
         isPaused = false
     }
     
     public func stopWatching() async {
-        await MainActor.run {
-            timer?.invalidate()
-            timer = nil
-        }
+        await stopPollingTimer()
         isWatching = false
+        isPaused = false
     }
     
     public func pauseWatching() async {
+        guard isWatching else { return }
         isPaused = true
+        await stopPollingTimer()
     }
     
     public func resumeWatching() async {
+        guard isWatching else { return }
         isPaused = false
         // 重置 changeCount 避免暂停期间的变化被处理
         lastChangeCount = NSPasteboard.general.changeCount
+        await startPollingTimer()
     }
     
     // MARK: - Clipboard Monitoring
@@ -91,106 +120,54 @@ public final class ClipboardService: ClipboardServiceProtocol {
     private func checkClipboard() async {
         guard !isPaused else { return }
         guard shouldCaptureAutomatically else { return }
-        
+
         let pasteboard = NSPasteboard.general
         let currentChangeCount = pasteboard.changeCount
-        
+
         guard currentChangeCount != lastChangeCount else { return }
         lastChangeCount = currentChangeCount
-        
-        // 获取前台应用名称
+
         let sourceApp = await getFrontmostAppName()
-        
-        // 尝试创建剪贴板条目
-        if let item = await createItem(from: pasteboard, sourceApp: sourceApp) {
-            // 检查是否重复
-            let itemHash = hashForItem(item)
-            guard !recentHashes.contains(itemHash) else { return }
-            
-            // 添加到历史
-            items.insert(item, at: 0)
-            
-            // 更新去重缓存
-            recentHashes.insert(itemHash, at: 0)
-            if recentHashes.count > maxRecentHashes {
-                recentHashes = Array(recentHashes.prefix(maxRecentHashes))
-            }
-            
-            // 限制历史数量
-            trimHistory()
-            
-            // 持久化到数据库
-            try? await saveItemToDatabase(item)
+
+        var textContent: String?
+        var htmlContent: String?
+        var imageData: Data?
+        var fileURLs: [String]?
+
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL], !urls.isEmpty {
+            fileURLs = urls.map { $0.path }
         }
-    }
-    
-    private func createItem(from pasteboard: NSPasteboard, sourceApp: String?) async -> ClipboardItem? {
-        // 1. 检查图片
-        if let image = pasteboard.readObjects(forClasses: [NSImage.self])?.first as? NSImage {
-            return await createImageItem(image: image, sourceApp: sourceApp)
+
+        if let images = pasteboard.readObjects(forClasses: [NSImage.self]) as? [NSImage], let image = images.first {
+            imageData = image.tiffRepresentation
         }
-        
-        // 2. 检查文件 URL
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL],
-           !urls.isEmpty {
-            return createFileItem(urls: urls, sourceApp: sourceApp)
-        }
-        
-        // 3. 检查普通 URL（字符串形式）
-        if let string = pasteboard.string(forType: .string) {
-            // 检查是否是 URL
-            if let url = URL(string: string),
-               url.scheme?.hasPrefix("http") == true {
-                return ClipboardItem(
-                    type: .url,
-                    content: string,
-                    textContent: string,
-                    sourceApp: sourceApp
-                )
-            }
-            
-            // 普通文本
-            return ClipboardItem(
-                type: .text,
-                content: string,
-                textContent: string,
-                sourceApp: sourceApp
-            )
-        }
-        
-        return nil
-    }
-    
-    private func createImageItem(image: NSImage, sourceApp: String?) async -> ClipboardItem? {
-        do {
-            let assetFile = try await assetStore.saveImage(
-                image,
-                fileName: "clipboard_\(Date().timeIntervalSince1970).png"
-            )
-            
-            return ClipboardItem(
-                type: .image,
-                content: assetFile.id,
-                textContent: "[图片] \(assetFile.fileName)",
-                sourceApp: sourceApp
-            )
-        } catch {
-            print("Failed to save clipboard image: \(error)")
-            return nil
-        }
-    }
-    
-    private func createFileItem(urls: [URL], sourceApp: String?) -> ClipboardItem? {
-        let paths = urls.map { $0.path }
-        let content = paths.joined(separator: "\n")
-        let preview = paths.map { URL(fileURLWithPath: $0).lastPathComponent }.joined(separator: ", ")
-        
-        return ClipboardItem(
-            type: .file,
-            content: content,
-            textContent: "[文件] \(preview)",
-            sourceApp: sourceApp
+
+        htmlContent = pasteboard.string(forType: NSPasteboard.PasteboardType("public.html"))
+
+        textContent = pasteboard.string(forType: .string)
+
+        let raw = RawClipboardContent(
+            changeCount: currentChangeCount,
+            sourceApp: sourceApp,
+            textContent: textContent,
+            htmlContent: htmlContent,
+            imageData: imageData,
+            fileURLs: fileURLs
         )
+
+        var context = PipelineContext(rawContent: raw)
+
+        do {
+            try await pipeline.process(&context)
+        } catch {
+            print("Pipeline error: \(error)")
+            return
+        }
+
+        guard !context.shouldIgnore, let item = context.item else { return }
+
+        items.insert(item, at: 0)
+        trimHistory()
     }
     
     private func getFrontmostAppName() async -> String? {
@@ -211,13 +188,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
         guard captureOnlyWhenAppActive else { return true }
         return isAppActive
     }
-    
-    private func hashForItem(_ item: ClipboardItem) -> String {
-        // 使用内容哈希进行去重
-        let content = item.content ?? item.textContent ?? ""
-        return "\(item.type.rawValue)_\(content.prefix(100))"
-    }
-    
+
     private func trimHistory() {
         // 保留 pinned 项，限制总数
         let pinnedItems = items.filter { $0.isPinned }
@@ -235,20 +206,31 @@ public final class ClipboardService: ClipboardServiceProtocol {
     private func loadHistory() async {
         do {
             items = try await storage.listClipboardItems(limit: maxHistoryItems)
-            // 重建去重缓存
-            recentHashes = items.prefix(maxRecentHashes).map { hashForItem($0) }
+            pipeline.validation.rebuildHashes(from: Array(items.prefix(50)))
         } catch {
             print("加载剪贴板历史失败: \(error)")
             items = []
         }
     }
-    
-    private func saveItemToDatabase(_ item: ClipboardItem) async throws {
-        try await storage.insertClipboardItem(item)
-    }
-    
+
     private func deleteItemFromDatabase(id: String) async throws {
         try await storage.deleteClipboardItem(id: id)
+    }
+
+    private func startPollingTimer() async {
+        await MainActor.run {
+            guard self.timer == nil else { return }
+            self.timer = Timer.scheduledTimer(withTimeInterval: self.pollInterval, repeats: true) { _ in
+                Task { await self.checkClipboard() }
+            }
+        }
+    }
+
+    private func stopPollingTimer() async {
+        await MainActor.run {
+            self.timer?.invalidate()
+            self.timer = nil
+        }
     }
     
     // MARK: - Query
@@ -332,24 +314,21 @@ public final class ClipboardService: ClipboardServiceProtocol {
     }
     
     public func clearHistory() async throws {
-        // 只保留 pinned 项
         let pinnedItems = items.filter { $0.isPinned }
         let itemsToDelete = items.filter { !$0.isPinned }
-        
-        // 删除关联的 assets
+
         for item in itemsToDelete where item.type == .image {
             if let assetId = item.content {
                 try? await assetStore.deleteAsset(id: assetId)
             }
         }
-        
+
+        for item in itemsToDelete {
+            try? await storage.deleteClipboardItem(id: item.id)
+        }
+
         items = pinnedItems
-        
-        // 清空去重缓存
-        recentHashes.removeAll()
-        
-        // 从数据库删除
-        // try? await storage.clearClipboardHistory(keepingPinned: true)
+        pipeline.validation.clearHashes()
     }
     
     // MARK: - Save to Inbox
@@ -370,21 +349,39 @@ public final class ClipboardService: ClipboardServiceProtocol {
             assetIds = []
             previewText = item.textContent
             title = previewText.map { String($0.prefix(50)) }
-            
+
         case .image:
             sourceType = .image
             assetIds = item.content.map { [$0] } ?? []
             previewText = item.textContent
             title = previewText
-            
+
         case .file:
             sourceType = .unknownFile
             assetIds = []
             previewText = item.textContent
             title = previewText.map { String($0.prefix(50)) }
-            
+
         case .url:
             sourceType = .webpage
+            assetIds = []
+            previewText = item.textContent
+            title = previewText
+
+        case .richText:
+            sourceType = .text
+            assetIds = []
+            previewText = item.textContent
+            title = previewText.map { String($0.prefix(50)) }
+
+        case .code:
+            sourceType = .text
+            assetIds = []
+            previewText = item.textContent
+            title = "[\(item.codeLanguage ?? "代码")] " + (previewText.map { String($0.prefix(40)) } ?? "")
+
+        case .video:
+            sourceType = .unknownFile
             assetIds = []
             previewText = item.textContent
             title = previewText
@@ -414,32 +411,52 @@ public final class ClipboardService: ClipboardServiceProtocol {
         guard let item = items.first(where: { $0.id == id }) else {
             throw ClipboardError.itemNotFound
         }
-        
+
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        
+
         switch item.type {
         case .text, .url:
             if let text = item.textContent ?? item.content {
                 pasteboard.setString(text, forType: .string)
             }
-            
-            case .image:
+
+        case .richText:
+            if let html = item.htmlContent ?? item.content {
+                pasteboard.setString(html, forType: NSPasteboard.PasteboardType("public.html"))
+                if let text = item.textContent {
+                    pasteboard.setString(text, forType: .string)
+                }
+            }
+
+        case .code:
+            if let text = item.textContent ?? item.content {
+                pasteboard.setString(text, forType: .string)
+            }
+
+        case .image:
             if let assetId = item.content {
                 if let asset = try? await assetStore.getAsset(id: assetId),
-                   let image = await assetStore.loadImage(asset: asset) {
+                   let image = assetStore.loadImage(asset: asset) {
                     pasteboard.writeObjects([image])
                 }
             }
-            
+
         case .file:
             if let paths = item.content?.split(separator: "\n").map(String.init) {
                 let urls = paths.map { URL(fileURLWithPath: $0) }
                 pasteboard.writeObjects(urls as [NSURL])
             }
+
+        case .video:
+            if let text = item.textContent ?? item.content {
+                pasteboard.setString(text, forType: .string)
+            }
         }
-        
-        // 更新最后处理的 changeCount，避免重复捕获自己写入的内容
+
+        let hash = pipeline.validation.computeHash(for: item)
+        pipeline.validation.recordPasteHash(hash)
+
         lastChangeCount = pasteboard.changeCount
     }
     
@@ -447,11 +464,127 @@ public final class ClipboardService: ClipboardServiceProtocol {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let tempItem = ClipboardItem(type: .text, content: text, textContent: text)
+        let hash = pipeline.validation.computeHash(for: tempItem)
+        pipeline.validation.recordPasteHash(hash)
         lastChangeCount = pasteboard.changeCount
     }
     
-    // MARK: - Stats
+    // MARK: - Transient Paste
     
+    public func pasteTransiently(id: String) async throws {
+        guard let item = items.first(where: { $0.id == id }) else {
+            throw ClipboardError.itemNotFound
+        }
+        focusManager.saveCurrentFocus()
+        await transientPaster.pasteTransiently(item, assetStore: assetStore)
+        focusManager.restoreFocus()
+    }
+    
+    // MARK: - Sequential Paste Queue
+    
+    public func enqueueForSequentialPaste(ids: [String]) {
+        pasteQueue.enqueueBatch(clipboardItemIds: ids)
+    }
+    
+    public func pasteNextInQueue() async throws -> ClipboardItem? {
+        guard let queueItem = pasteQueue.dequeue() else { return nil }
+        guard let item = items.first(where: { $0.id == queueItem.clipboardItemId }) else { return nil }
+        
+        focusManager.saveCurrentFocus()
+        try await copyItem(id: item.id)
+        simulatePasteKeystroke()
+        focusManager.restoreFocus()
+        
+        return item
+    }
+    
+    public func getQueueItems() -> [PasteQueue.QueueItem] {
+        pasteQueue.items
+    }
+    
+    public func clearPasteQueue() {
+        pasteQueue.clear()
+    }
+    
+    public func removeQueueItem(id: String) {
+        pasteQueue.remove(id: id)
+    }
+    
+    public func reorderQueue(from source: Int, to destination: Int) {
+        pasteQueue.moveItem(from: source, to: destination)
+    }
+    
+    private func simulatePasteKeystroke() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        keyDown?.flags = .maskCommand
+        keyUp?.flags = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
+    }
+    
+    // MARK: - Cleaning Rules
+
+    public func getCleaningRules() -> [CleaningRule] {
+        cleaningRulesStore.getRules()
+    }
+
+    public func addCleaningRule(_ rule: CleaningRule) async {
+        await cleaningRulesStore.addRule(rule)
+    }
+
+    public func updateCleaningRule(_ rule: CleaningRule) async {
+        await cleaningRulesStore.updateRule(rule)
+    }
+
+    public func deleteCleaningRule(id: String) async {
+        await cleaningRulesStore.deleteRule(id: id)
+    }
+
+    public func toggleCleaningRule(id: String) async {
+        await cleaningRulesStore.toggleRule(id: id)
+    }
+
+    // MARK: - Tags
+
+    public func createTag(name: String, color: String) async throws -> ClipboardTag {
+        let tag = ClipboardTag(name: name, color: color)
+        try await storage.insertClipboardTag(tag)
+        return tag
+    }
+
+    public func listTags() async throws -> [ClipboardTag] {
+        try await storage.listClipboardTags()
+    }
+
+    public func deleteTag(id: String) async throws {
+        try await storage.deleteClipboardTag(id: id)
+    }
+
+    public func addTagToItem(itemId: String, tagName: String) async throws {
+        try await storage.addTagToClipboardItem(itemId: itemId, tagName: tagName)
+        if let index = items.firstIndex(where: { $0.id == itemId }) {
+            if !items[index].tags.contains(tagName) {
+                items[index].tags.append(tagName)
+            }
+        }
+    }
+
+    public func removeTagFromItem(itemId: String, tagName: String) async throws {
+        try await storage.removeTagFromClipboardItem(itemId: itemId, tagName: tagName)
+        if let index = items.firstIndex(where: { $0.id == itemId }) {
+            items[index].tags.removeAll { $0 == tagName }
+        }
+    }
+
+    public func listItemsByTag(_ tagName: String) async throws -> [ClipboardItem] {
+        try await storage.listClipboardItemsByTag(tagName, limit: nil)
+    }
+
+    // MARK: - Stats
+
     public func getStats() async -> ClipboardStats {
         let totalCount = items.count
         let pinnedCount = items.filter { $0.isPinned }.count
@@ -459,14 +592,22 @@ public final class ClipboardService: ClipboardServiceProtocol {
         let imageCount = items.filter { $0.type == .image }.count
         let fileCount = items.filter { $0.type == .file }.count
         let urlCount = items.filter { $0.type == .url }.count
-        
+        let richTextCount = items.filter { $0.type == .richText }.count
+        let codeCount = items.filter { $0.type == .code }.count
+        let videoCount = items.filter { $0.type == .video }.count
+        let queueCount = pasteQueue.count
+
         return ClipboardStats(
             totalCount: totalCount,
             pinnedCount: pinnedCount,
             textCount: textCount,
             imageCount: imageCount,
             fileCount: fileCount,
-            urlCount: urlCount
+            urlCount: urlCount,
+            richTextCount: richTextCount,
+            codeCount: codeCount,
+            videoCount: videoCount,
+            queueCount: queueCount
         )
     }
 }
@@ -502,14 +643,22 @@ public struct ClipboardStats: Sendable, Equatable {
     public let imageCount: Int
     public let fileCount: Int
     public let urlCount: Int
-    
+    public let richTextCount: Int
+    public let codeCount: Int
+    public let videoCount: Int
+    public let queueCount: Int
+
     public init(
         totalCount: Int = 0,
         pinnedCount: Int = 0,
         textCount: Int = 0,
         imageCount: Int = 0,
         fileCount: Int = 0,
-        urlCount: Int = 0
+        urlCount: Int = 0,
+        richTextCount: Int = 0,
+        codeCount: Int = 0,
+        videoCount: Int = 0,
+        queueCount: Int = 0
     ) {
         self.totalCount = totalCount
         self.pinnedCount = pinnedCount
@@ -517,5 +666,9 @@ public struct ClipboardStats: Sendable, Equatable {
         self.imageCount = imageCount
         self.fileCount = fileCount
         self.urlCount = urlCount
+        self.richTextCount = richTextCount
+        self.codeCount = codeCount
+        self.videoCount = videoCount
+        self.queueCount = queueCount
     }
 }

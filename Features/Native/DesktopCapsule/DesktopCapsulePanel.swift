@@ -14,8 +14,11 @@ final class DesktopCapsulePanel: NSPanel {
 
     private var hostingView: NSHostingView<DesktopCapsuleView>?
     private var isDockedToNotch = false
+    private weak var notchController: NotchPanelControlling?
+    private var dockingCoordinator: DesktopCapsuleDockingCoordinator?
 
     private init() {
+        self.notchController = nil
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 42, height: 42),
             styleMask: [.nonactivatingPanel, .hudWindow],
@@ -25,6 +28,14 @@ final class DesktopCapsulePanel: NSPanel {
 
         setupPanel()
         setupContentView()
+    }
+
+    func connect(notchController: NotchPanelControlling) {
+        self.notchController = notchController
+    }
+
+    func connect(dockingCoordinator: DesktopCapsuleDockingCoordinator) {
+        self.dockingCoordinator = dockingCoordinator
     }
 
     private func setupPanel() {
@@ -44,7 +55,7 @@ final class DesktopCapsulePanel: NSPanel {
     }
 
     private func setupContentView() {
-        let viewModel = DesktopCapsuleViewModel()
+        let viewModel = DesktopCapsuleViewModel(panelController: self)
         let contentView = DesktopCapsuleView(viewModel: viewModel)
         hostingView = NSHostingView(rootView: contentView)
         self.contentView = hostingView
@@ -55,7 +66,7 @@ final class DesktopCapsulePanel: NSPanel {
     func show(at position: CGPoint? = nil) {
         isDockedToNotch = false
         alphaValue = 1
-        NotchPanel.shared.hide()
+        notchController?.hide()
         if let position = position {
             setFrameOrigin(position)
         } else {
@@ -148,9 +159,19 @@ final class DesktopCapsulePanel: NSPanel {
     }
 }
 
-extension DesktopCapsulePanel: NSWindowDelegate {
+@MainActor
+protocol DesktopCapsulePanelControlling: AnyObject {
+    func show(at position: CGPoint?)
+    func hide()
+    func resizeToExpanded(width: CGFloat)
+    func resizeToCollapsed()
+}
+
+extension DesktopCapsulePanel: DesktopCapsulePanelControlling {}
+
+    extension DesktopCapsulePanel: NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {
-        DesktopCapsuleDockingCoordinator.shared.handleWindowMoved(self)
+        dockingCoordinator?.handleWindowMoved(self)
     }
 }
 
@@ -188,7 +209,7 @@ struct DesktopCapsuleView: View {
 
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(isHovered ? Color.accentColor : .primary)
+                    .foregroundStyle(isHovered ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.primaryText)
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -214,12 +235,12 @@ struct DesktopCapsuleView: View {
             Button(action: { viewModel.toggleExpand() }) {
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor.opacity(0.1))
+                        .fill(AppSurfaceTokens.accentBlue.opacity(0.1))
                         .frame(width: 33, height: 33)
 
                     Image(systemName: "brain.head.profile")
                         .font(.system(size: 13.5, weight: .medium))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
                 }
             }
             .buttonStyle(PlainButtonStyle())
@@ -246,7 +267,7 @@ struct DesktopCapsuleView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(width: 24, height: 33)
             }
             .menuStyle(.borderlessButton)
@@ -295,7 +316,7 @@ struct CapsuleActionButtonView: View {
                 } else {
                     Image(systemName: action.type.defaultIcon)
                         .font(.system(size: 13.5, weight: .medium))
-                        .foregroundStyle(isHovered ? action.type.defaultColor : .primary)
+                        .foregroundStyle(isHovered ? action.type.defaultColor : AppSurfaceTokens.primaryText)
                 }
             }
         }

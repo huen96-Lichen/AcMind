@@ -96,6 +96,8 @@ final class NotchV2ViewModel: ObservableObject {
     @Published var quickAskMessages: [ChatMessage] = []
     @Published var quickAskIsSending: Bool = false
     @Published var quickAskError: String?
+    @Published var realtimeTranscript: String = ""
+    @Published var isRecordingActive: Bool = false
 
     var playbackAccentColor: Color {
         guard let artworkData = playbackState.artwork,
@@ -134,11 +136,13 @@ final class NotchV2ViewModel: ObservableObject {
         let action: () -> Void
     }
 
-    private let batteryService = BatteryService.shared
+    private let batteryService: BatteryService
     private let aiRuntime: AIRuntimeProtocol
     private let quickAskService: AgentQuickAskService
-    private let systemEventCenter = SystemEventCenter.shared
+    let systemEventCenter: SystemEventCenter
+    private let musicService: MusicService
     private let permissionManager: PermissionManager
+    private let panelController: NotchPanelControlling
     private var cancellables = Set<AnyCancellable>()
     private var voiceStateResetTask: Task<Void, Never>?
     private var presentationStateTransitionTask: Task<Void, Never>?
@@ -212,14 +216,23 @@ final class NotchV2ViewModel: ObservableObject {
         return nil
     }
 
-    init() {
-        permissionManager = ServiceContainer.isInitialized() ? ServiceContainer.shared.permissionManager : PermissionManager()
-        aiRuntime = ServiceContainer.isInitialized() ? ServiceContainer.shared.aiRuntime : AIRuntimeService()
+    init(
+        panelController: NotchPanelControlling,
+        batteryService: BatteryService,
+        systemEventCenter: SystemEventCenter,
+        musicService: MusicService
+    ) {
+        self.panelController = panelController
+        self.batteryService = batteryService
+        self.systemEventCenter = systemEventCenter
+        self.musicService = musicService
+        permissionManager = PermissionManager()
+        aiRuntime = AIRuntimeService()
         quickAskService = AgentQuickAskService(
             aiRuntime: aiRuntime,
-            storage: ServiceContainer.isInitialized() ? ServiceContainer.shared.storageService : nil
+            storage: StorageService()
         )
-        playbackState = Self.snapshot()
+        playbackState = snapshot()
         lastTranscription = nil
         quickAskMessages = [
             ChatMessage(
@@ -288,15 +301,15 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     func playPause() {
-        MusicService.shared.togglePlay()
+        musicService.togglePlay()
     }
 
     func nextTrack() {
-        MusicService.shared.nextTrack()
+        musicService.nextTrack()
     }
 
     func previousTrack() {
-        MusicService.shared.previousTrack()
+        musicService.previousTrack()
     }
 
     var expandedHeight: CGFloat {
@@ -482,6 +495,12 @@ final class NotchV2ViewModel: ObservableObject {
         )
         NotificationCenter.default.addObserver(
             self,
+            selector: #selector(handleRealtimeTranscript(_:)),
+            name: .companionVoiceRealtimeTranscript,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
             selector: #selector(handleCaptureSuccess(_:)),
             name: .companionCaptureSuccess,
             object: nil
@@ -636,11 +655,13 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @objc private func handleVoiceRecordingStarted(_ notification: Notification) {
+        isRecordingActive = true
+        realtimeTranscript = ""
         updateVoiceState(.listening)
         if presentationState != .hidden {
             setPresentationState(.blockedClose)
         }
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .sayInput,
             title: "说入法收音中",
             detail: "松开 Fn 完成 · Esc 取消",
@@ -649,11 +670,13 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @objc private func handleVoiceRecordingStopped(_ notification: Notification) {
+        isRecordingActive = false
+        realtimeTranscript = ""
         updateVoiceState(.processing)
         if presentationState != .hidden {
             setPresentationState(.blockedClose)
         }
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .sayInput,
             title: "正在清洗文稿",
             detail: "准备写入当前光标",
@@ -666,7 +689,7 @@ final class NotchV2ViewModel: ObservableObject {
         if presentationState != .hidden {
             setPresentationState(.blockedClose)
         }
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .sayInput,
             title: "正在清洗文稿",
             detail: "准备写入当前光标",
@@ -675,12 +698,14 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @objc private func handleVoiceProcessingFinished(_ notification: Notification) {
+        isRecordingActive = false
+        realtimeTranscript = ""
         let destination = voiceDestination(from: notification.object) ?? .clipboard
         updateVoiceState(.completed(destination: destination), autoResetAfter: 1.0)
         if presentationState == .blockedClose {
             setPresentationState(.compact)
         }
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .sayInput,
             title: destination.title,
             detail: destination.subtitle,
@@ -689,16 +714,28 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     @objc private func handleVoiceCancelled(_ notification: Notification) {
+        isRecordingActive = false
+        realtimeTranscript = ""
         updateVoiceState(.cancelled, autoResetAfter: 0.7)
         if presentationState == .blockedClose {
             setPresentationState(.compact)
         }
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .sayInput,
             title: "已取消",
             detail: "",
             duration: 0.8
         )
+    }
+
+    @objc private func handleRealtimeTranscript(_ notification: Notification) {
+        guard let text = notification.object as? String else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count > 20 {
+            realtimeTranscript = String(trimmed.prefix(20)) + "..."
+        } else {
+            realtimeTranscript = trimmed
+        }
     }
 
     @objc private func handleCaptureSuccess(_ notification: Notification) {
@@ -707,7 +744,7 @@ final class NotchV2ViewModel: ObservableObject {
             setPresentationState(.compact)
         }
         ToastManager.shared.show(.success, "截图已完成")
-        SystemEventCenter.shared.dismiss(animated: true)
+        systemEventCenter.dismiss(animated: true)
     }
 
     @objc private func handleUserDefaultsChanged(_ notification: Notification) {
@@ -766,21 +803,21 @@ final class NotchV2ViewModel: ObservableObject {
 
         isCapturing = true
         setPresentationState(.hidden)
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .screenshot,
             title: "截图处理中",
             detail: "正在截取当前屏幕",
             duration: 1.6
         )
         ToastManager.shared.show(.info, "正在截图...")
-        NotchPanel.shared.hide()
+        panelController.hide()
         NotificationCenter.default.post(
             name: Notification.Name("AcMind.captureScreenshot"),
             object: ["mode": ScreenshotMode.fullscreen.rawValue]
         )
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             self.isCapturing = false
-            NotchPanel.shared.showCompact()
+            self.panelController.showCompact(on: nil)
         }
     }
 
@@ -796,7 +833,7 @@ final class NotchV2ViewModel: ObservableObject {
             return
         }
 
-        SystemEventCenter.shared.publish(
+        systemEventCenter.publish(
             .sayInput,
             title: "说入法",
             detail: "准备收音",
@@ -821,8 +858,8 @@ final class NotchV2ViewModel: ObservableObject {
         requestCompact()
     }
 
-    private static func snapshot() -> PlaybackState {
-        let service = MusicService.shared
+    private func snapshot() -> PlaybackState {
+        let service = musicService
         return PlaybackState(
             title: service.songTitle,
             artist: service.artistName,

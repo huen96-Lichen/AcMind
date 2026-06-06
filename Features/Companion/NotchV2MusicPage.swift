@@ -137,7 +137,7 @@ struct NotchV2MusicPage: View {
     }
 
     private var volumeText: String {
-        if let volume = SystemEventCenter.shared.volumeLevel {
+        if let volume = viewModel.systemEventCenter.volumeLevel {
             return "\(Int(volume.rounded()))%"
         }
         return "未采样"

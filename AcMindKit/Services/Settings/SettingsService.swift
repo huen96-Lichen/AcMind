@@ -197,6 +197,9 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
         let allowContinuation = (try? await storage.getSetting(key: "voice.allowContinuation")) != "false" // 默认 true
         let continuationWindow = (try? await storage.getSetting(key: "voice.continuationWindow")).flatMap(Double.init) ?? 12.0
         let translationLanguage = (try? await storage.getSetting(key: "voice.translationLanguage")) ?? "zh"
+        let enablePunctuationAppend = (try? await storage.getSetting(key: "voice.enablePunctuationAppend")) == "true"
+        let injectionStrategy = (try? await storage.getSetting(key: "voice.injectionStrategy")) ?? "postToPid"
+        let preferredLanguage = (try? await storage.getSetting(key: "voice.preferredLanguage")) ?? "auto"
 
         let settings = VoiceSettings(
             defaultProvider: provider,
@@ -210,6 +213,9 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
             saveToInbox: saveToInbox,
             allowContinuation: allowContinuation,
             continuationWindow: continuationWindow,
+            enablePunctuationAppend: enablePunctuationAppend,
+            injectionStrategy: injectionStrategy,
+            preferredLanguage: preferredLanguage,
             translationLanguage: translationLanguage
         )
         voiceSettingsCache = settings
@@ -229,6 +235,9 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
         try await storage.setSetting(key: "voice.allowContinuation", value: settings.allowContinuation ? "true" : "false")
         try await storage.setSetting(key: "voice.continuationWindow", value: String(settings.continuationWindow))
         try await storage.setSetting(key: "voice.translationLanguage", value: settings.translationLanguage)
+        try await storage.setSetting(key: "voice.enablePunctuationAppend", value: settings.enablePunctuationAppend ? "true" : "false")
+        try await storage.setSetting(key: "voice.injectionStrategy", value: settings.injectionStrategy)
+        try await storage.setSetting(key: "voice.preferredLanguage", value: settings.preferredLanguage)
     }
     
     private func loadSayInputTriggerMode() async throws -> SayInputTriggerMode {

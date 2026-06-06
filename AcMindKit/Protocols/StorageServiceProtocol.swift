@@ -1,9 +1,13 @@
 import Foundation
+import Combine
 import CoreGraphics
+import AppKit
 
 // MARK: - StorageServiceProtocol
 
 public protocol StorageServiceProtocol: Sendable {
+    func setup() async throws
+
     // SourceItem
     func insertSourceItem(_ item: SourceItem) async throws
     func getSourceItem(id: String) async throws -> SourceItem?
@@ -45,6 +49,14 @@ public protocol StorageServiceProtocol: Sendable {
     func listClipboardItems(limit: Int?) async throws -> [ClipboardItem]
     func updateClipboardItem(_ item: ClipboardItem) async throws
     func deleteClipboardItem(id: String) async throws
+
+    // Clipboard Tags
+    func insertClipboardTag(_ tag: ClipboardTag) async throws
+    func listClipboardTags() async throws -> [ClipboardTag]
+    func deleteClipboardTag(id: String) async throws
+    func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem]
+    func addTagToClipboardItem(itemId: String, tagName: String) async throws
+    func removeTagFromClipboardItem(itemId: String, tagName: String) async throws
 
     // Scheduled agent tasks
     func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws
@@ -93,10 +105,19 @@ public struct SourceItemFilter: Sendable, Equatable {
 }
 
 public extension StorageServiceProtocol {
+    func setup() async throws {}
+
     func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {}
     func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? { nil }
     func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] { [] }
     func deleteScheduledAgentTask(id: String) async throws {}
+
+    func insertClipboardTag(_ tag: ClipboardTag) async throws {}
+    func listClipboardTags() async throws -> [ClipboardTag] { [] }
+    func deleteClipboardTag(id: String) async throws {}
+    func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem] { [] }
+    func addTagToClipboardItem(itemId: String, tagName: String) async throws {}
+    func removeTagFromClipboardItem(itemId: String, tagName: String) async throws {}
 }
 
 // MARK: - CaptureServiceProtocol
@@ -113,16 +134,69 @@ public protocol CaptureServiceProtocol: Sendable {
 
 // MARK: - ClipboardServiceProtocol
 
+@MainActor
 public protocol ClipboardServiceProtocol: Sendable {
+    var itemPublisher: AnyPublisher<ClipboardItem, Never> { get }
     func startWatching() async
     func stopWatching() async
+    func pauseWatching() async
+    func resumeWatching() async
+    func getStats() async -> ClipboardStats
     func listItems(filter: ClipboardFilter?) async throws -> [ClipboardItem]
     func pinItem(id: String) async throws
     func unpinItem(id: String) async throws
     func deleteItem(id: String) async throws
     func saveToInbox(id: String) async throws -> SourceItem
     func copyItem(id: String) async throws
+    func copyText(_ text: String) async
     func clearHistory() async throws
+    func pasteTransiently(id: String) async throws
+    func enqueueForSequentialPaste(ids: [String])
+    func pasteNextInQueue() async throws -> ClipboardItem?
+    func getQueueItems() -> [PasteQueue.QueueItem]
+    func clearPasteQueue()
+    func removeQueueItem(id: String)
+    func reorderQueue(from source: Int, to destination: Int)
+    func getCleaningRules() -> [CleaningRule]
+    func addCleaningRule(_ rule: CleaningRule) async
+    func updateCleaningRule(_ rule: CleaningRule) async
+    func deleteCleaningRule(id: String) async
+    func toggleCleaningRule(id: String) async
+
+    // Tags
+    func createTag(name: String, color: String) async throws -> ClipboardTag
+    func listTags() async throws -> [ClipboardTag]
+    func deleteTag(id: String) async throws
+    func addTagToItem(itemId: String, tagName: String) async throws
+    func removeTagFromItem(itemId: String, tagName: String) async throws
+    func listItemsByTag(_ tagName: String) async throws -> [ClipboardItem]
+}
+
+public extension ClipboardServiceProtocol {
+    var itemPublisher: AnyPublisher<ClipboardItem, Never> {
+        Empty().eraseToAnyPublisher()
+    }
+    func pauseWatching() async {}
+    func resumeWatching() async {}
+    func getStats() async -> ClipboardStats { ClipboardStats() }
+    func pasteTransiently(id: String) async throws {}
+    func enqueueForSequentialPaste(ids: [String]) {}
+    func pasteNextInQueue() async throws -> ClipboardItem? { nil }
+    func getQueueItems() -> [PasteQueue.QueueItem] { [] }
+    func clearPasteQueue() {}
+    func removeQueueItem(id: String) {}
+    func reorderQueue(from source: Int, to destination: Int) {}
+    func getCleaningRules() -> [CleaningRule] { [] }
+    func addCleaningRule(_ rule: CleaningRule) async {}
+    func updateCleaningRule(_ rule: CleaningRule) async {}
+    func deleteCleaningRule(id: String) async {}
+    func toggleCleaningRule(id: String) async {}
+    func createTag(name: String, color: String) async throws -> ClipboardTag { ClipboardTag(name: name, color: color) }
+    func listTags() async throws -> [ClipboardTag] { [] }
+    func deleteTag(id: String) async throws {}
+    func addTagToItem(itemId: String, tagName: String) async throws {}
+    func removeTagFromItem(itemId: String, tagName: String) async throws {}
+    func listItemsByTag(_ tagName: String) async throws -> [ClipboardItem] { [] }
 }
 
 // MARK: - DistillServiceProtocol
@@ -150,6 +224,7 @@ public protocol AIRuntimeProtocol: Sendable {
     func addProvider(_ config: ProviderConfig) async throws
     func updateProvider(_ config: ProviderConfig) async throws
     func removeProvider(id: String) async throws
+    func setDefaultProvider(id: String) throws
     func healthCheck(providerId: String) async throws -> Bool
     func listModels(providerId: String) async throws -> [String]
     func listJobs() async throws -> [ProcessJob]
@@ -172,6 +247,8 @@ public protocol AIProvider: Sendable {
 // MARK: - KnowledgeServiceProtocol
 
 public protocol KnowledgeServiceProtocol: Sendable {
+    func setup() async throws
+
     func listCards(filter: KnowledgeCardFilter?) async throws -> [KnowledgeCard]
     func getCard(id: String) async throws -> KnowledgeCard?
     func searchCards(query: String) async throws -> [KnowledgeCard]
@@ -209,4 +286,6 @@ public protocol AssetStoreProtocol: Sendable {
     func deleteAssetsForSourceItem(sourceItemId: String) async throws
     func assetExists(asset: AssetFile) -> Bool
     func getTotalSize() async throws -> Int64
+    func loadImage(asset: AssetFile) -> NSImage?
+    func loadImage(asset: AssetFile, maxPixelSize: CGFloat) -> NSImage?
 }

@@ -1,4 +1,5 @@
 import XCTest
+import Combine
 @testable import AcMindKit
 
 @MainActor
@@ -38,7 +39,19 @@ final class SystemStatusServiceTests: XCTestCase {
             ]
         )
 
+        let snapshotUpdated = expectation(description: "snapshot updated")
+        var cancellable: AnyCancellable?
+        cancellable = service.$snapshot
+            .dropFirst()
+            .sink { snapshot in
+                if snapshot.cpu?.value == 42 {
+                    snapshotUpdated.fulfill()
+                    cancellable?.cancel()
+                }
+            }
+
         service.refresh()
+        wait(for: [snapshotUpdated], timeout: 2.0)
 
         XCTAssertEqual(service.snapshot.cpu?.value, 42)
         XCTAssertEqual(service.snapshot.topCPUProcesses.map(\.name), ["AcMind"])
@@ -88,19 +101,90 @@ final class SystemStatusServiceTests: XCTestCase {
             ]
         )
 
+        let snapshotUpdated = expectation(description: "snapshot updated")
+        var cancellable: AnyCancellable?
+        cancellable = service.$snapshot
+            .dropFirst()
+            .sink { snapshot in
+                if snapshot.cpu?.value == 18 {
+                    snapshotUpdated.fulfill()
+                    cancellable?.cancel()
+                }
+            }
+
         service.refresh()
+        wait(for: [snapshotUpdated], timeout: 2.0)
 
         XCTAssertEqual(service.snapshot.cpu?.value, 18)
         XCTAssertEqual(service.snapshot.memory?.isAvailable, false)
         XCTAssertEqual(service.snapshot.memory?.unavailableReason, "reader failed")
         XCTAssertEqual(service.snapshot.unavailableReasons.count, 1)
     }
+
+    func testStartDoesNotBlockWhenAReaderIsSlow() {
+        let service = SystemStatusService(
+            readers: [
+                SlowStatusReader(delay: 0.5)
+            ]
+        )
+
+        let snapshotUpdated = expectation(description: "snapshot updated asynchronously")
+        let startTime = Date()
+        var cancellable: AnyCancellable?
+
+        cancellable = service.$snapshot
+            .dropFirst()
+            .sink { snapshot in
+                if snapshot.cpu?.value == 17 {
+                    snapshotUpdated.fulfill()
+                    cancellable?.cancel()
+                }
+            }
+
+        service.start()
+
+        XCTAssertLessThan(Date().timeIntervalSince(startTime), 0.1)
+        wait(for: [snapshotUpdated], timeout: 2.0)
+
+        service.stop()
+        _ = cancellable
+    }
+
+    func testFourCharCodeInitializerFallsBackForInvalidSMCKeys() {
+        let valid = FourCharCode(fromString: "FNum")
+        XCTAssertEqual(valid.toString(), "FNum")
+
+        let invalid = FourCharCode(fromString: "FNumber")
+        XCTAssertEqual(invalid, 0)
+    }
 }
 
 private struct FakeStatusReader: SystemStatusReader {
     let makePartial: @Sendable (SystemStatusPartialSnapshot) -> SystemStatusPartialSnapshot
 
-    func read() -> SystemStatusPartialSnapshot {
+    func read() async -> SystemStatusPartialSnapshot {
         makePartial(SystemStatusPartialSnapshot())
+    }
+}
+
+    private struct SlowStatusReader: SystemStatusReader {
+        let delay: TimeInterval
+
+        func read() async -> SystemStatusPartialSnapshot {
+        let duration = UInt64(delay * 1_000_000_000)
+        try? await Task.sleep(nanoseconds: duration)
+
+        var partial = SystemStatusPartialSnapshot()
+        partial.cpu = SystemMetricValue(
+            id: "cpu",
+            name: "CPU",
+            category: "cpu",
+            value: 17,
+            unit: "%",
+            source: "slow",
+            isAvailable: true,
+            unavailableReason: nil
+        )
+        return partial
     }
 }

@@ -348,7 +348,7 @@ private final class HotCornerOverlayContentView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
-        NSColor.black.setFill()
+        NSColor(white: 0, alpha: 1).setFill()
         let path = NSBezierPath()
         path.appendRect(bounds)
         path.append(NSBezierPath(ovalIn: HotCornerGeometry.overlayCutoutRect(for: corner, in: bounds, size: bounds.width)))

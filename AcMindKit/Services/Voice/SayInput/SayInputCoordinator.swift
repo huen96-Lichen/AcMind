@@ -222,7 +222,12 @@ public actor SayInputCoordinator {
     private var isRecording: Bool = false
     private var isLockedRecording: Bool = false
     private var capturedPunctuation: [String] = []
+    private var streamingWriter: StreamingKeyboardWriter?
     var currentConfiguration: SayInputConfiguration?
+
+    public var onRealtimeTranscriptUpdate: (@Sendable (String) -> Void)?
+    private var isRealtimeASRActive: Bool = false
+    private var lastRealtimeResult: String?
 
     private static let cjkInputSourcePatterns: [String] = [
         "com.apple.inputmethod.SCIM",
@@ -259,6 +264,18 @@ public actor SayInputCoordinator {
         try await voiceService.startRecording()
         isRecording = true
         capturedPunctuation = []
+        lastRealtimeResult = nil
+
+        do {
+            try await voiceService.startRealtimeTranscription { [weak self] snapshot in
+                Task { @MainActor in
+                    self?.onRealtimeTranscriptUpdate?(snapshot.text)
+                }
+            }
+            isRealtimeASRActive = true
+        } catch {
+            isRealtimeASRActive = false
+        }
 
         // 启动静音检测
         if let config = currentConfiguration, config.enableSilenceDetection {
@@ -286,6 +303,11 @@ public actor SayInputCoordinator {
         await SilenceDetectionService.shared.stopMonitoring()
         await RecordingHotkeyService.shared.stopListening()
 
+        if isRealtimeASRActive {
+            lastRealtimeResult = try? await voiceService.stopRealtimeTranscription()
+            isRealtimeASRActive = false
+        }
+
         let sourceItemId = try await voiceService.stopRecording()
         isRecording = false
         isLockedRecording = false
@@ -302,10 +324,16 @@ public actor SayInputCoordinator {
         await SilenceDetectionService.shared.stopMonitoring()
         await RecordingHotkeyService.shared.stopListening()
 
+        if isRealtimeASRActive {
+            _ = try? await voiceService.stopRealtimeTranscription()
+            isRealtimeASRActive = false
+        }
+
         let sourceItemId = try await voiceService.stopRecording()
         isRecording = false
         isLockedRecording = false
         capturedPunctuation = []
+        lastRealtimeResult = nil
         try await sourceStore.deleteSourceItem(id: sourceItemId)
         if let assetStore {
             try? await assetStore.deleteAssetsForSourceItem(sourceItemId: sourceItemId)
@@ -439,16 +467,25 @@ public actor SayInputCoordinator {
         onPolishChunk: (@Sendable (String) async -> Void)? = nil
     ) async throws -> SayInputOutcome {
         let contextTask = ContextCaptureService.shared.captureContextNonBlocking()
-        
-        guard let sourceItem = try await waitForSourceItem(
-            id: sourceItemId,
-            timeout: configuration.transcriptTimeout,
-            pollInterval: configuration.transcriptPollInterval
-        ) else {
-            throw SayInputError.missingSourceItem
-        }
 
-        let rawText = bestAvailableText(from: sourceItem)
+        var sourceItem: SourceItem?
+        let rawText: String
+
+        if let realtimeResult = lastRealtimeResult, !realtimeResult.isEmpty {
+            rawText = realtimeResult
+            sourceItem = try? await sourceStore.getSourceItem(id: sourceItemId)
+        } else {
+            sourceItem = try await waitForSourceItem(
+                id: sourceItemId,
+                timeout: configuration.transcriptTimeout,
+                pollInterval: configuration.transcriptPollInterval
+            )
+            guard let fetchedItem = sourceItem else {
+                throw SayInputError.missingSourceItem
+            }
+            rawText = bestAvailableText(from: fetchedItem)
+        }
+        lastRealtimeResult = nil
         let textWithPunctuation = rawText + capturedPunctuation.joined()
         guard textWithPunctuation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
             throw SayInputError.emptyTranscript
@@ -460,9 +497,33 @@ public actor SayInputCoordinator {
         let context = await contextTask.value
         let contextInfo = context.hasContext ? context.formattedContext() : nil
 
+        let snapshot = await textInjector.getSelectionSnapshot()
+        var usedStreamingKeyboard = false
+
         let polishedText: String
         if configuration.autoPolish, configuration.polishMode != .none {
-            if let onPolishChunk {
+            if let onPolishChunk, snapshot.isFocusedTarget, configuration.outputMode != .translate {
+                let writer = StreamingKeyboardWriter()
+                streamingWriter = writer
+                let streamedText = StreamedTextBuffer()
+                polishedText = try await voiceService.polishTranscriptStream(
+                    textWithPunctuation,
+                    mode: configuration.polishMode,
+                    hotwords: hotwords,
+                    customSystemPrompt: customPrompt,
+                    contextInfo: contextInfo,
+                    language: configuration.preferredLanguage
+                ) { chunk in
+                    let fullText = await streamedText.append(chunk)
+                    await onPolishChunk(fullText)
+                    await writer.write(chunk: chunk)
+                }
+                let writeSuccess = await writer.finish()
+                streamingWriter = nil
+                if writeSuccess {
+                    usedStreamingKeyboard = true
+                }
+            } else if let onPolishChunk {
                 let streamedText = StreamedTextBuffer()
                 polishedText = try await voiceService.polishTranscriptStream(
                     textWithPunctuation,
@@ -512,11 +573,16 @@ public actor SayInputCoordinator {
             outputText = polishedText
         }
 
-        let snapshot = await textInjector.getSelectionSnapshot()
         let deliveryState: SayInputDeliveryState
         let now = Date()
+        let previousClipboard = clipboard.string()
+        var clipboardOverwritten = false
 
-        if snapshot.isFocusedTarget {
+        if usedStreamingKeyboard {
+            deliveryState = .insertedIntoFocusedField
+            lastClipboardText = outputText
+            lastClipboardDeliveryAt = now
+        } else if snapshot.isFocusedTarget {
             do {
                 if snapshot.canReplaceSelection {
                     try textInjector.replaceSelection(text: outputText)
@@ -534,6 +600,7 @@ public actor SayInputCoordinator {
                     continuationWindow: configuration.continuationWindow
                 )
                 clipboard.setString(deliveredText)
+                clipboardOverwritten = true
                 lastClipboardText = deliveredText
                 lastClipboardDeliveryAt = now
                 deliveryState = configuration.saveToInbox ? .copiedAndSavedToInbox : .copiedToClipboard
@@ -548,17 +615,27 @@ public actor SayInputCoordinator {
             switch configuration.outputMode {
             case .ask:
                 clipboard.setString(deliveredText)
+                clipboardOverwritten = true
                 deliveryState = .awaitingUserChoice
             case .copyToClipboard, .autoPaste, .translate:
                 clipboard.setString(deliveredText)
+                clipboardOverwritten = true
                 deliveryState = configuration.saveToInbox ? .copiedAndSavedToInbox : .copiedToClipboard
             }
             lastClipboardText = deliveredText
             lastClipboardDeliveryAt = now
         }
 
-        if configuration.saveToInbox {
-            var updated = sourceItem
+        if clipboardOverwritten {
+            Task {
+                try? await Task.sleep(nanoseconds: 750_000_000)
+                if let prev = previousClipboard {
+                    clipboard.setString(prev)
+                }
+            }
+        }
+
+        if configuration.saveToInbox, var updated = sourceItem {
             updated.transcript = textWithPunctuation
             updated.polishedTranscript = outputText
             updated.previewText = outputText.prefix(200).description

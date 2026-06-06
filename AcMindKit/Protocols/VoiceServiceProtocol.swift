@@ -3,6 +3,7 @@ import Foundation
 public protocol VoiceServiceProtocol: Sendable {
     func startRecording() async throws
     func stopRecording() async throws -> String
+    func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) async
     func transcribe(audioURL: URL) async throws -> String
     func polishTranscript(_ text: String, mode: VoicePolishMode) async throws -> String
     func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String], customSystemPrompt: String?, contextInfo: String?) async throws -> String
@@ -28,9 +29,13 @@ public protocol VoiceServiceProtocol: Sendable {
         onChunk: @escaping @Sendable (String) async -> Void
     ) async throws -> String
     func getRecordingStatus() async -> RecordingStatus
+    func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws
+    func stopRealtimeTranscription() async throws -> String
 }
 
 public extension VoiceServiceProtocol {
+    func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) async {}
+
     func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String] = [], customSystemPrompt: String? = nil, contextInfo: String? = nil) async throws -> String {
         try await polishTranscript(text, mode: mode)
     }
@@ -76,5 +81,13 @@ public extension VoiceServiceProtocol {
     ) async throws -> String {
         await onChunk(text)
         return text
+    }
+
+    func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws {
+        throw NSError(domain: "VoiceService", code: -1, userInfo: [NSLocalizedDescriptionKey: "实时转写未实现"])
+    }
+
+    func stopRealtimeTranscription() async throws -> String {
+        ""
     }
 }

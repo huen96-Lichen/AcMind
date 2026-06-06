@@ -15,7 +15,7 @@ struct DesktopCapsuleSettingsSection: View {
 
             Text("桌面小胶囊是一个悬浮在桌面上的快捷入口，可以快速调用应用功能")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             // 启用开关
             VStack(alignment: .leading, spacing: 8) {
@@ -55,10 +55,10 @@ struct DesktopCapsuleSettingsSection: View {
                 if settings.actions.isEmpty {
                     Text("暂无功能，点击上方按钮添加")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
-                        .background(Color.secondary.opacity(0.1))
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
                         .cornerRadius(8)
                 } else {
                     List {
@@ -102,12 +102,12 @@ struct DesktopCapsuleSettingsSection: View {
 
                         Text(actionDescription(for: type))
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
             }
             .padding()
-            .background(Color.secondary.opacity(0.05))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .cornerRadius(8)
         }
         .onAppear {
@@ -197,7 +197,7 @@ struct CapsuleActionRow: View {
         HStack(spacing: 12) {
             // 拖拽手柄
             Image(systemName: "line.3.horizontal")
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             // 图标
             Image(systemName: action.type.defaultIcon)
@@ -252,8 +252,8 @@ struct AddActionSheet: View {
                     }) {
                         VStack(spacing: 8) {
                             ZStack {
-                                Circle()
-                                    .fill(isAdded ? Color.secondary.opacity(0.1) : type.defaultColor.opacity(0.1))
+                            Circle()
+                                    .fill(isAdded ? AppSurfaceTokens.cardBackgroundSoft : type.defaultColor.opacity(0.1))
                                     .frame(width: 48, height: 48)
 
                                 Image(systemName: type.defaultIcon)
@@ -262,7 +262,7 @@ struct AddActionSheet: View {
 
                                 if isAdded {
                                     Circle()
-                                        .stroke(Color.secondary, lineWidth: 2)
+                                        .stroke(AppSurfaceTokens.secondaryText, lineWidth: 2)
                                 }
                             }
 

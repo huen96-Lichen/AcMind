@@ -804,6 +804,7 @@ private final class MockAIRuntime: AIRuntimeProtocol, @unchecked Sendable {
     func addProvider(_ config: ProviderConfig) async throws {}
     func updateProvider(_ config: ProviderConfig) async throws {}
     func removeProvider(id: String) async throws {}
+    func setDefaultProvider(id: String) throws {}
 
     func healthCheck(providerId: String) async throws -> Bool {
         providers.contains(where: { $0.id == providerId && $0.enabled })

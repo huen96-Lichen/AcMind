@@ -3,6 +3,8 @@ import Foundation
 // MARK: - Schedule Service Protocol
 
 public protocol ScheduleServiceProtocol: Sendable {
+    func setup() async throws
+
     func createEvent(_ event: ScheduleEvent) async throws
     func getEvent(id: String) async throws -> ScheduleEvent?
     func listEvents(filter: ScheduleEventFilter?) async throws -> [ScheduleEvent]

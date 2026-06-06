@@ -19,7 +19,7 @@ struct CompanionVoicePanel: View {
             }
             .padding(20)
         }
-        .frame(width: 520, height: 300)
+        .frame(width: 500, height: 280)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(AppSurfaceTokens.background)
@@ -86,8 +86,8 @@ struct CompanionVoicePanel: View {
                     .fill(AppSurfaceTokens.cardBackgroundSoft)
             )
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
     }
 
     private var statusChip: some View {
@@ -104,8 +104,8 @@ struct CompanionVoicePanel: View {
 
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
@@ -132,11 +132,20 @@ struct CompanionVoicePanel: View {
             }
 
             ScrollView {
-                Text(viewModel.displayText.isEmpty ? "说完后，这里会显示清洗后的文稿。" : viewModel.displayText)
-                    .font(.body)
-                    .foregroundStyle(viewModel.displayText.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
+                if viewModel.isRealtimeMode && !viewModel.realtimeText.isEmpty {
+                    Text(viewModel.realtimeText)
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppSurfaceTokens.primaryText.opacity(0.6))
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .animation(.easeInOut(duration: 0.15), value: viewModel.realtimeText)
+                } else {
+                    Text(viewModel.displayText.isEmpty ? "说完后，这里会显示清洗后的文稿。" : viewModel.displayText)
+                        .font(.body)
+                        .foregroundStyle(viewModel.displayText.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -206,6 +215,8 @@ final class CompanionVoicePanelViewModel: ObservableObject {
     @Published var resultTitle = "转写结果"
     @Published var hasResult = false
     @Published var errorMessage: String?
+    @Published var realtimeText: String = ""
+    @Published var isRealtimeMode: Bool = false
 
     private let settingsViewModel = SettingsViewModel()
     private let coordinator: SayInputCoordinator?
@@ -214,18 +225,13 @@ final class CompanionVoicePanelViewModel: ObservableObject {
     private var pendingFinishRequest = false
 
     init() {
-        if ServiceContainer.isInitialized() {
-            let container = ServiceContainer.shared
-            self.coordinator = SayInputCoordinator(
-                voiceService: container.voiceService,
-                sourceStore: StorageSayInputSourceItemStore(storage: container.storageService),
-                textInjector: AXTextInjector(),
-                clipboard: SystemSayInputClipboard(),
-                assetStore: container.assetStore
-            )
-        } else {
-            self.coordinator = nil
-        }
+        self.coordinator = SayInputCoordinator(
+            voiceService: VoiceService(),
+            sourceStore: StorageSayInputSourceItemStore(storage: StorageService()),
+            textInjector: AXTextInjector(),
+            clipboard: SystemSayInputClipboard(),
+            assetStore: AssetStore()
+        )
     }
 
     var statusIcon: String {
@@ -279,6 +285,17 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         // 应用前台应用的感知配置
         await coordinator.applyAppAwareConfiguration()
 
+        coordinator.onRealtimeTranscriptUpdate = { [weak self] text in
+            Task { @MainActor in
+                self?.realtimeText = text
+                self?.isRealtimeMode = true
+                NotificationCenter.default.post(
+                    name: .companionVoiceRealtimeTranscript,
+                    object: text
+                )
+            }
+        }
+
         do {
             try await coordinator.startRecording()
             NotificationCenter.default.post(name: .companionVoiceRecordingStarted, object: nil)
@@ -303,6 +320,8 @@ final class CompanionVoicePanelViewModel: ObservableObject {
 
         isBusy = true
         isProcessing = true
+        realtimeText = ""
+        isRealtimeMode = false
         statusText = "正在整理文稿..."
         NotificationCenter.default.post(name: .companionVoiceRecordingStopped, object: nil)
         NotificationCenter.default.post(name: .companionVoiceProcessingStarted, object: nil)
@@ -364,6 +383,8 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         guard isCancelled == false else { return }
         isCancelled = true
         pendingFinishRequest = false
+        realtimeText = ""
+        isRealtimeMode = false
 
         if isRecording {
             do {

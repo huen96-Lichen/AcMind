@@ -12,7 +12,7 @@ struct WorkbenchView: View {
         HStack(spacing: 0) {
             // 左侧导航
             sidebar
-                .frame(width: 220)
+                .frame(width: 184)
                 .background(AppSurfaceTokens.secondarySidebarBackground)
 
             Divider()
@@ -67,7 +67,7 @@ struct WorkbenchView: View {
 
                         Text("\(viewModel.todayItems.count)")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
                             .background(AppSurfaceTokens.cardBackgroundSoft)
@@ -77,7 +77,7 @@ struct WorkbenchView: View {
                     if viewModel.todayItems.isEmpty {
                         Text("今日暂无待整理内容")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     } else {
                         ForEach(viewModel.todayItems) { item in
                             WorkbenchSidebarItemRow(item: item)
@@ -149,7 +149,7 @@ struct WorkbenchView: View {
 
                         Text("\(viewModel.pendingArchiveCount)")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
                             .background(AppSurfaceTokens.cardBackgroundSoft)
@@ -183,7 +183,7 @@ struct WorkbenchView: View {
 
                         Text("\(project.noteCount) 笔记 • 最后更新 \(formatTime(project.lastUpdated))")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 } else {
                     Text("工作台")
@@ -196,15 +196,15 @@ struct WorkbenchView: View {
                 // 搜索
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .font(.caption)
 
                     TextField("搜索笔记...", text: $viewModel.searchQuery)
                         .textFieldStyle(.plain)
-                        .frame(width: 200)
+                        .frame(width: 160)
                 }
                 .padding(6)
-                .background(Color.secondary.opacity(0.1))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .cornerRadius(6)
 
                 Button(action: { viewModel.presentNewNoteEditor() }) {
@@ -231,11 +231,11 @@ struct WorkbenchView: View {
         VStack(spacing: 16) {
             Image(systemName: "folder")
                 .font(.system(size: 64))
-                .foregroundStyle(Color.secondary.opacity(0.3))
+                .foregroundStyle(AppSurfaceTokens.secondaryText.opacity(0.3))
 
             Text(emptyStateTitle)
                 .font(.title3)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             if viewModel.projects.isEmpty {
                 Button("新建项目") {
@@ -317,7 +317,7 @@ struct ProjectRow: View {
             HStack(spacing: 8) {
                 Image(systemName: "folder")
                     .font(.system(size: 14))
-                    .foregroundStyle(isSelected ? .white : .secondary)
+                    .foregroundStyle(isSelected ? AppSurfaceTokens.background : AppSurfaceTokens.secondaryText)
 
                 Text(project.name)
                     .font(.body)
@@ -327,11 +327,11 @@ struct ProjectRow: View {
 
                 Text("\(project.noteCount)")
                     .font(.caption)
-                    .foregroundStyle(isSelected ? .white.opacity(0.7) : .secondary)
+                    .foregroundStyle(isSelected ? AppSurfaceTokens.background.opacity(0.7) : AppSurfaceTokens.secondaryText)
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
-                .background(isSelected ? Color.accentColor : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
+                .background(isSelected ? AppSurfaceTokens.accentBlue : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
             .cornerRadius(6)
         }
         .buttonStyle(PlainButtonStyle())
@@ -393,7 +393,7 @@ struct NoteRow: View {
 
                     Text(formatTime(note.updatedAt))
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
 
@@ -418,7 +418,7 @@ struct NoteRow: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .help("删除")
                 }
             }
@@ -567,8 +567,8 @@ class WorkbenchViewModel: ObservableObject {
         }
     }
 
-    init() {
-        self.storage = ServiceContainer.shared.storageService
+    init(storage: StorageServiceProtocol = StorageService()) {
+        self.storage = storage
         loadData()
     }
 
@@ -949,7 +949,7 @@ struct WorkbenchNoteEditorSheet: View {
                 .frame(minHeight: 220)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.2), lineWidth: 1)
                 )
 
             TextField("标签，使用逗号分隔", text: $tags)
@@ -987,7 +987,7 @@ struct WorkbenchArchiveSheet: View {
                         .fontWeight(.semibold)
                     Text("当前收集箱里尚未处理的条目。")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Spacer()
@@ -1004,14 +1004,14 @@ struct WorkbenchArchiveSheet: View {
                                     .font(.body)
                                 Text(item.status)
                                     .font(.caption)
-                                    .foregroundStyle(Color.secondary)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                             }
 
                             Spacer()
 
                             Text(RelativeDateTimeFormatter().localizedString(for: item.createdAt, relativeTo: Date()))
                                 .font(.caption)
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
                         .padding(12)
                         .background(AppSurfaceTokens.cardBackgroundSoft)
@@ -1021,7 +1021,7 @@ struct WorkbenchArchiveSheet: View {
                     if items.isEmpty {
                         Text("当前没有待归档条目。")
                             .font(.body)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .padding(.top, 12)
                     }
                 }

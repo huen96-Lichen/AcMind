@@ -31,11 +31,64 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("PermissionManager"))
     }
 
-    func testSystemStatusViewIsWhiteBackgroundAndSnapshotDriven() throws {
+    func testSystemStatusViewUsesSharedBackgroundAndSnapshotDriven() throws {
         let source = try readSource("Features/Native/SystemStatus/SystemStatusView.swift")
-        XCTAssertTrue(source.contains("Color.white.ignoresSafeArea()"))
+        XCTAssertTrue(source.contains("AppSurfaceTokens.background.ignoresSafeArea()"))
         XCTAssertFalse(source.contains("BatteryService.shared"))
         XCTAssertFalse(source.contains("PermissionManager"))
+    }
+
+    func testWorkspaceHomeViewDoesNotUseSystemStatusSingleton() throws {
+        let source = try readSource("Features/Native/Home/WorkspaceHomeView.swift")
+        XCTAssertFalse(source.contains("SystemStatusViewModel(service: .shared)"))
+        XCTAssertTrue(source.contains("systemStatusService"))
+    }
+
+    func testSystemStatusViewDoesNotUseSystemStatusSingleton() throws {
+        let source = try readSource("Features/Native/SystemStatus/SystemStatusView.swift")
+        XCTAssertFalse(source.contains("SystemStatusViewModel(service: .shared)"))
+        XCTAssertTrue(source.contains("SystemStatusViewModel(service:"))
+    }
+
+    func testServiceContainerOwnsSystemStatusServiceLifecycle() throws {
+        let source = try readSource("App/ServiceContainer.swift")
+        XCTAssertTrue(source.contains("public let systemStatusService"))
+        XCTAssertTrue(source.contains("systemStatusService.stop()"))
+    }
+
+    func testSystemStatusServiceHasNoSharedSingleton() throws {
+        let source = try readSource("AcMindKit/Services/SystemStatus/SystemStatusService.swift")
+        XCTAssertFalse(source.contains("static let shared"))
+    }
+
+    func testNotchCompanionViewsUseInjectedSystemEventCenter() throws {
+        let rootSource = try readSource("Features/Companion/NotchV2RootView.swift")
+        let hudSource = try readSource("Features/Companion/SystemEventHUD.swift")
+        let musicSource = try readSource("Features/Companion/NotchV2MusicPage.swift")
+
+        XCTAssertTrue(rootSource.contains("SystemEventHUDView(center: viewModel.systemEventCenter)"))
+        XCTAssertFalse(hudSource.contains("SystemEventCenter.shared"))
+        XCTAssertFalse(musicSource.contains("SystemEventCenter.shared"))
+    }
+
+    func testNotchCompanionViewModelUsesInjectedMediaServices() throws {
+        let source = try readSource("Features/Companion/NotchV2ViewModel.swift")
+        XCTAssertFalse(source.contains("BatteryService.shared"))
+        XCTAssertFalse(source.contains("MusicService.shared"))
+        XCTAssertFalse(source.contains("SystemEventCenter.shared"))
+        XCTAssertTrue(source.contains("batteryService: BatteryService"))
+        XCTAssertTrue(source.contains("systemEventCenter: SystemEventCenter"))
+        XCTAssertTrue(source.contains("musicService: MusicService"))
+    }
+
+    func testCompanionDemoViewsAreInjected() throws {
+        let batterySource = try readSource("Features/Companion/BatteryService.swift")
+        let musicSource = try readSource("Features/Companion/MusicService.swift")
+
+        XCTAssertFalse(batterySource.contains("BatteryService.shared"))
+        XCTAssertFalse(musicSource.contains("MusicService.shared"))
+        XCTAssertTrue(batterySource.contains("batteryService: BatteryService"))
+        XCTAssertTrue(musicSource.contains("musicService: MusicService"))
     }
 
     private func readSource(_ relativePath: String) throws -> String {

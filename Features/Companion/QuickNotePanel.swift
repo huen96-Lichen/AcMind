@@ -68,7 +68,7 @@ struct QuickNotePanel: View {
             }
             .padding(20)
         }
-        .frame(width: 420, height: 320)
+        .frame(width: 400, height: 300)
         .background(AppSurfaceTokens.background)
         .onAppear {
             isFocused = true
@@ -103,7 +103,8 @@ struct QuickNotePanel: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
@@ -115,8 +116,10 @@ final class QuickNoteViewModel: ObservableObject {
     @Published var isSaving = false
     @Published var didSave = false
 
-    private var storage: StorageServiceProtocol {
-        ServiceContainer.shared.storageService
+    private let storage: StorageServiceProtocol
+
+    init(storage: StorageServiceProtocol = StorageService()) {
+        self.storage = storage
     }
 
     func save() {

@@ -325,7 +325,9 @@ final class OOBEWindowController: NSObject {
     
     private func startPermissionRefresh() {
         permissionRefreshTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            self?.refreshPermissions()
+            Task { @MainActor [weak self] in
+                self?.refreshPermissions()
+            }
         }
     }
     
@@ -335,17 +337,13 @@ final class OOBEWindowController: NSObject {
     }
     
     private func refreshPermissions() {
-        Task {
-            let accessibilityStatus = await permissionManager.statuses[.accessibility] ?? .unknown
-            let microphoneStatus = await permissionManager.statuses[.microphone] ?? .unknown
-            let speechStatus = await permissionManager.statuses[.speechRecognition] ?? .unknown
-            
-            await MainActor.run {
-                permissionCards[0].update(status: accessibilityStatus)
-                permissionCards[1].update(status: microphoneStatus)
-                permissionCards[2].update(status: speechStatus)
-            }
-        }
+        let accessibilityStatus = permissionManager.statuses[.accessibility] ?? .unknown
+        let microphoneStatus = permissionManager.statuses[.microphone] ?? .unknown
+        let speechStatus = permissionManager.statuses[.speechRecognition] ?? .unknown
+
+        permissionCards[0].update(status: accessibilityStatus)
+        permissionCards[1].update(status: microphoneStatus)
+        permissionCards[2].update(status: speechStatus)
     }
     
     @objc private func permTapped(_ sender: NSButton) {

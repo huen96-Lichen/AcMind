@@ -28,17 +28,23 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        HStack(spacing: 0) {
             MainSidebar(selectedItem: selectedItemBinding)
-        } detail: {
+                .frame(width: AppSurfaceTokens.Layout.sidebarWidth, alignment: .topLeading)
+                .frame(maxHeight: .infinity, alignment: .topLeading)
+                .layoutPriority(1)
+
+            Divider()
+
             MainContent(
                 selectedItem: appState.sidebarSelection,
                 clipboardPinActions: clipboardPinActions
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
         }
-        .navigationSplitViewStyle(.balanced)
-        .navigationSplitViewColumnWidth(min: 292, ideal: 320, max: 380)
-        .background(Color.white.ignoresSafeArea())
+        .frame(minWidth: 1200, maxWidth: .infinity, minHeight: 650, maxHeight: .infinity)
+        .background(AppSurfaceTokens.background.ignoresSafeArea())
         .sheet(isPresented: $showVoicePanel) {
             CompanionVoicePanel()
         }
@@ -87,10 +93,12 @@ struct MainSidebar: View {
                 sidebarSection(title: "伴随能力", items: SidebarItem.companionCapabilities)
                 sidebarSection(title: "系统", items: SidebarItem.systemItems)
             }
+            .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }
         .scrollIndicators(.hidden)
-        .frame(minWidth: 300, idealWidth: 320, maxWidth: 360)
+        .frame(width: AppSurfaceTokens.Layout.sidebarWidth, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
         .background(AppSurfaceTokens.sidebarBackground.ignoresSafeArea())
     }
 
@@ -130,9 +138,6 @@ struct MainSidebar: View {
         }
         .padding(.top, 6)
         .padding(.bottom, 8)
-        .listRowSeparator(.hidden)
-        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-        .listRowBackground(Color.clear)
     }
 
     private func sidebarSectionHeader(_ title: String) -> some View {
@@ -156,17 +161,17 @@ struct SidebarItemView: View {
         HStack(spacing: 9) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-                    .frame(width: 26, height: 26)
+                    .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+                    .frame(width: 24, height: 24)
 
                 Image(systemName: item.icon)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isSelected ? Color.accentColor : AppSurfaceTokens.secondaryText)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
             }
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(item.title)
-                    .font(.system(size: 13.5, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 12.75, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,13 +191,13 @@ struct SidebarItemView: View {
 
             if let shortcut = item.shortcut {
                 Text(shortcut.displayString)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(isSelected ? Color.accentColor : AppSurfaceTokens.secondaryText)
+                    .font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(isSelected ? Color.accentColor.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
+                            .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
                     )
             }
         }
@@ -201,7 +206,7 @@ struct SidebarItemView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft.opacity(0.72) : Color.clear))
+                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft.opacity(0.72) : Color.clear))
         )
         .foregroundStyle(AppSurfaceTokens.primaryText)
         .contentShape(Rectangle())
@@ -213,13 +218,14 @@ struct SidebarItemView: View {
 struct MainContent: View {
     let selectedItem: SidebarItem
     let clipboardPinActions: ClipboardPinActions
+    @EnvironmentObject private var serviceContainer: ServiceContainer
 
     var body: some View {
         Group {
             switch selectedItem {
             case .home, .systemStatus:
-                WorkspaceHomeView()
-                    .navigationTitle("首页")
+                SystemStatusView(systemStatusService: serviceContainer.systemStatusService)
+                    .navigationTitle("状态")
             case .agent:
                 AgentDashboardView()
                     .navigationTitle("Agent")

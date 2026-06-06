@@ -67,14 +67,12 @@ public enum BatteryEvent: Sendable {
 /// 电池状态服务 - 监控电池状态变化
 @MainActor
 public class BatteryService: ObservableObject {
-    public static let shared = BatteryService()
-
     @Published public private(set) var batteryInfo: BatteryInfo = BatteryInfo()
 
     private var batterySource: CFRunLoopSource?
     private var cancellables = Set<AnyCancellable>()
 
-    private init() {
+    public init() {
         setupMonitoring()
         setupLowPowerModeObserver()
         updateBatteryInfo()
@@ -161,11 +159,12 @@ import SwiftUI
 
 /// 电池状态视图
 public struct BatteryIndicatorView: View {
-    @ObservedObject private var batteryService = BatteryService.shared
+    @ObservedObject private var batteryService: BatteryService
     var batteryWidth: CGFloat = 26
     var showPercentage: Bool = true
 
-    public init(batteryWidth: CGFloat = 26, showPercentage: Bool = true) {
+    public init(batteryService: BatteryService = BatteryService(), batteryWidth: CGFloat = 26, showPercentage: Bool = true) {
+        _batteryService = ObservedObject(wrappedValue: batteryService)
         self.batteryWidth = batteryWidth
         self.showPercentage = showPercentage
     }

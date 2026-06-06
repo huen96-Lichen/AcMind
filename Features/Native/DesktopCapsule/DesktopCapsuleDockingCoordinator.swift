@@ -4,7 +4,11 @@ import AcMindKit
 
 @MainActor
 final class DesktopCapsuleDockingCoordinator {
-    static let shared = DesktopCapsuleDockingCoordinator()
+    private let notchController: NotchPanelControlling
+
+    init(notchController: NotchPanelControlling) {
+        self.notchController = notchController
+    }
 
     func handleWindowMoved(_ panel: DesktopCapsulePanel) {
         guard panel.isVisible, let screen = panel.screen ?? NSScreen.main else { return }
@@ -16,7 +20,7 @@ final class DesktopCapsuleDockingCoordinator {
 
         panel.dockToNotch()
         DispatchQueue.main.async {
-            NotchPanel.shared.showCompact(on: screen)
+            self.notchController.showCompact(on: screen)
         }
     }
 }

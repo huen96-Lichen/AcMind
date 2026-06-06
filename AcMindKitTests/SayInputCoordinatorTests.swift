@@ -399,6 +399,157 @@ final class SayInputCoordinatorTests: XCTestCase {
         XCTAssertEqual(outcome.rawText, rawText)
         XCTAssertEqual(outcome.polishedText, polishedText)
     }
+
+    func testRealtimeTranscriptionCallbackReceivesUpdates() async throws {
+        let sourceItemId = UUID().uuidString
+        let realtimeText = "实时转写的结果"
+
+        let voiceService = VoiceServiceStub(stopRecordingResult: sourceItemId, polishedTextProvider: { $0 + "。" })
+        voiceService.realtimeFinalText = realtimeText
+
+        let storage = SayInputSourceStoreStub(items: [
+            sourceItemId: SourceItem(
+                id: sourceItemId,
+                type: .audio,
+                source: .voice,
+                status: .captured,
+                previewText: realtimeText,
+                transcript: realtimeText
+            )
+        ])
+        let textInjector = SayInputTextInjectorStub(
+            selectionSnapshot: {
+                var snapshot = TextSelectionSnapshot()
+                snapshot.isEditable = false
+                snapshot.isFocusedTarget = false
+                snapshot.source = "none"
+                return snapshot
+            }()
+        )
+        let clipboard = SayInputClipboardStub()
+
+        let coordinator = SayInputCoordinator(
+            voiceService: voiceService,
+            sourceStore: storage,
+            textInjector: textInjector,
+            clipboard: clipboard
+        )
+
+        var realtimeCallbacks: [String] = []
+        coordinator.onRealtimeTranscriptUpdate = { text in
+            realtimeCallbacks.append(text)
+        }
+
+        try await coordinator.startRecording()
+        XCTAssertTrue(voiceService.realtimeStarted)
+        XCTAssertEqual(realtimeCallbacks, ["实时转写的结果"])
+
+        let outcome = try await coordinator.stopRecording(
+            configuration: SayInputConfiguration(
+                autoPolish: false,
+                polishMode: .none,
+                outputMode: .copyToClipboard,
+                saveToInbox: true
+            )
+        )
+
+        XCTAssertTrue(voiceService.realtimeStopped)
+        XCTAssertEqual(outcome.rawText, realtimeText)
+        XCTAssertEqual(clipboard.writtenStrings, [realtimeText])
+    }
+
+    func testUnsupportedRealtimeEngineFallsBackToBatch() async throws {
+        let sourceItemId = UUID().uuidString
+        let rawText = "批量转写结果"
+        let polishedText = "批量转写结果。"
+
+        let voiceService = VoiceServiceStub(stopRecordingResult: sourceItemId, polishedText: polishedText)
+        voiceService.realtimeShouldThrow = true
+
+        let storage = SayInputSourceStoreStub(items: [
+            sourceItemId: SourceItem(
+                id: sourceItemId,
+                type: .audio,
+                source: .voice,
+                status: .captured,
+                previewText: rawText,
+                transcript: rawText
+            )
+        ])
+        let textInjector = SayInputTextInjectorStub(
+            selectionSnapshot: {
+                var snapshot = TextSelectionSnapshot()
+                snapshot.isEditable = false
+                snapshot.isFocusedTarget = false
+                snapshot.source = "none"
+                return snapshot
+            }()
+        )
+        let clipboard = SayInputClipboardStub()
+
+        let coordinator = SayInputCoordinator(
+            voiceService: voiceService,
+            sourceStore: storage,
+            textInjector: textInjector,
+            clipboard: clipboard
+        )
+
+        try await coordinator.startRecording()
+        XCTAssertFalse(voiceService.realtimeStarted)
+
+        let outcome = try await coordinator.stopRecording(
+            configuration: SayInputConfiguration(
+                autoPolish: true,
+                polishMode: .light,
+                outputMode: .copyToClipboard,
+                saveToInbox: true
+            )
+        )
+
+        XCTAssertEqual(outcome.rawText, rawText)
+        XCTAssertEqual(outcome.polishedText, polishedText)
+    }
+
+    func testLastRealtimeResultSkipsSourceItemPolling() async throws {
+        let sourceItemId = UUID().uuidString
+        let realtimeText = "实时结果优先使用"
+
+        let voiceService = VoiceServiceStub(stopRecordingResult: sourceItemId, polishedTextProvider: { $0 + "。" })
+        voiceService.realtimeFinalText = realtimeText
+
+        let storage = SayInputSourceStoreStub()
+        let textInjector = SayInputTextInjectorStub(
+            selectionSnapshot: {
+                var snapshot = TextSelectionSnapshot()
+                snapshot.isEditable = false
+                snapshot.isFocusedTarget = false
+                snapshot.source = "none"
+                return snapshot
+            }()
+        )
+        let clipboard = SayInputClipboardStub()
+
+        let coordinator = SayInputCoordinator(
+            voiceService: voiceService,
+            sourceStore: storage,
+            textInjector: textInjector,
+            clipboard: clipboard
+        )
+
+        try await coordinator.startRecording()
+
+        let outcome = try await coordinator.stopRecording(
+            configuration: SayInputConfiguration(
+                autoPolish: false,
+                polishMode: .none,
+                outputMode: .copyToClipboard,
+                saveToInbox: false
+            )
+        )
+
+        XCTAssertEqual(outcome.rawText, realtimeText)
+        XCTAssertEqual(outcome.polishedText, realtimeText)
+    }
 }
 
 private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable {
@@ -411,6 +562,12 @@ private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable 
     private(set) var translationRequests: [String] = []
     var streamChunks: [String] = []
     private(set) var status: RecordingStatus = .idle
+
+    var realtimeFinalText: String?
+    var realtimeShouldThrow: Bool = false
+    private(set) var realtimeStarted: Bool = false
+    private(set) var realtimeStopped: Bool = false
+    private var realtimeUpdateHandler: (@Sendable (TranscriptionSnapshot) -> Void)?
 
     init(stopRecordingResult: String, polishedText: String) {
         self.stopRecordingResults = [stopRecordingResult]
@@ -502,6 +659,22 @@ private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable 
 
     func getRecordingStatus() async -> RecordingStatus {
         status
+    }
+
+    func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws {
+        if realtimeShouldThrow {
+            throw NSError(domain: "VoiceService", code: -1)
+        }
+        realtimeStarted = true
+        realtimeUpdateHandler = onUpdate
+        if let text = realtimeFinalText {
+            onUpdate(TranscriptionSnapshot(text: text, isFinal: true))
+        }
+    }
+
+    func stopRealtimeTranscription() async throws -> String {
+        realtimeStopped = true
+        return realtimeFinalText ?? ""
     }
 }
 

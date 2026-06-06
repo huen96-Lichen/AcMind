@@ -22,7 +22,6 @@ public final class ClipboardPinWindowManager {
     public init(assetStore: AssetStore) {
         self.assetStore = assetStore
         installReassertionObservers()
-        installKeepAliveTimer()
     }
 
     deinit {
@@ -40,6 +39,7 @@ public final class ClipboardPinWindowManager {
             existing.controller.setAlwaysOnTop(true)
             existing.controller.reveal()
             scheduleReassertion()
+            updateKeepAliveTimer()
             notifyWindowStateChanged()
             return
         }
@@ -50,6 +50,7 @@ public final class ClipboardPinWindowManager {
             preferredDisplayFrame: preferredDisplayFrame,
             onClose: { [weak self] in
                 self?.windows.removeValue(forKey: item.id)
+                self?.updateKeepAliveTimer()
                 self?.notifyWindowStateChanged()
             },
             onToggleAlwaysOnTop: { [weak self] in
@@ -61,6 +62,7 @@ public final class ClipboardPinWindowManager {
         controller.setAlwaysOnTop(true)
         controller.reveal()
         scheduleReassertion()
+        updateKeepAliveTimer()
         notifyWindowStateChanged()
     }
 
@@ -68,6 +70,7 @@ public final class ClipboardPinWindowManager {
         for entry in windows.values {
             entry.controller.hide()
         }
+        updateKeepAliveTimer()
         notifyWindowStateChanged()
     }
 
@@ -76,6 +79,7 @@ public final class ClipboardPinWindowManager {
             entry.controller.reveal()
         }
         scheduleReassertion()
+        updateKeepAliveTimer()
         notifyWindowStateChanged()
     }
 
@@ -85,6 +89,7 @@ public final class ClipboardPinWindowManager {
             windows[id]?.controller.close()
         }
         windows.removeAll()
+        updateKeepAliveTimer()
         notifyWindowStateChanged()
     }
 
@@ -96,6 +101,7 @@ public final class ClipboardPinWindowManager {
         if entry.alwaysOnTop {
             scheduleReassertion()
         }
+        updateKeepAliveTimer()
         notifyWindowStateChanged()
     }
 
@@ -109,6 +115,78 @@ public final class ClipboardPinWindowManager {
 
     public var windowSnapshots: [ClipboardPinWindowSnapshot] {
         windows.values.map { $0.controller.snapshot }
+    }
+
+    nonisolated static func shouldKeepAlive(using snapshots: [ClipboardPinWindowSnapshot]) -> Bool {
+        snapshots.contains { snapshot in
+            snapshot.isAlwaysOnTop && snapshot.isVisible
+        }
+    }
+
+    public func diagnosticsReport(generatedAt: Date = Date()) -> String {
+        Self.diagnosticsReport(from: windowSnapshots, generatedAt: generatedAt)
+    }
+
+    nonisolated static func diagnosticsReport(from snapshots: [ClipboardPinWindowSnapshot], generatedAt: Date = Date()) -> String {
+        let expectedLevel = snapshots.first?.expectedAlwaysOnTopLevelRawValue ?? ClipboardPinWindowPresentation.alwaysOnTopLevel.rawValue
+        let visibleCount = snapshots.filter(\.isVisible).count
+        let alwaysOnTopCount = snapshots.filter(\.isAlwaysOnTop).count
+        let expectedLevelCount = snapshots.filter(\.isAtExpectedAlwaysOnTopLevel).count
+        let keepAliveEligibleCount = snapshots.filter { $0.isAlwaysOnTop && $0.isVisible }.count
+        let unstableCount = snapshots.filter { $0.diagnosticReason != "ok" }.count
+        let reasonCounts = Dictionary(grouping: snapshots, by: \.diagnosticReason)
+            .mapValues(\.count)
+            .sorted { lhs, rhs in
+                if lhs.value == rhs.value {
+                    return lhs.key < rhs.key
+                }
+                return lhs.value > rhs.value
+            }
+            .map { "\($0.key)=\($0.value)" }
+        let summary = [
+            "AcMind Clipboard Pin Diagnostics",
+            "Window Count: \(snapshots.count)",
+            "Visible Count: \(visibleCount)",
+            "Always-On-Top Count: \(alwaysOnTopCount)",
+            "At Expected Level: \(expectedLevelCount)",
+            "Keep-Alive Eligible Count: \(keepAliveEligibleCount)",
+            "Keep-Alive Active: \(keepAliveEligibleCount > 0)",
+            "Unstable Window Count: \(unstableCount)",
+            "Reason Summary: \(reasonCounts.isEmpty ? "none" : reasonCounts.joined(separator: ", "))",
+            "Expected Always-On-Top Level: \(expectedLevel)",
+            "Generated At: \(generatedAt.formatted(date: .abbreviated, time: .standard))"
+        ]
+
+        guard snapshots.isEmpty == false else {
+            return (summary + ["No open pin windows."]).joined(separator: "\n")
+        }
+
+        let sortedSnapshots = snapshots.sorted { lhs, rhs in
+            if lhs.diagnosticPriority == rhs.diagnosticPriority {
+                return lhs.itemId < rhs.itemId
+            }
+            return lhs.diagnosticPriority > rhs.diagnosticPriority
+        }
+
+        let entries = sortedSnapshots.enumerated().map { index, snapshot in
+            let status = snapshot.isAtExpectedAlwaysOnTopLevel ? "ok" : "mismatch"
+            return [
+                "#\(index + 1)",
+                "item=\(snapshot.itemId)",
+                "status=\(status)",
+                "reason=\(snapshot.diagnosticReason)",
+                "visible=\(snapshot.isVisible)",
+                "alwaysOnTop=\(snapshot.isAlwaysOnTop)",
+                "level=\(snapshot.levelRawValue)",
+                "expectedLevel=\(snapshot.expectedAlwaysOnTopLevelRawValue)",
+                "matchesExpected=\(snapshot.isAtExpectedAlwaysOnTopLevel)",
+                "frame=\(snapshot.frame.debugDescription)",
+                "screen=\(snapshot.screenFrame?.debugDescription ?? "nil")",
+                "display=\(snapshot.displayFrame.debugDescription)"
+            ].joined(separator: " ")
+        }
+
+        return (summary + entries).joined(separator: "\n")
     }
 
     private func notifyWindowStateChanged() {
@@ -136,11 +214,41 @@ public final class ClipboardPinWindowManager {
 
         notificationObservers.append(
             NotificationObserver(
+                center: workspaceCenter,
+                token: workspaceCenter.addObserver(
+                    forName: NSWorkspace.activeSpaceDidChangeNotification,
+                    object: nil,
+                    queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.reassertVisibleAlwaysOnTopWindows()
+                    }
+                }
+            )
+        )
+
+        notificationObservers.append(
+            NotificationObserver(
                 center: notificationCenter,
                 token: notificationCenter.addObserver(
                 forName: NSApplication.didChangeScreenParametersNotification,
                 object: nil,
                 queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.reassertVisibleAlwaysOnTopWindows()
+                    }
+                }
+            )
+        )
+
+        notificationObservers.append(
+            NotificationObserver(
+                center: notificationCenter,
+                token: notificationCenter.addObserver(
+                    forName: NSApplication.didChangeOcclusionStateNotification,
+                    object: nil,
+                    queue: .main
                 ) { [weak self] _ in
                     Task { @MainActor [weak self] in
                         self?.reassertVisibleAlwaysOnTopWindows()
@@ -165,14 +273,21 @@ public final class ClipboardPinWindowManager {
         )
     }
 
-    private func installKeepAliveTimer() {
-        let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + 1.0, repeating: 1.25, leeway: .milliseconds(120))
-        timer.setEventHandler { [weak self] in
-            self?.reassertVisibleAlwaysOnTopWindows()
+    private func updateKeepAliveTimer() {
+        let shouldKeepAlive = Self.shouldKeepAlive(using: windowSnapshots)
+        if shouldKeepAlive {
+            guard reassertionTimer == nil else { return }
+            let timer = DispatchSource.makeTimerSource(queue: .main)
+            timer.schedule(deadline: .now() + 1.0, repeating: 1.25, leeway: .milliseconds(120))
+            timer.setEventHandler { [weak self] in
+                self?.reassertVisibleAlwaysOnTopWindows()
+            }
+            timer.resume()
+            reassertionTimer = timer
+        } else {
+            reassertionTimer?.cancel()
+            reassertionTimer = nil
         }
-        timer.resume()
-        reassertionTimer = timer
     }
 
     private func scheduleReassertion() {
@@ -467,6 +582,12 @@ final class ClipboardPinWindowViewModel: ObservableObject {
             return "文件剪贴板"
         case .url:
             return "链接剪贴板"
+        case .richText:
+            return "富文本剪贴板"
+        case .code:
+            return "代码剪贴板"
+        case .video:
+            return "视频剪贴板"
         }
     }
 
@@ -480,6 +601,12 @@ final class ClipboardPinWindowViewModel: ObservableObject {
             return "文件"
         case .url:
             return "链接"
+        case .richText:
+            return "富文本"
+        case .code:
+            return "代码"
+        case .video:
+            return "视频"
         }
     }
 
@@ -498,12 +625,14 @@ final class ClipboardPinWindowViewModel: ObservableObject {
                 return "\(Int(image.size.width)) × \(Int(image.size.height))"
             }
             return "图片加载中"
-        case .text, .url:
+        case .text, .url, .richText, .code:
             let length = displayText.count
             return "\(length) 字"
         case .file:
             let lines = displayText.split(separator: "\n", omittingEmptySubsequences: false).count
             return "\(lines) 个路径"
+        case .video:
+            return "视频"
         }
     }
 
@@ -513,7 +642,7 @@ final class ClipboardPinWindowViewModel: ObservableObject {
             guard let self else { return }
             guard let asset = try? await assetStore.getAsset(id: assetId) else { return }
             let maxPixelSize = max(displayFrame.width * 1.5, displayFrame.height * 1.5)
-            guard let image = await assetStore.loadImage(asset: asset, maxPixelSize: maxPixelSize) else { return }
+            guard let image = assetStore.loadImage(asset: asset, maxPixelSize: maxPixelSize) else { return }
             await MainActor.run {
                 self.loadedImage = image
                 self.preferredWindowSize = ClipboardPinWindowSizing.imageWindowSize(for: image.size, displayFrame: self.displayFrame)
@@ -550,7 +679,7 @@ private struct ClipboardPinWindowView: View {
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(nsColor: .windowBackgroundColor).opacity(0.97))
-                .shadow(color: Color.black.opacity(0.16), radius: 18, x: 0, y: 8)
+                .shadow(color: Color(white: 0, opacity: 0.16), radius: 18, x: 0, y: 8)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .frame(minWidth: 280, minHeight: 160)
@@ -566,12 +695,12 @@ private struct ClipboardPinWindowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.item.type.displayName)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color(nsColor: .labelColor))
                     .lineLimit(1)
 
                 Text("\(viewModel.sourceLabel) · \(viewModel.timestampText)")
                     .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
                     .lineLimit(1)
             }
 
@@ -581,10 +710,10 @@ private struct ClipboardPinWindowView: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .semibold))
                     .frame(width: 22, height: 22)
-                    .background(Circle().fill(Color.black.opacity(0.04)))
+                    .background(Circle().fill(Color(white: 0, opacity: 0.04)))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(nsColor: .secondaryLabelColor))
             .help("关闭")
         }
         .padding(.horizontal, 12)
@@ -608,7 +737,7 @@ private struct ClipboardPinWindowView: View {
     private func textCard(_ text: String) -> some View {
         Text(text.isEmpty ? "无内容" : text)
             .font(.system(size: 14, weight: .regular))
-            .foregroundStyle(.primary)
+            .foregroundStyle(Color(nsColor: .labelColor))
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -626,12 +755,12 @@ private struct ClipboardPinWindowView: View {
             .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.black.opacity(0.035))
+                    .fill(Color(white: 0, opacity: 0.035))
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    .stroke(Color(white: 1, opacity: 0.12), lineWidth: 1)
             )
             .contentShape(Rectangle())
     }

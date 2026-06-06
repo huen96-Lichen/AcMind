@@ -11,6 +11,7 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
 
     private let appId: String
     private let token: String
+    private let hotwords: [String]
     private var webSocketTask: URLSessionWebSocketTask?
 
     private let webSocketURL = "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
@@ -18,9 +19,10 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
     /// 音频分片大小 (16KB)
     private let chunkSize = 16 * 1024
 
-    public init(appId: String, token: String) {
+    public init(appId: String, token: String, hotwords: [String] = []) {
         self.appId = appId
         self.token = token
+        self.hotwords = hotwords
     }
 
     // MARK: - Transcriber Protocol
@@ -174,7 +176,7 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
             try await wsTask.send(.data(Data(chunk)))
             offset = end
 
-            // 控制发送速率，模拟实时流
+            // 控制发送速率，分片推送音频，避免一次性突发发送
             try? await Task.sleep(nanoseconds: 40_000_000) // ~40ms per chunk
         }
 
@@ -223,7 +225,226 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
         webSocketTask = nil
     }
 
+    public func createRealtimeSession() -> RealtimeTranscriptionSession? {
+        AliCloudRealtimeSession(
+            appId: appId,
+            token: token,
+            hotwords: hotwords
+        )
+    }
+
     deinit {
         disconnect()
+    }
+}
+
+// MARK: - AliCloud Realtime Session
+
+public final class AliCloudRealtimeSession: RealtimeTranscriptionSession, @unchecked Sendable {
+    public var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)?
+
+    private let appId: String
+    private let token: String
+    private let hotwords: [String]
+    private var webSocketTask: URLSessionWebSocketTask?
+    private var isConnected = false
+    private var isTaskStarted = false
+    private var isFinished = false
+    private var accumulatedText = ""
+    private let webSocketURL = "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+
+    private var taskStartContinuation: CheckedContinuation<Void, Error>?
+
+    init(appId: String, token: String, hotwords: [String]) {
+        self.appId = appId
+        self.token = token
+        self.hotwords = hotwords
+    }
+
+    public func sendAudioData(_ data: Data) async throws {
+        if !isConnected {
+            try await connect()
+        }
+        guard let wsTask = webSocketTask else {
+            throw STTError.transcriptionFailed("WebSocket 未连接")
+        }
+        try await wsTask.send(.data(data))
+    }
+
+    public func finish() async throws -> String {
+        guard let wsTask = webSocketTask else {
+            return accumulatedText
+        }
+
+        let finishTask: [String: Any] = [
+            "header": [
+                "action": "finish-task",
+                "task_id": UUID().uuidString,
+                "streaming": "duplex"
+            ],
+            "payload": [
+                "input": [:]
+            ]
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: finishTask),
+              let json = String(data: data, encoding: .utf8) else {
+            throw STTError.transcriptionFailed("构建 finish-task 命令失败")
+        }
+
+        try await wsTask.send(.string(json))
+
+        let timeout: UInt64 = 30_000_000_000
+        let deadline = DispatchTime.now() + .nanoseconds(Int(timeout))
+        while !isFinished && DispatchTime.now() < deadline {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+
+        wsTask.cancel(with: .normalClosure, reason: nil)
+        webSocketTask = nil
+        isConnected = false
+
+        return accumulatedText
+    }
+
+    public func cancel() async {
+        webSocketTask?.cancel(with: .normalClosure, reason: nil)
+        webSocketTask = nil
+        isConnected = false
+        isFinished = true
+    }
+
+    private func connect() async throws {
+        guard let url = URL(string: webSocketURL) else {
+            throw STTError.transcriptionFailed("无效的 WebSocket URL")
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let session = URLSession(configuration: .default)
+        let wsTask = session.webSocketTask(with: request)
+        self.webSocketTask = wsTask
+
+        wsTask.resume()
+        isConnected = true
+
+        startReceiveLoop()
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.taskStartContinuation = continuation
+            self.sendRunTaskCommand(wsTask: wsTask)
+        }
+    }
+
+    private func sendRunTaskCommand(wsTask: URLSessionWebSocketTask) {
+        var parameters: [String: Any] = [
+            "format": "pcm",
+            "sample_rate": 16000
+        ]
+
+        if !hotwords.isEmpty {
+            parameters["vocabulary"] = hotwords.joined(separator: ",")
+        }
+
+        let runTask: [String: Any] = [
+            "header": [
+                "action": "run-task",
+                "task_id": UUID().uuidString,
+                "streaming": "duplex"
+            ],
+            "payload": [
+                "task_group": "audio",
+                "task": "asr",
+                "function": "recognition",
+                "model": "paraformer-realtime-v2",
+                "parameters": parameters,
+                "input": [:]
+            ]
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: runTask),
+              let json = String(data: data, encoding: .utf8) else {
+            taskStartContinuation?.resume(throwing: STTError.transcriptionFailed("构建 run-task 命令失败"))
+            taskStartContinuation = nil
+            return
+        }
+
+        Task {
+            do {
+                try await wsTask.send(.string(json))
+            } catch {
+                self.taskStartContinuation?.resume(throwing: error)
+                self.taskStartContinuation = nil
+            }
+        }
+    }
+
+    private func startReceiveLoop() {
+        guard let wsTask = webSocketTask else { return }
+
+        wsTask.receive { [weak self] result in
+            guard let self else { return }
+
+            switch result {
+            case .success(let message):
+                self.handleMessage(message)
+                if !self.isFinished {
+                    self.startReceiveLoop()
+                }
+            case .failure:
+                self.isFinished = true
+                self.taskStartContinuation?.resume(throwing: STTError.transcriptionFailed("WebSocket 接收错误"))
+                self.taskStartContinuation = nil
+            }
+        }
+    }
+
+    private func handleMessage(_ message: URLSessionWebSocketTask.Message) {
+        switch message {
+        case .string(let text):
+            guard let data = text.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let header = json["header"] as? [String: Any],
+                  let event = header["event"] as? String else {
+                return
+            }
+
+            switch event {
+            case "task-started":
+                isTaskStarted = true
+                taskStartContinuation?.resume()
+                taskStartContinuation = nil
+
+            case "result-generated":
+                if let payload = json["payload"] as? [String: Any],
+                   let output = payload["output"] as? [String: Any],
+                   let sentence = output["sentence"] as? [String: Any],
+                   let text = sentence["text"] as? String {
+                    let sentenceEnd = sentence["sentence_end"] as? Bool ?? false
+                    accumulatedText += text
+                    onUpdate?(TranscriptionSnapshot(
+                        text: accumulatedText,
+                        isFinal: sentenceEnd
+                    ))
+                }
+
+            case "task-finished":
+                isFinished = true
+
+            case "error":
+                isFinished = true
+                let errorMessage = (json["payload"] as? [String: Any])?["message"] as? String ?? "未知错误"
+                print("[AliCloudRealtimeSession] ASR error: \(errorMessage)")
+
+            default:
+                break
+            }
+
+        case .data:
+            break
+
+        @unknown default:
+            break
+        }
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 import AcMindKit
 
 // MARK: - Clipboard View Model
@@ -16,6 +17,7 @@ public final class ClipboardViewModel: ObservableObject {
     // MARK: - Dependencies
     
     private let clipboardService: ClipboardServiceProtocol
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
     
@@ -27,6 +29,10 @@ public final class ClipboardViewModel: ObservableObject {
     @Published public var selectedType: ClipboardContentType? = nil {
         didSet { applyFilter() }
     }
+    @Published public var availableTags: [ClipboardTag] = []
+    @Published public var selectedTag: String? = nil {
+        didSet { applyFilter() }
+    }
     
     @Published public var isLoading = false
     @Published public var errorMessage: String?
@@ -36,10 +42,21 @@ public final class ClipboardViewModel: ObservableObject {
     @Published public var isWatching = false
     
     // MARK: - Initialization
-    
+
     public init(clipboardService: ClipboardServiceProtocol? = nil) {
-        self.clipboardService = clipboardService ?? ServiceContainer.shared.clipboardService
-        
+        self.clipboardService = clipboardService ?? ClipboardService()
+
+        clipboardService?.itemPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newItem in
+                guard let self else { return }
+                let pinnedCount = self.items.filter { $0.isPinned }.count
+                self.items.insert(newItem, at: pinnedCount)
+                self.applyFilter()
+                Task { await self.updateStats() }
+            }
+            .store(in: &cancellables)
+
         Task {
             await loadItems()
             await updateStats()
@@ -53,27 +70,21 @@ public final class ClipboardViewModel: ObservableObject {
         defer { isLoading = false }
         
         do {
-            _ = ClipboardFilter(
-                contentType: selectedType,
-                searchQuery: searchQuery.isEmpty ? nil : searchQuery,
-                limit: nil
-            )
             items = try await clipboardService.listItems(filter: nil)
             applyFilter()
+            await loadTags()
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
     private func applyFilter() {
         var result = items
-        
-        // 类型过滤
+
         if let type = selectedType {
             result = result.filter { $0.type == type }
         }
-        
-        // 搜索过滤
+
         if !searchQuery.isEmpty {
             let query = searchQuery.lowercased()
             result = result.filter { item in
@@ -83,7 +94,18 @@ public final class ClipboardViewModel: ObservableObject {
                 return text.contains(query) || content.contains(query) || sourceApp.contains(query)
             }
         }
-        
+
+        if let tag = selectedTag {
+            result = result.filter { $0.tags.contains(tag) }
+        }
+
+        result.sort { lhs, rhs in
+            if lhs.isPinned != rhs.isPinned {
+                return lhs.isPinned
+            }
+            return lhs.createdAt > rhs.createdAt
+        }
+
         filteredItems = result
     }
     
@@ -95,7 +117,7 @@ public final class ClipboardViewModel: ObservableObject {
             await loadItems()
             await updateStats()
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
@@ -105,7 +127,7 @@ public final class ClipboardViewModel: ObservableObject {
             await loadItems()
             await updateStats()
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
@@ -115,7 +137,7 @@ public final class ClipboardViewModel: ObservableObject {
             await loadItems()
             await updateStats()
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
@@ -123,23 +145,20 @@ public final class ClipboardViewModel: ObservableObject {
         do {
             try await clipboardService.copyItem(id: id)
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
     public func copyText(_ text: String) async {
-        if let service = clipboardService as? ClipboardService {
-            await service.copyText(text)
-        }
+        await clipboardService.copyText(text)
     }
     
     public func saveToInbox(id: String) async {
         do {
             let sourceItem = try await clipboardService.saveToInbox(id: id)
             print("Saved to Inbox: \(sourceItem.id)")
-            // 可以在这里发送通知或回调
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
@@ -149,7 +168,7 @@ public final class ClipboardViewModel: ObservableObject {
             await loadItems()
             await updateStats()
         } catch {
-            showError(message: error.localizedDescription)
+            emitError(message: error.localizedDescription)
         }
     }
     
@@ -166,28 +185,22 @@ public final class ClipboardViewModel: ObservableObject {
     }
     
     public func pauseWatching() async {
-        if let service = clipboardService as? ClipboardService {
-            await service.pauseWatching()
-        }
+        await clipboardService.pauseWatching()
     }
     
     public func resumeWatching() async {
-        if let service = clipboardService as? ClipboardService {
-            await service.resumeWatching()
-        }
+        await clipboardService.resumeWatching()
     }
     
     // MARK: - Stats
     
     public func updateStats() async {
-        if let service = clipboardService as? ClipboardService {
-            stats = await service.getStats()
-        }
+        stats = await clipboardService.getStats()
     }
     
     // MARK: - Error Handling
     
-    private func showError(message: String) {
+    private func emitError(message: String) {
         errorMessage = message
         showError = true
     }
@@ -195,6 +208,70 @@ public final class ClipboardViewModel: ObservableObject {
     public func clearError() {
         errorMessage = nil
         showError = false
+    }
+    
+    // MARK: - Tags
+    
+    public func loadTags() async {
+        do {
+            availableTags = try await clipboardService.listTags()
+        } catch {
+            emitError(message: error.localizedDescription)
+        }
+    }
+    
+    public func createTag(name: String, color: String) async {
+        do {
+            let tag = try await clipboardService.createTag(name: name, color: color)
+            availableTags.append(tag)
+        } catch {
+            emitError(message: error.localizedDescription)
+        }
+    }
+    
+    public func addTagToItem(itemId: String, tagName: String) async {
+        do {
+            try await clipboardService.addTagToItem(itemId: itemId, tagName: tagName)
+            await loadItems()
+        } catch {
+            emitError(message: error.localizedDescription)
+        }
+    }
+    
+    public func removeTagFromItem(itemId: String, tagName: String) async {
+        do {
+            try await clipboardService.removeTagFromItem(itemId: itemId, tagName: tagName)
+            await loadItems()
+        } catch {
+            emitError(message: error.localizedDescription)
+        }
+    }
+    
+    // MARK: - Paste Queue
+    
+    public func enqueueForSequentialPaste(ids: [String]) {
+        clipboardService.enqueueForSequentialPaste(ids: ids)
+    }
+    
+    public func pasteNextInQueue() async -> ClipboardItem? {
+        do {
+            return try await clipboardService.pasteNextInQueue()
+        } catch {
+            emitError(message: error.localizedDescription)
+            return nil
+        }
+    }
+    
+    public func getQueueItems() -> [PasteQueue.QueueItem] {
+        clipboardService.getQueueItems()
+    }
+    
+    public func clearPasteQueue() async {
+        clipboardService.clearPasteQueue()
+    }
+    
+    public func removeQueueItem(id: String) {
+        clipboardService.removeQueueItem(id: id)
     }
     
     // MARK: - Helpers
@@ -210,20 +287,10 @@ public final class ClipboardViewModel: ObservableObject {
     }
     
     public func typeIcon(for type: ClipboardContentType) -> String {
-        switch type {
-        case .text: return "doc.text"
-        case .image: return "photo"
-        case .file: return "doc"
-        case .url: return "link"
-        }
+        type.icon
     }
-    
+
     public func typeColor(for type: ClipboardContentType) -> Color {
-        switch type {
-        case .text: return .blue
-        case .image: return .green
-        case .file: return .orange
-        case .url: return .purple
-        }
+        type.color
     }
 }

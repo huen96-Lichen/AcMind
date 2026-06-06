@@ -37,7 +37,7 @@ struct WebDigestPanel: View {
 
                 Text("输入网页 URL，用 `defuddle parse <url> --md` 抽取正文并生成 Markdown。")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -57,12 +57,12 @@ struct WebDigestPanel: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.green.opacity(0.12))
+                        .fill(AppSurfaceTokens.accentGreen.opacity(0.12))
                         .frame(width: 44, height: 44)
 
                     Image(systemName: "globe")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.green)
+                        .foregroundStyle(AppSurfaceTokens.accentGreen)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -70,13 +70,13 @@ struct WebDigestPanel: View {
                         .font(.headline)
                     Text("适合把一篇网页文章快速转换为可编辑的 Markdown 草稿。")
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
 
             Text("如果本机还没装 `defuddle`，请先运行 `npm install -g defuddle`。")
                 .font(.caption)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             HStack(spacing: 8) {
                 Label("解析正文", systemImage: "doc.text.magnifyingglass")
@@ -84,7 +84,7 @@ struct WebDigestPanel: View {
                 Label("可复制保存", systemImage: "tray.and.arrow.down")
             }
             .font(.caption2)
-            .foregroundStyle(Color.secondary)
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(16)
         .background(
@@ -119,7 +119,7 @@ struct WebDigestPanel: View {
             HStack(spacing: 12) {
                 Text(viewModel.statusText)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 
@@ -135,7 +135,7 @@ struct WebDigestPanel: View {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -176,7 +176,7 @@ struct WebDigestPanel: View {
                 .frame(minHeight: 260)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
                 )
         }
         .padding(16)

@@ -158,7 +158,7 @@ struct LaunchView: View {
 
                 Text("正在初始化: \(appState.initializationPhase.rawValue)")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             // 错误显示
@@ -166,11 +166,11 @@ struct LaunchView: View {
                 VStack(spacing: 8) {
                     Text("初始化失败")
                         .font(.headline)
-                        .foregroundStyle(Color.red)
+                        .foregroundStyle(AppSurfaceTokens.accentOrange)
 
                     Text(error.localizedDescription)
                         .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .multilineTextAlignment(.center)
 
                     Button("重试") {
@@ -181,7 +181,7 @@ struct LaunchView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .padding()
-                .background(Color.red.opacity(0.1))
+                .background(AppSurfaceTokens.accentOrange.opacity(0.1))
                 .cornerRadius(8)
             }
         }

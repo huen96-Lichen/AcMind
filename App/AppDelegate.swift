@@ -50,13 +50,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - State
 
     private let appState = AppState.shared
-    private let musicService = MusicService.shared
+    private var serviceContainer: ServiceContainer?
     private var hotCornerManager: HotCornerManager?
     private var fnKeyMonitor: FnKeyHoldMonitor?
     private var registeredGlobalShortcuts: [KeyboardShortcut] = []
     private var registeredCompanionShortcuts: [AcMindKeyboardShortcut] = []
+    private var registeredVoiceShortcut: KeyboardShortcut?
     private var isCompanionRuntimeEnabled = true
     private var isTerminating = false
+    private lazy var notchPanelController = NotchPanel.shared
+    private lazy var desktopCapsuleController = DesktopCapsulePanel.shared
+
+    private var permissionManager: PermissionManager? {
+        serviceContainer?.permissionManager
+    }
+
+    private var storageService: StorageServiceProtocol? {
+        serviceContainer?.storageService
+    }
+
+    private var captureService: CaptureServiceProtocol? {
+        serviceContainer?.captureService
+    }
+
+    private var clipboardService: ClipboardServiceProtocol? {
+        serviceContainer?.clipboardService
+    }
+
+    private var settingsService: SettingsServiceProtocol? {
+        serviceContainer?.settingsService
+    }
+
+    private var assetStore: AssetStore? {
+        serviceContainer?.assetStore
+    }
+
+    private var hotCornerSettingsStore: HotCornerSettingsStore? {
+        serviceContainer?.hotCornerSettingsStore
+    }
 
     // MARK: - Lifecycle
 
@@ -70,11 +101,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 初始化服务容器
         Task {
             do {
-                try await ServiceContainer.setup()
+                let container = try await ServiceContainer.setup()
                 await MainActor.run {
+                    self.serviceContainer = container
+                    self.appState.bindServiceContainerState(container)
                     self.hideLaunchWindow()
+                    self.connectCompanionPanels()
                     if self.clipboardPinWindowManager == nil {
-                        self.clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: ServiceContainer.shared.assetStore)
+                        self.clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: self.assetStore ?? AssetStore())
                     }
                     
                     // 检查是否需要显示 OOBE
@@ -102,6 +136,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func connectCompanionPanels() {
+        guard let serviceContainer else { return }
+        let notchPanel = NotchPanel.shared
+        let desktopCapsulePanel = DesktopCapsulePanel.shared
+        let dockingCoordinator = DesktopCapsuleDockingCoordinator(notchController: notchPanel)
+        notchPanel.connect(desktopCapsuleController: desktopCapsulePanel)
+        notchPanel.connect(serviceContainer: serviceContainer)
+        desktopCapsulePanel.connect(dockingCoordinator: dockingCoordinator)
+        desktopCapsulePanel.connect(notchController: notchPanel)
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         isTerminating = true
 
@@ -111,7 +156,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.hotCornerManager?.stop()
                 self.hotCornerManager = nil
             }
-            await ServiceContainer.shared.shutdown()
+            await serviceContainer?.shutdown()
         }
 
         // 停止监听
@@ -135,13 +180,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindowController == nil {
             mainWindowController = MainWindowController(
                 restoreWindowPosition: shouldRestoreWindowPosition,
-                clipboardPinActions: clipboardPinActions
+                clipboardPinActions: clipboardPinActions,
+                serviceContainer: serviceContainer ?? ServiceContainer.preview()
             )
         }
         NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
+        mainWindowController?.normalizeWindowSizeIfNeeded(targetContentSize: AppWindowGeometry.mainFrame.size)
         if shouldRestoreWindowPosition == false {
-            mainWindowController?.window?.setFrame(AppWindowGeometry.mainFrame, display: true)
+            mainWindowController?.window?.setFrame(
+                MainWindowController.frameRect(forContentSize: AppWindowGeometry.mainFrame.size, origin: AppWindowGeometry.mainFrame.origin, styleMask: mainWindowController?.window?.styleMask),
+                display: true
+            )
         }
         mainWindowController?.window?.makeKeyAndOrderFront(nil)
         mainWindowController?.window?.orderFrontRegardless()
@@ -203,34 +253,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Notch Panel
 
     func showNotchPanel() {
-        NotchPanel.shared.showCompact()
+        notchPanelController.showCompact()
     }
 
     func showNotchPanel(page: NotchV2Page) {
-        NotchPanel.shared.show(page: page)
+        notchPanelController.show(page: page)
     }
 
     func hideNotchPanel() {
-        NotchPanel.shared.hide()
+        notchPanelController.hide()
     }
 
     func toggleNotchPanel() {
-        NotchPanel.shared.toggle()
+        notchPanelController.toggle()
     }
 
     // MARK: - Desktop Capsule
 
     func showDesktopCapsule() {
-        DesktopCapsulePanel.shared.restorePosition()
-        DesktopCapsulePanel.shared.show()
+        desktopCapsuleController.restorePosition()
+        desktopCapsuleController.show()
     }
 
     func hideDesktopCapsule() {
-        DesktopCapsulePanel.shared.hide()
+        desktopCapsuleController.hide()
     }
 
     func toggleDesktopCapsule() {
-        DesktopCapsulePanel.shared.toggle()
+        desktopCapsuleController.toggle()
     }
 
     // MARK: - Clipboard Pin Windows
@@ -241,7 +291,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("[ClipboardPin] request pin item=\(item.id) type=\(item.type.displayName)")
         #endif
         if clipboardPinWindowManager == nil {
-            let assetStore = ServiceContainer.isInitialized() ? ServiceContainer.shared.assetStore : AssetStore()
+            let assetStore = self.assetStore ?? AssetStore()
             clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: assetStore)
         }
         clipboardPinWindowManager?.show(item: item)
@@ -277,30 +327,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func copyClipboardPinDiagnosticsToPasteboard() {
-        let snapshots = clipboardPinWindowSnapshots()
-        let expectedLevel = snapshots.first?.expectedAlwaysOnTopLevelRawValue ?? NSWindow.Level.screenSaver.rawValue
-        let header = [
-            "AcMind Clipboard Pin Diagnostics",
-            "Window Count: \(snapshots.count)",
-            "Expected Always-On-Top Level: \(expectedLevel)",
-            "Generated At: \(Date().formatted(date: .abbreviated, time: .standard))"
-        ]
-        let entries = snapshots.enumerated().map { index, snapshot in
-            [
-                "#\(index + 1) item=\(snapshot.itemId)",
-                "visible=\(snapshot.isVisible)",
-                "alwaysOnTop=\(snapshot.isAlwaysOnTop)",
-                "level=\(snapshot.levelRawValue)",
-                "expectedLevel=\(snapshot.expectedAlwaysOnTopLevelRawValue)",
-                "matchesExpected=\(snapshot.isAtExpectedAlwaysOnTopLevel)",
-                "frame=\(snapshot.frame.debugDescription)",
-                "screen=\(snapshot.screenFrame?.debugDescription ?? "nil")",
-                "display=\(snapshot.displayFrame.debugDescription)"
-            ].joined(separator: " ")
-        }
-
+        let diagnostics = clipboardPinWindowManager?.diagnosticsReport() ?? "AcMind Clipboard Pin Diagnostics\nWindow Count: 0\nNo open pin windows."
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString((header + entries).joined(separator: "\n"), forType: .string)
+        NSPasteboard.general.setString(diagnostics, forType: .string)
     }
 
     private var clipboardPinActions: ClipboardPinActions {
@@ -326,9 +355,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - OOBE
 
     func showOOBE() {
+        let permissionManager = self.permissionManager ?? PermissionManager()
+        let settingsService = self.settingsService ?? SettingsService()
         let oobeController = OOBEWindowController(
-            permissionManager: ServiceContainer.shared.permissionManager,
-            settingsService: ServiceContainer.shared.settingsService
+            permissionManager: permissionManager,
+            settingsService: settingsService
         )
         oobeWindowController = oobeController
         oobeController.onFinish = { [weak self] engine, polishMode in
@@ -417,6 +448,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self,
             selector: #selector(handleAppDidBecomeActive(_:)),
             name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidResignActive(_:)),
+            name: NSApplication.didResignActiveNotification,
             object: nil
         )
 
@@ -532,7 +570,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // App 回到前台时刷新所有权限状态
         Task {
             print("[AcMind.App] app did become active, refreshing permissions")
-            await ServiceContainer.shared.permissionManager.refreshAll()
+            await permissionManager?.refreshAll()
+            await updateClipboardCapturePolicy(isAppActive: true)
+        }
+    }
+
+    @objc private func handleAppDidResignActive(_ notification: Notification) {
+        Task {
+            await updateClipboardCapturePolicy(isAppActive: false)
         }
     }
 
@@ -593,7 +638,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task {
             do {
-                try await ServiceContainer.shared.storageService.deleteSourceItem(id: itemID)
+                try await storageService?.deleteSourceItem(id: itemID)
             } catch {
                 await MainActor.run {
                     appState.showError(.serviceUnavailable("删除收集项"))
@@ -648,6 +693,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleSettingsDidChange(_ notification: Notification) {
         setupGlobalShortcuts()
+        Task {
+            await updateClipboardCapturePolicy(isAppActive: NSApp.isActive)
+        }
     }
 
     @objc private func handleCompanionConfigurationDidChange(_ notification: Notification) {
@@ -657,7 +705,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Global Shortcuts
 
     private func setupHotCorners() {
-        guard let hotCornerStore = ServiceContainer.shared.hotCornerSettingsStore else {
+        guard let hotCornerStore = hotCornerSettingsStore else {
             hotCornerManager?.stop()
             hotCornerManager = nil
             return
@@ -685,10 +733,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshGlobalShortcuts() async {
-        let isReady = await MainActor.run { ServiceContainer.isInitialized() }
-        guard isReady else { return }
-
-        let settingsService = await MainActor.run { ServiceContainer.shared.settingsService }
+        guard let settingsService else { return }
 
         for shortcut in registeredGlobalShortcuts {
             try? await settingsService.unregisterShortcut(shortcut)
@@ -743,9 +788,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshCompanionRuntime() async {
-        guard ServiceContainer.isInitialized() else { return }
+        guard let storageService else { return }
 
-        let storageService = ServiceContainer.shared.storageService
         let configuration = await CompanionConfigurationStore.load(from: storageService)
         isCompanionRuntimeEnabled = configuration.companionEnabled
 
@@ -755,10 +799,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshCompanionShortcuts() async {
-        guard ServiceContainer.isInitialized() else { return }
-
-        let storageService = ServiceContainer.shared.storageService
-        let settingsService = ServiceContainer.shared.settingsService
+        guard let storageService, let settingsService else { return }
 
         for shortcut in registeredCompanionShortcuts {
             try? await settingsService.unregisterShortcut(shortcut)
@@ -784,6 +825,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } catch {
                 print("⚠️ 注册随身快捷键失败: \(shortcutConfig.action) - \(error.localizedDescription)")
             }
+        }
+    }
+
+    func registerVoiceShortcut(_ shortcutString: String) {
+        guard !shortcutString.isEmpty, let shortcut = KeyboardShortcut(displayString: shortcutString) else { return }
+        guard let settingsService else { return }
+        Task {
+            if let old = registeredVoiceShortcut {
+                try? await settingsService.unregisterShortcut(old)
+            }
+            do {
+                try await settingsService.registerShortcut(shortcut) { [weak self] in
+                    Task { @MainActor [weak self] in
+                        self?.showVoicePanel()
+                    }
+                }
+                registeredVoiceShortcut = shortcut
+            } catch {
+                print("⚠️ 注册语音快捷键失败: \(shortcutString) - \(error.localizedDescription)")
+                ToastManager.shared.show(.error, "语音快捷键注册失败，请检查快捷键是否与其他应用冲突")
+            }
+        }
+    }
+
+    func unregisterVoiceShortcut(_ shortcutString: String) {
+        guard !shortcutString.isEmpty, let shortcut = KeyboardShortcut(displayString: shortcutString) else { return }
+        guard let settingsService else { return }
+        Task {
+            try? await settingsService.unregisterShortcut(shortcut)
+            if registeredVoiceShortcut?.displayString == shortcutString {
+                registeredVoiceShortcut = nil
+            }
+        }
+    }
+
+    private func updateClipboardCapturePolicy(isAppActive: Bool) async {
+        guard let clipboardService else { return }
+
+        let preferences = SettingsLocalPreferences.loadOrDefault()
+        guard preferences.captureOnlyWhenAppActive else { return }
+
+        if isAppActive {
+            await clipboardService.resumeWatching()
+        } else {
+            await clipboardService.pauseWatching()
         }
     }
 
@@ -1094,14 +1180,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performCapture(mode: ScreenshotMode) async {
         guard !isTerminating else { return }
+        guard let captureService else { return }
 
         do {
-            let result = try await ServiceContainer.shared.captureService.captureScreenshot(mode: mode)
+            let result = try await captureService.captureScreenshot(mode: mode)
             
             // 获取截图图片用于预览
             var previewImage: NSImage?
             if let assetId = result.sourceItem.assetFileIds.first,
-               let asset = try? await ServiceContainer.shared.assetStore.getAsset(id: assetId) {
+               let asset = try? await assetStore?.getAsset(id: assetId) {
                 previewImage = NSImage(contentsOfFile: asset.filePath)
             }
             
@@ -1150,9 +1237,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performClipboardCapture() async {
         guard !isTerminating else { return }
+        guard let captureService else { return }
 
         do {
-            if let result = try await ServiceContainer.shared.captureService.captureFromClipboard() {
+            if let result = try await captureService.captureFromClipboard() {
                 NotificationCenter.default.post(name: Notification.Name("AcMind.captureCompleted"), object: result)
             }
         } catch {
@@ -1164,9 +1252,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performTextCapture(_ text: String) async {
         guard !isTerminating else { return }
+        guard let captureService else { return }
 
         do {
-            let result = try await ServiceContainer.shared.captureService.captureFromManualText(text)
+            let result = try await captureService.captureFromManualText(text)
             NotificationCenter.default.post(name: Notification.Name("AcMind.captureCompleted"), object: result)
         } catch {
             await MainActor.run {
@@ -1177,9 +1266,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performVoiceCapture() async {
         guard !isTerminating else { return }
+        guard let captureService else { return }
 
         do {
-            let result = try await ServiceContainer.shared.captureService.captureFromVoice()
+            let result = try await captureService.captureFromVoice()
             NotificationCenter.default.post(name: Notification.Name("AcMind.captureCompleted"), object: result)
         } catch {
             await MainActor.run {
@@ -1270,7 +1360,7 @@ struct ScreenshotPreviewView: View {
                 if let size = imageSizeString {
                     Text(size)
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 
                 Spacer()
@@ -1299,12 +1389,12 @@ struct ScreenshotPreviewView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "photo")
                         .font(.system(size: 48))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("截图已保存")
                         .font(.headline)
                     Text("可在收集箱中查看")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(AppSurfaceTokens.secondarySidebarBackground)
@@ -1328,16 +1418,18 @@ struct ScreenshotPreviewView: View {
 // MARK: - Main Window Controller
 
 class MainWindowController: NSWindowController {
-    convenience init(restoreWindowPosition: Bool, clipboardPinActions: ClipboardPinActions) {
+    private var didEnforceInitialSize = false
+
+    convenience init(restoreWindowPosition: Bool, clipboardPinActions: ClipboardPinActions, serviceContainer: ServiceContainer) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1320, height: 880),
+            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 650),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
         window.title = "AcMind"
-        window.minSize = NSSize(width: 1160, height: 760)
+        window.contentMinSize = NSSize(width: 1200, height: 650)
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
@@ -1349,7 +1441,7 @@ class MainWindowController: NSWindowController {
         // 设置内容视图
         let contentView = ContentView(clipboardPinActions: clipboardPinActions)
             .environmentObject(AppState.shared)
-            .environmentObject(ServiceContainer.shared)
+            .environmentObject(serviceContainer)
 
         window.contentView = NSHostingView(rootView: contentView)
 
@@ -1361,10 +1453,36 @@ class MainWindowController: NSWindowController {
     private func setupWindowDelegate() {
         window?.delegate = self
     }
+
+    private func enforceInitialWindowSizeIfNeeded() {
+        guard didEnforceInitialSize == false else { return }
+        didEnforceInitialSize = true
+
+        guard let window else { return }
+        let targetContentSize = NSSize(width: 1200, height: 650)
+        if window.contentLayoutRect.size != targetContentSize {
+            window.setFrame(Self.frameRect(forContentSize: targetContentSize, origin: window.frame.origin, styleMask: window.styleMask), display: true)
+        }
+    }
+
+    func normalizeWindowSizeIfNeeded(targetContentSize: NSSize) {
+        guard let window else { return }
+        if window.contentLayoutRect.size != targetContentSize {
+            window.setFrame(Self.frameRect(forContentSize: targetContentSize, origin: window.frame.origin, styleMask: window.styleMask), display: true)
+        }
+    }
+
+    static func frameRect(forContentSize contentSize: NSSize, origin: NSPoint, styleMask: NSWindow.StyleMask?) -> NSRect {
+        let resolvedStyleMask = styleMask ?? [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        var frameRect = NSWindow.frameRect(forContentRect: NSRect(origin: .zero, size: contentSize), styleMask: resolvedStyleMask)
+        frameRect.origin = origin
+        return frameRect
+    }
 }
 
 extension MainWindowController: NSWindowDelegate {
     func windowDidBecomeKey(_ notification: Notification) {
+        enforceInitialWindowSizeIfNeeded()
         AppState.shared.mainWindowDidBecomeKey()
     }
 
@@ -1445,7 +1563,7 @@ class LaunchWindowController: NSWindowController {
 // MARK: - Window Geometry
 
 enum AppWindowGeometry {
-    static let mainFrame = NSRect(x: 120, y: 120, width: 1320, height: 880)
+    static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 650)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
     static let capsuleFrame = NSRect(x: 320, y: 260, width: 400, height: 60)
 }

@@ -17,7 +17,7 @@ import Foundation
 /// 免费: 完全免费，Qwen3-ASR 开源模型
 /// 来源: ModelScope (zengshuishui/Qwen3-ASR-onnx)
 ///
-/// 注意: Qwen3-ASR 不支持真正的实时流式，这里用起始状态 + 最终结果的分段行为呈现。
+/// 注意: Qwen3-ASR 不支持真正的实时流式，这里用起始提示 + 最终结果的分段行为呈现。
 public final class Qwen3ASRTranscriber: Transcriber, RecordingPrewarmingTranscriber {
 
     // MARK: - Properties
@@ -53,7 +53,7 @@ public final class Qwen3ASRTranscriber: Transcriber, RecordingPrewarmingTranscri
 
     /// 分段式转写
     /// Qwen3-ASR 不支持真正的实时流式。
-    /// 这里先发送起始状态，再在识别结束后发送最终结果，避免让 UI 误以为是连续实时输出。
+    /// 这里先发送起始提示，再在识别结束后发送最终结果，避免让 UI 误以为是连续实时输出。
     public func transcribeStream(
         audioFile: AudioFile,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void

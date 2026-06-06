@@ -3,385 +3,1152 @@ import Combine
 import AcMindKit
 
 struct SystemStatusView: View {
-    @StateObject private var viewModel = SystemStatusViewModel(service: .shared)
+    @StateObject private var viewModel: SystemStatusViewModel
+    @State private var pulsePhase = false
+
+    private enum DashboardLayout {
+        static let heroCardHeight: CGFloat = 224
+        static let sideCardWidth: CGFloat = 224
+        static let statusMatrixHeight: CGFloat = 60
+        static let permissionStripHeight: CGFloat = 42
+    }
+
+    init(systemStatusService: SystemStatusService) {
+        _viewModel = StateObject(wrappedValue: SystemStatusViewModel(service: systemStatusService))
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                summaryStrip
-                performanceSection
-                networkSection
-                batterySection
-                sensorSection
-                permissionsSection
-                exceptionsSection
+        WorkspacePageShell(
+            title: "状态",
+            subtitle: "真实采样 · \(viewModel.lastUpdatedText) · \(viewModel.refreshHint)",
+            headerActions: AnyView(dashboardHeaderActions),
+            leadingRailWidth: AppSurfaceTokens.Layout.leadingRailWidth,
+            trailingRailWidth: DashboardLayout.sideCardWidth,
+            leadingRail: {
+                dashboardLeadingRail
+            },
+            content: {
+                dashboardContent
+            },
+            trailingRail: {
+                dashboardTrailingRail
             }
-            .padding(.horizontal, AppSurfaceTokens.Layout.pagePadding)
-            .padding(.vertical, 24)
-            .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, alignment: .leading)
-        }
-        .background(Color.white.ignoresSafeArea())
+        )
         .onAppear { viewModel.startMonitoring() }
         .onDisappear { viewModel.stopMonitoring() }
     }
 
-    private var header: some View {
-        AppSurfaceCard(title: "状态", subtitle: "主状态中心只展示真实可读的数据，读不到就明确写不可用。") {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 10) {
-                        statusGlyph
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("状态中心")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text("CPU、内存、磁盘、网络、电池、权限、进程、传感器一次看全")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                                .lineLimit(1)
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        statusPill(icon: "clock", title: viewModel.lastUpdatedText, accent: AppSurfaceTokens.cardBackgroundSoft)
-                        statusPill(icon: "waveform.path.ecg", title: viewModel.samplingStatusText, accent: viewModel.samplingStatusColor.opacity(0.16))
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text(viewModel.samplingStatusText)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(viewModel.samplingStatusColor)
-                    Text(viewModel.refreshHint)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(AppSurfaceTokens.primaryText)
-                    Text("白底只读总览")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                }
-            }
+    private var dashboardHeaderActions: some View {
+        HStack(spacing: 6) {
+            dashboardTopBadge(icon: "mic.fill", title: "说入法")
+            dashboardTopBadge(icon: "magnifyingglass", title: "搜索")
+            dashboardTopBadge(icon: "bolt.horizontal.circle", title: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor)
         }
     }
 
-    private var summaryStrip: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 180), spacing: 12), count: 3), spacing: 12) {
-            summaryCard(title: "CPU", icon: "cpu", value: viewModel.cpuSummary, detail: viewModel.loadAverageSummary, tint: .blue)
-            summaryCard(title: "内存", icon: "memorychip", value: viewModel.memorySummary, detail: viewModel.memoryPressureSummary, tint: .purple)
-            summaryCard(title: "网络", icon: "network", value: viewModel.networkSummary, detail: viewModel.networkInterfaceSummary, tint: .green)
-            summaryCard(title: "电池", icon: "battery.100", value: viewModel.batterySummary, detail: viewModel.batteryStateSummary, tint: .cyan)
-            summaryCard(title: "温度", icon: "thermometer", value: viewModel.temperatureSummary, detail: viewModel.temperatureDetailSummary, tint: .orange)
+    private var dashboardContent: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            dashboardKpiRow
+            dashboardOverviewCard
+            dashboardUtilityGrid
+            dashboardBottomRow
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 0)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(AppSurfaceTokens.background.ignoresSafeArea())
     }
 
-    private var performanceSection: some View {
-        AppSurfaceSectionCard(title: "性能", subtitle: "CPU、内存、磁盘和进程排行") {
-            VStack(alignment: .leading, spacing: 12) {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    metricTile(title: "CPU", value: viewModel.cpuSummary, detail: viewModel.loadAverageSummary)
-                    metricTile(title: "内存", value: viewModel.memorySummary, detail: viewModel.memoryUsagePercentSummary)
-                    metricTile(title: "磁盘", value: viewModel.diskSummary, detail: viewModel.diskDetailSummary)
-                    metricTile(title: "最近刷新", value: viewModel.lastUpdatedText, detail: viewModel.refreshHint)
-                }
-
-                Divider()
-
-                HStack(alignment: .top, spacing: 12) {
-                    processList(title: "CPU 进程", processes: viewModel.snapshot.topCPUProcesses)
-                    processList(title: "内存进程", processes: viewModel.snapshot.topMemoryProcesses)
-                }
-            }
-        }
-    }
-
-    private var networkSection: some View {
-        AppSurfaceSectionCard(title: "网络", subtitle: "速率、主接口和 Wi‑Fi 详情") {
-            VStack(alignment: .leading, spacing: 10) {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    infoTile(title: "下载", value: viewModel.networkDownloadSummary, detail: "MB/s")
-                    infoTile(title: "上传", value: viewModel.networkUploadSummary, detail: "MB/s")
-                    infoTile(title: "主接口", value: viewModel.primaryInterfaceSummary, detail: viewModel.primaryInterfaceDetail)
-                    infoTile(title: "Wi‑Fi", value: viewModel.wifiSummary, detail: viewModel.wifiDetail)
-                }
-            }
-        }
-    }
-
-    private var batterySection: some View {
-        AppSurfaceSectionCard(title: "电池", subtitle: "容量、健康、温度、电压、电流和充电功率") {
-            VStack(alignment: .leading, spacing: 10) {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    infoTile(title: "电量", value: viewModel.batterySummary, detail: viewModel.batteryStateSummary)
-                    infoTile(title: "循环", value: viewModel.batteryCycleSummary, detail: "CycleCount")
-                    infoTile(title: "容量", value: viewModel.batteryCapacitySummary, detail: viewModel.batteryCapacityDetail)
-                    infoTile(title: "温度", value: viewModel.batteryTemperatureSummary, detail: "°C")
-                    infoTile(title: "电压", value: viewModel.batteryVoltageSummary, detail: "V")
-                    infoTile(title: "电流", value: viewModel.batteryCurrentSummary, detail: "A")
-                    infoTile(title: "充电功率", value: viewModel.batteryPowerSummary, detail: "W")
-                    infoTile(title: "剩余时间", value: viewModel.batteryTimeSummary, detail: viewModel.batteryTimeDetail)
-                    infoTile(title: "健康", value: viewModel.batteryHealthSummary, detail: viewModel.batteryHealthDetail)
-                }
-            }
-        }
-    }
-
-    private var sensorSection: some View {
-        AppSurfaceSectionCard(title: "传感器", subtitle: "温度、风扇、功耗、电压、电流") {
-            VStack(alignment: .leading, spacing: 12) {
-                sensorGroup(title: "温度", items: viewModel.snapshot.temperatureSensors, placeholder: "暂无温度传感器")
-                sensorGroup(title: "风扇", items: viewModel.fanSensorSummaries, placeholder: "暂无风扇传感器")
-                sensorGroup(title: "功耗", items: viewModel.snapshot.powerSensors, placeholder: "暂无功耗传感器")
-                sensorGroup(title: "电压", items: viewModel.snapshot.voltageSensors, placeholder: "暂无电压传感器")
-                sensorGroup(title: "电流", items: viewModel.snapshot.currentSensors, placeholder: "暂无电流传感器")
-                if let thermalState = viewModel.snapshot.thermalState {
-                    infoRow(title: "热状态", value: thermalState)
-                }
-            }
-        }
-    }
-
-    private var permissionsSection: some View {
-        AppSurfaceSectionCard(title: "权限", subtitle: "麦克风、辅助功能、屏幕录制、日历、提醒事项、通知") {
+    private var dashboardLeadingRail: some View {
+        ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(viewModel.snapshot.permissions) { permission in
-                    permissionRow(permission)
-                }
-            }
-        }
-    }
-
-    private var exceptionsSection: some View {
-        AppSurfaceSectionCard(title: "异常", subtitle: "明确列出所有不可用原因") {
-            if viewModel.snapshot.unavailableReasons.isEmpty {
-                Text("当前没有不可用项。")
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(viewModel.snapshot.unavailableReasons) { reason in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(reason.message)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text([reason.category, reason.detail].compactMap { $0 }.joined(separator: " · "))
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                                .fixedSize(horizontal: false, vertical: true)
+                AppSurfaceCard(title: "系统摘要", subtitle: "轻量概览", padding: 8) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        dashboardMiniLine(title: "CPU", value: viewModel.cpuSummary)
+                        dashboardMiniLine(title: "内存", value: viewModel.memorySummary)
+                        dashboardMiniLine(title: "网络", value: viewModel.networkSummary)
+                        if viewModel.hasBattery {
+                            dashboardMiniLine(title: "电池", value: viewModel.batterySummary)
                         }
-                        .padding(10)
-                        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
-                        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
+                        dashboardMiniLine(title: "磁盘", value: viewModel.diskSummary)
+                    }
+                }
+
+                AppSurfaceCard(title: "硬件传感器", subtitle: "SMC 实时", padding: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if viewModel.hasTemperatureData, let sensor = viewModel.snapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+                            let color = temperatureColor(sensor.value ?? 0)
+                            dashboardMiniLineColored(title: "温度", value: viewModel.temperaturePrimaryValue, tint: color)
+                        } else {
+                            dashboardMiniLine(title: "温度", value: "采样中")
+                        }
+
+                        if viewModel.hasFanData {
+                            dashboardMiniLine(title: "风扇", value: viewModel.fanPrimaryValue)
+                        } else {
+                            dashboardMiniLine(title: "风扇", value: "采样中")
+                        }
+
+                        if viewModel.hasGPUData {
+                            dashboardMiniLine(title: "GPU", value: viewModel.gpuSummary)
+                        } else {
+                            dashboardMiniLine(title: "GPU", value: "采样中")
+                        }
+                    }
+                }
+
+                AppSurfaceCard(title: "采样状态", subtitle: "只读", padding: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        dashboardPermissionStatePill(title: "刷新", value: viewModel.refreshHint, tint: .blue)
+                        dashboardPermissionStatePill(title: "更新时间", value: viewModel.lastUpdatedText, tint: .green)
+                        dashboardPermissionStatePill(title: "采样", value: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor)
                     }
                 }
             }
+            .padding(16)
         }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 
-    private var statusGlyph: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
-                .fill(Color.accentColor.opacity(0.12))
-                .frame(width: 44, height: 44)
-            Image(systemName: "cpu")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-        }
-    }
-
-    private func statusPill(icon: String, title: String, accent: Color) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-            Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(Capsule(style: .continuous).fill(accent))
-    }
-
-    private func summaryCard(title: String, icon: String, value: String, detail: String, tint: Color) -> some View {
-        AppSurfaceCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                        .fill(tint.opacity(0.14))
-                        .frame(width: 28, height: 28)
-                        .overlay(Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint))
-                    Text(title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+    private var dashboardTrailingRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                AppSurfaceCard(title: "进程占用 Top 5", subtitle: "真实进程", padding: 5) {
+                    dashboardProcessList(processes: viewModel.snapshot.topCPUProcesses)
                 }
-                Text(value)
-                    .font(.system(size: 15, weight: .semibold))
+
+                AppSurfaceCard(title: "状态指示", subtitle: "图标化状态矩阵", padding: 5) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        dashboardStatusMatrix
+                            .frame(height: DashboardLayout.statusMatrixHeight, alignment: .topLeading)
+                        dashboardPermissionStateStrip
+                            .frame(height: DashboardLayout.permissionStripHeight, alignment: .topLeading)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private var dashboardKpiRow: some View {
+        let columns = viewModel.hasBattery
+            ? Array(repeating: GridItem(.flexible(minimum: 0), spacing: 4), count: 5)
+            : Array(repeating: GridItem(.flexible(minimum: 0), spacing: 4), count: 4)
+
+        return LazyVGrid(columns: columns, spacing: 4) {
+            dashboardKpiCard(
+                title: "CPU",
+                icon: "cpu",
+                tint: .blue,
+                mainValue: viewModel.cpuSummary,
+                detail: viewModel.loadAverageSummary,
+                chart: {
+                    DashboardSparklineChart(values: viewModel.cpuHistory, tint: .blue, lineWidth: 2.4)
+                }
+            )
+            dashboardKpiCard(
+                title: "内存",
+                icon: "memorychip",
+                tint: .purple,
+                mainValue: viewModel.memorySummary,
+                detail: viewModel.memoryPressureSummary,
+                chart: {
+                    DashboardRingGauge(progress: viewModel.snapshot.memoryUsagePercent, tint: .purple, label: viewModel.memoryUsagePercentSummary)
+                }
+            )
+            dashboardKpiCard(
+                title: "网络",
+                icon: "network",
+                tint: .green,
+                mainValue: viewModel.networkSummary,
+                detail: viewModel.networkInterfaceSummary,
+                chart: {
+                    DashboardSparklineChart(values: viewModel.networkHistory, tint: .green, lineWidth: 2.4)
+                }
+            )
+            if viewModel.hasBattery {
+                dashboardKpiCard(
+                    title: "电池",
+                    icon: "battery.100",
+                    tint: .cyan,
+                    mainValue: viewModel.batterySummary,
+                    detail: viewModel.batteryStateSummary,
+                    chart: {
+                        DashboardRingGauge(progress: viewModel.snapshot.batteryLevel, tint: .cyan, label: viewModel.batterySummary)
+                    }
+                )
+            }
+            dashboardKpiCard(
+                title: "磁盘",
+                icon: "internaldrive",
+                tint: .orange,
+                mainValue: viewModel.diskSummary,
+                detail: viewModel.diskIOSummary,
+                chart: {
+                    VStack(spacing: 6) {
+                        DashboardRingGauge(progress: viewModel.snapshot.diskUsagePercent, tint: .orange, label: viewModel.diskSummary)
+                            .frame(height: 30)
+                        if viewModel.diskReadHistory.count > 2 {
+                            DashboardSparklineChart(values: viewModel.diskReadHistory, tint: .teal, lineWidth: 1.8)
+                                .frame(height: 18)
+                        }
+                    }
+                }
+            )
+        }
+    }
+
+    private var dashboardOverviewCard: some View {
+        AppSurfaceCard(title: "系统状态总览", subtitle: "近 60 秒真实趋势与少量关键指标", padding: 6) {
+            let metricColumnCount = viewModel.hasGPUData ? 5 : 4
+
+            VStack(alignment: .leading, spacing: 5) {
+                DashboardTrendChart(
+                    cpu: viewModel.cpuHistory,
+                    memory: viewModel.memoryHistory,
+                    network: viewModel.networkHistory
+                )
+                .frame(height: 76)
+
+                HStack(alignment: .center, spacing: 5) {
+                    dashboardLegendChip(title: "CPU", tint: .blue)
+                    dashboardLegendChip(title: "内存", tint: .purple)
+                    dashboardLegendChip(title: "网络", tint: .green)
+                    if viewModel.hasBattery {
+                        dashboardLegendChip(title: "电池", tint: .cyan)
+                    }
+                    if viewModel.hasTemperatureData {
+                        dashboardLegendChip(title: "温度", tint: .orange)
+                    }
+                    dashboardLegendChip(title: "磁盘", tint: .orange)
+                    Spacer(minLength: 0)
+                }
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 4), count: metricColumnCount), spacing: 3) {
+                    dashboardMetricChip(title: "负载", value: viewModel.loadAverageSummary, tint: .blue)
+                    dashboardMetricChip(title: "内存", value: viewModel.memoryUsagePercentSummary, tint: .purple)
+                    dashboardMetricChip(title: "磁盘", value: viewModel.diskSummary, tint: .orange)
+                    if viewModel.hasGPUData {
+                        dashboardMetricChip(title: "GPU", value: viewModel.gpuSummary, tint: .indigo)
+                    }
+                    dashboardMetricChip(title: "热状态", value: viewModel.snapshot.thermalState ?? "—", tint: .green)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var dashboardPermissionStateStrip: some View {
+        let permissions = Array(viewModel.snapshot.permissions.prefix(6))
+        let availableCount = permissions.filter(\.isAvailable).count
+        let unavailableCount = permissions.filter { $0.isAvailable == false }.count
+        let unknownCount = permissions.filter { permission in
+            permission.isAvailable && permission.value == nil
+        }.count
+        let totalCount = max(permissions.count, 1)
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("权限快照")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                Spacer(minLength: 0)
+                Text(viewModel.permissionFooterSummary)
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
+            }
+
+            GeometryReader { proxy in
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 99, style: .continuous)
+                        .fill(.green.opacity(0.78))
+                        .frame(width: proxy.size.width * CGFloat(availableCount) / CGFloat(totalCount))
+
+                    RoundedRectangle(cornerRadius: 99, style: .continuous)
+                        .fill(.orange.opacity(0.78))
+                        .frame(width: proxy.size.width * CGFloat(unavailableCount) / CGFloat(totalCount))
+
+                    RoundedRectangle(cornerRadius: 99, style: .continuous)
+                        .fill(AppSurfaceTokens.secondaryText.opacity(0.35))
+                        .frame(width: proxy.size.width * CGFloat(unknownCount) / CGFloat(totalCount))
+
+                    if permissions.isEmpty {
+                        RoundedRectangle(cornerRadius: 99, style: .continuous)
+                            .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+                    }
+                }
+            }
+            .frame(height: 8)
+            .background(
+                RoundedRectangle(cornerRadius: 99, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+            )
+
+            HStack(spacing: 6) {
+                dashboardPermissionStatePill(title: "可用", value: "\(availableCount)", tint: .green)
+                dashboardPermissionStatePill(title: "关注", value: "\(unavailableCount)", tint: .orange)
+                dashboardPermissionStatePill(title: "未知", value: "\(unknownCount)", tint: .secondary)
+            }
+        }
+    }
+
+    private func dashboardPermissionStatePill(title: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 3) {
+            Circle()
+                .fill(tint.opacity(0.8))
+                .frame(width: 4, height: 4)
+            Text(title)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(tint.opacity(0.08))
+        )
+    }
+
+    private var dashboardUtilityGrid: some View {
+        HStack(alignment: .top, spacing: 4) {
+            AppSurfaceCard(title: "网络", subtitle: "速率 · 接口 · Wi‑Fi", padding: 5) {
+                VStack(alignment: .leading, spacing: 3) {
+                    DashboardSparklineChart(values: viewModel.networkHistory, tint: .green, lineWidth: 2.2)
+                        .frame(height: 30)
+
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 3), count: 2), spacing: 3) {
+                        dashboardMiniStat(title: "下载", value: viewModel.networkDownloadSummary, detail: "MB/s", tint: .green)
+                        dashboardMiniStat(title: "上传", value: viewModel.networkUploadSummary, detail: "MB/s", tint: .green)
+                        dashboardMiniStat(title: "主接口", value: viewModel.primaryInterfaceSummary, detail: viewModel.primaryInterfaceDetail, tint: .blue)
+                        dashboardMiniStat(title: "Wi‑Fi", value: viewModel.wifiSummary, detail: viewModel.wifiDetail, tint: .cyan)
+                    }
+                }
+            }
+
+            if viewModel.hasBattery {
+                AppSurfaceCard(title: "电源", subtitle: "电池与功率", padding: 5) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 5) {
+                            DashboardRingGauge(progress: viewModel.snapshot.batteryLevel, tint: .cyan, label: viewModel.batterySummary)
+                                .frame(width: 50, height: 50)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                dashboardMiniLine(title: "状态", value: viewModel.batteryStateSummary)
+                                dashboardMiniLine(title: "健康", value: viewModel.batteryHealthSummary)
+                                dashboardMiniLine(title: "功率", value: viewModel.batteryPowerSummary)
+                                dashboardMiniLine(title: "时间", value: viewModel.batteryTimeSummary)
+                            }
+                        }
+
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 3), count: 2), spacing: 3) {
+                            dashboardMiniStat(title: "循环", value: viewModel.batteryCycleSummary, detail: "CycleCount", tint: .orange)
+                            dashboardMiniStat(title: "容量", value: viewModel.batteryCapacitySummary, detail: viewModel.batteryCapacityDetail, tint: .purple)
+                            dashboardMiniStat(title: "电压", value: viewModel.batteryVoltageSummary, detail: "V", tint: .blue)
+                            dashboardMiniStat(title: "电流", value: viewModel.batteryCurrentSummary, detail: "A", tint: .green)
+                        }
+                    }
+                }
+            } else {
+                AppSurfaceCard(title: "供电", subtitle: "外接电源", padding: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "powerplug.fill")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundStyle(AppSurfaceTokens.accentGreen)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("外接供电")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                                if let powerSummary = viewModel.snapshot.powerSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+                                    Text(String(format: "%.1f %@", powerSummary.value ?? 0, powerSummary.unit))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            AppSurfaceCard(title: "权限", subtitle: "紧凑状态矩阵", padding: 5) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 3), count: 2), spacing: 3) {
+                    ForEach(Array(viewModel.snapshot.permissions.prefix(6))) { permission in
+                        dashboardPermissionCell(permission)
+                    }
+                }
+            }
+        }
+    }
+
+    private var dashboardBottomRow: some View {
+        HStack(alignment: .top, spacing: 4) {
+            AppSurfaceCard(title: "设备温度", subtitle: viewModel.hasTemperatureData ? "\(viewModel.snapshot.temperatureSensors.count) 个传感器" : "SMC", padding: 4) {
+                VStack(alignment: .leading, spacing: 1) {
+                    if viewModel.hasTemperatureData {
+                        if let primarySensor = viewModel.snapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+                            let color = temperatureColor(primarySensor.value ?? 0)
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(viewModel.temperaturePrimaryValue)
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(color)
+                                Text(primarySensor.name)
+                                    .font(.system(size: 9.5, weight: .medium))
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            }
+                        }
+
+                        DashboardSparklineChart(values: viewModel.temperatureHistory, tint: temperatureColor(viewModel.snapshot.temperatureSensors.first(where: { $0.value != nil })?.value ?? 0), lineWidth: 2.0)
+                            .frame(height: 20)
+                            .animation(.easeInOut(duration: 0.3), value: viewModel.hasTemperatureData)
+
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 2), spacing: 2) {
+                            ForEach(Array(viewModel.snapshot.temperatureSensors.prefix(3))) { sensor in
+                                HStack(spacing: 5) {
+                                    Circle()
+                                        .fill(AppSurfaceTokens.accentOrange.opacity(0.8))
+                                        .frame(width: 5, height: 5)
+                                    Text(sensor.name)
+                                        .font(.system(size: 9.5, weight: .semibold))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                        .lineLimit(1)
+                                    Spacer(minLength: 0)
+                                    Text(sensor.value.map { String(format: "%.1f", $0) } ?? "—")
+                                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                                        .lineLimit(1)
+                                    Text(sensor.unit)
+                                        .font(.system(size: 8.5, weight: .medium))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                        .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.88))
+                                )
+                            }
+                        }
+                    } else {
+                        dashboardPulsingPlaceholder(icon: "thermometer.medium", color: .orange)
+                    }
+                }
+            }
+
+            AppSurfaceCard(title: "风扇转速", subtitle: viewModel.hasFanData ? "\(viewModel.snapshot.fanSensors.count) 个风扇" : "SMC", padding: 4) {
+                VStack(alignment: .leading, spacing: 1) {
+                    if viewModel.hasFanData {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(viewModel.fanPrimaryValue)
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
+                            Text(viewModel.fanStatusText)
+                                .font(.system(size: 9.5, weight: .medium))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        }
+
+                        DashboardSparklineChart(values: viewModel.fanHistory, tint: .blue, lineWidth: 2.0)
+                            .frame(height: 20)
+
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 2), spacing: 2) {
+                            ForEach(Array(viewModel.fanSensorSummaries.prefix(3))) { fan in
+                                dashboardFanChip(fan)
+                            }
+                        }
+                    } else {
+                        dashboardPulsingPlaceholder(icon: "fanblades", color: .blue)
+                     }
+                }
+            }
+
+            AppSurfaceCard(title: "快速操作", subtitle: "短按钮，不拉高卡片", padding: 4) {
+                VStack(alignment: .leading, spacing: 1) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 2), spacing: 2) {
+                        dashboardQuickAction(title: "说入法", icon: "mic.fill") {
+                            (NSApp.delegate as? AppDelegate)?.showVoicePanel()
+                        }
+                        dashboardQuickAction(title: "截图", icon: "camera.viewfinder") {
+                            (NSApp.delegate as? AppDelegate)?.captureAreaScreenshot()
+                        }
+                        dashboardQuickAction(title: "便笺", icon: "square.and.pencil") {
+                            (NSApp.delegate as? AppDelegate)?.showQuickNotePanel()
+                        }
+                        dashboardQuickAction(title: "主窗口", icon: "rectangle.on.rectangle") {
+                            (NSApp.delegate as? AppDelegate)?.showMainWindow()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func dashboardTopBadge(icon: String, title: String, tint: Color = AppSurfaceTokens.cardBackgroundSoft) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 8.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+            Text(title)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(
+            Capsule(style: .continuous)
+                .fill(tint.opacity(0.9))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.55), lineWidth: 1)
+        )
+    }
+
+    private func dashboardKpiCard<Chart: View>(
+        title: String,
+        icon: String,
+        tint: Color,
+        mainValue: String,
+        detail: String,
+        @ViewBuilder chart: () -> Chart
+    ) -> some View {
+        AppSurfaceCard(padding: 8) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .top, spacing: 5) {
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(tint.opacity(0.14))
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            Image(systemName: icon)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(tint)
+                        )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Text(mainValue)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                chart()
+                    .frame(height: 26)
+
                 Text(detail)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 9.5, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(1)
             }
         }
     }
 
-    private func metricTile(title: String, value: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+    private func dashboardLegendChip(title: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(tint)
+                .frame(width: 6, height: 6)
             Text(title)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(Capsule(style: .continuous).fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72)))
+    }
+
+    private func dashboardMetricChip(title: String, value: String, tint: Color) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer(minLength: 0)
+            Text(value)
                 .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.88))
+        )
+    }
+
+    private func dashboardMiniLine(title: String, value: String) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+        )
+    }
+
+    private func dashboardMiniLineColored(title: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(tint.opacity(0.8))
+                .frame(width: 4, height: 4)
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(tint.opacity(0.06))
+        )
+    }
+
+    private func dashboardMiniStat(title: String, value: String, detail: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Text(value)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
             Text(detail)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
-    }
-
-    private func infoTile(title: String, value: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Text(value)
-                .font(.system(size: 13.5, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .font(.system(size: 8.5, weight: .medium))
+                .foregroundStyle(tint)
                 .lineLimit(1)
-            Text(detail)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(tint.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(tint.opacity(0.12), lineWidth: 1)
+        )
     }
 
-    private func processList(title: String, processes: [SystemProcessSnapshot]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+    private func dashboardProcessList(processes: [SystemProcessSnapshot]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             if processes.isEmpty {
-                Text("暂无进程排行")
-                    .font(.system(size: 11))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                dashboardPulsingPlaceholder(icon: "list.bullet", color: .blue)
             } else {
-                ForEach(processes.prefix(5)) { process in
-                    HStack {
-                        Text(process.name)
-                            .font(.system(size: 11, weight: .medium))
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        Text(String(format: "%.0f%%", process.cpuUsage))
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        Text(String(format: "%.0f MB", process.memoryUsageMB))
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                let topProcesses = Array(processes.prefix(5))
+                let maxCPU = max(topProcesses.map(\.cpuUsage).max() ?? 1, 1)
+                ForEach(Array(topProcesses.enumerated()), id: \.element.id) { index, process in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 7) {
+                            Text(process.name)
+                                .font(.system(size: 10.5, weight: .semibold))
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                            Text(String(format: "%.0f%%", process.cpuUsage))
+                                .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        }
+
+                        GeometryReader { proxy in
+                            RoundedRectangle(cornerRadius: 99, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
+                                .overlay(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 99, style: .continuous)
+                                        .fill(index == 0 ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.accentGreen.opacity(0.85))
+                                        .frame(width: proxy.size.width * CGFloat(min(process.cpuUsage / maxCPU, 1)))
+                                }
+                        }
+                        .frame(height: 5)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
-                    .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                            .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+                    )
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.65))
-        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
     }
 
-    private func sensorGroup<T>(title: String, items: [T], placeholder: String) -> some View where T: SensorDisplayRow {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-            if items.isEmpty {
-                Text(placeholder)
-                    .font(.system(size: 11))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            } else {
-                ForEach(items.indices, id: \.self) { index in
-                    sensorRow(items[index])
+    private var dashboardStatusMatrix: some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 3) {
+                dashboardStatusRow(title: "CPU", value: viewModel.cpuSummary, tint: .blue, icon: "cpu")
+                dashboardStatusRow(title: "内存", value: viewModel.memoryUsagePercentSummary, tint: .purple, icon: "memorychip")
+            }
+            HStack(spacing: 3) {
+                dashboardStatusRow(title: "网络", value: viewModel.networkSummary, tint: .green, icon: "network")
+                dashboardStatusRow(title: "磁盘", value: viewModel.diskSummary, tint: .orange, icon: "internaldrive")
+            }
+            HStack(spacing: 3) {
+                if viewModel.hasBattery {
+                    dashboardStatusRow(title: "电池", value: viewModel.batterySummary, tint: .cyan, icon: "battery.100")
+                } else {
+                    dashboardStatusRow(title: "电源", value: "外接供电", tint: .cyan, icon: "powerplug.fill")
                 }
+                dashboardStatusRow(title: "权限", value: viewModel.permissionFooterSummary, tint: .blue, icon: "checkmark.shield")
             }
         }
-        .padding(12)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.65))
-        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
     }
 
-    private func sensorRow<T: SensorDisplayRow>(_ item: T) -> some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.displayName)
-                    .font(.system(size: 11, weight: .medium))
-                Text(item.displaySource)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
-            Spacer(minLength: 0)
-            Text(item.displayValue)
-                .font(.system(size: 11, weight: .semibold))
-            if item.isUnavailable {
-                Text("不可用")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.orange)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(item.isUnavailable ? Color.orange.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
-    }
-
-    private func permissionRow(_ item: SystemPermissionSnapshot) -> some View {
-        HStack {
-            Text(item.name)
-                .font(.system(size: 11, weight: .medium))
-            Spacer(minLength: 0)
-            Text(item.value ?? "不可用")
-                .font(.system(size: 11, weight: .semibold))
-            if item.isAvailable == false, let reason = item.unavailableReason {
-                Text(reason)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.orange)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
-    }
-
-    private func infoRow(title: String, value: String) -> some View {
-        HStack {
+    private func dashboardStatusRow(title: String, value: String, tint: Color, icon: String) -> some View {
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(tint.opacity(0.14))
+                .frame(width: 15, height: 15)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 7.5, weight: .semibold))
+                        .foregroundStyle(tint)
+                )
             Text(title)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 7.5, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer(minLength: 0)
             Text(value)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 7.5, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.88))
+        )
+    }
+
+    private func dashboardPermissionCell(_ item: SystemPermissionSnapshot) -> some View {
+        let statusText = item.value ?? "—"
+        let statusTint = dashboardPermissionTint(statusText: statusText, isAvailable: item.isAvailable)
+
+        return HStack(spacing: 7) {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(statusTint.opacity(0.14))
+            .frame(width: 18, height: 18)
+                .overlay(
+                    Image(systemName: dashboardPermissionIcon(for: item.name))
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(statusTint)
+                )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+                Text(statusText)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(statusTint)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(statusTint.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(statusTint.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private func dashboardQuickAction(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+                    .frame(width: 18, height: 18)
+                    .overlay(
+                        Image(systemName: icon)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                    )
+                Text(title)
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.85))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func dashboardFanChip(_ fan: SystemFanRow) -> some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(AppSurfaceTokens.accentGreen.opacity(0.8))
+                .frame(width: 5, height: 5)
+            Text(fan.displayName)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Text(fan.displayValue)
+                .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.88))
+        )
+    }
+
+    private func dashboardSensorChip(_ sensor: SystemSensorSnapshot) -> some View {
+        let tempColor = sensor.value.map { temperatureColor($0) } ?? .orange
+        return HStack(spacing: 5) {
+            Circle()
+                .fill(tempColor.opacity(0.8))
+                .frame(width: 5, height: 5)
+            Text(sensor.name)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if let value = sensor.value {
+                Text(String(format: "%.1f", value))
+                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(tempColor)
+                    .lineLimit(1)
+                Text(sensor.unit)
+                    .font(.system(size: 8.5, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            }
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(tempColor.opacity(0.06))
+        )
+    }
+
+    private func temperatureColor(_ value: Double) -> Color {
+        if value < 50 { return .green }
+        if value < 70 { return .orange }
+        return .red
+    }
+
+    private func dashboardPulsingPlaceholder(icon: String, color: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(color.opacity(0.4))
+                .opacity(pulsePhase ? 1.0 : 0.3)
+                .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulsePhase)
+
+            RoundedRectangle(cornerRadius: 3)
+                .fill(color.opacity(0.1))
+                .frame(width: 60, height: 10)
+                .opacity(pulsePhase ? 0.8 : 0.2)
+                .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true).delay(0.15), value: pulsePhase)
+
+            RoundedRectangle(cornerRadius: 3)
+                .fill(color.opacity(0.08))
+                .frame(width: 40, height: 10)
+                .opacity(pulsePhase ? 0.6 : 0.15)
+                .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true).delay(0.3), value: pulsePhase)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 8)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.9))
+        .onAppear { pulsePhase = true }
+    }
+
+    private func dashboardFooterChip(title: String, value: String) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+        )
+    }
+
+    private func dashboardPermissionTint(statusText: String, isAvailable: Bool) -> Color {
+        if isAvailable == false || statusText.contains("拒绝") {
+            return .orange
+        }
+        if statusText.contains("授权") || statusText.contains("允许") {
+            return .green
+        }
+        if statusText.contains("未") {
+            return .secondary
+        }
+        return .blue
+    }
+
+    private func dashboardPermissionIcon(for permissionName: String) -> String {
+        switch permissionName {
+        case "麦克风": return "mic.fill"
+        case "辅助功能": return "accessibility"
+        case "屏幕录制": return "display"
+        case "日历": return "calendar"
+        case "提醒事项": return "checklist"
+        case "通知": return "bell"
+        default: return "checkmark.shield"
+        }
+    }
+}
+
+private struct DashboardSparklineChart: View {
+    let values: [Double]
+    let tint: Color
+    let lineWidth: CGFloat
+
+    init(values: [Double], tint: Color, lineWidth: CGFloat = 2.2) {
+        self.values = values
+        self.tint = tint
+        self.lineWidth = lineWidth
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+
+            ZStack {
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.62))
+
+                VStack(spacing: 0) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Rectangle()
+                            .fill(AppSurfaceTokens.separator.opacity(0.12))
+                            .frame(height: 1)
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                if let path = sparklinePath(in: size) {
+                    path.fill(
+                        LinearGradient(
+                            colors: [tint.opacity(0.15), tint.opacity(0.03), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                    path.stroke(
+                        tint,
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+                    )
+                } else {
+                    Text("—")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
+    }
+
+    private func sparklinePath(in size: CGSize) -> Path? {
+        guard values.count > 1 else { return nil }
+        let maxValue = max(values.max() ?? 1, 1)
+        let minValue = min(values.min() ?? 0, maxValue - 1)
+        let span = max(maxValue - minValue, 0.0001)
+        let step = size.width / CGFloat(max(values.count - 1, 1))
+        let points = values.enumerated().map { index, value -> CGPoint in
+            let x = CGFloat(index) * step
+            let normalized = (value - minValue) / span
+            let y = size.height - (CGFloat(normalized) * size.height * 0.74) - size.height * 0.12
+            return CGPoint(x: x, y: max(6, min(size.height - 6, y)))
+        }
+
+        return Path { path in
+            guard let first = points.first else { return }
+            path.move(to: first)
+            for point in points.dropFirst() {
+                path.addLine(to: point)
+            }
+
+            let last = points.last ?? first
+            path.addLine(to: CGPoint(x: last.x, y: size.height - 4))
+            path.addLine(to: CGPoint(x: first.x, y: size.height - 4))
+            path.closeSubpath()
+        }
+    }
+}
+
+private struct DashboardRingGauge: View {
+    let progress: Double?
+    let tint: Color
+    let label: String
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 8)
+
+            if let progress {
+                Circle()
+                    .trim(from: 0, to: CGFloat(max(0, min(progress / 100.0, 1))))
+                    .stroke(
+                        AngularGradient(
+                            colors: [tint.opacity(0.55), tint],
+                            center: .center
+                        ),
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+            }
+
+            VStack(spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+                if progress == nil {
+                    Text("—")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+        .aspectRatio(1, contentMode: .fit)
+    }
+}
+
+private struct DashboardTrendChart: View {
+    let cpu: [Double]
+    let memory: [Double]
+    let network: [Double]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+
+            ZStack {
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                AppSurfaceTokens.cardBackgroundSoft.opacity(0.55),
+                                AppSurfaceTokens.cardBackgroundSoft.opacity(0.3),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                VStack(spacing: 0) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        Rectangle()
+                            .fill(AppSurfaceTokens.separator.opacity(0.12))
+                            .frame(height: 1)
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                dashboardTrendPath(values: cpu, in: size)
+                    .fill(AppSurfaceTokens.accentBlue.opacity(0.08))
+                dashboardTrendPath(values: memory, in: size)
+                    .fill(AppSurfaceTokens.accentPrimary.opacity(0.06))
+                dashboardTrendPath(values: network, in: size)
+                    .fill(AppSurfaceTokens.accentGreen.opacity(0.05))
+
+                dashboardTrendLine(values: cpu, in: size)
+                    .stroke(AppSurfaceTokens.accentBlue, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
+                dashboardTrendLine(values: memory, in: size)
+                    .stroke(AppSurfaceTokens.accentPrimary, style: StrokeStyle(lineWidth: 2.1, lineCap: .round, lineJoin: .round))
+                dashboardTrendLine(values: network, in: size)
+                    .stroke(AppSurfaceTokens.accentGreen, style: StrokeStyle(lineWidth: 2.1, lineCap: .round, lineJoin: .round))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous))
+    }
+
+    private func dashboardTrendLine(values: [Double], in size: CGSize) -> Path {
+        let points = dashboardTrendPoints(values: values, in: size)
+        return Path { path in
+            guard let first = points.first else { return }
+            path.move(to: first)
+            for point in points.dropFirst() {
+                path.addLine(to: point)
+            }
+        }
+    }
+
+    private func dashboardTrendPath(values: [Double], in size: CGSize) -> Path {
+        let points = dashboardTrendPoints(values: values, in: size)
+        return Path { path in
+            guard let first = points.first, let last = points.last else { return }
+            path.move(to: CGPoint(x: first.x, y: size.height - 6))
+            path.addLine(to: first)
+            for point in points.dropFirst() {
+                path.addLine(to: point)
+            }
+            path.addLine(to: CGPoint(x: last.x, y: size.height - 6))
+            path.closeSubpath()
+        }
+    }
+
+    private func dashboardTrendPoints(values: [Double], in size: CGSize) -> [CGPoint] {
+        guard values.isEmpty == false else { return [CGPoint(x: 0, y: size.height * 0.7), CGPoint(x: size.width, y: size.height * 0.7)] }
+        let minValue = values.min() ?? 0
+        let maxValue = max(values.max() ?? 1, minValue + 0.0001)
+        let span = max(maxValue - minValue, 0.0001)
+        let step = values.count > 1 ? size.width / CGFloat(values.count - 1) : size.width / 2
+
+        return values.enumerated().map { index, value in
+            let x = values.count > 1 ? CGFloat(index) * step : size.width / 2
+            let normalized = (value - minValue) / span
+            let y = size.height - (CGFloat(normalized) * size.height * 0.68) - size.height * 0.14
+            return CGPoint(x: x, y: max(6, min(size.height - 6, y)))
+        }
     }
 }
 
@@ -397,11 +1164,14 @@ final class SystemStatusViewModel: ObservableObject {
     @Published private(set) var temperatureHistory: [Double] = []
     @Published private(set) var fanHistory: [Double] = []
     @Published private(set) var batteryHistory: [Double] = []
+    @Published private(set) var gpuHistory: [Double] = []
+    @Published private(set) var diskReadHistory: [Double] = []
+    @Published private(set) var diskWriteHistory: [Double] = []
 
     private let service: SystemStatusService
     private var cancellables = Set<AnyCancellable>()
 
-    init(service: SystemStatusService = .shared) {
+    init(service: SystemStatusService) {
         self.service = service
         service.$snapshot
             .sink { [weak self] snapshot in
@@ -432,13 +1202,39 @@ final class SystemStatusViewModel: ObservableObject {
         snapshot.lastUpdated == .distantPast ? "未刷新" : "已刷新"
     }
 
+    var hasBattery: Bool {
+        guard let battery = snapshot.battery else { return false }
+        return battery.isAvailable && battery.percentage != nil
+    }
+
+    var hasTemperatureData: Bool {
+        snapshot.temperatureSensors.contains(where: { $0.isAvailable && $0.value != nil })
+            || snapshot.battery?.temperatureC != nil
+    }
+
+    var hasGPUData: Bool {
+        snapshot.gpuChipModel != nil
+    }
+
+    var hasFanData: Bool {
+        snapshot.fanSensors.contains(where: { $0.value != nil })
+    }
+
+    var hasNetworkRate: Bool {
+        snapshot.networkDownloadMBps != nil || snapshot.networkUploadMBps != nil
+    }
+
+    var hasDiskIO: Bool {
+        snapshot.diskReadMBps != nil || snapshot.diskWriteMBps != nil
+    }
+
     var cpuSummary: String {
         formatPercent(snapshot.cpu?.value)
     }
 
     var loadAverageSummary: String {
         let values = [snapshot.loadAverage1m, snapshot.loadAverage5m, snapshot.loadAverage15m].compactMap { $0 }
-        guard values.isEmpty == false else { return "负载不可用" }
+        guard values.isEmpty == false else { return "—" }
         return values.map { String(format: "%.2f", $0) }.joined(separator: " / ")
     }
 
@@ -447,15 +1243,15 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     var memoryUsagePercentSummary: String {
-        snapshot.memoryUsagePercent > 0 ? String(format: "%.0f%%", snapshot.memoryUsagePercent) : "不可用"
+        snapshot.memoryUsagePercent > 0 ? String(format: "%.0f%%", snapshot.memoryUsagePercent) : "—"
     }
 
     var memoryPressureSummary: String {
-        snapshot.unavailableReasons.first(where: { $0.category == "memory" })?.message ?? "内存压力已读取"
+        snapshot.unavailableReasons.first(where: { $0.category == "memory" })?.message ?? "—"
     }
 
     var diskSummary: String {
-        snapshot.diskUsagePercent > 0 ? String(format: "%.0f%%", snapshot.diskUsagePercent) : "不可用"
+        snapshot.diskUsagePercent > 0 ? String(format: "%.0f%%", snapshot.diskUsagePercent) : "—"
     }
 
     var diskDetailSummary: String {
@@ -463,7 +1259,8 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     var networkSummary: String {
-        "↓ \(formatMBps(snapshot.networkDownloadMBps)) / ↑ \(formatMBps(snapshot.networkUploadMBps))"
+        guard hasNetworkRate else { return "—" }
+        return "↓ \(formatMBps(snapshot.networkDownloadMBps)) / ↑ \(formatMBps(snapshot.networkUploadMBps))"
     }
 
     var networkDownloadSummary: String {
@@ -475,11 +1272,11 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     var networkInterfaceSummary: String {
-        snapshot.networkInterfaces.first?.interfaceName ?? "主接口不可用"
+        snapshot.networkInterfaces.first?.interfaceName ?? "—"
     }
 
     var primaryInterfaceSummary: String {
-        snapshot.networkInterfaces.first(where: { $0.name == "主接口" })?.interfaceName ?? "不可用"
+        snapshot.networkInterfaces.first(where: { $0.name == "主接口" })?.interfaceName ?? "—"
     }
 
     var primaryInterfaceDetail: String {
@@ -487,41 +1284,40 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     var wifiSummary: String {
-        snapshot.networkInterfaces.first(where: { $0.ssid != nil })?.ssid ?? "不可用"
+        snapshot.networkInterfaces.first(where: { $0.ssid != nil })?.ssid ?? "—"
     }
 
     var wifiDetail: String {
-        guard let wifi = snapshot.networkInterfaces.first(where: { $0.ssid != nil }) else { return "未连接 Wi‑Fi" }
+        guard let wifi = snapshot.networkInterfaces.first(where: { $0.ssid != nil }) else { return "—" }
         var parts: [String] = []
-        if let bssid = wifi.bssid { parts.append(bssid) }
         if let rssi = wifi.rssi { parts.append("RSSI \(rssi)") }
-        if let transmit = wifi.transmitRateMbps { parts.append("Tx \(String(format: "%.0f", transmit)) Mbps") }
+        if let transmit = wifi.transmitRateMbps { parts.append("\(String(format: "%.0f", transmit)) Mbps") }
         if let channel = wifi.channel { parts.append(channel) }
-        return parts.isEmpty ? "Wi‑Fi 已连接" : parts.joined(separator: " · ")
+        return parts.isEmpty ? "已连接" : parts.joined(separator: " · ")
     }
 
     var batterySummary: String {
-        guard let battery = snapshot.battery else { return "不可用" }
-        guard battery.isAvailable else { return battery.unavailableReason ?? "无电池" }
+        guard let battery = snapshot.battery, battery.isAvailable else { return "—" }
         if let percentage = battery.percentage {
             return String(format: "%.0f%%", percentage)
         }
-        return "不可用"
+        return "—"
     }
 
     var batteryStateSummary: String {
-        snapshot.battery?.state ?? "无电池"
+        guard let state = snapshot.battery?.state, hasBattery else { return "—" }
+        return state
     }
 
     var batteryCycleSummary: String {
-        snapshot.battery?.cycleCount.map(String.init) ?? "不可用"
+        snapshot.battery?.cycleCount.map(String.init) ?? "—"
     }
 
     var batteryCapacitySummary: String {
-        guard let battery = snapshot.battery, battery.isAvailable else { return "不可用" }
+        guard let battery = snapshot.battery, battery.isAvailable else { return "—" }
         let current = battery.rawCurrentCapacity ?? battery.maxCapacity
         let max = battery.rawMaxCapacity ?? battery.designCapacity ?? battery.maxCapacity
-        guard let current, let max, max > 0 else { return "不可用" }
+        guard let current, let max, max > 0 else { return "—" }
         return "\(String(format: "%.0f", current)) / \(String(format: "%.0f", max))"
     }
 
@@ -552,7 +1348,7 @@ final class SystemStatusViewModel: ObservableObject {
         if let minutes = snapshot.battery?.timeToFullChargeMinutes {
             return "\(minutes) min"
         }
-        return "不可用"
+        return "—"
     }
 
     var batteryTimeDetail: String {
@@ -563,7 +1359,7 @@ final class SystemStatusViewModel: ObservableObject {
         if let health = batteryHealthPercentage {
             return String(format: "%.0f%%", health)
         }
-        return "不可用"
+        return "—"
     }
 
     var batteryHealthDetail: String {
@@ -575,12 +1371,68 @@ final class SystemStatusViewModel: ObservableObject {
         return (max / design) * 100
     }
 
+    var temperaturePrimaryValue: String {
+        if let sensor = snapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+            return sensorSummary(sensor)
+        }
+        if let batteryTemperature = snapshot.battery?.temperatureC {
+            return formatTemperature(batteryTemperature)
+        }
+        return "—"
+    }
+
+    var temperaturePrimaryDetail: String {
+        if let sensor = snapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+            return sensor.name
+        }
+        if snapshot.battery?.temperatureC != nil {
+            return "Battery"
+        }
+        return "采样中"
+    }
+
+    var temperatureStatusText: String {
+        if let thermalState = snapshot.thermalState {
+            return thermalState
+        }
+        if hasTemperatureData { return "已采样" }
+        return "采样中"
+    }
+
+    var fanPrimaryValue: String {
+        let values = snapshot.fanSensors.compactMap { $0.value }
+        guard values.isEmpty == false else { return "—" }
+        let average = values.reduce(0, +) / Double(values.count)
+        return String(format: "%.0f RPM", average)
+    }
+
+    var fanStatusText: String {
+        guard hasFanData else { return "采样中" }
+        let automaticCount = snapshot.fanSensors.filter { $0.isAutomatic == true }.count
+        if automaticCount == snapshot.fanSensors.count {
+            return "\(snapshot.fanSensors.count) 个风扇 · 自动"
+        }
+        return "\(snapshot.fanSensors.count) 个风扇 · 只读"
+    }
+
+    var permissionFooterSummary: String {
+        guard snapshot.permissions.isEmpty == false else { return "—" }
+        let warningCount = snapshot.permissions.filter { permission in
+            guard let value = permission.value else { return true }
+            return value.contains("拒绝") || value.contains("未确定")
+        }.count
+        if warningCount == 0 {
+            return "全部正常"
+        }
+        return "\(warningCount) 项需关注"
+    }
+
     var temperatureSummary: String {
-        snapshot.temperatureSensors.first.flatMap { sensorSummary($0) } ?? "不可用"
+        snapshot.temperatureSensors.first.flatMap { sensorSummary($0) } ?? "—"
     }
 
     var temperatureDetailSummary: String {
-        snapshot.temperatureSensors.isEmpty ? "无温度传感器" : "\(snapshot.temperatureSensors.count) 个"
+        snapshot.temperatureSensors.isEmpty ? "—" : "\(snapshot.temperatureSensors.count) 个"
     }
 
     var fanSensorSummaries: [SystemFanRow] {
@@ -588,15 +1440,65 @@ final class SystemStatusViewModel: ObservableObject {
             SystemFanRow(
                 id: fan.id,
                 displayName: fan.name,
-                displayValue: fan.value.map { String(format: "%.0f RPM", $0) } ?? fan.unavailableReason ?? "不可用",
+                displayValue: fan.value.map { String(format: "%.0f RPM", $0) } ?? "—",
                 displaySource: fan.source,
                 isUnavailable: fan.isAvailable == false || fan.value == nil
             )
         }
     }
 
+    var gpuSummary: String {
+        guard let gpuUsage = snapshot.gpuUsagePercent else { return snapshot.gpuChipModel ?? "—" }
+        return String(format: "%.0f%%", gpuUsage)
+    }
+
+    var gpuFrequencySummary: String {
+        guard let gpuFreq = snapshot.gpuFrequencyMHz else { return "—" }
+        return String(format: "%.0f MHz", gpuFreq)
+    }
+
+    var gpuChipModelSummary: String {
+        snapshot.gpuChipModel ?? "GPU"
+    }
+
+    var diskReadSummary: String {
+        formatMBps(snapshot.diskReadMBps)
+    }
+
+    var diskWriteSummary: String {
+        formatMBps(snapshot.diskWriteMBps)
+    }
+
+    var diskIOSummary: String {
+        guard hasDiskIO else { return "—" }
+        return "↓ \(diskReadSummary) / ↑ \(diskWriteSummary)"
+    }
+
+    var systemInfoSummary: String {
+        guard let info = snapshot.hardwareInfo else { return "—" }
+        return "\(info.cpuCoreCount) 核 · macOS \(info.osVersion)"
+    }
+
+    var uptimeSummary: String {
+        guard let info = snapshot.hardwareInfo else { return "—" }
+        return formatUptime(info.uptimeSeconds)
+    }
+
+    private func formatUptime(_ seconds: TimeInterval) -> String {
+        let days = Int(seconds) / 86400
+        let hours = (Int(seconds) % 86400) / 3600
+        let minutes = (Int(seconds) % 3600) / 60
+        if days > 0 {
+            return "\(days)d \(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+
     private func sensorSummary(_ sensor: SystemSensorSnapshot) -> String {
-        guard sensor.isAvailable, let value = sensor.value else { return sensor.unavailableReason ?? "不可用" }
+        guard sensor.isAvailable, let value = sensor.value else { return "—" }
         if sensor.unit == "°C" { return String(format: "%.1f°C", value) }
         if sensor.unit == "W" { return String(format: "%.1fW", value) }
         if sensor.unit == "V" { return String(format: "%.2fV", value) }
@@ -605,12 +1507,12 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     private func formatPercent(_ value: Double?) -> String {
-        guard let value else { return "不可用" }
+        guard let value else { return "—" }
         return String(format: "%.0f%%", value)
     }
 
     private func formatGB(_ value: Double?) -> String {
-        guard let value else { return "不可用" }
+        guard let value else { return "—" }
         return String(format: "%.1f GB", value)
     }
 
@@ -619,17 +1521,17 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     private func formatMBps(_ value: Double?) -> String {
-        guard let value else { return "不可用" }
+        guard let value else { return "—" }
         return String(format: "%.1f MB/s", value)
     }
 
     private func formatTemperature(_ value: Double?) -> String {
-        guard let value else { return "不可用" }
+        guard let value else { return "—" }
         return String(format: "%.1f°C", value)
     }
 
     private func formatMetric(_ value: Double?, unit: String) -> String {
-        guard let value else { return "不可用" }
+        guard let value else { return "—" }
         return String(format: "%.2f %@", value, unit)
     }
 
@@ -659,6 +1561,15 @@ final class SystemStatusViewModel: ObservableObject {
         }
         if let battery = snapshot.battery?.percentage {
             batteryHistory = Self.appendLimited(batteryHistory, value: battery)
+        }
+        if let gpuUsage = snapshot.gpuUsagePercent {
+            gpuHistory = Self.appendLimited(gpuHistory, value: gpuUsage)
+        }
+        if let diskRead = snapshot.diskReadMBps {
+            diskReadHistory = Self.appendLimited(diskReadHistory, value: diskRead)
+        }
+        if let diskWrite = snapshot.diskWriteMBps {
+            diskWriteHistory = Self.appendLimited(diskWriteHistory, value: diskWrite)
         }
     }
 
@@ -702,7 +1613,7 @@ struct SystemFanRow: Identifiable, SensorDisplayRow {
 extension SystemSensorSnapshot: SensorDisplayRow {
     var displayName: String { name }
     var displayValue: String {
-        guard isAvailable, let value else { return unavailableReason ?? "不可用" }
+        guard isAvailable, let value else { return "—" }
         if unit.isEmpty { return String(format: "%.0f", value) }
         if unit == "°C" { return String(format: "%.1f°C", value) }
         if unit == "RPM" { return String(format: "%.0f RPM", value) }

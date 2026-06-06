@@ -51,7 +51,7 @@ public struct NotchV2RootView: View {
                 value: viewModel.presentationState
             )
 
-            SystemEventHUDView()
+            SystemEventHUDView(center: viewModel.systemEventCenter)
                 .padding(.top, 10)
                 .allowsHitTesting(false)
         }

@@ -12,8 +12,10 @@ import AcMindKit
 final class NotchPanel: NSPanel {
     static let shared = NotchPanel()
 
-    private let viewModel = NotchV2ViewModel()
-    private var hostingView: NSHostingView<NotchV2RootView>?
+    private var viewModel: NotchV2ViewModel!
+    private weak var desktopCapsuleController: DesktopCapsulePanelControlling?
+    private var serviceContainer: ServiceContainer?
+    private var hostingView: NSHostingView<AnyView>?
     private var pendingDockDecision: DispatchWorkItem?
     private var lastKnownScreenFrame: CGRect?
     private var lastAppliedFrame: CGRect?
@@ -22,6 +24,7 @@ final class NotchPanel: NSPanel {
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
+        self.desktopCapsuleController = nil
         // 初始尺寸，后续会根据内容自适应
         super.init(
             contentRect: CompanionScreenPositioning.collapsedFrame(),
@@ -31,11 +34,27 @@ final class NotchPanel: NSPanel {
         )
 
         setupPanel()
-        setupContentView()
-        setupViewModelBindings()
         setupScreenObserver()
         setupDisplaySettingsObserver()
         setupScreenRecordingMonitor()
+    }
+
+    func connect(desktopCapsuleController: DesktopCapsulePanelControlling) {
+        self.desktopCapsuleController = desktopCapsuleController
+    }
+
+    func connect(serviceContainer: ServiceContainer) {
+        self.serviceContainer = serviceContainer
+        if viewModel == nil {
+            viewModel = NotchV2ViewModel(
+                panelController: self,
+                batteryService: serviceContainer.batteryService,
+                systemEventCenter: serviceContainer.systemEventCenter,
+                musicService: serviceContainer.musicService
+            )
+            setupContentView()
+            setupViewModelBindings()
+        }
     }
 
     // MARK: - Panel Setup
@@ -72,7 +91,8 @@ final class NotchPanel: NSPanel {
         }
         let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
         container.translatesAutoresizingMaskIntoConstraints = true
-        let hosting = NSHostingView(rootView: capsule)
+        let rootView = serviceContainer.map { AnyView(capsule.environmentObject($0)) } ?? AnyView(capsule)
+        let hosting = NSHostingView(rootView: rootView)
         hosting.sizingOptions = []
         hosting.translatesAutoresizingMaskIntoConstraints = false
 
@@ -122,13 +142,27 @@ final class NotchPanel: NSPanel {
     }
 
     private func setupScreenRecordingMonitor() {
-        screenRecordingMonitorTimer?.invalidate()
-        screenRecordingMonitorTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.evaluateVisibilityPolicies()
+        syncScreenRecordingMonitor()
+    }
+
+    private func syncScreenRecordingMonitor(with settings: CompanionDisplaySettings? = nil) {
+        let settings = settings ?? CompanionDisplaySettingsStore.load()
+        let shouldMonitor = isVisible && settings.isEnabled && settings.hideWhenScreenRecording
+
+        if shouldMonitor {
+            guard screenRecordingMonitorTimer == nil else { return }
+            let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    self?.evaluateVisibilityPolicies()
+                }
             }
+            screenRecordingMonitorTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
+            return
         }
-        RunLoop.main.add(screenRecordingMonitorTimer!, forMode: .common)
+
+        screenRecordingMonitorTimer?.invalidate()
+        screenRecordingMonitorTimer = nil
     }
 
     @objc private func handleScreenParametersChanged(_ notification: Notification) {
@@ -178,7 +212,7 @@ final class NotchPanel: NSPanel {
             hide()
             return
         }
-        DesktopCapsulePanel.shared.hide()
+        desktopCapsuleController?.hide()
         applyDisplaySettings(settings)
         let screenFrame = screen?.frame ?? lastKnownScreenFrame ?? currentScreenFrame()
         lastKnownScreenFrame = screenFrame
@@ -193,7 +227,7 @@ final class NotchPanel: NSPanel {
         }
         let screenFrame = screen?.frame ?? lastKnownScreenFrame ?? currentScreenFrame()
         lastKnownScreenFrame = screenFrame
-        DesktopCapsulePanel.shared.hide()
+        desktopCapsuleController?.hide()
         applyDisplaySettings(settings)
         viewModel.requestOpen(page: page)
     }
@@ -206,7 +240,7 @@ final class NotchPanel: NSPanel {
         }
         let screenFrame = screen?.frame ?? lastKnownScreenFrame ?? currentScreenFrame()
         lastKnownScreenFrame = screenFrame
-        DesktopCapsulePanel.shared.hide()
+        desktopCapsuleController?.hide()
         applyDisplaySettings(settings)
         viewModel.requestCompact()
     }
@@ -255,7 +289,7 @@ final class NotchPanel: NSPanel {
         )
 
         hide()
-        DesktopCapsulePanel.shared.show(at: capsuleOrigin)
+        desktopCapsuleController?.show(at: capsuleOrigin)
     }
 
     private func currentScreenFrame() -> CGRect {
@@ -283,6 +317,7 @@ final class NotchPanel: NSPanel {
         if settings.isEnabled == false {
             orderOut(nil)
         }
+        syncScreenRecordingMonitor(with: settings)
     }
 
     private func evaluateVisibilityPolicies() {
@@ -299,6 +334,7 @@ final class NotchPanel: NSPanel {
         if shouldRemainVisible(for: settings) == false, isVisible {
             orderOut(nil)
         }
+        syncScreenRecordingMonitor(with: settings)
     }
 
     private func shouldRemainVisible(for settings: CompanionDisplaySettings) -> Bool {
@@ -359,8 +395,17 @@ final class NotchPanel: NSPanel {
             makeKeyAndOrderFront(nil)
             orderFrontRegardless()
         }
+        syncScreenRecordingMonitor(with: settings)
     }
 }
+
+@MainActor
+protocol NotchPanelControlling: AnyObject {
+    func hide()
+    func showCompact(on screen: NSScreen?)
+}
+
+extension NotchPanel: NotchPanelControlling {}
 
 extension NotchPanel: NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {

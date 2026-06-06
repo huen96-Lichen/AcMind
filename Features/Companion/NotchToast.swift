@@ -101,7 +101,7 @@ struct NotchToastView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .frame(width: 280)
+            .frame(width: 260)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(.regularMaterial)

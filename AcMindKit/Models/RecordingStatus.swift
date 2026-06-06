@@ -36,6 +36,12 @@ public struct ClipboardItem: Codable, Sendable, Identifiable, Equatable {
     public var sourceApp: String?
     public var isPinned: Bool
     public let createdAt: Date
+    public var htmlContent: String?
+    public var codeLanguage: String?
+    public var isSensitive: Bool
+    public var tags: [String]
+    public var useCount: Int
+    public var visualHash: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -44,7 +50,13 @@ public struct ClipboardItem: Codable, Sendable, Identifiable, Equatable {
         textContent: String? = nil,
         sourceApp: String? = nil,
         isPinned: Bool = false,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        htmlContent: String? = nil,
+        codeLanguage: String? = nil,
+        isSensitive: Bool = false,
+        tags: [String] = [],
+        useCount: Int = 0,
+        visualHash: String? = nil
     ) {
         self.id = id
         self.type = type
@@ -53,6 +65,12 @@ public struct ClipboardItem: Codable, Sendable, Identifiable, Equatable {
         self.sourceApp = sourceApp
         self.isPinned = isPinned
         self.createdAt = createdAt
+        self.htmlContent = htmlContent
+        self.codeLanguage = codeLanguage
+        self.isSensitive = isSensitive
+        self.tags = tags
+        self.useCount = useCount
+        self.visualHash = visualHash
     }
 }
 
@@ -61,8 +79,11 @@ public enum ClipboardContentType: String, Codable, Sendable, Hashable, CaseItera
     case image
     case file
     case url
+    case richText
+    case code
+    case video
 
-    public static var allCases: [ClipboardContentType] { [.text, .image, .file, .url] }
+    public static var allCases: [ClipboardContentType] { [.text, .image, .file, .url, .richText, .code, .video] }
 
     public var displayName: String {
         switch self {
@@ -70,6 +91,9 @@ public enum ClipboardContentType: String, Codable, Sendable, Hashable, CaseItera
         case .image: return "图片"
         case .file: return "文件"
         case .url: return "链接"
+        case .richText: return "富文本"
+        case .code: return "代码"
+        case .video: return "视频"
         }
     }
 
@@ -79,6 +103,9 @@ public enum ClipboardContentType: String, Codable, Sendable, Hashable, CaseItera
         case .image: return "photo"
         case .file: return "doc"
         case .url: return "link"
+        case .richText: return "doc.richtext"
+        case .code: return "chevron.left.forwardslash.chevron.right"
+        case .video: return "video"
         }
     }
 
@@ -88,6 +115,9 @@ public enum ClipboardContentType: String, Codable, Sendable, Hashable, CaseItera
         case .image: return .green
         case .file: return .orange
         case .url: return .purple
+        case .richText: return .pink
+        case .code: return .cyan
+        case .video: return .red
         }
     }
 }

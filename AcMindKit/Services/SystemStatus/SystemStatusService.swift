@@ -3,8 +3,6 @@ import Combine
 
 @MainActor
 public final class SystemStatusService: ObservableObject {
-    public static let shared = SystemStatusService()
-
     @Published public private(set) var snapshot = SystemStatusSnapshot()
 
     private var timer: Timer?
@@ -40,14 +38,30 @@ public final class SystemStatusService: ObservableObject {
     }
 
     public func refresh() {
-        let now = Date()
-        var merged = SystemStatusPartialSnapshot()
+        let readers = self.readers
 
-        for reader in readers {
-            let partial = reader.read()
-            merged = Self.merge(merged, with: partial)
+        Task.detached(priority: .utility) {
+            var merged = SystemStatusPartialSnapshot()
+            let corePublishCount = min(readers.count, 6)
+
+            for (index, reader) in readers.enumerated() {
+                let partial = await reader.read()
+                merged = Self.merge(merged, with: partial)
+
+                let isCoreCheckpoint = (index + 1) == corePublishCount && corePublishCount < readers.count
+                let isFinalReader = (index + 1) == readers.count
+
+                if isCoreCheckpoint || isFinalReader {
+                    let snapshot = Self.makeSnapshot(from: merged, updatedAt: Date())
+                    await MainActor.run {
+                        self.snapshot = snapshot
+                    }
+                }
+            }
         }
+    }
 
+    private nonisolated static func makeSnapshot(from merged: SystemStatusPartialSnapshot, updatedAt now: Date) -> SystemStatusSnapshot {
         let totalMemoryGB = Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824.0
         let memoryUsageGB = merged.memory?.value ?? 0
         let memoryUsagePercent = totalMemoryGB > 0 ? (memoryUsageGB / totalMemoryGB) * 100 : 0
@@ -55,7 +69,7 @@ public final class SystemStatusService: ObservableObject {
         let batteryLevel = merged.battery?.percentage ?? 0
         let batteryState = merged.battery?.state ?? "未知"
 
-        snapshot = SystemStatusSnapshot(
+        return SystemStatusSnapshot(
             cpu: merged.cpu,
             memory: merged.memory,
             disk: merged.disk,
@@ -78,6 +92,13 @@ public final class SystemStatusService: ObservableObject {
             diskTotalGB: merged.diskTotalGB,
             networkDownloadMBps: merged.networkDownloadMBps,
             networkUploadMBps: merged.networkUploadMBps,
+            gpuUsagePercent: merged.gpuUsagePercent,
+            gpuFrequencyMHz: merged.gpuFrequencyMHz,
+            gpuCoreCount: merged.gpuCoreCount,
+            gpuChipModel: merged.gpuChipModel,
+            diskReadMBps: merged.diskReadMBps,
+            diskWriteMBps: merged.diskWriteMBps,
+            hardwareInfo: merged.hardwareInfo,
             unavailableReasons: merged.unavailableReasons,
             cpuUsage: merged.cpu?.value ?? 0,
             memoryUsageGB: memoryUsageGB,
@@ -91,7 +112,7 @@ public final class SystemStatusService: ObservableObject {
         )
     }
 
-    private static func merge(_ lhs: SystemStatusPartialSnapshot, with rhs: SystemStatusPartialSnapshot) -> SystemStatusPartialSnapshot {
+    private nonisolated static func merge(_ lhs: SystemStatusPartialSnapshot, with rhs: SystemStatusPartialSnapshot) -> SystemStatusPartialSnapshot {
         var result = lhs
 
         if let cpu = rhs.cpu { result.cpu = cpu }
@@ -116,6 +137,13 @@ public final class SystemStatusService: ObservableObject {
         if let diskTotalGB = rhs.diskTotalGB { result.diskTotalGB = diskTotalGB }
         if let networkDownloadMBps = rhs.networkDownloadMBps { result.networkDownloadMBps = networkDownloadMBps }
         if let networkUploadMBps = rhs.networkUploadMBps { result.networkUploadMBps = networkUploadMBps }
+        if let gpuUsagePercent = rhs.gpuUsagePercent { result.gpuUsagePercent = gpuUsagePercent }
+        if let gpuFrequencyMHz = rhs.gpuFrequencyMHz { result.gpuFrequencyMHz = gpuFrequencyMHz }
+        if let gpuCoreCount = rhs.gpuCoreCount { result.gpuCoreCount = gpuCoreCount }
+        if let gpuChipModel = rhs.gpuChipModel { result.gpuChipModel = gpuChipModel }
+        if let diskReadMBps = rhs.diskReadMBps { result.diskReadMBps = diskReadMBps }
+        if let diskWriteMBps = rhs.diskWriteMBps { result.diskWriteMBps = diskWriteMBps }
+        if let hardwareInfo = rhs.hardwareInfo { result.hardwareInfo = hardwareInfo }
         if rhs.unavailableReasons.isEmpty == false { result.unavailableReasons.append(contentsOf: rhs.unavailableReasons) }
 
         return result
@@ -132,7 +160,9 @@ public final class SystemStatusService: ObservableObject {
             ProcessStatusReader(),
             SensorStatusReader(),
             FanStatusReader(),
-            PowerStatusReader()
+            PowerStatusReader(),
+            GPUStatusReader(),
+            SystemInfoReader()
         ]
     }
 }

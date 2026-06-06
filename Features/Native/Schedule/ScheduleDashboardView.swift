@@ -55,20 +55,30 @@ struct ScheduleDashboardView: View {
     }
 
     var body: some View {
-        HSplitView {
-            SecondarySidebarWithHeader(
-                title: "日程",
-                subtitle: "\(viewModel.todayEventCount) 项待办",
-                sections: sidebarSections,
-                selectedItem: $selectedSidebarItem,
-                footerAction: { viewModel.openCreateEvent() },
-                footerTitle: "新建日程",
-                footerIcon: "plus"
-            )
-            .frame(width: 220)
-
-            mainContent
-        }
+        WorkspacePageShell(
+            title: "日程",
+            subtitle: "\(viewModel.todayEventCount) 项待办",
+            headerActions: AnyView(headerActions),
+            leadingRailWidth: 208,
+            trailingRailWidth: 224,
+            leadingRail: {
+                SecondarySidebarWithHeader(
+                    title: "日程",
+                    subtitle: "\(viewModel.todayEventCount) 项待办",
+                    sections: sidebarSections,
+                    selectedItem: $selectedSidebarItem,
+                    footerAction: { viewModel.openCreateEvent() },
+                    footerTitle: "新建日程",
+                    footerIcon: "plus"
+                )
+            },
+            content: {
+                dayContentShell
+            },
+            trailingRail: {
+                scheduleRightRail
+            }
+        )
         .background(AppSurfaceTokens.islandBackground.ignoresSafeArea())
         .sheet(isPresented: $viewModel.isCreatingEvent) {
             ScheduleEventEditorSheet(viewModel: viewModel)
@@ -84,19 +94,15 @@ struct ScheduleDashboardView: View {
         }
     }
 
-    private var mainContent: some View {
+    private var dayContentShell: some View {
         VStack(spacing: 0) {
-            topBar
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-
             if let accessNotice = viewModel.accessNotice {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "calendar.badge.exclamationmark")
                         .foregroundStyle(.orange)
                     Text(accessNotice)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Spacer()
                 }
                 .padding(.horizontal, 20)
@@ -115,21 +121,15 @@ struct ScheduleDashboardView: View {
         }
     }
 
-    private var topBar: some View {
+    private var headerActions: some View {
         HStack(spacing: 14) {
-            Text(viewModel.viewTitle)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-
-            Spacer()
-
             Picker("模式", selection: $dashboardMode) {
                 ForEach(ScheduleDashboardMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 180)
+            .frame(width: 152)
             .onChange(of: dashboardMode) { _, newMode in
                 switch newMode {
                 case .day: selectedSidebarItem = "today"
@@ -193,7 +193,7 @@ struct ScheduleDashboardView: View {
                 nextEventCard
                 dayStatsCard
             }
-            .frame(width: 280)
+            .frame(width: 224)
         }
     }
 
@@ -205,7 +205,7 @@ struct ScheduleDashboardView: View {
                 Spacer()
                 Text("\(viewModel.todayEvents.count) 项")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             if viewModel.todayEvents.isEmpty {
@@ -217,7 +217,7 @@ struct ScheduleDashboardView: View {
                             .foregroundStyle(.secondary.opacity(0.3))
                         Text("今天还没有安排")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                     Spacer()
                 }
@@ -240,10 +240,10 @@ struct ScheduleDashboardView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(event.title)
                                     .font(.system(size: 13))
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(AppSurfaceTokens.primaryText)
                                 Text(event.categoryId.isEmpty ? "未分类" : viewModel.categoryName(for: event.categoryId))
                                     .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                             }
 
                             Spacer()
@@ -264,8 +264,6 @@ struct ScheduleDashboardView: View {
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var timelineCard: some View {
@@ -284,7 +282,7 @@ struct ScheduleDashboardView: View {
                 HStack(spacing: 12) {
                     Text(String(format: "%02d:00", hour))
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(width: 48, alignment: .leading)
 
                     if hourEvents.isEmpty {
@@ -294,7 +292,7 @@ struct ScheduleDashboardView: View {
                             .overlay(
                                 Text("双击添加任务")
                                     .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(AppSurfaceTokens.tertiaryText)
                             )
                             .onTapGesture(count: 2) {
                                 viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
@@ -323,7 +321,7 @@ struct ScheduleDashboardView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(14)
         .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
@@ -338,6 +336,56 @@ struct ScheduleDashboardView: View {
         return allHours.sorted()
     }
 
+    private var scheduleRightRail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                AppSurfaceCard(title: "今日摘要", subtitle: "快速查看当前状态", padding: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        dashboardTopBadge(icon: "calendar", title: viewModel.viewTitle, tint: AppSurfaceTokens.accentBlue)
+                        dashboardTopBadge(icon: "clock", title: "\(viewModel.todayEventCount) 项待办", tint: AppSurfaceTokens.accentGreen)
+                        dashboardTopBadge(
+                            icon: "checkmark.circle",
+                            title: "已完成 \(viewModel.todayEvents.filter { $0.status == .done }.count)",
+                            tint: AppSurfaceTokens.accentGreen
+                        )
+                    }
+                }
+
+                AppSurfaceCard(title: "快捷操作", subtitle: "保持外壳稳定", padding: 12) {
+                    VStack(spacing: 6) {
+                        Button("今天") { viewModel.goToToday() }
+                            .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
+                        Button("新建日程") { viewModel.openCreateEvent() }
+                            .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .padding(14)
+        }
+        .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private func dashboardTopBadge(icon: String, title: String, tint: Color = AppSurfaceTokens.secondaryText) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(tint.opacity(0.10))
+        )
+    }
+
     private var nextEventCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("下一事件")
@@ -349,12 +397,12 @@ struct ScheduleDashboardView: View {
                         .font(.system(size: 16, weight: .semibold))
                     Text("\(next.startAt.formatted(date: .omitted, time: .shortened)) - \(next.endAt.formatted(date: .omitted, time: .shortened))")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             } else {
                 Text("今天暂无事件")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
         }
         .padding(16)
@@ -379,7 +427,7 @@ struct ScheduleDashboardView: View {
         HStack {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
             Text(value)
                 .font(.system(size: 13, weight: .medium))
@@ -403,13 +451,13 @@ struct ScheduleDashboardView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(day.date, format: .dateTime.weekday(.narrow))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                         RoundedRectangle(cornerRadius: 8)
                             .fill(heatColor(for: day.workloadPercent))
                             .frame(height: 48)
                         Text("\(day.eventCount) 项")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     }
                 }
             }
@@ -430,7 +478,7 @@ struct ScheduleDashboardView: View {
                     Spacer()
                     Text(event.startAt.formatted(date: .omitted, time: .shortened))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .padding(8)
                 .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -507,7 +555,7 @@ struct ScheduleDashboardView: View {
                     Spacer()
                     Text(event.startAt.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .padding(8)
                 .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
@@ -572,7 +620,7 @@ private struct ScheduleEventEditorSheet: View {
                     viewModel.closeCreateEvent()
                     dismiss()
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 
