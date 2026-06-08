@@ -510,6 +510,8 @@ private enum QishuiMusicNowPlayingProbe {
         let frame: CGRect
     }
 
+    private static let accessibilityPromptFlagKey = "AcMind.MusicService.didPromptAccessibility"
+
     static func fetch(logger: Logger) async -> NowPlayingSnapshot? {
         guard isApplicationAvailable(bundleIdentifier: "com.soda.music") else {
             logger.debug("Skipping missing app: 汽水音乐")
@@ -528,30 +530,36 @@ private enum QishuiMusicNowPlayingProbe {
             return nil
         }
 
-        let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        
-        let isTrusted = AXIsProcessTrusted()
-        if !isTrusted {
-            logger.debug("Accessibility not trusted, trying AppleScript compatibility path for 汽水音乐")
-            return await fetchWithAppleScript(logger: logger)
+        if AXIsProcessTrusted() == false {
+            if UserDefaults.standard.bool(forKey: Self.accessibilityPromptFlagKey) == false {
+                UserDefaults.standard.set(true, forKey: Self.accessibilityPromptFlagKey)
+                let options: [String: Any] = ["AXTrustedCheckOptionPrompt": true]
+                let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
+                logger.debug("Accessibility prompt requested for 汽水音乐, trusted=\(trusted)")
+            } else {
+                logger.debug("Accessibility not trusted for 汽水音乐, waiting for grant")
+            }
+            return nil
         }
 
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+
         guard let window = frontWindow(of: axApp) else {
-            logger.debug("汽水音乐 front window not found, trying AppleScript")
-            return await fetchWithAppleScript(logger: logger)
+            logger.debug("汽水音乐 front window not found")
+            return nil
         }
 
         let windowFrame = rectValue(of: window, attribute: "AXFrame" as CFString) ?? .zero
         let candidates = collectStaticTextCandidates(from: window)
         
         if candidates.isEmpty {
-            logger.debug("汽水音乐 accessibility tree yielded no text candidates, trying AppleScript")
-            return await fetchWithAppleScript(logger: logger)
+            logger.debug("汽水音乐 accessibility tree yielded no text candidates")
+            return nil
         }
 
         guard let title = pickQishuiTitle(from: candidates, windowFrame: windowFrame) else {
-            logger.debug("汽水音乐 title candidate not found, trying AppleScript")
-            return await fetchWithAppleScript(logger: logger)
+            logger.debug("汽水音乐 title candidate not found")
+            return nil
         }
 
         let artist = pickQishuiArtist(from: candidates, title: title, windowFrame: windowFrame) ?? ""
@@ -571,27 +579,6 @@ private enum QishuiMusicNowPlayingProbe {
             bundleIdentifier: "com.soda.music",
             source: "汽水音乐"
         )
-    }
-    
-    private static func fetchWithAppleScript(logger: Logger) async -> NowPlayingSnapshot? {
-        do {
-            let script = """
-            tell application "汽水音乐"
-                if player state is playing or player state is paused then
-                    return name of current track & "|||" & artist of current track & "|||" & album of current track & "|||" & duration of current track & "|||" & player position & "|||" & (player state as text) & "|||com.soda.music"
-                end if
-            end tell
-            return ""
-            """
-            let result = try await runAppleScript(script)
-            if let snapshot = NowPlayingSnapshot.make(fromAppleScript: result, source: "汽水音乐") {
-                logger.debug("Qishui AppleScript probe hit: title=\(snapshot.title, privacy: .public)")
-                return snapshot
-            }
-        } catch {
-            logger.debug("Qishui AppleScript probe failed: \(error.localizedDescription, privacy: .public)")
-        }
-        return nil
     }
 
     private static func frontWindow(of app: AXUIElement) -> AXUIElement? {
@@ -629,7 +616,7 @@ private enum QishuiMusicNowPlayingProbe {
         let titleCandidates = candidates.filter { candidate in
             guard candidate.frame.width >= 80, candidate.frame.width <= 240 else { return false }
             guard candidate.frame.height >= 12, candidate.frame.height <= 28 else { return false }
-            guard candidate.frame.minX > windowFrame.minX + windowFrame.width * 0.45 else { return false }
+            guard candidate.frame.minX > windowFrame.minX + windowFrame.width * 0.20 else { return false }
             guard candidate.frame.minY > windowFrame.minY + windowFrame.height * 0.45 else { return false }
             guard candidate.frame.minY < windowFrame.minY + windowFrame.height * 0.72 else { return false }
             guard ignoredTexts.contains(candidate.text) == false else { return false }
@@ -654,7 +641,7 @@ private enum QishuiMusicNowPlayingProbe {
             guard candidate.text != title else { return false }
             guard candidate.frame.width >= 18, candidate.frame.width <= 120 else { return false }
             guard candidate.frame.height >= 12, candidate.frame.height <= 20 else { return false }
-            guard candidate.frame.minX > windowFrame.minX + windowFrame.width * 0.45 else { return false }
+            guard candidate.frame.minX > windowFrame.minX + windowFrame.width * 0.20 else { return false }
             guard candidate.frame.minY >= titleFrame.minY - 24 else { return false }
             guard candidate.frame.minY <= titleFrame.minY + 40 else { return false }
             guard ignoredTexts.contains(candidate.text) == false else { return false }
@@ -851,7 +838,12 @@ private extension NowPlayingSnapshot {
         let urlString = second.contains("://") ? second : ""
         let browserLabel = second.contains("://") ? third : second
         let displayTitle = cleanBrowserTitle(title)
-        let isBilibili = urlString.contains("bilibili.com") || displayTitle.localizedCaseInsensitiveContains("bilibili") || displayTitle.contains("哔哩哔哩")
+        let host = URL(string: urlString)?.host?.lowercased() ?? ""
+        guard isLikelyBrowserMediaSource(host: host, title: displayTitle) else {
+            return nil
+        }
+
+        let isBilibili = host.contains("bilibili.com") || displayTitle.localizedCaseInsensitiveContains("bilibili") || displayTitle.contains("哔哩哔哩")
 
         guard displayTitle.isEmpty == false else { return nil }
 
@@ -874,6 +866,44 @@ private extension NowPlayingSnapshot {
             .replacingOccurrences(of: " - bilibili", with: "", options: .caseInsensitive)
             .replacingOccurrences(of: "_哔哩哔哩", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func isLikelyBrowserMediaSource(host: String, title: String) -> Bool {
+        let host = host.lowercased()
+        let title = title.lowercased()
+
+        let allowedHosts = [
+            "youtube.com",
+            "youtu.be",
+            "music.youtube.com",
+            "bilibili.com",
+            "live.bilibili.com",
+            "spotify.com",
+            "music.163.com",
+            "y.qq.com",
+            "kuwo.cn",
+            "kugou.com",
+            "soundcloud.com",
+            "podcasts.apple.com"
+        ]
+
+        if allowedHosts.contains(where: { host == $0 || host.hasSuffix(".\($0)") }) {
+            return true
+        }
+
+        let titleKeywords = [
+            "播放",
+            "正在播放",
+            "music",
+            "song",
+            "album",
+            "playlist",
+            "radio",
+            "podcast",
+            "bilibili",
+            "哔哩哔哩"
+        ]
+        return titleKeywords.contains(where: { title.contains($0) })
     }
 
     private static func stringValue(from dictionary: NSDictionary, keys: [String]) -> String? {

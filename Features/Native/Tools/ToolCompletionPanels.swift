@@ -862,8 +862,8 @@ struct ModelManagementPanel: View {
                     .buttonStyle(.bordered)
                 }
             ),
-            leadingRailWidth: 208,
-            trailingRailWidth: 224,
+            leadingRailWidth: 232,
+            trailingRailWidth: 232,
             leadingRail: {
                 leftPane
             },
@@ -901,7 +901,14 @@ struct ModelManagementPanel: View {
     private var leftPane: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                overviewCard
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("模型列表")
+                        .font(.headline)
+                    Text("先筛选，再从左侧列表里选择具体条目。")
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+
                 filterBar
 
                 if let errorMessage = viewModel.errorMessage {
@@ -909,7 +916,7 @@ struct ModelManagementPanel: View {
                 }
 
                 if shouldShowSection(.ai) {
-                modelListSection(
+                    modelListSection(
                         title: "AI 提供商",
                         description: "真实提供商、默认项和启用状态",
                         count: viewModel.filteredAIItems.count
@@ -999,7 +1006,7 @@ struct ModelManagementPanel: View {
     private var modelSummaryRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "当前状态", subtitle: "固定外壳下的概要", padding: 14) {
+                AppSurfaceCard(title: "当前状态", subtitle: "当前筛选结果的汇总", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         summaryRow(title: "条目", value: "\(viewModel.filteredItems.count) / \(viewModel.items.count)")
                         summaryRow(title: "默认项", value: "\(viewModel.summary.defaultCount)")
@@ -1007,7 +1014,7 @@ struct ModelManagementPanel: View {
                     }
                 }
 
-                AppSurfaceCard(title: "选中项", subtitle: "仅展示真实详情", padding: 14) {
+                AppSurfaceCard(title: "选中项", subtitle: "当前条目的摘要", padding: 14) {
                     if let item = viewModel.selectedItem {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(item.displayName)
@@ -1027,7 +1034,7 @@ struct ModelManagementPanel: View {
                     }
                 }
 
-                AppSurfaceCard(title: "操作", subtitle: "保持当前构图稳定", padding: 14) {
+                AppSurfaceCard(title: "操作", subtitle: "只保留当前条目的动作", padding: 14) {
                     VStack(spacing: 8) {
                         Button("清除筛选") { viewModel.clearFilters() }
                             .buttonStyle(.bordered)
@@ -1079,132 +1086,6 @@ struct ModelManagementPanel: View {
         )
     }
 
-    private var overviewCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("模型总控台")
-                        .font(.headline)
-                    Text("从这里统一查看、筛选和控制应用里真实可用的模型。")
-                        .font(.caption)
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                }
-
-                Spacer()
-
-                Button {
-                    Task { await viewModel.refresh() }
-                } label: {
-                    Label("刷新", systemImage: "arrow.clockwise")
-                }
-                .buttonStyle(.bordered)
-            }
-
-            HStack(spacing: 10) {
-                metricPill(title: "总条目", value: "\(viewModel.summary.totalCount)")
-                metricPill(title: "已启用", value: "\(viewModel.summary.enabledCount)")
-                metricPill(title: "默认项", value: "\(viewModel.summary.defaultCount)")
-                metricPill(title: "已下载", value: "\(viewModel.summary.downloadedCount)")
-            }
-
-            HStack(spacing: 10) {
-                summaryPill(
-                    label: "默认 AI",
-                    value: viewModel.defaultAIProviderName,
-                    icon: "cpu",
-                    tint: .blue
-                )
-                summaryPill(
-                    label: "默认语音识别",
-                    value: viewModel.defaultSpeechProviderName,
-                    icon: "mic.fill",
-                    tint: .green
-                )
-                summaryPill(
-                    label: "语音克隆",
-                    value: viewModel.voiceCloneStatusText,
-                    icon: "person.wave.2",
-                    tint: .orange
-                )
-            }
-
-            HStack(spacing: 8) {
-                Button("清除筛选") {
-                    viewModel.clearFilters()
-                }
-                .buttonStyle(.bordered)
-
-                Menu {
-                    ForEach(ModelManagementSortOption.allCases) { option in
-                        Button(option.displayName) {
-                            viewModel.sortOption = option
-                        }
-                    }
-                } label: {
-                    Label("排序: \(viewModel.sortOption.displayName)", systemImage: "arrow.up.arrow.down")
-                }
-                .buttonStyle(.bordered)
-
-                Spacer()
-
-                Text(viewModel.statusText)
-                    .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
-
-            Text("语音克隆功能暂未开放。")
-                .font(.caption2)
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 18).fill(AppSurfaceTokens.cardBackgroundSoft))
-    }
-
-    private func metricPill(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Text(value)
-                .font(.headline)
-                .fontWeight(.semibold)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(AppSurfaceTokens.cardBackgroundSoft))
-    }
-
-    private func summaryPill(label: String, value: String, icon: String, tint: Color) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(tint.opacity(0.12))
-                    .frame(width: 30, height: 30)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(tint)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption2)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                Text(value)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(AppSurfaceTokens.cardBackgroundSoft))
-    }
-
     private var filterBar: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
@@ -1225,7 +1106,7 @@ struct ModelManagementPanel: View {
                 .buttonStyle(.bordered)
             }
 
-            FlowLayout(spacing: 8) {
+            ToolCompletionFlowLayout(spacing: 8) {
                 filterChip(title: "全部", isSelected: viewModel.selectedDomain == nil) {
                     viewModel.selectedDomain = nil
                     viewModel.selectedDeploymentKind = nil
@@ -1300,7 +1181,7 @@ struct ModelManagementPanel: View {
         count: Int,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -1312,19 +1193,18 @@ struct ModelManagementPanel: View {
 
                 Spacer()
 
-                    Text("\(count)")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                Text("\(count)")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
                     .background(RoundedRectangle(cornerRadius: 999).fill(AppSurfaceTokens.primaryText.opacity(0.05)))
             }
 
             content()
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .padding(.vertical, 4)
     }
 
     private func detailHeader(_ item: ModelManagementItem) -> some View {
@@ -1515,11 +1395,11 @@ struct ModelManagementPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: 88, alignment: .leading)
-                    Text(value)
-                        .font(.body)
-                        .foregroundStyle(AppSurfaceTokens.primaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
+            Text(value)
+                .font(.body)
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -1727,7 +1607,7 @@ private struct ModelManagementListRow: View {
     }
 }
 
-private struct FlowLayout: Layout {
+private struct ToolCompletionFlowLayout: Layout {
     var spacing: CGFloat = 8
 
     struct Cache {

@@ -63,14 +63,14 @@ public final class ParakeetTranscriber: Transcriber, RecordingPrewarmingTranscri
 
 // MARK: - Parakeet Realtime Session
 
-private final class ParakeetRealtimeSession: RealtimeTranscriptionSession, @unchecked Sendable {
+private actor ParakeetRealtimeSession: RealtimeTranscriptionSession {
     
     private let modelFolder: String
     private var process: Process?
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var accumulatedText: String = ""
-    public var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)?
+    nonisolated(unsafe) public var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)?
     
     init(modelFolder: String) {
         self.modelFolder = modelFolder

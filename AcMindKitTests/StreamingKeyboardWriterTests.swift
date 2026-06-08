@@ -10,20 +10,23 @@ final class StreamingKeyboardWriterTests: XCTestCase {
         await writer.write(chunk: "世")
         await writer.write(chunk: "界")
         try await Task.sleep(nanoseconds: 20_000_000)
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertTrue(result)
     }
 
     func testFinishFlushesRemaining() async throws {
         let writer = StreamingKeyboardWriter()
         await writer.write(chunk: "hello")
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertTrue(result)
     }
 
     func testCancelClearsBuffer() async throws {
         let writer = StreamingKeyboardWriter()
         await writer.write(chunk: "test")
         await writer.cancel()
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertFalse(result)
     }
 
     func testCancelThenWriteIsNoOp() async throws {
@@ -31,7 +34,8 @@ final class StreamingKeyboardWriterTests: XCTestCase {
         await writer.write(chunk: "before")
         await writer.cancel()
         await writer.write(chunk: "after")
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertFalse(result)
     }
 
     func testEmptyChunkIgnored() async throws {
@@ -40,19 +44,22 @@ final class StreamingKeyboardWriterTests: XCTestCase {
         await writer.write(chunk: "real")
         await writer.write(chunk: "")
         try await Task.sleep(nanoseconds: 20_000_000)
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertTrue(result)
     }
 
     func testLargeChunk() async throws {
         let writer = StreamingKeyboardWriter()
         let large = String(repeating: "A", count: 500)
         await writer.write(chunk: large)
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertTrue(result)
     }
 
     func testFinishOnEmptyBufferIsNoOp() async throws {
         let writer = StreamingKeyboardWriter()
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertTrue(result)
     }
 
     func testRapidSmallChunks() async throws {
@@ -61,14 +68,17 @@ final class StreamingKeyboardWriterTests: XCTestCase {
             await writer.write(chunk: String(char))
         }
         try await Task.sleep(nanoseconds: 20_000_000)
-        await writer.finish()
+        let result = await writer.finish()
+        XCTAssertTrue(result)
     }
 
     func testWriteAfterFinish() async throws {
         let writer = StreamingKeyboardWriter()
         await writer.write(chunk: "first")
-        await writer.finish()
+        let firstResult = await writer.finish()
+        XCTAssertTrue(firstResult)
         await writer.write(chunk: "second")
-        await writer.finish()
+        let secondResult = await writer.finish()
+        XCTAssertFalse(secondResult)
     }
 }

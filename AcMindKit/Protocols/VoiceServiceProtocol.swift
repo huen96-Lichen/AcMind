@@ -31,6 +31,7 @@ public protocol VoiceServiceProtocol: Sendable {
     func getRecordingStatus() async -> RecordingStatus
     func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws
     func stopRealtimeTranscription() async throws -> String
+    var isRealtimeActive: Bool { get async }
 }
 
 public extension VoiceServiceProtocol {
@@ -89,5 +90,9 @@ public extension VoiceServiceProtocol {
 
     func stopRealtimeTranscription() async throws -> String {
         ""
+    }
+
+    var isRealtimeActive: Bool {
+        get async { false }
     }
 }

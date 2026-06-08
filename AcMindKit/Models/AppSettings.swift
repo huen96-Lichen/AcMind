@@ -78,6 +78,21 @@ public enum AppTheme: String, Codable, Sendable, Hashable, CaseIterable, Identif
     }
 }
 
+// MARK: - CorrectionRule（纠错规则）
+
+public struct CorrectionRule: Codable, Sendable, Identifiable, Equatable {
+    public var id = UUID()
+    public var pattern: String
+    public var replacement: String
+    public var isRegex: Bool
+
+    public init(pattern: String, replacement: String, isRegex: Bool = false) {
+        self.pattern = pattern
+        self.replacement = replacement
+        self.isRegex = isRegex
+    }
+}
+
 // MARK: - VoiceSettings（语音设置）
 
 public struct VoiceSettings: Codable, Sendable, Equatable {
@@ -97,6 +112,8 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
     public var enableCloudSync: Bool
     public var preferredLanguage: String
     public var translationLanguage: String
+    public var correctionRules: [CorrectionRule]
+    public var muteSystemAudioDuringRecording: Bool
 
     public init(
         defaultProvider: String = "whisper",
@@ -114,7 +131,9 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
         injectionStrategy: String = "postToPid",
         enableCloudSync: Bool = false,
         preferredLanguage: String = "auto",
-        translationLanguage: String = "zh"
+        translationLanguage: String = "zh",
+        correctionRules: [CorrectionRule] = [],
+        muteSystemAudioDuringRecording: Bool = false
     ) {
         self.defaultProvider = defaultProvider
         self.defaultLanguage = defaultLanguage
@@ -132,6 +151,8 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
         self.enableCloudSync = enableCloudSync
         self.preferredLanguage = preferredLanguage
         self.translationLanguage = translationLanguage
+        self.correctionRules = correctionRules
+        self.muteSystemAudioDuringRecording = muteSystemAudioDuringRecording
     }
 }
 
@@ -181,7 +202,11 @@ public extension VoiceSettings {
             silenceTimeout: silenceTimeout,
             enableSilenceDetection: enableSilenceDetection,
             preferredLanguage: preferredLanguage,
-            translationLanguage: translationLanguage
+            translationLanguage: translationLanguage,
+            correctionRules: correctionRules,
+            muteSystemAudioDuringRecording: muteSystemAudioDuringRecording,
+            enablePunctuationAppend: enablePunctuationAppend,
+            injectionStrategy: injectionStrategy
         )
     }
 }

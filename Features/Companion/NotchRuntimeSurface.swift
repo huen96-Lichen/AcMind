@@ -96,8 +96,8 @@ enum NotchRuntimeSurfaceDispatcher {
     private static let providers: [@Sendable (NotchRuntimeSurfaceContext, NotchRuntimeSurfaceScope) -> NotchRuntimeSurface?] = [
         voiceSurface,
         screenshotSurface,
-        systemStatusSurface,
         musicSurface,
+        systemStatusSurface,
         scheduleSurface,
         agentSurface
     ]

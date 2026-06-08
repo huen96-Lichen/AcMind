@@ -80,6 +80,8 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var enableCloudSync: Bool = false
     @Published public var preferredLanguage: String = "auto"
     @Published public var translationLanguage: String = "zh"
+    @Published public var correctionRules: [CorrectionRule] = []
+    @Published public var muteSystemAudioDuringRecording: Bool = false
 
     // Capture Settings
     @Published public var captureOnlyWhenAppActive: Bool = false
@@ -204,6 +206,8 @@ public final class SettingsViewModel: ObservableObject {
         enableCloudSync = voiceSettings.enableCloudSync
         preferredLanguage = voiceSettings.preferredLanguage
         translationLanguage = voiceSettings.translationLanguage
+        correctionRules = voiceSettings.correctionRules
+        muteSystemAudioDuringRecording = voiceSettings.muteSystemAudioDuringRecording
 
         loadLocalPreferences()
     }
@@ -274,7 +278,9 @@ public final class SettingsViewModel: ObservableObject {
                 injectionStrategy: injectionStrategy,
                 enableCloudSync: enableCloudSync,
                 preferredLanguage: preferredLanguage,
-                translationLanguage: translationLanguage
+                translationLanguage: translationLanguage,
+                correctionRules: correctionRules,
+                muteSystemAudioDuringRecording: muteSystemAudioDuringRecording
             )
             try await settings.updateVoiceSettings(voiceSettings)
 
@@ -385,7 +391,11 @@ public final class SettingsViewModel: ObservableObject {
             silenceTimeout: voiceSilenceTimeout,
             enableSilenceDetection: voiceEnableSilenceDetection,
             preferredLanguage: preferredLanguage,
-            translationLanguage: translationLanguage
+            translationLanguage: translationLanguage,
+            correctionRules: correctionRules,
+            muteSystemAudioDuringRecording: muteSystemAudioDuringRecording,
+            enablePunctuationAppend: enablePunctuationAppend,
+            injectionStrategy: injectionStrategy
         )
     }
 
@@ -895,8 +905,10 @@ public final class SettingsViewModel: ObservableObject {
             injectionStrategy: injectionStrategy,
             enableCloudSync: enableCloudSync,
             preferredLanguage: preferredLanguage,
-            translationLanguage: translationLanguage
-        )
+                translationLanguage: translationLanguage,
+                correctionRules: correctionRules,
+                muteSystemAudioDuringRecording: muteSystemAudioDuringRecording
+            )
 
         let companionConfiguration = CompanionConfiguration(
             companionEnabled: companionEnabled,
@@ -979,7 +991,7 @@ public final class SettingsViewModel: ObservableObject {
         enableCloudSync = snapshot.voiceSettings.enableCloudSync
         preferredLanguage = snapshot.voiceSettings.preferredLanguage
         translationLanguage = snapshot.voiceSettings.translationLanguage
-
+        correctionRules = snapshot.voiceSettings.correctionRules
         companionCapsuleEnabled = snapshot.companionConfiguration.capsuleEnabled
         companionCapsuleShowOnLaunch = snapshot.companionConfiguration.capsuleShowOnLaunch
         companionCapsulePosition = CompanionCapsulePosition(rawValue: snapshot.companionConfiguration.capsulePosition) ?? .topCenter

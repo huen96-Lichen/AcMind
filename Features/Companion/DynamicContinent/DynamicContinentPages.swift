@@ -31,438 +31,523 @@ struct DynamicContinentSchedulePage: View {
     @StateObject private var scheduleViewModel = ScheduleViewModel()
 
     var body: some View {
-        let todayEvents = scheduleViewModel.todayEvents
-        let weekEvents = scheduleViewModel.currentWeekEvents
-        let nextEvent = todayEvents.first
-        let workloadLevel = scheduleViewModel.todayWorkloadLevel
-
-        NotchV2DashboardLayout(leftColumnWidth: 208, rightColumnWidth: 232) {
-            DynamicCard(title: "今日时间线", subtitle: timelineSubtitle, symbol: "calendar") {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let accessNotice = scheduleViewModel.accessNotice {
-                        Text(accessNotice)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if todayEvents.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("今天还没有安排")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                            Text("完整日程里有更丰富的周/月/年视图，这里先展示今日摘要。")
-                                .font(.system(size: 10, weight: .regular))
-                                .foregroundStyle(DynamicContinentDesignTokens.tertiaryText)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 12)
-                    } else {
-                        ForEach(todayEvents.prefix(4)) { event in
-                            scheduleEventRow(event)
-                        }
-                    }
-                }
-            }
+        NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
+            leftColumn
         } centerColumn: {
-            VStack(spacing: DynamicContinentLayoutMetrics.rowGap) {
-                DynamicCard(title: "当前焦点", subtitle: currentFocusSubtitle, symbol: "target") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if let nextEvent {
-                            Text(nextEvent.title)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Text(nextEventTimeText(for: nextEvent))
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                                .lineLimit(1)
-                            Text("分类：\(scheduleViewModel.categoryName(for: nextEvent.categoryId))")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                                .lineLimit(1)
-
-                            HStack(spacing: 6) {
-                                NotchV2StatusPill(title: nextEvent.isAllDay ? "全天" : "\(nextEvent.durationMinutes) 分钟", accent: DynamicContinentDesignTokens.accentPurple)
-                                NotchV2StatusPill(title: nextEvent.status.displayName, accent: DynamicContinentDesignTokens.cardBackgroundStrong)
-                            }
-                        } else {
-                            Text("今天暂时没有下一项安排")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                            Text("可以在完整日程里创建新的任务或查看本周安排。")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                        }
-                    }
-                }
-
-                DynamicCard(title: "今日饱和度", subtitle: workloadLevel.displayName, symbol: "chart.bar") {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("\(scheduleViewModel.todayWorkloadPercent)%")
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("今日专注 \(scheduleViewModel.todayFocusMinutes) 分钟")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                                Text("今日 \(scheduleViewModel.todayEventCount) 项日程 · 本周 \(weekEvents.count) 项")
-                                    .font(.system(size: 10, weight: .regular))
-                                    .foregroundStyle(DynamicContinentDesignTokens.tertiaryText)
-                                    .lineLimit(2)
-                            }
-                        }
-
-                        ProgressView(value: Double(scheduleViewModel.todayWorkloadPercent) / 100.0)
-                            .tint(DynamicContinentDesignTokens.accentPurple)
-                        Text("根据已安排时长估算的今日负载")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                    }
-                }
-            }
+            centerColumn
         } rightColumn: {
-            VStack(spacing: DynamicContinentLayoutMetrics.rowGap) {
-                NotchV2SystemRail(viewModel: viewModel)
+            rightColumn
+        }
+    }
 
-                DynamicCard(title: "本周概览", subtitle: "真实日程数据", symbol: "calendar.badge.clock", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if weekEvents.isEmpty {
-                            Text("本周暂时没有安排")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                            Text("打开完整日程后可以在周视图里直接新增或编辑事件。")
-                                .font(.system(size: 10, weight: .regular))
-                                .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } else {
-                            ForEach(Array(weekEvents.prefix(3))) { event in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(event.title)
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                                        .lineLimit(1)
-                                    Text(weekEventSubtitle(for: event))
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                                        .lineLimit(1)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 2)
-                            }
-                        }
+    private var leftColumn: some View {
+        NotchV2Card(title: "今日时间线", symbol: "timeline.selection", padding: 12) {
+            if scheduleVm.todayEvents.isEmpty {
+                emptyTimeline
+            } else {
+                timelineContent
+            }
+        }
+    }
 
-                        HStack(spacing: 6) {
-                            NotchV2StatusPill(icon: "plus", title: "打开完整日程", accent: DynamicContinentDesignTokens.innerCardBackground)
-                                .onTapGesture {
-                                    NotificationCenter.default.post(name: .companionShowSchedule, object: nil)
-                                }
-                            NotchV2StatusPill(icon: "sparkles", title: "今日总结", accent: DynamicContinentDesignTokens.innerCardBackground)
-                        }
-                    }
-                }
+    private var centerColumn: some View {
+        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
+            NotchV2Card(title: "当前焦点", symbol: "scope", padding: 12, cardAccent: currentEvent == nil ? .clear : NotchV2DesignTokens.accentPurple) {
+                focusCard
+            }
 
-                DynamicCard(title: "快速视图", subtitle: "今日聚焦", symbol: "bolt", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        statusChip(scheduleViewModel.todayWorkloadLevel.displayName, color: scheduleViewModel.todayWorkloadLevel.color)
-                        statusChip("\(scheduleViewModel.todayEventCount) 项日程", color: .blue)
-                        statusChip("\(scheduleViewModel.todayFocusMinutes) 分钟专注", color: .green)
-                    }
+            NotchV2Card(title: "今日饱和度", symbol: "gauge.medium", padding: 12) {
+                workloadCard
+            }
+        }
+    }
+
+    private var rightColumn: some View {
+        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
+            NotchV2SystemRail(viewModel: viewModel)
+
+            NotchV2Card(title: "本周概览", symbol: "chart.bar.fill", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+                weekOverviewCard
+            }
+
+            NotchV2Card(title: "快捷视图", symbol: "list.bullet.rectangle", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+                quickViewCard
+            }
+        }
+    }
+
+    private var scheduleVm: ScheduleViewModel {
+        scheduleViewModel
+    }
+
+    private var emptyTimeline: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("暂无安排")
+                .font(NotchV2DesignTokens.Typography.title)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+            Text("有日程时会按时间显示进度。")
+                .font(NotchV2DesignTokens.Typography.body)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(2)
+        }
+    }
+
+    private var timelineContent: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(scheduleVm.todayEvents.prefix(6)) { event in
+                    timelineItem(event)
                 }
             }
         }
     }
 
-    private var timelineSubtitle: String {
-        if let accessNotice = scheduleViewModel.accessNotice, scheduleViewModel.todayEvents.isEmpty {
-            return accessNotice
-        }
-        return "\(scheduleViewModel.todayEventCount) 项日程 · \(scheduleViewModel.todayFocusMinutes) 分钟专注"
-    }
+    private func timelineItem(_ event: ScheduleEvent) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(statusColor(for: event.status))
+                    .frame(width: 8, height: 8)
+                Rectangle()
+                    .fill(NotchV2DesignTokens.separator.opacity(0.3))
+                    .frame(width: 1)
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(width: 8)
 
-    private var currentFocusSubtitle: String {
-        if let nextEvent {
-            return nextEvent.isAllDay ? "全天事件" : nextEvent.startAt.formatted(date: .omitted, time: .shortened)
-        }
-        return "待开始"
-    }
-
-    private var nextEvent: ScheduleEvent? {
-        scheduleViewModel.todayEvents.first
-    }
-
-    private func scheduleEventRow(_ event: ScheduleEvent) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(eventTimeText(for: event))
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(DynamicContinentDesignTokens.accentPurple)
-                .frame(width: 44, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(event.title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(event.title)
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if isCurrentEvent(event) {
+                        Text("进行中")
+                            .font(NotchV2DesignTokens.Typography.caption)
+                            .foregroundStyle(NotchV2DesignTokens.accentPurple)
+                            .lineLimit(1)
+                    }
+                }
+                Text(eventTimeText(for: event))
+                    .font(NotchV2DesignTokens.Typography.caption)
+                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(event.status.displayName)
+                    Text("·")
+                    Text(eventSubtitle(for: event))
+                }
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                if let tag = event.tag, tag.isEmpty == false {
+                    HStack(spacing: 3) {
+                        Image(systemName: "tag")
+                            .font(.system(size: 8))
+                        Text(tag)
+                    }
+                    .font(NotchV2DesignTokens.Typography.caption)
+                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text(eventSubtitle(for: event))
-                    .font(.system(size: 8, weight: .regular))
-                    .foregroundStyle(DynamicContinentDesignTokens.tertiaryText)
-                    .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 0)
         }
-        .frame(height: 32, alignment: .topLeading)
+        .padding(.vertical, 4)
+    }
+
+    private var focusCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let item = currentEvent {
+                Text(item.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                HStack(spacing: 6) {
+                    Text(eventTimeText(for: item))
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
+                    Text("·")
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    Text(eventSubtitle(for: item))
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if let tag = item.tag, tag.isEmpty == false {
+                        Text("·")
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        Text(tag)
+                            .font(NotchV2DesignTokens.Typography.body)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+                if let next = nextEvent {
+                    Divider()
+                        .overlay(NotchV2DesignTokens.separator.opacity(0.45))
+                    HStack(spacing: 6) {
+                        Text("下一条")
+                            .font(NotchV2DesignTokens.Typography.caption)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                            .lineLimit(1)
+                        Text(next.title)
+                            .font(NotchV2DesignTokens.Typography.body)
+                            .foregroundStyle(NotchV2DesignTokens.primaryText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Text(eventTimeText(for: next))
+                            .font(NotchV2DesignTokens.Typography.caption)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                            .lineLimit(1)
+                    }
+                }
+            } else {
+                Text("当前没有进行中的事项")
+                    .font(NotchV2DesignTokens.Typography.title)
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .lineLimit(1)
+                Text("有日程时会自动进入焦点。")
+                    .font(NotchV2DesignTokens.Typography.body)
+                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private var workloadCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text("\(scheduleVm.todayWorkloadPercent)%")
+                    .font(NotchV2DesignTokens.Typography.title)
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .lineLimit(1)
+                Text(scheduleVm.todayWorkloadLevel.displayName)
+                    .font(NotchV2DesignTokens.Typography.caption)
+                    .foregroundStyle(scheduleVm.todayWorkloadLevel.color)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+
+            Text("今日专注 \(scheduleVm.todayFocusMinutes) 分钟 · \(scheduleVm.todayEventCount) 项日程")
+                .font(NotchV2DesignTokens.Typography.body)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(2)
+                .truncationMode(.tail)
+
+            ProgressView(value: Double(scheduleVm.todayWorkloadPercent) / 100.0)
+                .tint(scheduleVm.todayWorkloadLevel.color)
+
+            HStack(spacing: 8) {
+                legendItem(color: NotchV2DesignTokens.accentPurple, title: "专注", value: Double(scheduleVm.todayFocusMinutes) / 60.0)
+                legendItem(color: NotchV2DesignTokens.accentBlue, title: "事件", value: Double(scheduleVm.todayEventCount))
+            }
+        }
+    }
+
+    private var weekOverviewCard: some View {
+        let weekDays = ["一", "二", "三", "四", "五", "六", "日"]
+        let days = scheduleVm.weekWorkloadDays
+
+        let maxCount = max(1, days.map(\.eventCount).max() ?? 1)
+
+        return VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(weekDays.enumerated()), id: \.offset) { index, day in
+                let dayData = index < days.count ? days[index] : nil
+                HStack(spacing: 6) {
+                    Text(day)
+                        .font(NotchV2DesignTokens.Typography.caption)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .frame(width: 14, alignment: .leading)
+                        .lineLimit(1)
+
+                    GeometryReader { proxy in
+                        let ratio = CGFloat(dayData?.eventCount ?? 0) / CGFloat(maxCount)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(NotchV2DesignTokens.accentPurple.opacity(0.5 + 0.5 * Double(ratio)))
+                            .frame(width: max(3, proxy.size.width * ratio))
+                    }
+                    .frame(height: 6)
+
+                    Text("\(dayData?.eventCount ?? 0)")
+                        .font(NotchV2DesignTokens.Typography.caption)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .frame(width: 16, alignment: .trailing)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private var quickViewCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            let statusFilters: [(String, ScheduleEvent.EventStatus?)] = [
+                ("待办", .todo),
+                ("已完成", .done),
+                ("已取消", .cancelled)
+            ]
+
+            ForEach(statusFilters, id: \.0) { filter in
+                let count = filter.1 != nil ? scheduleVm.events.filter { $0.status == filter.1 }.count : scheduleVm.events.count
+                HStack {
+                    Text(filter.0)
+                        .font(NotchV2DesignTokens.Typography.caption)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Text("\(count)")
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+                )
+            }
+
+            Divider()
+                .overlay(NotchV2DesignTokens.separator.opacity(0.45))
+
+            Button("打开日程") {
+                NotificationCenter.default.post(name: .companionShowSchedule, object: nil)
+            }
+            .buttonStyle(.plain)
+            .font(NotchV2DesignTokens.Typography.caption)
+            .foregroundStyle(NotchV2DesignTokens.accentBlue)
+        }
+    }
+
+    private func legendItem(color: Color, title: String, value: Double) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(title)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+            Text(title == "专注" ? String(format: "%.1fh", value) : "\(Int(value))")
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+        }
+    }
+
+    private var currentEvent: ScheduleEvent? {
+        let now = Date()
+        if let active = scheduleVm.todayEvents.first(where: { $0.startAt <= now && now < $0.endAt }) {
+            return active
+        }
+        return scheduleVm.todayEvents.first
+    }
+
+    private var nextEvent: ScheduleEvent? {
+        let now = Date()
+        return scheduleVm.todayEvents.first(where: { $0.startAt > now }) ?? scheduleVm.todayEvents.dropFirst().first
+    }
+
+    private func isCurrentEvent(_ event: ScheduleEvent) -> Bool {
+        guard let currentEvent else { return false }
+        return currentEvent.id == event.id
     }
 
     private func eventTimeText(for event: ScheduleEvent) -> String {
         if event.isAllDay {
             return "全天"
         }
-        return event.startAt.formatted(date: .omitted, time: .shortened)
-    }
-
-    private func nextEventTimeText(for event: ScheduleEvent) -> String {
-        if event.isAllDay {
-            return "全天事件"
-        }
         return "\(event.startAt.formatted(date: .omitted, time: .shortened)) - \(event.endAt.formatted(date: .omitted, time: .shortened))"
     }
 
     private func eventSubtitle(for event: ScheduleEvent) -> String {
-        let category = scheduleViewModel.categoryName(for: event.categoryId)
+        let category = scheduleVm.categoryName(for: event.categoryId)
         let duration = event.isAllDay ? "全天" : "\(event.durationMinutes) 分钟"
-        return "\(category) · \(duration) · \(event.status.displayName)"
+        return "\(category) · \(duration)"
     }
 
-    private func weekEventSubtitle(for event: ScheduleEvent) -> String {
-        let time = event.isAllDay ? "全天" : event.startAt.formatted(date: .omitted, time: .shortened)
-        return "\(time) · \(scheduleViewModel.categoryName(for: event.categoryId))"
-    }
-
-    private func statusChip(_ title: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 0)
+    private func statusColor(for status: ScheduleEvent.EventStatus) -> Color {
+        switch status {
+        case .todo: return NotchV2DesignTokens.accentBlue
+        case .done: return NotchV2DesignTokens.accentGreen
+        case .cancelled: return NotchV2DesignTokens.secondaryText
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(DynamicContinentDesignTokens.innerCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
 struct DynamicContinentSystemStatusPage: View {
-    @StateObject private var viewModel: SystemStatusViewModel
-
-    init(systemStatusService: SystemStatusService) {
-        _viewModel = StateObject(wrappedValue: SystemStatusViewModel(service: systemStatusService))
-    }
+    @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
         NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
-            DynamicCard(title: "状态入口", subtitle: "跳转到主状态中心", symbol: "arrow.right.circle") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("这里只保留轻量摘要，不再重复完整状态面板。")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+            leftColumn
+        } centerColumn: {
+            centerColumn
+        } rightColumn: {
+            rightColumn
+        }
+    }
 
-                    Button("查看状态") {
+    private var leftColumn: some View {
+        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
+            NotchV2Card(title: "关键指标", symbol: "gauge.high", cornerRadius: NotchV2DesignTokens.cardRadius) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(viewModel.overviewSystemStatusRows, id: \.title) { row in
+                        miniMetricRow(
+                            icon: metricIcon(for: row.title),
+                            title: row.title,
+                            value: row.value,
+                            accent: row.accent
+                        )
+                    }
+                }
+            }
+
+            NotchV2Card(title: "跳转", symbol: "arrow.triangle.branch", cornerRadius: NotchV2DesignTokens.cardRadius) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("在主窗口查看完整运行状态、进程和问题排查。")
+                        .font(NotchV2DesignTokens.Typography.body)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+
+                    Button("打开系统状态") {
                         (NSApp.delegate as? AppDelegate)?.showSystemStatus()
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.plain)
+                    .font(NotchV2DesignTokens.Typography.caption)
+                    .foregroundStyle(NotchV2DesignTokens.accentBlue)
                 }
             }
-        } centerColumn: {
-            DynamicCard(title: "核心摘要", subtitle: "真实可读字段", symbol: "chart.line.uptrend.xyaxis") {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    DynamicMetricCard(title: "CPU", value: viewModel.cpuSummary, icon: "cpu", tint: .blue, trend: .up)
-                    DynamicMetricCard(title: "内存", value: viewModel.memorySummary, icon: "memorychip", tint: .purple, trend: .stable)
-                    DynamicMetricCard(title: "磁盘", value: viewModel.diskSummary, icon: "internaldrive", tint: .orange, trend: .up)
-                    DynamicMetricCard(title: "网络", value: viewModel.networkSummary, icon: "network", tint: .green, trend: .down)
+        }
+    }
+
+    private var centerColumn: some View {
+        NotchV2Card(title: "核心摘要", symbol: "cpu", cardAccent: .orange) {
+            let columns = [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
+            ]
+
+            return LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                ForEach(viewModel.overviewSystemStatusRows, id: \.title) { row in
+                    metricTile(
+                        title: row.title,
+                        value: row.value,
+                        detail: "",
+                        color: row.accent
+                    )
                 }
             }
-        } rightColumn: {
-            DynamicCard(title: "运行摘要", subtitle: "进程与刷新时间", symbol: "list.bullet.rectangle", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
-                VStack(alignment: .leading, spacing: 10) {
-                    deviceOverviewRow(title: "最近刷新", value: viewModel.lastUpdatedText)
-                    deviceOverviewRow(title: "电池", value: viewModel.batterySummary)
-                    deviceOverviewRow(title: "温度", value: viewModel.temperatureSummary)
+        }
+    }
+
+    private var rightColumn: some View {
+        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
+            NotchV2SystemRail(viewModel: viewModel)
+
+            NotchV2Card(title: "运行摘要", symbol: "desktopcomputer", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+                VStack(alignment: .leading, spacing: 6) {
+                    infoRow(label: "主机", value: Host.current().localizedName ?? "Mac")
+                    infoRow(label: "系统", value: ProcessInfo.processInfo.operatingSystemVersionString)
+                    infoRow(label: "CPU 核心", value: "\(ProcessInfo.processInfo.processorCount)")
 
                     Divider()
                         .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
-                    DynamicProcessListSection(processes: Array(viewModel.snapshot.topCPUProcesses.prefix(2)))
+                    Text("设备信息")
+                        .font(NotchV2DesignTokens.Typography.caption)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
+
+                    infoRow(label: "电池", value: viewModel.batteryStateText)
+                    infoRow(label: "电量", value: "\(Int(viewModel.batteryInfo.percentage))%")
                 }
             }
         }
-        .onAppear {
-            viewModel.startMonitoring()
-        }
-        .onDisappear {
-            viewModel.stopMonitoring()
+    }
+
+    private func metricIcon(for title: String) -> String {
+        switch title {
+        case "电池": return "bolt.fill"
+        case "麦克风": return "mic.fill"
+        case "录屏": return "display"
+        case "辅助功能": return "accessibility"
+        default: return "info.circle"
         }
     }
 
-    private func statusChip(_ title: String, color: Color) -> some View {
+    private func miniMetricRow(icon: String, title: String, value: String, accent: Color) -> some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(accent)
+                .frame(width: 16)
             Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(DynamicContinentDesignTokens.innerCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    private func deviceOverviewRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
             Spacer(minLength: 0)
             Text(value)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
-                .truncationMode(.tail)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .background(DynamicContinentDesignTokens.innerCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-}
-
-private struct DynamicMetricCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let tint: Color
-    let trend: Trend
-
-    enum Trend {
-        case up, down, stable
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+        )
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(tint)
-                Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                    .lineLimit(1)
-            }
-
-            HStack(alignment: .bottom, spacing: 3) {
-                Text(value)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(DynamicContinentDesignTokens.primaryText)
+    private func metricTile(title: String, value: String, detail: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+            Text(value)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(color)
+                .lineLimit(1)
+            if detail.isEmpty == false {
+                Text(detail)
+                    .font(NotchV2DesignTokens.Typography.caption)
+                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
-
-                Image(systemName: trendIcon)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(trendColor)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(DynamicContinentDesignTokens.innerCardBackground)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(DynamicContinentDesignTokens.cardStroke.opacity(0.75), lineWidth: 1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
-    private var trendIcon: String {
-        switch trend {
-        case .up: return "arrow.up.right"
-        case .down: return "arrow.down.right"
-        case .stable: return "arrow.right"
-        }
-    }
-
-    private var trendColor: Color {
-        switch trend {
-        case .up: return .red
-        case .down: return .green
-        case .stable: return .gray
-        }
-    }
-}
-
-private struct DynamicProcessListSection: View {
-    let processes: [SystemProcessSnapshot]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            let rows = Array(processes.prefix(5).enumerated())
-
-            if rows.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Image(systemName: "list.bullet.rectangle")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                    Text("等待进程采样")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                        .lineLimit(1)
-                    Text("刷新后会显示活跃进程的 CPU 和内存占用。")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                }
-                .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-            } else {
-                ForEach(rows, id: \.offset) { row in
-                    let process = row.element
-                    HStack(spacing: 8) {
-                        Text(process.name)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(DynamicContinentDesignTokens.primaryText)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Spacer(minLength: 0)
-                        Text(String(format: "%.0f%%", process.cpuUsage))
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                            .lineLimit(1)
-                        Text(String(format: "%.0f MB", process.memoryUsageMB))
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(DynamicContinentDesignTokens.secondaryText)
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(DynamicContinentDesignTokens.innerCardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-            }
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(NotchV2DesignTokens.Typography.body)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 }

@@ -200,6 +200,17 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
         let enablePunctuationAppend = (try? await storage.getSetting(key: "voice.enablePunctuationAppend")) == "true"
         let injectionStrategy = (try? await storage.getSetting(key: "voice.injectionStrategy")) ?? "postToPid"
         let preferredLanguage = (try? await storage.getSetting(key: "voice.preferredLanguage")) ?? "auto"
+        let muteSystemAudioDuringRecording = (try? await storage.getSetting(key: "voice.muteSystemAudioDuringRecording")) == "true"
+        let enableCloudSync = (try? await storage.getSetting(key: "voice.enableCloudSync")) == "true"
+
+        let correctionRules: [CorrectionRule]
+        if let json = try? await storage.getSetting(key: "voice.correctionRules"),
+           let data = json.data(using: .utf8),
+           let rules = try? JSONDecoder().decode([CorrectionRule].self, from: data) {
+            correctionRules = rules
+        } else {
+            correctionRules = []
+        }
 
         let settings = VoiceSettings(
             defaultProvider: provider,
@@ -215,8 +226,11 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
             continuationWindow: continuationWindow,
             enablePunctuationAppend: enablePunctuationAppend,
             injectionStrategy: injectionStrategy,
+            enableCloudSync: enableCloudSync,
             preferredLanguage: preferredLanguage,
-            translationLanguage: translationLanguage
+            translationLanguage: translationLanguage,
+            correctionRules: correctionRules,
+            muteSystemAudioDuringRecording: muteSystemAudioDuringRecording
         )
         voiceSettingsCache = settings
         return settings
@@ -238,6 +252,15 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
         try await storage.setSetting(key: "voice.enablePunctuationAppend", value: settings.enablePunctuationAppend ? "true" : "false")
         try await storage.setSetting(key: "voice.injectionStrategy", value: settings.injectionStrategy)
         try await storage.setSetting(key: "voice.preferredLanguage", value: settings.preferredLanguage)
+        try await storage.setSetting(key: "voice.muteSystemAudioDuringRecording", value: settings.muteSystemAudioDuringRecording ? "true" : "false")
+        try await storage.setSetting(key: "voice.enableCloudSync", value: settings.enableCloudSync ? "true" : "false")
+
+        if let data = try? JSONEncoder().encode(settings.correctionRules),
+           let json = String(data: data, encoding: .utf8) {
+            try await storage.setSetting(key: "voice.correctionRules", value: json)
+        } else {
+            try await storage.setSetting(key: "voice.correctionRules", value: "[]")
+        }
     }
     
     private func loadSayInputTriggerMode() async throws -> SayInputTriggerMode {

@@ -37,6 +37,10 @@ Thumbs.db
 # Local assistant / tool state
 .trae/
 .acmind-tmp/
+.codex/
+.agents/
+.superpowers/
+.swiftpm/
 
 # User data (Obsidian vault)
 ~/PinMind/

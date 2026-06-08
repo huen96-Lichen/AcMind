@@ -44,6 +44,8 @@ enum NotchPresentationState: Equatable {
     }
 }
 
+typealias NotchV2SystemAttentionHintCard = NotchV2ViewModel.SystemAttentionHintCard
+
 enum NotchCloseBlocker: Equatable {
     case voice
     case screenshot
@@ -72,6 +74,50 @@ final class NotchV2ViewModel: ObservableObject {
         let title: String
         let value: String
         let accent: Color
+    }
+
+    struct AttentionHint: Identifiable {
+        let id = UUID()
+        let symbol: String
+        let title: String
+        let subtitle: String
+        let accent: Color
+    }
+
+    struct SystemAttentionHintCard: View {
+        let hint: AttentionHint
+
+        var body: some View {
+            NotchV2Card(title: hint.title, symbol: hint.symbol, cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Circle()
+                            .fill(hint.accent)
+                            .frame(width: 7, height: 7)
+                            .padding(.top, 4)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(hint.subtitle)
+                                .font(NotchV2DesignTokens.Typography.body)
+                                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                                .lineLimit(2)
+                                .truncationMode(.tail)
+
+                            Text("不抢主位，只作提醒。")
+                                .font(NotchV2DesignTokens.Typography.caption)
+                                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Button("查看状态") {
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
     }
 
     @Published var isExpanded = true
@@ -456,6 +502,12 @@ final class NotchV2ViewModel: ObservableObject {
         voiceSurfaceState.surfacePriority
     }
 
+    var systemAttentionHint: AttentionHint? {
+        guard isModuleEnabled(.systemStatus) else { return nil }
+        guard let hint = systemAttentionHintData else { return nil }
+        return hint
+    }
+
     private func setupObservers() {
         NotificationCenter.default.addObserver(
             self,
@@ -511,6 +563,46 @@ final class NotchV2ViewModel: ObservableObject {
             name: UserDefaults.didChangeNotification,
             object: UserDefaults.standard
         )
+    }
+
+    private var systemAttentionHintData: AttentionHint? {
+        if microphonePermissionStatus != .authorized {
+            return AttentionHint(
+                symbol: "mic.fill",
+                title: "系统提醒",
+                subtitle: "麦克风权限需要处理",
+                accent: .orange
+            )
+        }
+
+        if screenRecordingPermissionStatus != .authorized {
+            return AttentionHint(
+                symbol: "display",
+                title: "系统提醒",
+                subtitle: "录屏权限需要处理",
+                accent: .orange
+            )
+        }
+
+        if accessibilityPermissionStatus != .authorized {
+            return AttentionHint(
+                symbol: "accessibility",
+                title: "系统提醒",
+                subtitle: "辅助功能权限需要处理",
+                accent: .orange
+            )
+        }
+
+        if batteryInfo.percentage <= 20, batteryInfo.isCharging == false {
+            return AttentionHint(
+                symbol: "battery.25",
+                title: "系统提醒",
+                subtitle: "电量较低",
+                accent: .red
+            )
+        }
+
+        return nil
     }
 
     private func setupSystemObservers() {

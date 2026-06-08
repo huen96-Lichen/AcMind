@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import AcMindKit
 
 // MARK: - Screenshot Preview Window Controller
 
@@ -89,7 +90,7 @@ struct ScreenshotPreviewContentView: View {
                             imageSize = image.size
                         }
                 }
-                .frame(minWidth: 560, minHeight: 360, maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minWidth: 560, maxWidth: .infinity, minHeight: 360, maxHeight: .infinity)
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "photo")
@@ -101,7 +102,7 @@ struct ScreenshotPreviewContentView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                .frame(minWidth: 560, minHeight: 360, maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minWidth: 560, maxWidth: .infinity, minHeight: 360, maxHeight: .infinity)
                 .background(AppSurfaceTokens.background)
             }
         }
@@ -122,7 +123,7 @@ struct ScreenshotPreviewContentView: View {
 
 // MARK: - Quick Note Panel
 
-struct QuickNotePanel: View {
+struct ScreenshotQuickNotePanel: View {
     @Environment(\.dismiss) private var dismiss
     @State private var noteText: String = ""
     @FocusState private var isFocused: Bool

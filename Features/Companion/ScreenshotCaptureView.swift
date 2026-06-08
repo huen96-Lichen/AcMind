@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AcMindKit
 
 // MARK: - Screenshot Selection View
 
@@ -116,7 +117,7 @@ public class ScreenshotSelectionNSView: NSView {
             selectedRect.fill()
             
             // 绘制选中区域边框
-            NSColor.accentColor.setStroke()
+            NSColor.controlAccentColor.setStroke()
             let borderPath = NSBezierPath(rect: selectedRect)
             borderPath.lineWidth = 2
             borderPath.stroke()
@@ -126,7 +127,7 @@ public class ScreenshotSelectionNSView: NSView {
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: NSFont.systemFont(ofSize: 12),
                 .foregroundColor: NSColor.white,
-                .backgroundColor: NSColor.accentColor
+                .backgroundColor: NSColor.controlAccentColor
             ]
             let sizeText = NSAttributedString(string: sizeString, attributes: attributes)
             let textSize = sizeText.size()
@@ -146,7 +147,7 @@ public class ScreenshotSelectionNSView: NSView {
                 textRect.origin.x = selectedRect.origin.x + selectedRect.width - textRect.width - 8
             }
             
-            NSColor.accentColor.setFill()
+            NSColor.controlAccentColor.setFill()
             textRect.fill()
             sizeText.draw(at: CGPoint(x: textRect.origin.x + 6, y: textRect.origin.y + 3))
         }
@@ -162,7 +163,7 @@ public class ScreenshotSelectionNSView: NSView {
 // MARK: - Screenshot Preview View
 
 /// 截图预览视图
-public struct ScreenshotPreviewView: View {
+public struct ScreenshotCapturePreviewView: View {
     let image: NSImage
     let originalRect: CGRect
     let onConfirm: () -> Void
@@ -205,7 +206,11 @@ public struct ScreenshotPreviewView: View {
                     .scaleEffect(scale)
                     .offset(x: position.x, y: position.y)
                     .onHover { hovering in
-                        NSCursor.push(hovering ? .openHand : .arrow)
+                        if hovering {
+                            NSCursor.openHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
                     }
                     .gesture(
                         DragGesture()

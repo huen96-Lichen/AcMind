@@ -7,14 +7,44 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-			207E12CABBA98EB84C016909 /* ClipboardPinNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C4E1C47034FFAA162FF8EF /* ClipboardPinNotifications.swift */; };
-			7A1C6E2A9B4D4F1A8C3E2A12 /* ClipboardCardPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A11 /* ClipboardCardPresentation.swift */; };
-			7A1C6E2A9B4D4F1A8C3E2A14 /* MaterialCardGridLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A13 /* MaterialCardGridLayout.swift */; };
-			7A1C6E2A9B4D4F1A8C3E2A16 /* ClipboardPinWindowSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A15 /* ClipboardPinWindowSnapshot.swift */; };
-			7A1C6E2A9B4D4F1A8C3E2A18 /* MaterialCardMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A17 /* MaterialCardMetadata.swift */; };
-			7A1C6E2A9B4D4F1A8C3E2A1A /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A19 /* SidebarItem.swift */; };
-			3CB7DEC4CD9B0EC2DBC33BE6 /* CompanionPresentationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209040C76DC08E2B8C481130 /* CompanionPresentationState.swift */; };
+		08DE15194A8B21CCEFF77141 /* ScheduleServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3F2A4D9FBDA12740C78B52 /* ScheduleServiceTests.swift */; };
+		0DD468BB3560D2BED70F5458 /* StreamingKeyboardWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */; };
+		0E43A7A1E470D167AFAD33C9 /* AgentQuickAskServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */; };
+		13368FE91E928A672B830E8E /* SidebarItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FA6BB8339B7405BF83EAEE /* SidebarItemTests.swift */; };
+		15949678016CFF62ADE25EFC /* SayInputCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD44DDB60310419F0B14859C /* SayInputCoordinatorTests.swift */; };
+		1C0651F25CDCE99CAB905DD8 /* NotchDashboardData.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE3B0498600B4B7DC5FCBA6 /* NotchDashboardData.swift */; };
+		207E12CABBA98EB84C016909 /* ClipboardPinNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C4E1C47034FFAA162FF8EF /* ClipboardPinNotifications.swift */; };
+		21A69308863F294061C2F55D /* SystemStatusCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D638B1E68AA2B66772A43D /* SystemStatusCleanupTests.swift */; };
+		259AEBAE0CAED41C3408E848 /* VoiceMicrophonePreferenceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C2B0B9869BA8D9406B1C72 /* VoiceMicrophonePreferenceStoreTests.swift */; };
+		2B71F15C1A813719590C8600 /* AudioMuteGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DA4FD07A1D2DD16C15DD05 /* AudioMuteGuardTests.swift */; };
+		3214DE808323802B2E19E212 /* HotCornerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 589B701A2FE81B3A72D22481 /* HotCornerManagerTests.swift */; };
+		3230762FEFACAFB0FDFA3EB9 /* KnowledgeServiceNewFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA12B02AAB662B1B166D4D66 /* KnowledgeServiceNewFeatureTests.swift */; };
+		34C18D3060C9F0653D249322 /* PermissionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 058433B8000B2A32C2499B61 /* PermissionManagerTests.swift */; };
+		3660C5DD262B8A4172E535A3 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368289451AF72AECCE215B64 /* ExportServiceTests.swift */; };
+		36B3456AE74DB54C25D82288 /* AgentTaskBoardServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65ED0234D0F001D276EB1DF9 /* AgentTaskBoardServiceTests.swift */; };
+		3CB7DEC4CD9B0EC2DBC33BE6 /* CompanionPresentationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209040C76DC08E2B8C481130 /* CompanionPresentationState.swift */; };
+		40020FF70158529C104CC554 /* ModelManagementSortOptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16C29C7BE67FFEC7B209D383 /* ModelManagementSortOptionTests.swift */; };
+		4A493E43998DBABF66D53511 /* ClipboardServiceLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD20FC5BD5E768DF73B5C435 /* ClipboardServiceLifecycleTests.swift */; };
+		4AF6EDD68B3A9C2EFA8DEC64 /* TagSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 193C89CB34AEAEBD3F3CC2AF /* TagSelectorView.swift */; };
+		55128628C00A9E7F932A4E1C /* PermissionStatusReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC31D352A1DAFB43E2F99AC /* PermissionStatusReaderTests.swift */; };
+		5DE245A738EE3BC09FFF0EDD /* CompanionCaptureSaveDestinationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CA71F4D016A13D7FBF7409 /* CompanionCaptureSaveDestinationTests.swift */; };
 		5FCBF9223432CC743EEA4963 /* ClipboardPinWindowSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418ECDEAC9387BD8935E7D9E /* ClipboardPinWindowSizing.swift */; };
+		675F80097743C247C75CFE25 /* CompanionConfigurationStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666DF2A5E6AB9F8D58D5C425 /* CompanionConfigurationStoreTests.swift */; };
+		685621FEFC42EE538F8EB563 /* CloudSyncServicePrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB5147E7E0482D28DFA9F8EF /* CloudSyncServicePrivacyTests.swift */; };
+		6A26D6A4B5C3428D22CF06A4 /* CaptureServiceVoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0666ED9ABC891A9E3B498761 /* CaptureServiceVoiceTests.swift */; };
+		7178571BBD78E5C2010987FB /* TimelineLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F9CDDDACF6297156633ECA /* TimelineLayoutTests.swift */; };
+		73B9A2706D6CB327252F4655 /* ScheduleViewModelSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B676AD629E05CCB0948AAB2 /* ScheduleViewModelSearchTests.swift */; };
+		7A1C6E2A9B4D4F1A8C3E2A12 /* ClipboardCardPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A11 /* ClipboardCardPresentation.swift */; };
+		7A1C6E2A9B4D4F1A8C3E2A14 /* MaterialCardGridLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A13 /* MaterialCardGridLayout.swift */; };
+		7A1C6E2A9B4D4F1A8C3E2A16 /* ClipboardPinWindowSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A15 /* ClipboardPinWindowSnapshot.swift */; };
+		7A1C6E2A9B4D4F1A8C3E2A18 /* MaterialCardMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A17 /* MaterialCardMetadata.swift */; };
+		7A1C6E2A9B4D4F1A8C3E2A1A /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A19 /* SidebarItem.swift */; };
+		7ABC6F686E3AA59291B5F42F /* NotchDashboardDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E39DE42E62DF627BA3A0B15D /* NotchDashboardDataProvider.swift */; };
+		7AE4E7483265315C66ED22D5 /* CloudSyncMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79BA19D630675AE7E42E252A /* CloudSyncMergeTests.swift */; };
+		8A0A3CBBD1F6B1DE93A8807E /* SettingsServiceInitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93010469BF47C9F8021B1829 /* SettingsServiceInitTests.swift */; };
+		8CE6FA48BAD79DE72271AD0E /* VoiceServiceProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B7AAEC467C8F7FEBEA9440 /* VoiceServiceProtocolTests.swift */; };
+		9719E7809C15EB189D3D2C3C /* SystemStatusMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E002493E93FD8A3C24689AC1 /* SystemStatusMetricsTests.swift */; };
+		9D7F26D2D89EBB50A2AE8FBD /* BatteryStatusReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEF1FF81194780A42C81D3D /* BatteryStatusReaderTests.swift */; };
 		A10000000000000000000001 /* AcMindApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000000 /* AcMindApp.swift */; };
 		A10000000000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ContentView.swift */; };
 		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Assets.xcassets */; };
@@ -48,22 +78,6 @@
 		A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* OpenAICompatibleProvider.swift */; };
 		A1000000000000000000007E /* CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* CaptureService.swift */; };
 		A1000000000000000000007F /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ClipboardService.swift */; };
-		B10000000000000000000002 /* PipelineContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* PipelineContext.swift */; };
-		B10000000000000000000004 /* PipelineStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* PipelineStage.swift */; };
-		B10000000000000000000006 /* DiscoveryStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* DiscoveryStage.swift */; };
-		B10000000000000000000008 /* TransformationStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* TransformationStage.swift */; };
-		B1000000000000000000000A /* ValidationStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* ValidationStage.swift */; };
-		B1000000000000000000000C /* PersistenceStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* PersistenceStage.swift */; };
-		B1000000000000000000000E /* DistributionStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* DistributionStage.swift */; };
-		B10000000000000000000010 /* ClipboardPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* ClipboardPipeline.swift */; };
-		C10000000000000000000002 /* TransientPaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000001 /* TransientPaster.swift */; };
-		C10000000000000000000004 /* PasteQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* PasteQueue.swift */; };
-		C10000000000000000000006 /* FocusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* FocusManager.swift */; };
-		C10000000000000000000008 /* CleaningRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000007 /* CleaningRule.swift */; };
-		C1000000000000000000000A /* CleaningRulesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000009 /* CleaningRulesStore.swift */; };
-		C1000000000000000000000C /* ClipboardTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000B /* ClipboardTag.swift */; };
-		C10000000000000000000010 /* PasteQueuePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000D /* PasteQueuePanel.swift */; };
-		C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000011 /* ClipboardPipelineTests.swift */; };
 		A10000000000000000000080 /* DistillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* DistillService.swift */; };
 		A10000000000000000000081 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* ExportService.swift */; };
 		A10000000000000000000082 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* KnowledgeService.swift */; };
@@ -236,7 +250,14 @@
 		A1000000000000000000061A /* AgentSkillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000061B /* AgentSkillService.swift */; };
 		A1000000000000000000061C /* AgentTaskBoardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000061D /* AgentTaskBoardService.swift */; };
 		A1000000000000000000061E /* ScheduleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000061F /* ScheduleService.swift */; };
+		A10000000000000000000620 /* StreamingKeyboardWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000621 /* StreamingKeyboardWriter.swift */; };
+		A10000000000000000000622 /* AudioMuteGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000623 /* AudioMuteGuard.swift */; };
+		A10000000000000000000624 /* CorrectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000625 /* CorrectionService.swift */; };
+		A36F21286046CE6D62F32B11 /* AgentSkillServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1A0128C3DDCBD32AEEA7A0 /* AgentSkillServiceTests.swift */; };
 		A815299FFE494692B1000785 /* ClipboardPinWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B5CA555417EB6EC979D66E /* ClipboardPinWindowManager.swift */; };
+		AD072D5C46BBC0846D6678C7 /* HotCornerSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4206751427FE6FD8EFB104 /* HotCornerSettingsTests.swift */; };
+		ADE0D5BD7B11CF8EE3EEEB96 /* DistillServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D55731845CA313E8BD65F9A /* DistillServiceTests.swift */; };
+		AEA80E030DCD2FF81B38E3D3 /* SystemStatusServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C046C4CDB063E3EAACE7A9 /* SystemStatusServiceTests.swift */; };
 		B000000000000000000002C1 /* CompanionSettingsHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D1 /* CompanionSettingsHeader.swift */; };
 		B000000000000000000002C2 /* CompanionCapabilityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D2 /* CompanionCapabilityCard.swift */; };
 		B000000000000000000002C3 /* CapsuleSettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B000000000000000000002D3 /* CapsuleSettingsCard.swift */; };
@@ -251,6 +272,37 @@
 		B00000000000000000000313 /* SystemStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000312 /* SystemStatusView.swift */; };
 		B00000000000000000000315 /* VoiceEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000314 /* VoiceEntryView.swift */; };
 		B00000000000000000000317 /* ClipboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000316 /* ClipboardViewModel.swift */; };
+		B00000000000000000000319 /* ShortcutRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000318 /* ShortcutRecorderView.swift */; };
+		B10000000000000000000002 /* PipelineContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* PipelineContext.swift */; };
+		B10000000000000000000004 /* PipelineStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* PipelineStage.swift */; };
+		B10000000000000000000006 /* DiscoveryStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* DiscoveryStage.swift */; };
+		B10000000000000000000008 /* TransformationStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* TransformationStage.swift */; };
+		B1000000000000000000000A /* ValidationStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* ValidationStage.swift */; };
+		B1000000000000000000000C /* PersistenceStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* PersistenceStage.swift */; };
+		B1000000000000000000000E /* DistributionStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* DistributionStage.swift */; };
+		B10000000000000000000010 /* ClipboardPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* ClipboardPipeline.swift */; };
+		B7A4C8CBB6E71AF86E6548EF /* CorrectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57854295304949BD7A60B09F /* CorrectionServiceTests.swift */; };
+		B80B67EDED0FB1CF36EA15DF /* MarkdownBuilderNewFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107A93EE7555D32E3BBA2495 /* MarkdownBuilderNewFeatureTests.swift */; };
+		BE1439C2D977679A297F7EDE /* AgentModelRouterNewFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0376AC87145477E0E1E9B1 /* AgentModelRouterNewFeatureTests.swift */; };
+		C10000000000000000000002 /* TransientPaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000001 /* TransientPaster.swift */; };
+		C10000000000000000000004 /* PasteQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* PasteQueue.swift */; };
+		C10000000000000000000006 /* FocusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* FocusManager.swift */; };
+		C10000000000000000000008 /* CleaningRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000007 /* CleaningRule.swift */; };
+		C1000000000000000000000A /* CleaningRulesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000009 /* CleaningRulesStore.swift */; };
+		C1000000000000000000000C /* ClipboardTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000B /* ClipboardTag.swift */; };
+		C10000000000000000000010 /* PasteQueuePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000D /* PasteQueuePanel.swift */; };
+		C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000011 /* ClipboardPipelineTests.swift */; };
+		C325242CA1972A1C17A5A079 /* ScreenshotPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C62635322E9D8980DD74CB /* ScreenshotPreviewWindow.swift */; };
+		CB08A0A2158B62699F72F841 /* AgentModelRouterUsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FABD548B129EDD22129002F8 /* AgentModelRouterUsageTests.swift */; };
+		CFBBBBD910CB504C891A7691 /* HotkeyRegistryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400A764CE5538B9155D6BA51 /* HotkeyRegistryStoreTests.swift */; };
+		D6078832E89826C31EC7784E /* ClipboardPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F8AD245807BDDD59B03B9C5 /* ClipboardPreviewView.swift */; };
+		E173F6B01A6A51857A5161F0 /* ScreenshotCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4AB2822981A02092F4CE72 /* ScreenshotCaptureView.swift */; };
+		E52EA90EFEACB8FC38F284AA /* AIRuntimeServiceLoggingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473B603795DD420662D83F33 /* AIRuntimeServiceLoggingTests.swift */; };
+		E752B2C2E999F8F898D1A5CB /* AgentMemoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79D8188A908184C1622F543 /* AgentMemoryServiceTests.swift */; };
+		E9C024A74E1E2104D5897B7E /* ClipboardPinLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4E3B316A92D017F27C3227 /* ClipboardPinLayoutTests.swift */; };
+		EB26FECC2FE2801567649D1C /* PluginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A99B22F22BA00B7F389273B /* PluginManagerTests.swift */; };
+		F36BEBE5989125BD0823753A /* AgentToolRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E075A17DA8C41A0644786 /* AgentToolRouterTests.swift */; };
+		F739C8B13501C907C533B70D /* KeyboardShortcutParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6EB4EA7F95D52AB69850369 /* KeyboardShortcutParsingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -278,13 +330,46 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StreamingKeyboardWriterTests.swift; path = AcMindKitTests/StreamingKeyboardWriterTests.swift; sourceTree = SOURCE_ROOT; };
+		058433B8000B2A32C2499B61 /* PermissionManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PermissionManagerTests.swift; path = AcMindKitTests/PermissionManagerTests.swift; sourceTree = SOURCE_ROOT; };
+		0666ED9ABC891A9E3B498761 /* CaptureServiceVoiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CaptureServiceVoiceTests.swift; path = AcMindKitTests/CaptureServiceVoiceTests.swift; sourceTree = SOURCE_ROOT; };
+		107A93EE7555D32E3BBA2495 /* MarkdownBuilderNewFeatureTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MarkdownBuilderNewFeatureTests.swift; path = AcMindKitTests/MarkdownBuilderNewFeatureTests.swift; sourceTree = SOURCE_ROOT; };
+		16C29C7BE67FFEC7B209D383 /* ModelManagementSortOptionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ModelManagementSortOptionTests.swift; path = AcMindKitTests/ModelManagementSortOptionTests.swift; sourceTree = SOURCE_ROOT; };
+		171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentQuickAskServiceTests.swift; path = AcMindKitTests/AgentQuickAskServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		193C89CB34AEAEBD3F3CC2AF /* TagSelectorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TagSelectorView.swift; path = Features/Native/Clipboard/TagSelectorView.swift; sourceTree = SOURCE_ROOT; };
+		1A99B22F22BA00B7F389273B /* PluginManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PluginManagerTests.swift; path = AcMindKitTests/PluginManagerTests.swift; sourceTree = SOURCE_ROOT; };
+		1D55731845CA313E8BD65F9A /* DistillServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DistillServiceTests.swift; path = AcMindKitTests/DistillServiceTests.swift; sourceTree = SOURCE_ROOT; };
 		209040C76DC08E2B8C481130 /* CompanionPresentationState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CompanionPresentationState.swift; path = AcMindKit/Models/CompanionPresentationState.swift; sourceTree = "<group>"; };
+		22FA6BB8339B7405BF83EAEE /* SidebarItemTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SidebarItemTests.swift; path = AcMindKitTests/SidebarItemTests.swift; sourceTree = SOURCE_ROOT; };
+		24C046C4CDB063E3EAACE7A9 /* SystemStatusServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SystemStatusServiceTests.swift; path = AcMindKitTests/SystemStatusServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		368289451AF72AECCE215B64 /* ExportServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExportServiceTests.swift; path = AcMindKitTests/ExportServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		37C62635322E9D8980DD74CB /* ScreenshotPreviewWindow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenshotPreviewWindow.swift; path = Features/Companion/ScreenshotPreviewWindow.swift; sourceTree = SOURCE_ROOT; };
+		400A764CE5538B9155D6BA51 /* HotkeyRegistryStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HotkeyRegistryStoreTests.swift; path = AcMindKitTests/HotkeyRegistryStoreTests.swift; sourceTree = SOURCE_ROOT; };
+		40F9CDDDACF6297156633ECA /* TimelineLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimelineLayoutTests.swift; path = AcMindKitTests/TimelineLayoutTests.swift; sourceTree = SOURCE_ROOT; };
+		418ECDEAC9387BD8935E7D9E /* ClipboardPinWindowSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinWindowSizing.swift; path = AcMindKit/Models/ClipboardPinWindowSizing.swift; sourceTree = "<group>"; };
+		473B603795DD420662D83F33 /* AIRuntimeServiceLoggingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AIRuntimeServiceLoggingTests.swift; path = AcMindKitTests/AIRuntimeServiceLoggingTests.swift; sourceTree = SOURCE_ROOT; };
+		4B676AD629E05CCB0948AAB2 /* ScheduleViewModelSearchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScheduleViewModelSearchTests.swift; path = AcMindKitTests/ScheduleViewModelSearchTests.swift; sourceTree = SOURCE_ROOT; };
+		4F8AD245807BDDD59B03B9C5 /* ClipboardPreviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPreviewView.swift; path = Features/Native/Clipboard/ClipboardPreviewView.swift; sourceTree = SOURCE_ROOT; };
+		50C4E1C47034FFAA162FF8EF /* ClipboardPinNotifications.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinNotifications.swift; path = AcMindKit/Models/ClipboardPinNotifications.swift; sourceTree = "<group>"; };
+		57854295304949BD7A60B09F /* CorrectionServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CorrectionServiceTests.swift; path = AcMindKitTests/CorrectionServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		589B701A2FE81B3A72D22481 /* HotCornerManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HotCornerManagerTests.swift; path = AcMindKitTests/HotCornerManagerTests.swift; sourceTree = SOURCE_ROOT; };
+		5BEF1FF81194780A42C81D3D /* BatteryStatusReaderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BatteryStatusReaderTests.swift; path = AcMindKitTests/BatteryStatusReaderTests.swift; sourceTree = SOURCE_ROOT; };
+		65ED0234D0F001D276EB1DF9 /* AgentTaskBoardServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentTaskBoardServiceTests.swift; path = AcMindKitTests/AgentTaskBoardServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		666DF2A5E6AB9F8D58D5C425 /* CompanionConfigurationStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CompanionConfigurationStoreTests.swift; path = AcMindKitTests/CompanionConfigurationStoreTests.swift; sourceTree = SOURCE_ROOT; };
+		69CA71F4D016A13D7FBF7409 /* CompanionCaptureSaveDestinationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CompanionCaptureSaveDestinationTests.swift; path = AcMindKitTests/CompanionCaptureSaveDestinationTests.swift; sourceTree = SOURCE_ROOT; };
+		79BA19D630675AE7E42E252A /* CloudSyncMergeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CloudSyncMergeTests.swift; path = AcMindKitTests/CloudSyncMergeTests.swift; sourceTree = SOURCE_ROOT; };
 		7A1C6E2A9B4D4F1A8C3E2A11 /* ClipboardCardPresentation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardCardPresentation.swift; path = ClipboardCardPresentation.swift; sourceTree = "<group>"; };
 		7A1C6E2A9B4D4F1A8C3E2A13 /* MaterialCardGridLayout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MaterialCardGridLayout.swift; path = MaterialCardGridLayout.swift; sourceTree = "<group>"; };
 		7A1C6E2A9B4D4F1A8C3E2A15 /* ClipboardPinWindowSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinWindowSnapshot.swift; path = ClipboardPinWindowSnapshot.swift; sourceTree = "<group>"; };
 		7A1C6E2A9B4D4F1A8C3E2A17 /* MaterialCardMetadata.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MaterialCardMetadata.swift; path = MaterialCardMetadata.swift; sourceTree = "<group>"; };
-		418ECDEAC9387BD8935E7D9E /* ClipboardPinWindowSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinWindowSizing.swift; path = AcMindKit/Models/ClipboardPinWindowSizing.swift; sourceTree = "<group>"; };
-		50C4E1C47034FFAA162FF8EF /* ClipboardPinNotifications.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinNotifications.swift; path = AcMindKit/Models/ClipboardPinNotifications.swift; sourceTree = "<group>"; };
+		7A1C6E2A9B4D4F1A8C3E2A19 /* SidebarItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SidebarItem.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
+		7F1A0128C3DDCBD32AEEA7A0 /* AgentSkillServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentSkillServiceTests.swift; path = AcMindKitTests/AgentSkillServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		81D638B1E68AA2B66772A43D /* SystemStatusCleanupTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SystemStatusCleanupTests.swift; path = AcMindKitTests/SystemStatusCleanupTests.swift; sourceTree = SOURCE_ROOT; };
+		82DA4FD07A1D2DD16C15DD05 /* AudioMuteGuardTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioMuteGuardTests.swift; path = AcMindKitTests/AudioMuteGuardTests.swift; sourceTree = SOURCE_ROOT; };
+		8AC31D352A1DAFB43E2F99AC /* PermissionStatusReaderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PermissionStatusReaderTests.swift; path = AcMindKitTests/PermissionStatusReaderTests.swift; sourceTree = SOURCE_ROOT; };
+		8C4E3B316A92D017F27C3227 /* ClipboardPinLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinLayoutTests.swift; path = AcMindKitTests/ClipboardPinLayoutTests.swift; sourceTree = SOURCE_ROOT; };
+		93010469BF47C9F8021B1829 /* SettingsServiceInitTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsServiceInitTests.swift; path = AcMindKitTests/SettingsServiceInitTests.swift; sourceTree = SOURCE_ROOT; };
+		93C2B0B9869BA8D9406B1C72 /* VoiceMicrophonePreferenceStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VoiceMicrophonePreferenceStoreTests.swift; path = AcMindKitTests/VoiceMicrophonePreferenceStoreTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000000 /* AcMindApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
@@ -296,7 +381,6 @@
 		A1000000000000000000001D /* SourceItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceItem.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* StorageServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceProtocol.swift; sourceTree = "<group>"; };
 		A10000000000000000000023 /* AcMind.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AcMind.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A1C6E2A9B4D4F1A8C3E2A19 /* SidebarItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SidebarItem.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
 		A10000000000000000000050 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A10000000000000000000052 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
 		A10000000000000000000054 /* ServiceContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceContainer.swift; sourceTree = "<group>"; };
@@ -322,22 +406,6 @@
 		A1000000000000000000008D /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008E /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/CaptureService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008F /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardService.swift; sourceTree = SOURCE_ROOT; };
-		B10000000000000000000001 /* PipelineContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PipelineContext.swift; sourceTree = SOURCE_ROOT; };
-		B10000000000000000000003 /* PipelineStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PipelineStage.swift; sourceTree = SOURCE_ROOT; };
-		B10000000000000000000005 /* DiscoveryStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/DiscoveryStage.swift; sourceTree = SOURCE_ROOT; };
-		B10000000000000000000007 /* TransformationStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/TransformationStage.swift; sourceTree = SOURCE_ROOT; };
-		B10000000000000000000009 /* ValidationStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ValidationStage.swift; sourceTree = SOURCE_ROOT; };
-		B1000000000000000000000B /* PersistenceStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PersistenceStage.swift; sourceTree = SOURCE_ROOT; };
-		B1000000000000000000000D /* DistributionStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/DistributionStage.swift; sourceTree = SOURCE_ROOT; };
-		B1000000000000000000000F /* ClipboardPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardPipeline.swift; sourceTree = SOURCE_ROOT; };
-		C10000000000000000000001 /* TransientPaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/TransientPaster.swift; sourceTree = SOURCE_ROOT; };
-		C10000000000000000000003 /* PasteQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PasteQueue.swift; sourceTree = SOURCE_ROOT; };
-		C10000000000000000000005 /* FocusManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/FocusManager.swift; sourceTree = SOURCE_ROOT; };
-		C10000000000000000000007 /* CleaningRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/CleaningRule.swift; sourceTree = SOURCE_ROOT; };
-		C10000000000000000000009 /* CleaningRulesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/CleaningRulesStore.swift; sourceTree = SOURCE_ROOT; };
-		C1000000000000000000000B /* ClipboardTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ClipboardTag.swift; sourceTree = SOURCE_ROOT; };
-		C1000000000000000000000D /* PasteQueuePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Clipboard/PasteQueuePanel.swift; sourceTree = SOURCE_ROOT; };
-		C10000000000000000000011 /* ClipboardPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ClipboardPipelineTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000090 /* DistillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/DistillService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000091 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/ExportService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000092 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Knowledge/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
@@ -439,8 +507,8 @@
 		A10000000000000000000433 /* HotCornerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/HotCornerManager.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000435 /* SayInputCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/SayInput/SayInputCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000437 /* SystemStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemStatusService.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000043B /* SystemStatusReaders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemStatusReaders.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000439 /* SystemStatusModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/SystemStatusModels.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000043B /* SystemStatusReaders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemStatusReaders.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000442 /* NotchV2DashboardLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2DashboardLayout.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000450 /* NotchV2SurfacePriority.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/NotchV2SurfacePriority.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000454 /* NotchPriorityRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/NotchPriorityRulesTests.swift; sourceTree = SOURCE_ROOT; };
@@ -510,6 +578,13 @@
 		A1000000000000000000061B /* AgentSkillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentSkillService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000061D /* AgentTaskBoardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentTaskBoardService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000061F /* ScheduleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Schedule/ScheduleService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000621 /* StreamingKeyboardWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/TextInjection/StreamingKeyboardWriter.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000623 /* AudioMuteGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/AudioMuteGuard.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000625 /* CorrectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/Correction/CorrectionService.swift; sourceTree = SOURCE_ROOT; };
+		AB3F2A4D9FBDA12740C78B52 /* ScheduleServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScheduleServiceTests.swift; path = AcMindKitTests/ScheduleServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		AB4206751427FE6FD8EFB104 /* HotCornerSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HotCornerSettingsTests.swift; path = AcMindKitTests/HotCornerSettingsTests.swift; sourceTree = SOURCE_ROOT; };
+		AC0376AC87145477E0E1E9B1 /* AgentModelRouterNewFeatureTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentModelRouterNewFeatureTests.swift; path = AcMindKitTests/AgentModelRouterNewFeatureTests.swift; sourceTree = SOURCE_ROOT; };
+		AD20FC5BD5E768DF73B5C435 /* ClipboardServiceLifecycleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardServiceLifecycleTests.swift; path = AcMindKitTests/ClipboardServiceLifecycleTests.swift; sourceTree = SOURCE_ROOT; };
 		B000000000000000000002D1 /* CompanionSettingsHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CompanionSettingsHeader.swift; sourceTree = SOURCE_ROOT; };
 		B000000000000000000002D2 /* CompanionCapabilityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CompanionCapabilityCard.swift; sourceTree = SOURCE_ROOT; };
 		B000000000000000000002D3 /* CapsuleSettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/Views/CapsuleSettingsCard.swift; sourceTree = SOURCE_ROOT; };
@@ -524,7 +599,36 @@
 		B00000000000000000000312 /* SystemStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/SystemStatus/SystemStatusView.swift; sourceTree = SOURCE_ROOT; };
 		B00000000000000000000314 /* VoiceEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/VoiceEntry/VoiceEntryView.swift; sourceTree = SOURCE_ROOT; };
 		B00000000000000000000316 /* ClipboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/ClipboardViewModel.swift; sourceTree = SOURCE_ROOT; };
+		B00000000000000000000318 /* ShortcutRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/ShortcutRecorderView.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000001 /* PipelineContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PipelineContext.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000003 /* PipelineStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PipelineStage.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000005 /* DiscoveryStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/DiscoveryStage.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000007 /* TransformationStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/TransformationStage.swift; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000009 /* ValidationStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ValidationStage.swift; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000B /* PersistenceStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PersistenceStage.swift; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000D /* DistributionStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/DistributionStage.swift; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000F /* ClipboardPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardPipeline.swift; sourceTree = SOURCE_ROOT; };
 		B6B5CA555417EB6EC979D66E /* ClipboardPinWindowManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinWindowManager.swift; path = AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift; sourceTree = "<group>"; };
+		B6EB4EA7F95D52AB69850369 /* KeyboardShortcutParsingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KeyboardShortcutParsingTests.swift; path = AcMindKitTests/KeyboardShortcutParsingTests.swift; sourceTree = SOURCE_ROOT; };
+		BA12B02AAB662B1B166D4D66 /* KnowledgeServiceNewFeatureTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KnowledgeServiceNewFeatureTests.swift; path = AcMindKitTests/KnowledgeServiceNewFeatureTests.swift; sourceTree = SOURCE_ROOT; };
+		BD44DDB60310419F0B14859C /* SayInputCoordinatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SayInputCoordinatorTests.swift; path = AcMindKitTests/SayInputCoordinatorTests.swift; sourceTree = SOURCE_ROOT; };
+		BE4AB2822981A02092F4CE72 /* ScreenshotCaptureView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenshotCaptureView.swift; path = Features/Companion/ScreenshotCaptureView.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000001 /* TransientPaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/TransientPaster.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000003 /* PasteQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/PasteQueue.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000005 /* FocusManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/FocusManager.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000007 /* CleaningRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/CleaningRule.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000009 /* CleaningRulesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/CleaningRulesStore.swift; sourceTree = SOURCE_ROOT; };
+		C1000000000000000000000B /* ClipboardTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ClipboardTag.swift; sourceTree = SOURCE_ROOT; };
+		C1000000000000000000000D /* PasteQueuePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Clipboard/PasteQueuePanel.swift; sourceTree = SOURCE_ROOT; };
+		C10000000000000000000011 /* ClipboardPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ClipboardPipelineTests.swift; sourceTree = SOURCE_ROOT; };
+		C2B7AAEC467C8F7FEBEA9440 /* VoiceServiceProtocolTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VoiceServiceProtocolTests.swift; path = AcMindKitTests/VoiceServiceProtocolTests.swift; sourceTree = SOURCE_ROOT; };
+		D45E075A17DA8C41A0644786 /* AgentToolRouterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentToolRouterTests.swift; path = AcMindKitTests/AgentToolRouterTests.swift; sourceTree = SOURCE_ROOT; };
+		E002493E93FD8A3C24689AC1 /* SystemStatusMetricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SystemStatusMetricsTests.swift; path = AcMindKitTests/SystemStatusMetricsTests.swift; sourceTree = SOURCE_ROOT; };
+		E39DE42E62DF627BA3A0B15D /* NotchDashboardDataProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotchDashboardDataProvider.swift; path = Features/Companion/Data/NotchDashboardDataProvider.swift; sourceTree = SOURCE_ROOT; };
+		E79D8188A908184C1622F543 /* AgentMemoryServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentMemoryServiceTests.swift; path = AcMindKitTests/AgentMemoryServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		FABD548B129EDD22129002F8 /* AgentModelRouterUsageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentModelRouterUsageTests.swift; path = AcMindKitTests/AgentModelRouterUsageTests.swift; sourceTree = SOURCE_ROOT; };
+		FAE3B0498600B4B7DC5FCBA6 /* NotchDashboardData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotchDashboardData.swift; path = Features/Companion/Data/NotchDashboardData.swift; sourceTree = SOURCE_ROOT; };
+		FB5147E7E0482D28DFA9F8EF /* CloudSyncServicePrivacyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CloudSyncServicePrivacyTests.swift; path = AcMindKitTests/CloudSyncServicePrivacyTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -553,6 +657,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		25FBFE4F86258D83AC05CC24 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				FAE3B0498600B4B7DC5FCBA6 /* NotchDashboardData.swift */,
+				E39DE42E62DF627BA3A0B15D /* NotchDashboardDataProvider.swift */,
+			);
+			name = Data;
+			path = Data;
+			sourceTree = "<group>";
+		};
 		A10000000000000000000026 = {
 			isa = PBXGroup;
 			children = (
@@ -620,13 +734,13 @@
 		A1000000000000000000002D /* Models */ = {
 			isa = PBXGroup;
 			children = (
-					A1000000000000000000001D /* SourceItem.swift */,
-					7A1C6E2A9B4D4F1A8C3E2A11 /* ClipboardCardPresentation.swift */,
-					7A1C6E2A9B4D4F1A8C3E2A13 /* MaterialCardGridLayout.swift */,
-					7A1C6E2A9B4D4F1A8C3E2A15 /* ClipboardPinWindowSnapshot.swift */,
-					7A1C6E2A9B4D4F1A8C3E2A17 /* MaterialCardMetadata.swift */,
-					7A1C6E2A9B4D4F1A8C3E2A19 /* SidebarItem.swift */,
-					A1000000000000000000005C /* RecordingStatus.swift */,
+				A1000000000000000000001D /* SourceItem.swift */,
+				7A1C6E2A9B4D4F1A8C3E2A11 /* ClipboardCardPresentation.swift */,
+				7A1C6E2A9B4D4F1A8C3E2A13 /* MaterialCardGridLayout.swift */,
+				7A1C6E2A9B4D4F1A8C3E2A15 /* ClipboardPinWindowSnapshot.swift */,
+				7A1C6E2A9B4D4F1A8C3E2A17 /* MaterialCardMetadata.swift */,
+				7A1C6E2A9B4D4F1A8C3E2A19 /* SidebarItem.swift */,
+				A1000000000000000000005C /* RecordingStatus.swift */,
 				A10000000000000000000071 /* KnowledgeCard.swift */,
 				A10000000000000000000072 /* VaultConfig.swift */,
 				A100000000000000000004A0 /* ModelRoutingTypes.swift */,
@@ -982,6 +1096,9 @@
 				A1000000000000000000041C /* NotchV2StatusStrip.swift */,
 				A1000000000000000000041E /* SystemEventHUD.swift */,
 				A1000000000000000000018E /* CompanionView.swift */,
+				25FBFE4F86258D83AC05CC24 /* Data */,
+				BE4AB2822981A02092F4CE72 /* ScreenshotCaptureView.swift */,
+				37C62635322E9D8980DD74CB /* ScreenshotPreviewWindow.swift */,
 			);
 			path = Companion;
 			sourceTree = "<group>";
@@ -991,6 +1108,8 @@
 			children = (
 				A10000000000000000000158 /* ClipboardView.swift */,
 				C1000000000000000000000D /* PasteQueuePanel.swift */,
+				4F8AD245807BDDD59B03B9C5 /* ClipboardPreviewView.swift */,
+				193C89CB34AEAEBD3F3CC2AF /* TagSelectorView.swift */,
 			);
 			path = Clipboard;
 			sourceTree = "<group>";
@@ -1055,6 +1174,48 @@
 				A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */,
 				A1000000000000000000051D /* SourceItemTests.swift */,
 				C10000000000000000000011 /* ClipboardPipelineTests.swift */,
+				473B603795DD420662D83F33 /* AIRuntimeServiceLoggingTests.swift */,
+				E79D8188A908184C1622F543 /* AgentMemoryServiceTests.swift */,
+				AC0376AC87145477E0E1E9B1 /* AgentModelRouterNewFeatureTests.swift */,
+				FABD548B129EDD22129002F8 /* AgentModelRouterUsageTests.swift */,
+				171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */,
+				7F1A0128C3DDCBD32AEEA7A0 /* AgentSkillServiceTests.swift */,
+				65ED0234D0F001D276EB1DF9 /* AgentTaskBoardServiceTests.swift */,
+				D45E075A17DA8C41A0644786 /* AgentToolRouterTests.swift */,
+				82DA4FD07A1D2DD16C15DD05 /* AudioMuteGuardTests.swift */,
+				5BEF1FF81194780A42C81D3D /* BatteryStatusReaderTests.swift */,
+				0666ED9ABC891A9E3B498761 /* CaptureServiceVoiceTests.swift */,
+				8C4E3B316A92D017F27C3227 /* ClipboardPinLayoutTests.swift */,
+				AD20FC5BD5E768DF73B5C435 /* ClipboardServiceLifecycleTests.swift */,
+				79BA19D630675AE7E42E252A /* CloudSyncMergeTests.swift */,
+				FB5147E7E0482D28DFA9F8EF /* CloudSyncServicePrivacyTests.swift */,
+				69CA71F4D016A13D7FBF7409 /* CompanionCaptureSaveDestinationTests.swift */,
+				666DF2A5E6AB9F8D58D5C425 /* CompanionConfigurationStoreTests.swift */,
+				57854295304949BD7A60B09F /* CorrectionServiceTests.swift */,
+				1D55731845CA313E8BD65F9A /* DistillServiceTests.swift */,
+				368289451AF72AECCE215B64 /* ExportServiceTests.swift */,
+				589B701A2FE81B3A72D22481 /* HotCornerManagerTests.swift */,
+				AB4206751427FE6FD8EFB104 /* HotCornerSettingsTests.swift */,
+				400A764CE5538B9155D6BA51 /* HotkeyRegistryStoreTests.swift */,
+				B6EB4EA7F95D52AB69850369 /* KeyboardShortcutParsingTests.swift */,
+				BA12B02AAB662B1B166D4D66 /* KnowledgeServiceNewFeatureTests.swift */,
+				107A93EE7555D32E3BBA2495 /* MarkdownBuilderNewFeatureTests.swift */,
+				16C29C7BE67FFEC7B209D383 /* ModelManagementSortOptionTests.swift */,
+				058433B8000B2A32C2499B61 /* PermissionManagerTests.swift */,
+				8AC31D352A1DAFB43E2F99AC /* PermissionStatusReaderTests.swift */,
+				1A99B22F22BA00B7F389273B /* PluginManagerTests.swift */,
+				BD44DDB60310419F0B14859C /* SayInputCoordinatorTests.swift */,
+				AB3F2A4D9FBDA12740C78B52 /* ScheduleServiceTests.swift */,
+				4B676AD629E05CCB0948AAB2 /* ScheduleViewModelSearchTests.swift */,
+				93010469BF47C9F8021B1829 /* SettingsServiceInitTests.swift */,
+				22FA6BB8339B7405BF83EAEE /* SidebarItemTests.swift */,
+				01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */,
+				81D638B1E68AA2B66772A43D /* SystemStatusCleanupTests.swift */,
+				E002493E93FD8A3C24689AC1 /* SystemStatusMetricsTests.swift */,
+				24C046C4CDB063E3EAACE7A9 /* SystemStatusServiceTests.swift */,
+				40F9CDDDACF6297156633ECA /* TimelineLayoutTests.swift */,
+				93C2B0B9869BA8D9406B1C72 /* VoiceMicrophonePreferenceStoreTests.swift */,
+				C2B7AAEC467C8F7FEBEA9440 /* VoiceServiceProtocolTests.swift */,
 			);
 			path = AcMindKitTests;
 			sourceTree = "<group>";
@@ -1392,10 +1553,17 @@
 				B00000000000000000000313 /* SystemStatusView.swift in Sources */,
 				B00000000000000000000315 /* VoiceEntryView.swift in Sources */,
 				B00000000000000000000317 /* ClipboardViewModel.swift in Sources */,
+				B00000000000000000000319 /* ShortcutRecorderView.swift in Sources */,
 				A1000000000000000000046F /* OOBEWindowController.swift in Sources */,
 				A10000000000000000000605 /* MarqueeTextView.swift in Sources */,
 				A10000000000000000000606 /* SystemStatusComponents.swift in Sources */,
 				A10000000000000000000608 /* AlbumArtworkHeroView.swift in Sources */,
+				1C0651F25CDCE99CAB905DD8 /* NotchDashboardData.swift in Sources */,
+				7ABC6F686E3AA59291B5F42F /* NotchDashboardDataProvider.swift in Sources */,
+				E173F6B01A6A51857A5161F0 /* ScreenshotCaptureView.swift in Sources */,
+				C325242CA1972A1C17A5A079 /* ScreenshotPreviewWindow.swift in Sources */,
+				D6078832E89826C31EC7784E /* ClipboardPreviewView.swift in Sources */,
+				4AF6EDD68B3A9C2EFA8DEC64 /* TagSelectorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1492,7 +1660,10 @@
 				A100000000000000000002B6 /* TimelineLayout.swift in Sources */,
 				A1000000000000000000016E /* TextInjector.swift in Sources */,
 				A1000000000000000000016F /* AXTextInjector.swift in Sources */,
+				A10000000000000000000620 /* StreamingKeyboardWriter.swift in Sources */,
 				A10000000000000000000170 /* VisionOCR.swift in Sources */,
+				A10000000000000000000622 /* AudioMuteGuard.swift in Sources */,
+				A10000000000000000000624 /* CorrectionService.swift in Sources */,
 				A10000000000000000000182 /* DesktopCapsuleConfig.swift in Sources */,
 				A10000000000000000000183 /* ScheduledAgentTask.swift in Sources */,
 				A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */,
@@ -1522,13 +1693,13 @@
 				A1000000000000000000061A /* AgentSkillService.swift in Sources */,
 				A1000000000000000000061C /* AgentTaskBoardService.swift in Sources */,
 				A1000000000000000000061E /* ScheduleService.swift in Sources */,
-					207E12CABBA98EB84C016909 /* ClipboardPinNotifications.swift in Sources */,
-					7A1C6E2A9B4D4F1A8C3E2A12 /* ClipboardCardPresentation.swift in Sources */,
-					7A1C6E2A9B4D4F1A8C3E2A14 /* MaterialCardGridLayout.swift in Sources */,
-					7A1C6E2A9B4D4F1A8C3E2A16 /* ClipboardPinWindowSnapshot.swift in Sources */,
-					7A1C6E2A9B4D4F1A8C3E2A18 /* MaterialCardMetadata.swift in Sources */,
-					7A1C6E2A9B4D4F1A8C3E2A1A /* SidebarItem.swift in Sources */,
-					5FCBF9223432CC743EEA4963 /* ClipboardPinWindowSizing.swift in Sources */,
+				207E12CABBA98EB84C016909 /* ClipboardPinNotifications.swift in Sources */,
+				7A1C6E2A9B4D4F1A8C3E2A12 /* ClipboardCardPresentation.swift in Sources */,
+				7A1C6E2A9B4D4F1A8C3E2A14 /* MaterialCardGridLayout.swift in Sources */,
+				7A1C6E2A9B4D4F1A8C3E2A16 /* ClipboardPinWindowSnapshot.swift in Sources */,
+				7A1C6E2A9B4D4F1A8C3E2A18 /* MaterialCardMetadata.swift in Sources */,
+				7A1C6E2A9B4D4F1A8C3E2A1A /* SidebarItem.swift in Sources */,
+				5FCBF9223432CC743EEA4963 /* ClipboardPinWindowSizing.swift in Sources */,
 				3CB7DEC4CD9B0EC2DBC33BE6 /* CompanionPresentationState.swift in Sources */,
 				A815299FFE494692B1000785 /* ClipboardPinWindowManager.swift in Sources */,
 			);
@@ -1558,6 +1729,48 @@
 				A10000000000000000000519 /* DesktopCapsuleConfigTests.swift in Sources */,
 				A1000000000000000000051C /* SourceItemTests.swift in Sources */,
 				C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */,
+				E52EA90EFEACB8FC38F284AA /* AIRuntimeServiceLoggingTests.swift in Sources */,
+				E752B2C2E999F8F898D1A5CB /* AgentMemoryServiceTests.swift in Sources */,
+				BE1439C2D977679A297F7EDE /* AgentModelRouterNewFeatureTests.swift in Sources */,
+				CB08A0A2158B62699F72F841 /* AgentModelRouterUsageTests.swift in Sources */,
+				0E43A7A1E470D167AFAD33C9 /* AgentQuickAskServiceTests.swift in Sources */,
+				A36F21286046CE6D62F32B11 /* AgentSkillServiceTests.swift in Sources */,
+				36B3456AE74DB54C25D82288 /* AgentTaskBoardServiceTests.swift in Sources */,
+				F36BEBE5989125BD0823753A /* AgentToolRouterTests.swift in Sources */,
+				2B71F15C1A813719590C8600 /* AudioMuteGuardTests.swift in Sources */,
+				9D7F26D2D89EBB50A2AE8FBD /* BatteryStatusReaderTests.swift in Sources */,
+				6A26D6A4B5C3428D22CF06A4 /* CaptureServiceVoiceTests.swift in Sources */,
+				E9C024A74E1E2104D5897B7E /* ClipboardPinLayoutTests.swift in Sources */,
+				4A493E43998DBABF66D53511 /* ClipboardServiceLifecycleTests.swift in Sources */,
+				7AE4E7483265315C66ED22D5 /* CloudSyncMergeTests.swift in Sources */,
+				685621FEFC42EE538F8EB563 /* CloudSyncServicePrivacyTests.swift in Sources */,
+				5DE245A738EE3BC09FFF0EDD /* CompanionCaptureSaveDestinationTests.swift in Sources */,
+				675F80097743C247C75CFE25 /* CompanionConfigurationStoreTests.swift in Sources */,
+				B7A4C8CBB6E71AF86E6548EF /* CorrectionServiceTests.swift in Sources */,
+				ADE0D5BD7B11CF8EE3EEEB96 /* DistillServiceTests.swift in Sources */,
+				3660C5DD262B8A4172E535A3 /* ExportServiceTests.swift in Sources */,
+				3214DE808323802B2E19E212 /* HotCornerManagerTests.swift in Sources */,
+				AD072D5C46BBC0846D6678C7 /* HotCornerSettingsTests.swift in Sources */,
+				CFBBBBD910CB504C891A7691 /* HotkeyRegistryStoreTests.swift in Sources */,
+				F739C8B13501C907C533B70D /* KeyboardShortcutParsingTests.swift in Sources */,
+				3230762FEFACAFB0FDFA3EB9 /* KnowledgeServiceNewFeatureTests.swift in Sources */,
+				B80B67EDED0FB1CF36EA15DF /* MarkdownBuilderNewFeatureTests.swift in Sources */,
+				40020FF70158529C104CC554 /* ModelManagementSortOptionTests.swift in Sources */,
+				34C18D3060C9F0653D249322 /* PermissionManagerTests.swift in Sources */,
+				55128628C00A9E7F932A4E1C /* PermissionStatusReaderTests.swift in Sources */,
+				EB26FECC2FE2801567649D1C /* PluginManagerTests.swift in Sources */,
+				15949678016CFF62ADE25EFC /* SayInputCoordinatorTests.swift in Sources */,
+				08DE15194A8B21CCEFF77141 /* ScheduleServiceTests.swift in Sources */,
+				73B9A2706D6CB327252F4655 /* ScheduleViewModelSearchTests.swift in Sources */,
+				8A0A3CBBD1F6B1DE93A8807E /* SettingsServiceInitTests.swift in Sources */,
+				13368FE91E928A672B830E8E /* SidebarItemTests.swift in Sources */,
+				0DD468BB3560D2BED70F5458 /* StreamingKeyboardWriterTests.swift in Sources */,
+				21A69308863F294061C2F55D /* SystemStatusCleanupTests.swift in Sources */,
+				9719E7809C15EB189D3D2C3C /* SystemStatusMetricsTests.swift in Sources */,
+				AEA80E030DCD2FF81B38E3D3 /* SystemStatusServiceTests.swift in Sources */,
+				7178571BBD78E5C2010987FB /* TimelineLayoutTests.swift in Sources */,
+				259AEBAE0CAED41C3408E848 /* VoiceMicrophonePreferenceStoreTests.swift in Sources */,
+				8CE6FA48BAD79DE72271AD0E /* VoiceServiceProtocolTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

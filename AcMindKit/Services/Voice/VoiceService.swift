@@ -13,44 +13,48 @@ import CoreAudio
 /// 5. 文本插入（通过 TextInjector）
 /// 6. 状态管理和回调
 public actor VoiceService: VoiceServiceProtocol {
-    
+
     // MARK: - Dependencies
-    
+
     private let storage: StorageServiceProtocol
     private let assetStore: AssetStore
     private let aiRuntime: AIRuntimeProtocol?
     private nonisolated let permissionManager: PermissionManager?
-    
+
     // 新增模块
     private var sttRouter: STTRouter?
     private var textInjector: TextInjector?
     private var polishService: PolishService?
-    
+
     // MARK: - State
-    
+
     private var recorder: AVAudioRecorder?
     private var currentRecordingURL: URL?
     private var status: RecordingStatus = .idle
     private var recordingStartTime: Date?
     private var statusHandler: (@Sendable (RecordingStatus) -> Void)?
     private var restoredInputDeviceID: AudioDeviceID?
-    
+
     // MARK: - Realtime Transcription
-    
+
     private var realtimeSession: RealtimeTranscriptionSession?
     private var audioEngineForRealtime: AVAudioEngine?
     private var recorderWasRecording: Bool = false
-    
+
+    public var isRealtimeActive: Bool {
+        audioEngineForRealtime != nil && realtimeSession != nil
+    }
+
     // MARK: - ASR Configuration
-    
+
     private var sttProvider: STTProvider = .appleSpeech
-    
+
     // Legacy: 保留旧枚举以兼容
     public enum ASRProvider: String, Sendable, CaseIterable {
         case whisperLocal = "whisper_local"
         case whisperAPI = "whisper_api"
         case system = "system"
-        
+
         public var displayName: String {
             switch self {
             case .whisperLocal: return "本地 Whisper"
@@ -58,7 +62,7 @@ public actor VoiceService: VoiceServiceProtocol {
             case .system: return "系统听写"
             }
         }
-        
+
         /// 转换到新的 STTProvider
         public var toSTTProvider: STTProvider {
             switch self {
@@ -68,9 +72,9 @@ public actor VoiceService: VoiceServiceProtocol {
             }
         }
     }
-    
+
     // MARK: - Initialization
-    
+
     public init(
         storage: StorageServiceProtocol? = nil,
         assetStore: AssetStore? = nil,
@@ -85,24 +89,24 @@ public actor VoiceService: VoiceServiceProtocol {
         self.permissionManager = permissionManager
         self.sttRouter = sttRouter
         self.textInjector = textInjector ?? AXTextInjector()
-        
+
         // 初始化润色服务
         if let aiRuntime = self.aiRuntime {
             self.polishService = PolishService(aiRuntime: aiRuntime)
         }
-        
+
         // 初始化 STTRouter（如果未提供）
         if self.sttRouter == nil {
             self.sttRouter = STTRouter(provider: .appleSpeech)
         }
     }
-    
+
     // MARK: - Status Handler
-    
+
     public func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) {
         self.statusHandler = handler
     }
-    
+
     private func updateStatus(_ newStatus: RecordingStatus) {
         status = newStatus
         let handler = statusHandler
@@ -110,9 +114,9 @@ public actor VoiceService: VoiceServiceProtocol {
             handler?(newStatus)
         }
     }
-    
+
     // MARK: - Recording Control
-    
+
     public func startRecording() async throws {
         // 检查麦克风权限
         let permissionGranted = await requestMicrophonePermission()
@@ -160,66 +164,71 @@ public actor VoiceService: VoiceServiceProtocol {
             throw error
         }
     }
-    
+
     public func stopRecording() async throws -> String {
-        guard let recorder = recorder else {
-            throw VoiceError.notRecording
-        }
-        
-        if recorder.isRecording {
-            recorder.stop()
-        }
         updateStatus(.processing)
         restoreDefaultMicrophoneSelectionIfNeeded()
-        
-        guard let recordingURL = currentRecordingURL else {
-            throw VoiceError.noRecordingFile
-        }
-        
-        // 保存到 AssetStore
-        let assetFile = try await saveRecordingToAssetStore(url: recordingURL)
-        
-        // 创建 SourceItem
         let duration = recordingStartTime.map { Date().timeIntervalSince($0) } ?? 0
+
+        if let recorder = recorder {
+            if recorder.isRecording {
+                recorder.stop()
+            }
+
+            if let recordingURL = currentRecordingURL {
+                let assetFile = try await saveRecordingToAssetStore(url: recordingURL)
+                let sourceItem = SourceItem(
+                    type: .audio,
+                    source: .voice,
+                    status: .captured,
+                    title: "语音记录 \(formatDate())",
+                    previewText: "录音时长: \(formatDuration(duration))",
+                    assetFileIds: [assetFile.id],
+                    metadata: [
+                        "duration": String(duration),
+                        "asrProvider": sttProvider.rawValue
+                    ]
+                )
+                try await storage.insertSourceItem(sourceItem)
+                Task {
+                    await performTranscription(sourceItem: sourceItem, assetFile: assetFile)
+                }
+                return sourceItem.id
+            }
+        }
+
         let sourceItem = SourceItem(
             type: .audio,
             source: .voice,
             status: .captured,
             title: "语音记录 \(formatDate())",
             previewText: "录音时长: \(formatDuration(duration))",
-            assetFileIds: [assetFile.id],
+            assetFileIds: [],
             metadata: [
                 "duration": String(duration),
                 "asrProvider": sttProvider.rawValue
             ]
         )
-        
         try await storage.insertSourceItem(sourceItem)
-        
-        // 异步转写
-        Task {
-            await performTranscription(sourceItem: sourceItem, assetFile: assetFile)
-        }
-        
         return sourceItem.id
     }
-    
+
     private func saveRecordingToAssetStore(url: URL) async throws -> AssetFile {
         // 读取录音数据
         let data = try Data(contentsOf: url)
-        
+
         // 保存到 AssetStore
         let fileName = "recording_\(Date().timeIntervalSince1970).m4a"
         let assetFile = try await assetStore.saveAudio(data: data, fileName: fileName)
-        
+
         // 清理临时文件
         try? FileManager.default.removeItem(at: url)
-        
+
         return assetFile
     }
-    
+
     // MARK: - Transcription
-    
+
     public func transcribe(audioURL: URL) async throws -> String {
         if let router = sttRouter {
             let audioFile = AudioFile(url: audioURL)
@@ -235,20 +244,20 @@ public actor VoiceService: VoiceServiceProtocol {
             return try await transcribeWithWhisperAPI(audioURL: audioURL)
         }
     }
-    
+
     public func transcribe(audioURL: URL, language: String) async throws -> String {
         guard language != "auto" else {
             return try await transcribe(audioURL: audioURL)
         }
-        
+
         if let router = sttRouter {
             let audioFile = AudioFile(url: audioURL)
             return try await router.transcribe(audioFile: audioFile, language: language)
         }
-        
+
         return try await transcribe(audioURL: audioURL)
     }
-    
+
     public func transcribeStream(
         audioURL: URL,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
@@ -258,34 +267,34 @@ public actor VoiceService: VoiceServiceProtocol {
             await onUpdate(TranscriptionSnapshot(text: text, isFinal: true))
             return text
         }
-        
+
         let audioFile = AudioFile(url: audioURL)
         return try await router.transcribeStream(audioFile: audioFile, onUpdate: onUpdate)
     }
-    
+
     // MARK: - Realtime Transcription
-    
+
     public func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws {
         guard let router = sttRouter else {
             throw VoiceError.asrNotAvailable("STTRouter 未初始化")
         }
-        
+
         let transcriber = try await router.getTranscriber()
-        guard let session = transcriber.createRealtimeSession() else {
+        guard var session = transcriber.createRealtimeSession() else {
             throw VoiceError.asrNotAvailable("当前引擎不支持实时转写")
         }
         session.onUpdate = onUpdate
         realtimeSession = session
-        
+
         recorderWasRecording = recorder?.isRecording == true
         if recorderWasRecording {
             recorder?.pause()
         }
-        
+
         let engine = AVAudioEngine()
         let inputNode = engine.inputNode
         let format = inputNode.inputFormat(forBus: 0)
-        
+
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, _ in
             guard let self = self else { return }
             let pcmData = self.convertToPCM16(buffer: buffer)
@@ -293,23 +302,23 @@ public actor VoiceService: VoiceServiceProtocol {
                 try? await self.realtimeSession?.sendAudioData(pcmData)
             }
         }
-        
+
         engine.prepare()
         try engine.start()
         audioEngineForRealtime = engine
     }
-    
+
     public func stopRealtimeTranscription() async throws -> String {
         audioEngineForRealtime?.stop()
         audioEngineForRealtime?.inputNode.removeTap(onBus: 0)
         audioEngineForRealtime = nil
-        
+
         guard let session = realtimeSession else { return "" }
         realtimeSession = nil
         return try await session.finish()
     }
-    
-    private func convertToPCM16(buffer: AVAudioPCMBuffer) -> Data {
+
+    nonisolated private func convertToPCM16(buffer: AVAudioPCMBuffer) -> Data {
         let channelData = buffer.floatChannelData![0]
         let frames = buffer.frameLength
         var pcm16 = Data(count: Int(frames) * 2)
@@ -322,20 +331,20 @@ public actor VoiceService: VoiceServiceProtocol {
         }
         return pcm16
     }
-    
+
     private func performTranscription(sourceItem: SourceItem, assetFile: AssetFile) async {
         do {
             let audioURL = URL(fileURLWithPath: assetFile.filePath)
             let preferredLanguage = (try? await getVoiceSettings())?.preferredLanguage ?? "auto"
             let transcript = try await transcribe(audioURL: audioURL, language: preferredLanguage)
-            
+
             var updatedItem = sourceItem
             updatedItem.transcript = transcript
             updatedItem.previewText = transcript.prefix(200).description
             updatedItem.status = .parsed
-            
+
             try await storage.updateSourceItem(updatedItem)
-            
+
             if let settings = try? await getVoiceSettings(),
                settings.autoPolish,
                settings.voicePolishMode != .none {
@@ -347,31 +356,31 @@ public actor VoiceService: VoiceServiceProtocol {
                 updatedItem.polishedTranscript = polished
                 try await storage.updateSourceItem(updatedItem)
             }
-            
+
             updateStatus(.idle)
-            
+
         } catch {
             updateStatus(.error)
             print("转写失败: \(error)")
         }
     }
-    
+
     /// 使用 Apple Speech 转写
     private func transcribeWithAppleSpeech(audioURL: URL) async throws -> String {
         let transcriber = AppleSpeechTranscriber()
         let audioFile = AudioFile(url: audioURL)
         return try await transcriber.transcribe(audioFile: audioFile)
     }
-    
+
     private func transcribeWithLocalWhisper(audioURL: URL) async throws -> String {
         // 检查 whisper.cpp 是否可用
         let whisperPath = Bundle.main.path(forResource: "whisper", ofType: nil)
             ?? "/usr/local/bin/whisper"
-        
+
         guard FileManager.default.fileExists(atPath: whisperPath) else {
             throw VoiceError.asrNotAvailable("本地 Whisper 未安装")
         }
-        
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: whisperPath)
         process.arguments = [
@@ -381,36 +390,36 @@ public actor VoiceService: VoiceServiceProtocol {
             "--output_format", "txt",
             "--output_dir", FileManager.default.temporaryDirectory.path
         ]
-        
+
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         process.standardOutput = outputPipe
         process.standardError = errorPipe
-        
+
         try process.run()
         process.waitUntilExit()
-        
+
         if process.terminationStatus != 0 {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
             let errorMessage = String(data: errorData, encoding: .utf8) ?? "转写失败"
             throw VoiceError.transcriptionFailed(errorMessage)
         }
-        
+
         // 读取输出文件
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(audioURL.deletingPathExtension().lastPathComponent)
             .appendingPathExtension("txt")
-        
+
         guard FileManager.default.fileExists(atPath: outputURL.path) else {
             throw VoiceError.transcriptionFailed("输出文件未生成")
         }
-        
+
         let transcript = try String(contentsOf: outputURL, encoding: .utf8)
         try? FileManager.default.removeItem(at: outputURL)
-        
+
         return transcript.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private func transcribeWithWhisperAPI(audioURL: URL) async throws -> String {
         guard let apiKey = await SecretStore.shared.getAPIKey(for: "openai") else {
             throw VoiceError.asrNotAvailable("OpenAI API Key 未配置")
@@ -419,20 +428,20 @@ public actor VoiceService: VoiceServiceProtocol {
         let transcriber = OpenAIWhisperTranscriber(apiKey: apiKey)
         return try await transcriber.transcribe(audioFile: AudioFile(url: audioURL))
     }
-    
+
     // MARK: - Polish
-    
+
     public func polishTranscript(_ text: String, mode: VoicePolishMode) async throws -> String {
         try await polishTranscript(text, mode: mode, hotwords: [], customSystemPrompt: nil, contextInfo: nil)
     }
-    
+
     public func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String], customSystemPrompt: String?, contextInfo: String?) async throws -> String {
         try await polishTranscript(text, mode: mode, hotwords: hotwords, customSystemPrompt: customSystemPrompt, contextInfo: contextInfo, language: "auto")
     }
-    
+
     public func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String], customSystemPrompt: String?, contextInfo: String?, language: String) async throws -> String {
         guard mode != .none else { return text }
-        
+
         var enhancedSystemPrompt = customSystemPrompt
         if enhancedSystemPrompt == nil || enhancedSystemPrompt?.isEmpty == true {
             if language != "auto" {
@@ -447,7 +456,7 @@ public actor VoiceService: VoiceServiceProtocol {
                 enhancedSystemPrompt = PolishPrompts.systemPrompt(for: mode, hotwords: hotwords)
             }
         }
-        
+
         var enhancedText = text
         if let context = contextInfo, !context.isEmpty {
             if language.hasPrefix("en") {
@@ -456,7 +465,7 @@ public actor VoiceService: VoiceServiceProtocol {
                 enhancedText = "上下文信息：\n\(context)\n\n需要润色的文本：\n\(text)"
             }
         }
-        
+
         if let service = polishService {
             return try await service.polish(
                 text: enhancedText,
@@ -466,11 +475,11 @@ public actor VoiceService: VoiceServiceProtocol {
                 language: language
             )
         }
-        
+
         guard let aiRuntime = aiRuntime else {
             throw VoiceError.polishFailed("AI Runtime 未初始化")
         }
-        
+
         let prompt: String
         if language.hasPrefix("en") {
             switch mode {
@@ -503,16 +512,16 @@ public actor VoiceService: VoiceServiceProtocol {
                 return text
             }
         }
-        
+
         let systemMessage = language.hasPrefix("en")
             ? "You are a professional text polishing assistant."
             : "你是一个专业的文本润色助手。"
-        
+
         let messages = [
             ChatMessage(role: "system", content: systemMessage),
             ChatMessage(role: "user", content: prompt)
         ]
-        
+
         let response = try await aiRuntime.chat(messages: messages)
         return response.content
     }
@@ -648,7 +657,7 @@ public actor VoiceService: VoiceServiceProtocol {
 
         return cleanTranslationOutput(fullContent)
     }
-    
+
     /// 润色并插入到光标位置
     public func polishAndInsert(
         text: String,
@@ -657,31 +666,31 @@ public actor VoiceService: VoiceServiceProtocol {
         model: String? = nil
     ) async throws {
         let polished = try await polishTranscript(text, mode: mode)
-        
+
         // 插入到光标位置
         if let injector = textInjector {
             try injector.insert(text: polished)
         }
     }
-    
+
     // MARK: - Status
-    
+
     public func getRecordingStatus() async -> RecordingStatus {
         status
     }
-    
+
     public func getRecordingDuration() async -> TimeInterval {
         guard let startTime = recordingStartTime else { return 0 }
         return Date().timeIntervalSince(startTime)
     }
-    
+
     // MARK: - Configuration
-    
+
     public func setASRProvider(_ provider: ASRProvider) {
         sttProvider = provider.toSTTProvider
         sttRouter?.setProvider(provider.toSTTProvider)
     }
-    
+
     public func getASRProvider() -> ASRProvider {
         switch sttProvider {
         case .senseVoice, .whisperKit, .qwen3ASR, .funASR:
@@ -694,20 +703,20 @@ public actor VoiceService: VoiceServiceProtocol {
             return .system
         }
     }
-    
+
     /// 设置 STT Provider
     public func setSTTProvider(_ provider: STTProvider) {
         sttProvider = provider
         sttRouter?.setProvider(provider)
     }
-    
+
     /// 获取 STT Provider
     public func getSTTProvider() -> STTProvider {
         sttProvider
     }
-    
+
     // MARK: - Helpers
-    
+
     private func configureAudioSession() {
         // macOS 不需要配置音频会话，iOS 才需要
         // 这里可以保留为空或添加 macOS 特定的音频配置
@@ -727,10 +736,10 @@ public actor VoiceService: VoiceServiceProtocol {
         VoiceMicrophoneDeviceCatalog.restoreDefaultInputDevice(id: deviceID)
         restoredInputDeviceID = nil
     }
-    
+
     private func requestMicrophonePermission() async -> Bool {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
-        
+
         switch status {
         case .authorized:
             return true
@@ -743,7 +752,7 @@ public actor VoiceService: VoiceServiceProtocol {
             return false
         }
     }
-    
+
     private func getVoiceSettings() async throws -> VoiceSettings {
         let settingsService = SettingsService(storage: storage)
         return await settingsService.getVoiceSettings()
@@ -863,7 +872,7 @@ public actor VoiceService: VoiceServiceProtocol {
         formatter.dateFormat = "MM-dd HH:mm"
         return formatter.string(from: Date())
     }
-    
+
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
@@ -883,7 +892,7 @@ public enum VoiceError: Error, LocalizedError {
     case polishFailed(String)
     case translationFailed(String)
     case saveFailed(Error)
-    
+
     public var errorDescription: String? {
         switch self {
         case .permissionDenied:
@@ -906,7 +915,7 @@ public enum VoiceError: Error, LocalizedError {
             return "保存失败: \(error.localizedDescription)"
         }
     }
-    
+
     public var recoverySuggestion: String? {
         switch self {
         case .permissionDenied:

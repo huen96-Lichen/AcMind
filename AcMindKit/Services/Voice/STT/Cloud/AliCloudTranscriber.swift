@@ -240,8 +240,8 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
 
 // MARK: - AliCloud Realtime Session
 
-public final class AliCloudRealtimeSession: RealtimeTranscriptionSession, @unchecked Sendable {
-    public var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)?
+public actor AliCloudRealtimeSession: RealtimeTranscriptionSession {
+    nonisolated(unsafe) public var onUpdate: (@Sendable (TranscriptionSnapshot) -> Void)?
 
     private let appId: String
     private let token: String
@@ -331,9 +331,13 @@ public final class AliCloudRealtimeSession: RealtimeTranscriptionSession, @unche
         startReceiveLoop()
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            self.taskStartContinuation = continuation
-            self.sendRunTaskCommand(wsTask: wsTask)
+            Task { await self.beginTaskStart(continuation: continuation, wsTask: wsTask) }
         }
+    }
+
+    private func beginTaskStart(continuation: CheckedContinuation<Void, Error>, wsTask: URLSessionWebSocketTask) async {
+        self.taskStartContinuation = continuation
+        self.sendRunTaskCommand(wsTask: wsTask)
     }
 
     private func sendRunTaskCommand(wsTask: URLSessionWebSocketTask) {
@@ -373,10 +377,14 @@ public final class AliCloudRealtimeSession: RealtimeTranscriptionSession, @unche
             do {
                 try await wsTask.send(.string(json))
             } catch {
-                self.taskStartContinuation?.resume(throwing: error)
-                self.taskStartContinuation = nil
+                await self.resumeTaskStartContinuation(throwing: error)
             }
         }
+    }
+
+    private func resumeTaskStartContinuation(throwing error: Error) async {
+        taskStartContinuation?.resume(throwing: error)
+        taskStartContinuation = nil
     }
 
     private func startReceiveLoop() {
@@ -385,17 +393,21 @@ public final class AliCloudRealtimeSession: RealtimeTranscriptionSession, @unche
         wsTask.receive { [weak self] result in
             guard let self else { return }
 
-            switch result {
-            case .success(let message):
-                self.handleMessage(message)
-                if !self.isFinished {
-                    self.startReceiveLoop()
-                }
-            case .failure:
-                self.isFinished = true
-                self.taskStartContinuation?.resume(throwing: STTError.transcriptionFailed("WebSocket 接收错误"))
-                self.taskStartContinuation = nil
+            Task { await self.handleReceiveResult(result) }
+        }
+    }
+
+    private func handleReceiveResult(_ result: Result<URLSessionWebSocketTask.Message, Error>) {
+        switch result {
+        case .success(let message):
+            handleMessage(message)
+            if !isFinished {
+                startReceiveLoop()
             }
+        case .failure:
+            isFinished = true
+            taskStartContinuation?.resume(throwing: STTError.transcriptionFailed("WebSocket 接收错误"))
+            taskStartContinuation = nil
         }
     }
 

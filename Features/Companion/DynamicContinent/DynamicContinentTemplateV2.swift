@@ -70,7 +70,7 @@ struct DynamicContinentTemplateV2: View {
                 case .agent:
                     DynamicContinentAgentPage(viewModel: viewModel)
                 case .systemStatus:
-                    DynamicContinentSystemStatusPage(systemStatusService: serviceContainer.systemStatusService)
+                    DynamicContinentSystemStatusPage(viewModel: viewModel)
                 case .schedule:
                     DynamicContinentSchedulePage(viewModel: viewModel)
                 }

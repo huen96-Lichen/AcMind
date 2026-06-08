@@ -49,9 +49,9 @@ public actor SilenceDetectionService {
     public func startMonitoring(
         silenceThreshold: Float = -30.0,
         silenceTimeout: TimeInterval = 3.0,
-        onSilenceDetected: @escaping () -> Void,
-        onSpeechDetected: @escaping () -> Void,
-        onEnergyChanged: @escaping (Float) -> Void
+        onSilenceDetected: @escaping @Sendable () -> Void,
+        onSpeechDetected: @escaping @Sendable () -> Void,
+        onEnergyChanged: @escaping @Sendable (Float) -> Void
     ) async throws {
         guard !isMonitoring else { return }
         

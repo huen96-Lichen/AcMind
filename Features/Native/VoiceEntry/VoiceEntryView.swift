@@ -233,6 +233,10 @@ struct VoiceEntryView: View {
                 }
             }
 
+            settingCard(title: "纠错规则", description: "ASR 转写后、润色前自动应用的确定性文本替换。") {
+                correctionRulesSection
+            }
+
             settingCard(title: "输出与连续输入", description: "控制交付目标、收集箱和延续窗口。") {
                 pickerRow(title: "输出方式", description: "说入法最终如何交付文本。", selection: persistedBinding(\.voiceOutputMode)) {
                     ForEach(SayInputOutputMode.allCases) { mode in
@@ -259,6 +263,8 @@ struct VoiceEntryView: View {
                 toggleRow(title: "启用静音检测", description: "检测长静音后自动停止录音。", isOn: persistedBinding(\.voiceEnableSilenceDetection))
                 divider
                 stepperRow(title: "静音超时", description: "达到该时长后自动停录。", value: persistedBinding(\.voiceSilenceTimeout), range: 1...10, step: 0.5, format: { "\($0.formatted(.number.precision(.fractionLength(1))))s" })
+                divider
+                toggleRow(title: "录音时静音系统音频", description: "录音期间临时静音系统输出，防止扬声器回声影响识别。", isOn: persistedBinding(\.muteSystemAudioDuringRecording))
                 divider
                 pickerRow(title: "注入策略", description: "文本写回焦点输入框的方式。", selection: persistedBinding(\.injectionStrategy)) {
                     ForEach(injectionOptions, id: \.id) { option in
@@ -523,6 +529,62 @@ struct VoiceEntryView: View {
         case .requesting: return .blue
         case .needsSystemSettings, .denied, .restricted, .failed: return .orange
         }
+    }
+
+    private var correctionRulesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(viewModel.correctionRules, id: \.id) { rule in
+                HStack(spacing: 10) {
+                    TextField("匹配", text: correctionRuleBinding(for: rule, keyPath: \.pattern))
+                        .textFieldStyle(.roundedBorder)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    TextField("替换", text: correctionRuleBinding(for: rule, keyPath: \.replacement))
+                        .textFieldStyle(.roundedBorder)
+                    Toggle("正则", isOn: correctionRuleBinding(for: rule, keyPath: \.isRegex))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                    Button {
+                        if let idx = viewModel.correctionRules.firstIndex(where: { $0.id == rule.id }) {
+                            viewModel.correctionRules.remove(at: idx)
+                            Task { await viewModel.saveSettings() }
+                        }
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(.red.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Button {
+                viewModel.correctionRules.append(CorrectionRule(pattern: "", replacement: ""))
+                Task { await viewModel.saveSettings() }
+            } label: {
+                Label("添加规则", systemImage: "plus.circle")
+                    .font(.system(size: 13))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppSurfaceTokens.accentBlue)
+        }
+    }
+
+    private func correctionRuleBinding<T: Equatable>(for rule: CorrectionRule, keyPath: WritableKeyPath<CorrectionRule, T>) -> Binding<T> {
+        Binding<T>(
+            get: {
+                guard let idx = viewModel.correctionRules.firstIndex(where: { $0.id == rule.id }) else {
+                    return rule[keyPath: keyPath]
+                }
+                return viewModel.correctionRules[idx][keyPath: keyPath]
+            },
+            set: { newValue in
+                guard let idx = viewModel.correctionRules.firstIndex(where: { $0.id == rule.id }) else { return }
+                viewModel.correctionRules[idx][keyPath: keyPath] = newValue
+                Task { await viewModel.saveSettings() }
+            }
+        )
     }
 
     private func persistedBinding<Value>(_ keyPath: ReferenceWritableKeyPath<SettingsViewModel, Value>) -> Binding<Value> {

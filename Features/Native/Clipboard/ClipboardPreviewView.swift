@@ -91,7 +91,7 @@ struct ClipboardPreviewView: View {
 
     private func loadHTMLContent() async {
         guard item.type == .richText, let html = item.htmlContent ?? item.content else { return }
-        let attributed = await Task.detached(priority: .userInitiated) {
+        let attributed: NSAttributedString? = {
             guard let data = html.data(using: .utf8) else { return nil }
             return try? NSAttributedString(
                 data: data,
@@ -101,7 +101,7 @@ struct ClipboardPreviewView: View {
                 ],
                 documentAttributes: nil
             )
-        }.value
+        }()
 
         if let attributed {
             await MainActor.run {

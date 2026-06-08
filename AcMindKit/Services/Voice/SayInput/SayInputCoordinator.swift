@@ -64,6 +64,10 @@ public struct SayInputConfiguration: Sendable, Equatable {
     public var enableSilenceDetection: Bool
     public var preferredLanguage: String
     public var translationLanguage: String
+    public var correctionRules: [CorrectionRule]
+    public var muteSystemAudioDuringRecording: Bool
+    public var enablePunctuationAppend: Bool
+    public var injectionStrategy: String
 
     public init(
         autoPolish: Bool = true,
@@ -78,7 +82,11 @@ public struct SayInputConfiguration: Sendable, Equatable {
         silenceTimeout: TimeInterval = 3.0,
         enableSilenceDetection: Bool = false,
         preferredLanguage: String = "auto",
-        translationLanguage: String = "zh"
+        translationLanguage: String = "zh",
+        correctionRules: [CorrectionRule] = [],
+        muteSystemAudioDuringRecording: Bool = false,
+        enablePunctuationAppend: Bool = false,
+        injectionStrategy: String = "postToPid"
     ) {
         self.autoPolish = autoPolish
         self.polishMode = polishMode
@@ -93,6 +101,10 @@ public struct SayInputConfiguration: Sendable, Equatable {
         self.enableSilenceDetection = enableSilenceDetection
         self.preferredLanguage = preferredLanguage
         self.translationLanguage = translationLanguage
+        self.correctionRules = correctionRules
+        self.muteSystemAudioDuringRecording = muteSystemAudioDuringRecording
+        self.enablePunctuationAppend = enablePunctuationAppend
+        self.injectionStrategy = injectionStrategy
     }
 }
 
@@ -224,8 +236,9 @@ public actor SayInputCoordinator {
     private var capturedPunctuation: [String] = []
     private var streamingWriter: StreamingKeyboardWriter?
     var currentConfiguration: SayInputConfiguration?
+    private let audioMuteGuard = AudioMuteGuard.shared
 
-    public var onRealtimeTranscriptUpdate: (@Sendable (String) -> Void)?
+    nonisolated(unsafe) public var onRealtimeTranscriptUpdate: (@Sendable (String) -> Void)?
     private var isRealtimeASRActive: Bool = false
     private var lastRealtimeResult: String?
 
@@ -261,10 +274,13 @@ public actor SayInputCoordinator {
     // MARK: - Recording Lifecycle
 
     public func startRecording() async throws {
-        try await voiceService.startRecording()
         isRecording = true
         capturedPunctuation = []
         lastRealtimeResult = nil
+
+        if let config = currentConfiguration, config.muteSystemAudioDuringRecording {
+            audioMuteGuard.mute()
+        }
 
         do {
             try await voiceService.startRealtimeTranscription { [weak self] snapshot in
@@ -275,6 +291,7 @@ public actor SayInputCoordinator {
             isRealtimeASRActive = true
         } catch {
             isRealtimeASRActive = false
+            try await voiceService.startRecording()
         }
 
         // 启动静音检测
@@ -302,13 +319,16 @@ public actor SayInputCoordinator {
         // 停止所有监听服务
         await SilenceDetectionService.shared.stopMonitoring()
         await RecordingHotkeyService.shared.stopListening()
+        audioMuteGuard.unmute()
 
+        let sourceItemId: String
         if isRealtimeASRActive {
             lastRealtimeResult = try? await voiceService.stopRealtimeTranscription()
             isRealtimeASRActive = false
+            sourceItemId = try await voiceService.stopRecording()
+        } else {
+            sourceItemId = try await voiceService.stopRecording()
         }
-
-        let sourceItemId = try await voiceService.stopRecording()
         isRecording = false
         isLockedRecording = false
         currentConfiguration = configuration
@@ -323,13 +343,16 @@ public actor SayInputCoordinator {
         // 停止所有监听服务
         await SilenceDetectionService.shared.stopMonitoring()
         await RecordingHotkeyService.shared.stopListening()
+        audioMuteGuard.unmute()
 
+        let sourceItemId: String
         if isRealtimeASRActive {
             _ = try? await voiceService.stopRealtimeTranscription()
             isRealtimeASRActive = false
+            sourceItemId = try await voiceService.stopRecording()
+        } else {
+            sourceItemId = try await voiceService.stopRecording()
         }
-
-        let sourceItemId = try await voiceService.stopRecording()
         isRecording = false
         isLockedRecording = false
         capturedPunctuation = []
@@ -486,10 +509,21 @@ public actor SayInputCoordinator {
             rawText = bestAvailableText(from: fetchedItem)
         }
         lastRealtimeResult = nil
-        let textWithPunctuation = rawText + capturedPunctuation.joined()
+        var textWithPunctuation = rawText + capturedPunctuation.joined()
+        if configuration.enablePunctuationAppend && !textWithPunctuation.isEmpty {
+            let lastChar = textWithPunctuation.last!
+            if !".!?。！？".contains(lastChar) {
+                textWithPunctuation += "。"
+            }
+        }
         guard textWithPunctuation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
             throw SayInputError.emptyTranscript
         }
+
+        let correctedText = await CorrectionService.shared.applyCorrections(
+            to: textWithPunctuation,
+            rules: configuration.correctionRules
+        )
 
         let hotwords = await PersonalDictionaryService.shared.getHotwords()
         let customPrompt = await CustomPromptService.shared.getPrompt(for: configuration.polishMode)
@@ -507,7 +541,7 @@ public actor SayInputCoordinator {
                 streamingWriter = writer
                 let streamedText = StreamedTextBuffer()
                 polishedText = try await voiceService.polishTranscriptStream(
-                    textWithPunctuation,
+                    correctedText,
                     mode: configuration.polishMode,
                     hotwords: hotwords,
                     customSystemPrompt: customPrompt,
@@ -526,7 +560,7 @@ public actor SayInputCoordinator {
             } else if let onPolishChunk {
                 let streamedText = StreamedTextBuffer()
                 polishedText = try await voiceService.polishTranscriptStream(
-                    textWithPunctuation,
+                    correctedText,
                     mode: configuration.polishMode,
                     hotwords: hotwords,
                     customSystemPrompt: customPrompt,
@@ -538,7 +572,7 @@ public actor SayInputCoordinator {
                 }
             } else {
                 polishedText = try await voiceService.polishTranscript(
-                    textWithPunctuation,
+                    correctedText,
                     mode: configuration.polishMode,
                     hotwords: hotwords,
                     customSystemPrompt: customPrompt,
@@ -547,7 +581,7 @@ public actor SayInputCoordinator {
                 )
             }
         } else {
-            polishedText = textWithPunctuation
+            polishedText = correctedText
         }
 
         let outputText: String
@@ -582,6 +616,39 @@ public actor SayInputCoordinator {
             deliveryState = .insertedIntoFocusedField
             lastClipboardText = outputText
             lastClipboardDeliveryAt = now
+        } else if configuration.injectionStrategy == "clipboard" {
+            let deliveredText = mergeWithContinuationIfNeeded(
+                outputText,
+                now: now,
+                allowContinuation: configuration.allowContinuation,
+                continuationWindow: configuration.continuationWindow
+            )
+            clipboard.setString(deliveredText)
+            clipboardOverwritten = true
+            lastClipboardText = deliveredText
+            lastClipboardDeliveryAt = now
+            deliveryState = .copiedToClipboard
+        } else if configuration.injectionStrategy == "streaming" && snapshot.isFocusedTarget {
+            let writer = StreamingKeyboardWriter()
+            await writer.write(chunk: outputText)
+            let writeSuccess = await writer.finish()
+            if writeSuccess {
+                deliveryState = .insertedIntoFocusedField
+                lastClipboardText = outputText
+                lastClipboardDeliveryAt = now
+            } else {
+                let deliveredText = mergeWithContinuationIfNeeded(
+                    outputText,
+                    now: now,
+                    allowContinuation: configuration.allowContinuation,
+                    continuationWindow: configuration.continuationWindow
+                )
+                clipboard.setString(deliveredText)
+                clipboardOverwritten = true
+                lastClipboardText = deliveredText
+                lastClipboardDeliveryAt = now
+                deliveryState = configuration.saveToInbox ? .copiedAndSavedToInbox : .copiedToClipboard
+            }
         } else if snapshot.isFocusedTarget {
             do {
                 if snapshot.canReplaceSelection {

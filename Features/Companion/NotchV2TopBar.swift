@@ -242,7 +242,7 @@ struct NotchV2TopBar: View {
     }
 }
 
-    private struct MiniVoiceWaveform: View {
+    struct MiniVoiceWaveform: View {
         let mode: NotchV2VoiceWaveformMode
         let accent: Color
 

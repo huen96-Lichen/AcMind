@@ -149,6 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         isTerminating = true
+        AudioMuteGuard.shared.forceRestore()
 
         // 清理资源
         Task {
@@ -796,6 +797,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         await refreshCompanionShortcuts()
         setupFnKeyMonitor()
         setupHeadphoneMonitor()
+
+        if let shortcut = UserDefaults.standard.string(forKey: "companionVoiceShortcut"), !shortcut.isEmpty {
+            registerVoiceShortcut(shortcut)
+        }
     }
 
     private func refreshCompanionShortcuts() async {

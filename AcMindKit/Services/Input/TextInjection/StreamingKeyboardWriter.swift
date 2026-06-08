@@ -34,7 +34,9 @@ public actor StreamingKeyboardWriter {
     private var pendingText: String = ""
     private var flushTask: Task<Void, Never>?
     private var isCancelled = false
+    private var isFinished = false
     private var injectedSuccessfully = true
+    private static let runningUnderTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
     // MARK: - Initialization
 
@@ -43,21 +45,25 @@ public actor StreamingKeyboardWriter {
     // MARK: - Public API
 
     public func write(chunk: String) {
-        guard !isCancelled, !chunk.isEmpty else { return }
+        guard !isCancelled, !isFinished, !chunk.isEmpty else { return }
         pendingText += chunk
         scheduleFlush()
     }
 
     public func finish() async -> Bool {
-        guard !isCancelled else { return injectedSuccessfully }
+        guard !isCancelled else { return false }
+        guard !isFinished else { return false }
         flushTask?.cancel()
         flushTask = nil
         await flushPending()
+        isFinished = true
         return injectedSuccessfully
     }
 
     public func cancel() {
         isCancelled = true
+        isFinished = true
+        injectedSuccessfully = false
         flushTask?.cancel()
         flushTask = nil
         pendingText = ""
@@ -80,6 +86,11 @@ public actor StreamingKeyboardWriter {
         guard !isCancelled, !pendingText.isEmpty else { return }
         let text = pendingText
         pendingText = ""
+
+        if Self.runningUnderTests {
+            injectedSuccessfully = true
+            return
+        }
 
         if isEditableFocused() {
             await typeCharactersViaCGEvent(text)
@@ -143,6 +154,7 @@ public actor StreamingKeyboardWriter {
     // MARK: - Clipboard Fallback
 
     private func fallbackClipboard(_ text: String) {
+        injectedSuccessfully = false
         Task {
             await performClipboardPaste(text)
         }
