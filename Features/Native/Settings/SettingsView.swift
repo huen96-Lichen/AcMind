@@ -40,6 +40,15 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     }
 }
 
+fileprivate func usageBurnColor(for severity: UsageBurnSeverity) -> Color {
+    switch severity {
+    case .none: return AppSurfaceTokens.accentGreen
+    case .info: return AppSurfaceTokens.accentBlue
+    case .warning: return AppSurfaceTokens.accentOrange
+    case .critical: return .red
+    }
+}
+
 // MARK: - Settings View
 
 struct SettingsView: View {
@@ -47,6 +56,9 @@ struct SettingsView: View {
     @State private var selectedCategory: SettingsCategory = .general
     @State private var searchQuery = ""
     @State private var recordingShortcutTarget: ShortcutRecordingTarget?
+    @State private var pluginSummaries: [PluginManagementSummary] = []
+    @State private var isLoadingPluginSummaries = false
+    @State private var pluginSummaryError: String?
     private let cloudSyncService: CloudSyncServiceProtocol
 
     init(cloudSyncService: CloudSyncServiceProtocol = CloudSyncService(storage: StorageService())) {
@@ -103,6 +115,9 @@ struct SettingsView: View {
                 target.apply(shortcut: shortcut, on: viewModel)
             }
         }
+        .task {
+            await loadPluginSummaries()
+        }
     }
 
     private var settingsSidebar: some View {
@@ -156,15 +171,151 @@ struct SettingsView: View {
                         Text("搜索: \(searchQuery.isEmpty ? "无" : searchQuery)")
                             .font(.system(size: 12))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        Text("快捷键录制: \(recordingShortcutTarget == nil ? "未开启" : "进行中")")
+                        Text(
+                            "快捷键录制: " + SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: recordingShortcutTarget != nil,
+                                enabledText: "进行中",
+                                disabledText: "未开启"
+                            )
+                        )
                             .font(.system(size: 12))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                }
+
+                AppSurfaceCard(title: "插件扩展", subtitle: "ASR / 润色 / 注入扩展概览", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text(pluginSummaryHeadline)
+                                .font(.system(size: 12))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            Spacer()
+                            Button(isLoadingPluginSummaries ? "刷新中..." : "刷新") {
+                                Task {
+                                    await loadPluginSummaries()
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(isLoadingPluginSummaries)
+                        }
+
+                        if let pluginSummaryError {
+                            Text(pluginSummaryError)
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppSurfaceTokens.accentOrange)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if pluginSummaries.isEmpty {
+                            Text("尚未发现插件，放入插件目录后会在这里显示状态。")
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(pluginSummaries.prefix(4)) { summary in
+                                    pluginSummaryRow(summary)
+                                }
+                            }
+
+                            if pluginSummaries.count > 4 {
+                                Text("还有 \(pluginSummaries.count - 4) 个插件未展开")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            }
+                        }
                     }
                 }
             }
             .padding(16)
         }
         .background(AppSurfaceTokens.secondarySidebarBackground)
+    }
+
+    private var pluginSummaryHeadline: String {
+        if isLoadingPluginSummaries {
+            return "正在读取插件状态"
+        }
+        if pluginSummaries.isEmpty {
+            return "暂无插件摘要"
+        }
+
+        let activeCount = pluginSummaries.filter { $0.status == .active }.count
+        let errorCount = pluginSummaries.filter { $0.status == .error }.count
+        return "已发现 \(pluginSummaries.count) 个插件 · \(activeCount) 个运行中 · \(errorCount) 个错误"
+    }
+
+    private func pluginSummaryRow(_ summary: PluginManagementSummary) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(summary.name)
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 0)
+                Text(summary.status.displayName)
+                    .font(.system(size: 10, weight: .medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(pluginStatusColor(summary.status).opacity(0.12))
+                    .foregroundStyle(pluginStatusColor(summary.status))
+                    .cornerRadius(6)
+            }
+
+            HStack(spacing: 6) {
+                Text(summary.version)
+                Text("·")
+                Text(summary.capabilityLabels.isEmpty ? "无扩展能力" : summary.capabilityLabels.joined(separator: " / "))
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .lineLimit(1)
+
+            Text(pluginPolicySummary(summary.policy))
+                .font(.system(size: 10))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            if let errorMessage = summary.errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(8)
+        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+    }
+
+    private func pluginStatusColor(_ status: PluginStatus) -> Color {
+        switch status {
+        case .active:
+            return AppSurfaceTokens.accentGreen
+        case .loading:
+            return AppSurfaceTokens.accentBlue
+        case .discovered:
+            return AppSurfaceTokens.accentOrange
+        case .inactive:
+            return AppSurfaceTokens.secondaryText
+        case .error:
+            return .red
+        }
+    }
+
+    private func pluginPolicySummary(_ policy: PluginSandboxPolicySnapshot) -> String {
+        let permissionsText = policy.permissionLabels.isEmpty ? "无显式权限" : policy.permissionLabels.joined(separator: " / ")
+        return "权限: \(permissionsText) · 限制: \(policy.resourceLimits.memoryMB)MB / \(policy.resourceLimits.cpuPercent)%"
+    }
+
+    private func loadPluginSummaries() async {
+        isLoadingPluginSummaries = true
+        defer { isLoadingPluginSummaries = false }
+
+        do {
+            pluginSummaries = await PluginManager.shared.getManagementSummaries()
+            pluginSummaryError = nil
+        } catch {
+            pluginSummaries = []
+            pluginSummaryError = "读取插件状态失败: \(error.localizedDescription)"
+        }
     }
 
     private var settingsHeader: some View {
@@ -518,7 +669,8 @@ struct CompanionSettingsPage: View {
                                 Spacer()
                                 TextField("", text: $viewModel.companionVoiceShortcut)
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 120)
+                                .frame(minWidth: 120)
+                                .layoutPriority(1)
                                 Button("录制") {
                                     recordingShortcutTarget = .voiceShortcut
                                 }
@@ -661,10 +813,10 @@ struct AIModelsSettingsPage: View {
             SettingsCard(title: "使用概览", description: "查看本地实时统计与已保存的提供商配置") {
                 VStack(spacing: 16) {
                     HStack {
-                        StatBox(label: "收集条目", value: "\(viewModel.usageSummary.sourceItems)", change: "本地存储")
-                        StatBox(label: "蒸馏笔记", value: "\(viewModel.usageSummary.distilledNotes)", change: "本地存储")
-                        StatBox(label: "导出记录", value: "\(viewModel.usageSummary.exportRecords)", change: "本地存储")
-                        StatBox(label: "剪贴板", value: "\(viewModel.usageSummary.clipboardItems)", change: "本地存储")
+                        StatBox(label: "收集条目", value: "\(viewModel.usageSummary.sourceItems)", change: SettingsStatusLabelFormatter.localStorageText)
+                        StatBox(label: "蒸馏笔记", value: "\(viewModel.usageSummary.distilledNotes)", change: SettingsStatusLabelFormatter.localStorageText)
+                        StatBox(label: "导出记录", value: "\(viewModel.usageSummary.exportRecords)", change: SettingsStatusLabelFormatter.localStorageText)
+                        StatBox(label: "剪贴板", value: "\(viewModel.usageSummary.clipboardItems)", change: SettingsStatusLabelFormatter.localStorageText)
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -678,11 +830,81 @@ struct AIModelsSettingsPage: View {
                         }
 
                         HStack(spacing: 10) {
-                            StatBox(label: "提供商", value: "\(viewModel.usageSummary.providers)", change: viewModel.usageSummary.providers == 0 ? "未配置" : "已保存")
-                            StatBox(label: "自动采集", value: viewModel.autoCaptureClipboard ? "开" : "关", change: viewModel.autoCaptureClipboard ? "剪贴板" : "手动")
-                            StatBox(label: "语音润色", value: viewModel.voiceAutoPolish ? "开" : "关", change: viewModel.voicePolishMode.displayName)
+                            StatBox(
+                                label: "提供商",
+                                value: "\(viewModel.usageSummary.providers)",
+                                change: SettingsStatusLabelFormatter.configuredState(
+                                    isConfigured: viewModel.usageSummary.providers != 0,
+                                    configuredText: "已保存",
+                                    unconfiguredText: SettingsStatusLabelFormatter.unconfiguredProviderText
+                                )
+                            )
+                            StatBox(
+                                label: "自动采集",
+                                value: SettingsStatusLabelFormatter.binaryState(
+                                    isEnabled: viewModel.autoCaptureClipboard,
+                                    enabledText: "开",
+                                    disabledText: "关"
+                                ),
+                                change: viewModel.autoCaptureClipboard ? "剪贴板" : "手动"
+                            )
+                            StatBox(
+                                label: "语音润色",
+                                value: SettingsStatusLabelFormatter.binaryState(
+                                    isEnabled: viewModel.voiceAutoPolish,
+                                    enabledText: "开",
+                                    disabledText: "关"
+                                ),
+                                change: viewModel.voicePolishMode.displayName
+                            )
                         }
                     }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("用量风险")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(AIUsageBurnLabelFormatter.statusText(for: viewModel.usageBurnSnapshot))
+                                .font(.caption)
+                                .foregroundStyle(usageBurnColor(for: viewModel.usageBurnSnapshot.severity))
+                        }
+
+                        Text(AIUsageBurnLabelFormatter.summaryText(for: viewModel.usageBurnSnapshot))
+                            .font(.caption)
+                            .foregroundStyle(usageBurnColor(for: viewModel.usageBurnSnapshot.severity))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(AIUsageBurnLabelFormatter.detailText(for: viewModel.usageBurnSnapshot))
+                            .font(.caption2)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(AIUsageBurnLabelFormatter.thresholdHintText())
+                            .font(.caption2)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if viewModel.usageBurnSnapshot.windows.isEmpty == false {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(Array(viewModel.usageBurnSnapshot.windows.enumerated()), id: \.offset) { _, window in
+                                    HStack {
+                                        Text(window.name)
+                                            .font(.caption2)
+                                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                        Spacer()
+                                        Text(AIUsageBurnLabelFormatter.windowText(for: window))
+                                            .font(.caption2)
+                                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                            .monospacedDigit()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+                    .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                 }
             }
 
@@ -816,28 +1038,42 @@ struct DataKnowledgeSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "备份与恢复", description: "管理数据备份") {
+            SettingsCard(
+                title: "备份与恢复",
+                description: SettingsStatusLabelFormatter.backupSectionDescription(
+                    autoBackupEnabled: viewModel.autoBackupEnabled
+                )
+            ) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Button("创建备份") {
+                    Button(SettingsStatusLabelFormatter.createBackupText) {
                         Task {
                             await viewModel.createBackup()
                         }
                     }
                         .buttonStyle(.bordered)
 
-                    Button("恢复备份") {
+                    Button(SettingsStatusLabelFormatter.restoreBackupText) {
                         Task {
                             await viewModel.restoreBackup()
                         }
                     }
                         .buttonStyle(.bordered)
 
-                    Toggle("自动备份（每周）", isOn: $viewModel.autoBackupEnabled)
+                    Toggle(SettingsStatusLabelFormatter.autoBackupText, isOn: $viewModel.autoBackupEnabled)
 
                     SettingsInfoRow(
                         label: "上次备份",
                         value: viewModel.lastBackupAtText
                     )
+
+                    Text(
+                        SettingsStatusLabelFormatter.backupTriggerText(
+                            enabled: viewModel.autoBackupEnabled,
+                            lastAutoBackupAt: viewModel.lastBackupAtDate
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
 
@@ -865,7 +1101,21 @@ struct DataKnowledgeSettingsPage: View {
 struct CaptureInputSettingsPage: View {
     @ObservedObject var viewModel: SettingsViewModel
     @State private var cloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "com.acmind.cloudSync.enabled")
+    @State private var cloudSyncSummary = CloudSyncStatusSummary(
+        title: "云同步状态加载中",
+        detail: "正在读取云同步状态。",
+        canRetry: false,
+        retryTitle: nil
+    )
     private let cloudSyncService: CloudSyncServiceProtocol
+    private static let screenshotNumberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.generatesDecimalNumbers = true
+        formatter.minimum = 0
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
 
     init(
         viewModel: SettingsViewModel,
@@ -881,6 +1131,57 @@ struct CaptureInputSettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("自动采集剪贴板", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("仅在激活应用时采集", isOn: $viewModel.captureOnlyWhenAppActive)
+                }
+            }
+
+            SettingsCard(title: "云端同步", description: "查看数据同步状态") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("启用云端同步", isOn: $cloudSyncEnabled)
+                        .onChange(of: cloudSyncEnabled) { _, newValue in
+                            Task {
+                                await cloudSyncService.setSyncEnabled(newValue)
+                                await refreshCloudSyncSummary()
+                            }
+                        }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(cloudSyncSummary.title)
+                            .font(.headline)
+
+                        Text(cloudSyncSummary.detail)
+                            .font(.caption)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    HStack(spacing: 10) {
+                        if cloudSyncSummary.canRetry, let retryTitle = cloudSyncSummary.retryTitle {
+                            Button(retryTitle) {
+                                Task {
+                                    await cloudSyncService.sync()
+                                    await refreshCloudSyncSummary()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+
+                        Button("刷新状态") {
+                            Task {
+                                await refreshCloudSyncSummary()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Text(
+                        SettingsStatusLabelFormatter.binaryState(
+                            isEnabled: cloudSyncEnabled,
+                            enabledText: "已开启：数据将通过 iCloud 同步",
+                            disabledText: "已关闭：数据仅保存在本地"
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
 
@@ -917,6 +1218,73 @@ struct CaptureInputSettingsPage: View {
                         }
 
                         Text("截图捕获会受系统屏幕录制权限影响。")
+                            .font(.caption)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("截图外观")
+                            .font(.subheadline)
+
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("圆角")
+                                    .font(.caption)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                                TextField(
+                                    "0",
+                                    value: $viewModel.captureScreenshotCornerRadius,
+                                    formatter: Self.screenshotNumberFormatter
+                                )
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 90)
+                                .layoutPriority(1)
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("最大宽度")
+                                    .font(.caption)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                                TextField(
+                                    "原始",
+                                    value: $viewModel.captureScreenshotMaxWidth,
+                                    formatter: Self.screenshotNumberFormatter
+                                )
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 110)
+                                .layoutPriority(1)
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("最大高度")
+                                    .font(.caption)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                                TextField(
+                                    "原始",
+                                    value: $viewModel.captureScreenshotMaxHeight,
+                                    formatter: Self.screenshotNumberFormatter
+                                )
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 110)
+                                .layoutPriority(1)
+                            }
+
+                            Button("恢复默认") {
+                                viewModel.captureScreenshotCornerRadius = 0
+                                viewModel.captureScreenshotMaxWidth = 0
+                                viewModel.captureScreenshotMaxHeight = 0
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(AppSurfaceTokens.accentBlue)
+
+                            Spacer()
+                        }
+
+                        Text("圆角和尺寸会在截图保存前直接作用到结果图，0 表示不限制。")
                             .font(.caption)
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1026,20 +1394,18 @@ struct CaptureInputSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "云端同步", description: "配置数据云端同步") {
-                    Toggle("启用云端同步", isOn: $cloudSyncEnabled)
-                    .onChange(of: cloudSyncEnabled) { _, newValue in
-                        Task { @MainActor in
-                            await cloudSyncService.setSyncEnabled(newValue)
-                        }
-                    }
-                Text(cloudSyncEnabled ? "已开启：数据将通过 iCloud 同步" : "已关闭：数据仅保存在本地")
-                    .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
-
             saveButton
         }
+        .task {
+            await refreshCloudSyncSummary()
+        }
+    }
+
+    @MainActor
+    private func refreshCloudSyncSummary() async {
+        cloudSyncEnabled = await cloudSyncService.isSyncEnabled()
+        let status = await cloudSyncService.getSyncStatus()
+        cloudSyncSummary = CloudSyncStatusSummary.make(from: status)
     }
 
     private var saveButton: some View {
@@ -1145,6 +1511,11 @@ struct SecuritySettingsPage: View {
                             }
                         }
                     )
+
+                    Text(AppNotificationService.strategySummary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 

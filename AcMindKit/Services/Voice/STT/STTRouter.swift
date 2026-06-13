@@ -5,6 +5,7 @@ import Foundation
 /// STT 路由器
 /// 根据配置选择合适的 Transcriber
 public final class STTRouter: @unchecked Sendable {
+    private static let logger = AcMindLogger(category: .ai)
     
     // MARK: - Properties
     
@@ -92,7 +93,7 @@ public final class STTRouter: @unchecked Sendable {
         } catch {
             // 尝试兼容路径：系统听写
             if currentProvider != .appleSpeech {
-                print("STT failed with \(currentProvider), using Apple Speech compatibility path: \(error)")
+                Self.logger.warning("STT failed with \(currentProvider), using Apple Speech compatibility path: \(error)")
                 if let compatibilityTranscriber = appleSpeechTranscriber {
                     return try await compatibilityTranscriber.transcribeStream(
                         audioFile: audioFile,

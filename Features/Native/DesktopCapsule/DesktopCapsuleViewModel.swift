@@ -6,6 +6,7 @@ import AcMindKit
 
 @MainActor
 final class DesktopCapsuleViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .capture)
     // MARK: - State
 
     @Published var isExpanded: Bool = false
@@ -129,7 +130,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private func executeScreenshot() async {
         guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
-            print("⚠️ 截图捕获已在设置中关闭")
+            Self.logger.warning("截图捕获已在设置中关闭")
             return
         }
 
@@ -138,14 +139,14 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
         do {
             let result = try await captureService.captureScreenshot(mode: .fullscreen)
-            print("截图成功: \(result.sourceItem.id)")
+            Self.logger.info("截图成功: \(result.sourceItem.id)")
 
             // 重新显示胶囊
             await MainActor.run {
                 self.panelController.show(at: nil)
             }
         } catch {
-            print("截图失败: \(error)")
+            Self.logger.error("截图失败: \(error)")
             await MainActor.run {
                 self.panelController.show(at: nil)
             }
@@ -154,7 +155,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private func executeScrollScreenshot() async {
         guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
-            print("⚠️ 滚动截图已在设置中关闭")
+            Self.logger.warning("滚动截图已在设置中关闭")
             return
         }
 
@@ -162,13 +163,13 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
         do {
             let result = try await captureService.captureScrollingScreenshot()
-            print("滚动截图成功: \(result.sourceItem.id)")
+            Self.logger.info("滚动截图成功: \(result.sourceItem.id)")
 
             await MainActor.run {
                 self.panelController.show(at: nil)
             }
         } catch {
-            print("滚动截图失败: \(error)")
+            Self.logger.error("滚动截图失败: \(error)")
             await MainActor.run {
                 self.panelController.show(at: nil)
             }
@@ -177,7 +178,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
 
     private func executeVoiceNote() async {
         guard SettingsLocalPreferences.isVoiceInputEnabled() else {
-            print("⚠️ 说入法输入已在设置中关闭")
+            Self.logger.warning("说入法输入已在设置中关闭")
             return
         }
 
@@ -188,18 +189,18 @@ final class DesktopCapsuleViewModel: ObservableObject {
     private func executeUrlToText() async {
         guard let input = await promptForWebpageURL() else { return }
         guard let url = normalizeWebpageURL(input) else {
-            print("URL转换失败: 请输入有效的网页 URL")
+            Self.logger.warning("URL转换失败: 请输入有效的网页 URL")
             return
         }
 
         do {
             let result = try await captureService.captureFromWebpage(url: url)
-            print("URL转换成功: \(result.sourceItem.id)")
+            Self.logger.info("URL转换成功: \(result.sourceItem.id)")
 
             settings.lastWebpageURL = url
             saveSettings()
         } catch {
-            print("URL转换失败: \(error)")
+            Self.logger.error("URL转换失败: \(error)")
         }
     }
 
@@ -211,10 +212,10 @@ final class DesktopCapsuleViewModel: ObservableObject {
     private func executeClipboard() async {
         do {
             if let result = try await captureService.captureFromClipboard() {
-                print("剪贴板采集成功: \(result.sourceItem.id)")
+                Self.logger.info("剪贴板采集成功: \(result.sourceItem.id)")
             }
         } catch {
-            print("剪贴板采集失败: \(error)")
+            Self.logger.error("剪贴板采集失败: \(error)")
         }
     }
 
@@ -241,9 +242,9 @@ final class DesktopCapsuleViewModel: ObservableObject {
             Task {
                 do {
                     let result = try await captureService.captureFromFile(url: url)
-                    print("文件采集成功: \(result.sourceItem.id)")
+                    Self.logger.info("文件采集成功: \(result.sourceItem.id)")
                 } catch {
-                    print("文件采集失败: \(error)")
+                    Self.logger.error("文件采集失败: \(error)")
                 }
 
                 await MainActor.run {

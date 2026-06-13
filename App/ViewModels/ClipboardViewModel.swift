@@ -13,6 +13,7 @@ import AcMindKit
 /// 4. 监听剪贴板服务变化
 @MainActor
 public final class ClipboardViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .clipboard)
     
     // MARK: - Dependencies
     
@@ -156,7 +157,7 @@ public final class ClipboardViewModel: ObservableObject {
     public func saveToInbox(id: String) async {
         do {
             let sourceItem = try await clipboardService.saveToInbox(id: id)
-            print("Saved to Inbox: \(sourceItem.id)")
+            Self.logger.info("Saved to Inbox: \(sourceItem.id)")
         } catch {
             emitError(message: error.localizedDescription)
         }

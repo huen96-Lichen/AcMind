@@ -269,7 +269,7 @@ struct WorkspaceHomeView: View {
                 heroGlyph
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("本机状态总览")
+                    Text("工作台总览")
                         .font(.system(size: 17.5, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -286,7 +286,7 @@ struct WorkspaceHomeView: View {
                     Text(viewModel.refreshHint)
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
-                    Text("真实读数")
+                    Text("工作台实时")
                         .font(.system(size: 9.5, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -396,7 +396,7 @@ struct WorkspaceHomeView: View {
 
     private var overviewRow: some View {
         HStack(alignment: .top, spacing: 3.5) {
-            DashboardCard(title: "系统状态总览", subtitle: nil, style: .prominent) {
+            DashboardCard(title: "运行概览", subtitle: nil, style: .prominent) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
                         overviewMetric(label: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.accentBlue)
@@ -451,7 +451,7 @@ struct WorkspaceHomeView: View {
             .frame(maxWidth: 278)
             .layoutPriority(1)
 
-            DashboardCard(title: "状态指示", subtitle: nil, style: .subtle) {
+            DashboardCard(title: "运行提醒", subtitle: nil, style: .subtle) {
                 VStack(spacing: 3) {
                     ForEach(statusBadges) { badge in
                         statusLineRow(badge)
@@ -545,7 +545,10 @@ struct WorkspaceHomeView: View {
 
                     HStack(spacing: 4) {
                         compactStatusChip(viewModel.temperatureDetailSummary, tint: AppSurfaceTokens.accentOrange)
-                        compactStatusChip(viewModel.snapshot.thermalState ?? "不可用", tint: AppSurfaceTokens.accentOrange)
+                        compactStatusChip(
+                            SystemStatusLabelFormatter.thermalThrottleStatusText(viewModel.snapshot.thermalThrottle),
+                            tint: AppSurfaceTokens.accentOrange
+                        )
                         Spacer(minLength: 0)
                     }
                 }
@@ -597,35 +600,71 @@ struct WorkspaceHomeView: View {
 
     private var summaryFooter: some View {
         DashboardCard(padding: 1.5, style: .subtle) {
-            HStack(spacing: 1.5) {
-                summaryChip(icon: "cpu", title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.accentBlue)
-                summaryChip(icon: "memorychip", title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.accentPrimary)
-                summaryChip(icon: "internaldrive", title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.accentOrange)
-                summaryChip(icon: "network", title: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.accentGreen)
-                summaryChip(icon: "powerplug", title: "电源", value: viewModel.batteryStateSummary, tint: AppSurfaceTokens.accentCyan)
-                summaryChip(icon: "checkmark.shield", title: "权限", value: permissionFooterText, tint: AppSurfaceTokens.accentGreen)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("工作台摘要")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                    Text(viewModel.refreshHint)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    Spacer(minLength: 0)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("资源")
+                        .font(.system(size: 7.5, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                    HStack(spacing: 1.5) {
+                        summaryChip(icon: "cpu", title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.accentBlue)
+                        summaryChip(icon: "memorychip", title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.accentPrimary)
+                        summaryChip(icon: "internaldrive", title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.accentOrange)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("连接与权限")
+                        .font(.system(size: 7.5, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                    HStack(spacing: 1.5) {
+                        summaryChip(icon: "network", title: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.accentGreen)
+                        summaryChip(icon: "powerplug", title: "电源", value: viewModel.batteryStateSummary, tint: AppSurfaceTokens.accentCyan)
+                        summaryChip(icon: "checkmark.shield", title: "权限", value: permissionFooterText, tint: AppSurfaceTokens.accentGreen)
+                    }
+                }
             }
         }
     }
 
     private var permissionFooterText: String {
         let unavailableCount = viewModel.snapshot.permissions.filter { $0.isAvailable == false }.count
-        if unavailableCount == 0 { return "正常" }
+        if unavailableCount == 0 {
+            return SystemStatusLabelFormatter.healthState(isHealthy: true)
+        }
         return "\(unavailableCount) 项待确认"
     }
 
     private var fanStatusNote: some View {
         HStack(spacing: 5) {
             compactStatusChip(
-                currentFanValue == nil ? "只读" : "已接入",
+                SystemStatusLabelFormatter.availabilityState(
+                    isAvailable: currentFanValue != nil,
+                    availableText: "已接入",
+                    unavailableText: "只读"
+                ),
                 tint: currentFanValue == nil ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentPrimary
             )
 
-            if currentFanValue == nil {
-                compactStatusChip("不可控", tint: AppSurfaceTokens.accentOrange)
-            } else {
-                compactStatusChip("无调速", tint: AppSurfaceTokens.accentPrimary)
-            }
+            compactStatusChip(
+                SystemStatusLabelFormatter.availabilityState(
+                    isAvailable: currentFanValue != nil,
+                    availableText: "无调速",
+                    unavailableText: "不可控"
+                ),
+                tint: currentFanValue == nil ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentPrimary
+            )
 
             Spacer(minLength: 0)
         }
@@ -673,19 +712,19 @@ struct WorkspaceHomeView: View {
             WorkspaceStatusBadge(
                 icon: "sensor.tag.radiowaves.forward.fill",
                 title: "传感",
-                value: currentTemperatureValue == nil ? "不可用" : "正常",
+                value: SystemStatusLabelFormatter.availabilityState(isAvailable: currentTemperatureValue != nil),
                 accent: currentTemperatureValue == nil ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentGreen
             ),
             WorkspaceStatusBadge(
                 icon: "network",
                 title: "网络",
-                value: viewModel.primaryInterfaceSummary == "不可用" ? "异常" : "在线",
+                value: SystemStatusLabelFormatter.healthState(isHealthy: viewModel.primaryInterfaceSummary != "不可用", healthyText: "在线"),
                 accent: viewModel.primaryInterfaceSummary == "不可用" ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentGreen
             ),
             WorkspaceStatusBadge(
                 icon: "internaldrive",
                 title: "磁盘",
-                value: viewModel.diskSummary == "不可用" ? "异常" : "正常",
+                value: SystemStatusLabelFormatter.healthState(isHealthy: viewModel.diskSummary != "不可用"),
                 accent: viewModel.diskSummary == "不可用" ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentBlue
             ),
             WorkspaceStatusBadge(
@@ -705,12 +744,12 @@ struct WorkspaceHomeView: View {
 
     private var batteryBadgeValue: String {
         if viewModel.batterySummary == "无可用电池" || viewModel.batterySummary == "不可用" {
-            return "无"
+            return SystemStatusLabelFormatter.availabilityState(isAvailable: false, availableText: "良好", unavailableText: "无")
         }
         if viewModel.batteryHealthSummary == "不可用" {
-            return "未知"
+            return SystemStatusLabelFormatter.availabilityState(isAvailable: false, availableText: "良好", unavailableText: "未知")
         }
-        return "良好"
+        return SystemStatusLabelFormatter.availabilityState(isAvailable: true, availableText: "良好", unavailableText: "无")
     }
 
     private var batteryBadgeAccent: Color {
@@ -729,7 +768,11 @@ struct WorkspaceHomeView: View {
     }
 
     private var networkCardDetail: String {
-        viewModel.networkInterfaceSummary == "不可用" ? "接口不可用" : viewModel.networkInterfaceSummary
+        SystemStatusLabelFormatter.availabilityState(
+            isAvailable: viewModel.networkInterfaceSummary != "不可用",
+            availableText: viewModel.networkInterfaceSummary,
+            unavailableText: "接口不可用"
+        )
     }
 
     private var batteryCardDetail: String {
@@ -757,7 +800,11 @@ struct WorkspaceHomeView: View {
         if let fan = viewModel.fanSensorSummaries.first {
             return fan.displayValue
         }
-        return "风扇读数不可用"
+        return SystemStatusLabelFormatter.availabilityState(
+            isAvailable: false,
+            availableText: "风扇读数已接入",
+            unavailableText: "风扇读数不可用"
+        )
     }
 
     private var currentFanValue: Double? {
@@ -773,13 +820,20 @@ struct WorkspaceHomeView: View {
 
     private var temperatureSecondaryText: String {
         if currentTemperatureValue != nil {
-            return viewModel.snapshot.thermalState ?? "正常"
+            return SystemStatusLabelFormatter.healthState(
+                isHealthy: true,
+                healthyText: viewModel.snapshot.thermalState ?? "正常",
+                unhealthyText: "异常"
+            )
         }
         return "无可读传感器"
     }
 
     private var temperatureStatusText: String {
-        currentTemperatureValue == nil ? "不可用" : "热状态"
+        SystemStatusLabelFormatter.availabilityState(
+            isAvailable: currentTemperatureValue != nil,
+            availableText: "温度状态"
+        )
     }
 
     private var fanPrimaryText: String {
@@ -790,11 +844,19 @@ struct WorkspaceHomeView: View {
     }
 
     private var fanSecondaryText: String {
-        currentFanValue == nil ? "风扇读数不可用" : "仅展示读数"
+        SystemStatusLabelFormatter.availabilityState(
+            isAvailable: currentFanValue != nil,
+            availableText: "仅展示读数",
+            unavailableText: "风扇读数不可用"
+        )
     }
 
     private var fanStatusText: String {
-        currentFanValue == nil ? "风扇读数不可用" : "风扇读数已接入"
+        SystemStatusLabelFormatter.availabilityState(
+            isAvailable: currentFanValue != nil,
+            availableText: "风扇读数已接入",
+            unavailableText: "风扇读数不可用"
+        )
     }
 
     private func metricGlyph(systemName: String, tint: Color) -> some View {

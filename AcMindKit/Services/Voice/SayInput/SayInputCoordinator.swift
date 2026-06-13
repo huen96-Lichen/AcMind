@@ -224,6 +224,7 @@ public enum SayInputError: Error, LocalizedError {
 // MARK: - Say Input Coordinator
 
 public actor SayInputCoordinator {
+    private static let logger = AcMindLogger(category: .input)
     private let voiceService: VoiceServiceProtocol
     private let sourceStore: SayInputSourceItemStore
     private let textInjector: TextInjector
@@ -449,7 +450,7 @@ public actor SayInputCoordinator {
         do {
             _ = try await stopRecording(configuration: configuration)
         } catch {
-            print("[SayInputCoordinator] Silence timeout stop failed: \(error)")
+            Self.logger.error("Silence timeout stop failed: \(error)")
         }
     }
 

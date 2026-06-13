@@ -357,11 +357,13 @@ struct CaptureRecord: Identifiable {
 
 @MainActor
 class CompanionCaptureViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .capture)
     // MARK: - Dependencies
 
     private let captureService: CaptureServiceProtocol
     private let storage: StorageServiceProtocol
     nonisolated(unsafe) private var companionConfigurationObserver: NSObjectProtocol?
+    private var destinationChoicePanel: CaptureDestinationChoiceWindowController?
 
     @Published var recentCaptures: [CaptureRecord] = []
     @Published var autoSaveToInbox = true
@@ -469,7 +471,7 @@ class CompanionCaptureViewModel: ObservableObject {
                         )
                     }
             } catch {
-                print("⚠️ 加载最近捕获失败: \(error.localizedDescription)")
+                Self.logger.error("加载最近捕获失败: \(error.localizedDescription)")
             }
         }
     }
@@ -535,7 +537,7 @@ class CompanionCaptureViewModel: ObservableObject {
                     result = try await captureService.captureScrollingScreenshot()
                 case .clipboard:
                     guard let clipboardResult = try await captureService.captureFromClipboard() else {
-                        print("⚠️ 剪贴板为空")
+                        Self.logger.warning("剪贴板为空")
                         return
                     }
                     result = clipboardResult
@@ -543,13 +545,13 @@ class CompanionCaptureViewModel: ObservableObject {
                     let context = await ContextCaptureService.shared.captureContext()
                     let selectedText = context.selectedText?.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard let selectedText, !selectedText.isEmpty else {
-                        print("⚠️ 未检测到选中文本")
+                        Self.logger.warning("未检测到选中文本")
                         return
                     }
                     result = try await captureService.captureFromManualText(selectedText)
                 case .webpage:
                     guard let url = Self.frontmostBrowserURL() else {
-                        print("⚠️ 未检测到当前网页 URL")
+                        Self.logger.warning("未检测到当前网页 URL")
                         return
                     }
                     result = try await captureService.captureFromWebpage(url: url)
@@ -568,7 +570,7 @@ class CompanionCaptureViewModel: ObservableObject {
                     userInfo: ["type": type]
                 )
             } catch {
-                print("⚠️ 捕获失败: \(error.localizedDescription)")
+                Self.logger.error("捕获失败: \(error.localizedDescription)")
             }
         }
     }
@@ -653,29 +655,18 @@ class CompanionCaptureViewModel: ObservableObject {
     }
 
     private func presentCaptureDestinationChoice(for result: CaptureResult, type: CompanionCaptureType) async -> CompanionCaptureSaveDestination? {
-        await MainActor.run {
-            let alert = NSAlert()
-            alert.messageText = "捕获已完成"
-            let title = result.sourceItem.title?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let contentName = type.displayName
-            if let title, !title.isEmpty {
-                alert.informativeText = "“\(title)” (\(contentName)) 的结果要接下来怎么处理？"
-            } else {
-                alert.informativeText = "这次 \(contentName) 的结果要接下来怎么处理？"
-            }
-            alert.addButton(withTitle: "保存到收集箱")
-            alert.addButton(withTitle: "复制到剪贴板")
-            alert.addButton(withTitle: "取消")
+        let title = result.sourceItem.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let contentName = type.displayName
+        let prompt = title.map { "“\($0)” (\(contentName)) 的结果要接下来怎么处理？" } ?? "这次 \(contentName) 的结果要接下来怎么处理？"
 
-            switch alert.runModal() {
-            case .alertFirstButtonReturn:
-                return .inbox
-            case .alertSecondButtonReturn:
-                return .clipboard
-            default:
-                return nil
-            }
-        }
+        let panel = CaptureDestinationChoiceWindowController()
+        destinationChoicePanel = panel
+        let choice = await panel.present(
+            title: "捕获已完成",
+            message: prompt
+        )
+        destinationChoicePanel = nil
+        return choice
     }
 
     func deleteCapture(id: UUID) {
@@ -721,5 +712,97 @@ class CompanionCaptureViewModel: ObservableObject {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Capture Destination Choice Panel
+
+@MainActor
+private final class CaptureDestinationChoiceWindowController: NSObject, NSWindowDelegate {
+    private var panel: NSPanel?
+    private var continuation: CheckedContinuation<CompanionCaptureSaveDestination?, Never>?
+    private var didFinish = false
+
+    func present(title: String, message: String) async -> CompanionCaptureSaveDestination? {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 460, height: 220),
+                styleMask: [.titled, .closable, .fullSizeContentView],
+                backing: .buffered,
+                defer: false
+            )
+            panel.delegate = self
+            panel.titleVisibility = .hidden
+            panel.titlebarAppearsTransparent = true
+            panel.isMovableByWindowBackground = true
+            panel.isFloatingPanel = true
+            panel.level = .floating
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            panel.standardWindowButton(.zoomButton)?.isHidden = true
+
+            panel.contentView = NSHostingView(
+                rootView: CaptureDestinationChoiceView(
+                    title: title,
+                    message: message,
+                    onInbox: { [weak self] in
+                        self?.finish(with: .inbox)
+                    },
+                    onClipboard: { [weak self] in
+                        self?.finish(with: .clipboard)
+                    },
+                    onCancel: { [weak self] in
+                        self?.finish(with: nil)
+                    }
+                )
+            )
+
+            self.panel = panel
+            panel.center()
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        finish(with: nil)
+    }
+
+    private func finish(with destination: CompanionCaptureSaveDestination?) {
+        guard didFinish == false else { return }
+        didFinish = true
+        panel?.orderOut(nil)
+        panel = nil
+        continuation?.resume(returning: destination)
+        continuation = nil
+    }
+}
+
+private struct CaptureDestinationChoiceView: View {
+    let title: String
+    let message: String
+    let onInbox: () -> Void
+    let onClipboard: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        AppSurfaceConfirmationCard(
+            title: title,
+            message: message,
+            icon: "square.and.arrow.down",
+            tint: .blue,
+            primaryTitle: "保存到收集箱",
+            secondaryTitle: "复制到剪贴板",
+            tertiaryTitle: "取消",
+            footerNote: "选完就会关闭窗口，不会再额外弹系统对话框。",
+            primaryAction: onInbox,
+            secondaryAction: onClipboard,
+            tertiaryAction: onCancel
+        )
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(AppSurfaceTokens.background)
     }
 }

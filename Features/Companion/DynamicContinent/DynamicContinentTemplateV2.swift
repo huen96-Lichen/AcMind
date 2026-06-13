@@ -56,32 +56,32 @@ struct DynamicContinentTemplateV2: View {
 
     var body: some View {
         let containerShape = NotchShape(topCornerRadius: 14, bottomCornerRadius: DynamicContinentLayoutMetrics.containerCornerRadius)
+        let footerHeight = NotchV2DesignTokens.dashboardFooterHeight
 
         VStack(spacing: 0) {
             DynamicContinentTopBar(viewModel: viewModel)
                 .zIndex(1)
 
-            Group {
-                switch viewModel.effectiveSelectedPage {
-                case .overview:
-                    DynamicContinentTodayPage(viewModel: viewModel)
-                case .music:
-                    DynamicContinentMusicPage(viewModel: viewModel)
-                case .agent:
-                    DynamicContinentAgentPage(viewModel: viewModel)
-                case .systemStatus:
-                    DynamicContinentSystemStatusPage(viewModel: viewModel)
-                case .schedule:
-                    DynamicContinentSchedulePage(viewModel: viewModel)
+            GeometryReader { proxy in
+                let safeContentHeight = max(0, proxy.size.height)
+                ScrollView(.vertical, showsIndicators: false) {
+                    pageContent
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: safeContentHeight,
+                            maxHeight: safeContentHeight,
+                            alignment: .topLeading
+                        )
                 }
+                .frame(width: proxy.size.width, height: safeContentHeight, alignment: .topLeading)
             }
             .zIndex(0)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             NotchV2LightStatusStrip(items: viewModel.lightStatusItems)
                 .padding(.horizontal, NotchV2DesignTokens.pagePadding)
-                .padding(.vertical, 6)
-                .frame(height: NotchV2DesignTokens.dashboardFooterHeight)
+                .frame(height: footerHeight, alignment: .center)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(
             width: DynamicContinentLayoutMetrics.expandedWidth,
@@ -94,5 +94,21 @@ struct DynamicContinentTemplateV2: View {
                 .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 8)
         )
         .clipShape(containerShape)
+    }
+
+    @ViewBuilder
+    private var pageContent: some View {
+        switch viewModel.effectiveSelectedPage {
+        case .overview:
+            DynamicContinentTodayPage(viewModel: viewModel)
+        case .music:
+            DynamicContinentMusicPage(viewModel: viewModel)
+        case .agent:
+            DynamicContinentAgentPage(viewModel: viewModel)
+        case .systemStatus:
+            DynamicContinentSystemStatusPage(viewModel: viewModel)
+        case .schedule:
+            DynamicContinentSchedulePage(viewModel: viewModel)
+        }
     }
 }

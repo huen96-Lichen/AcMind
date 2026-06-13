@@ -464,6 +464,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             errorMessage: errorMessage
         )
         await router.recordUsage(usage)
+        await UsageBurnMonitor.shared.record(usage)
     }
 
     private func aiCallLoggingEnabled() -> Bool {

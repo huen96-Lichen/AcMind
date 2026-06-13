@@ -16,6 +16,9 @@ public struct SettingsLocalPreferences: Codable, Sendable, Equatable {
     public var captureScreenshotEnabled: Bool = true
     public var captureAutoRedactionEnabled: Bool = true
     public var captureCensorModeRawValue: Int = CensorMode.pixelate.rawValue
+    public var captureScreenshotCornerRadius: Double = 0
+    public var captureScreenshotMaxWidth: Double = 0
+    public var captureScreenshotMaxHeight: Double = 0
     public var companionCaptureAutoSaveToInbox: Bool = true
     public var companionCaptureOpenDetailAfterCapture: Bool = false
     public var companionCaptureShowNotification: Bool = true
@@ -37,6 +40,9 @@ public struct SettingsLocalPreferences: Codable, Sendable, Equatable {
         captureScreenshotEnabled: Bool = true,
         captureAutoRedactionEnabled: Bool = true,
         captureCensorModeRawValue: Int = CensorMode.pixelate.rawValue,
+        captureScreenshotCornerRadius: Double = 0,
+        captureScreenshotMaxWidth: Double = 0,
+        captureScreenshotMaxHeight: Double = 0,
         companionCaptureAutoSaveToInbox: Bool = true,
         companionCaptureOpenDetailAfterCapture: Bool = false,
         companionCaptureShowNotification: Bool = true,
@@ -57,6 +63,9 @@ public struct SettingsLocalPreferences: Codable, Sendable, Equatable {
         self.captureScreenshotEnabled = captureScreenshotEnabled
         self.captureAutoRedactionEnabled = captureAutoRedactionEnabled
         self.captureCensorModeRawValue = captureCensorModeRawValue
+        self.captureScreenshotCornerRadius = captureScreenshotCornerRadius
+        self.captureScreenshotMaxWidth = captureScreenshotMaxWidth
+        self.captureScreenshotMaxHeight = captureScreenshotMaxHeight
         self.companionCaptureAutoSaveToInbox = companionCaptureAutoSaveToInbox
         self.companionCaptureOpenDetailAfterCapture = companionCaptureOpenDetailAfterCapture
         self.companionCaptureShowNotification = companionCaptureShowNotification
@@ -112,6 +121,9 @@ public extension SettingsLocalPreferences {
         captureScreenshotEnabled = try container.decodeIfPresent(Bool.self, forKey: .captureScreenshotEnabled) ?? true
         captureAutoRedactionEnabled = try container.decodeIfPresent(Bool.self, forKey: .captureAutoRedactionEnabled) ?? true
         captureCensorModeRawValue = try container.decodeIfPresent(Int.self, forKey: .captureCensorModeRawValue) ?? CensorMode.pixelate.rawValue
+        captureScreenshotCornerRadius = try container.decodeIfPresent(Double.self, forKey: .captureScreenshotCornerRadius) ?? 0
+        captureScreenshotMaxWidth = try container.decodeIfPresent(Double.self, forKey: .captureScreenshotMaxWidth) ?? 0
+        captureScreenshotMaxHeight = try container.decodeIfPresent(Double.self, forKey: .captureScreenshotMaxHeight) ?? 0
         companionCaptureAutoSaveToInbox = try container.decodeIfPresent(Bool.self, forKey: .companionCaptureAutoSaveToInbox) ?? true
         companionCaptureOpenDetailAfterCapture = try container.decodeIfPresent(Bool.self, forKey: .companionCaptureOpenDetailAfterCapture) ?? false
         companionCaptureShowNotification = try container.decodeIfPresent(Bool.self, forKey: .companionCaptureShowNotification) ?? true
@@ -136,6 +148,9 @@ public extension SettingsLocalPreferences {
         try container.encode(captureScreenshotEnabled, forKey: .captureScreenshotEnabled)
         try container.encode(captureAutoRedactionEnabled, forKey: .captureAutoRedactionEnabled)
         try container.encode(captureCensorModeRawValue, forKey: .captureCensorModeRawValue)
+        try container.encode(captureScreenshotCornerRadius, forKey: .captureScreenshotCornerRadius)
+        try container.encode(captureScreenshotMaxWidth, forKey: .captureScreenshotMaxWidth)
+        try container.encode(captureScreenshotMaxHeight, forKey: .captureScreenshotMaxHeight)
         try container.encode(companionCaptureAutoSaveToInbox, forKey: .companionCaptureAutoSaveToInbox)
         try container.encode(companionCaptureOpenDetailAfterCapture, forKey: .companionCaptureOpenDetailAfterCapture)
         try container.encode(companionCaptureShowNotification, forKey: .companionCaptureShowNotification)
@@ -158,6 +173,9 @@ public extension SettingsLocalPreferences {
         case captureScreenshotEnabled
         case captureAutoRedactionEnabled
         case captureCensorModeRawValue
+        case captureScreenshotCornerRadius
+        case captureScreenshotMaxWidth
+        case captureScreenshotMaxHeight
         case companionCaptureAutoSaveToInbox
         case companionCaptureOpenDetailAfterCapture
         case companionCaptureShowNotification

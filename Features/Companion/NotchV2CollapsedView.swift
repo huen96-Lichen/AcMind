@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AcMindKit
 
 struct NotchV2CollapsedView: View {
     @ObservedObject var viewModel: NotchV2ViewModel
@@ -19,37 +20,37 @@ struct NotchV2CollapsedView: View {
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
                 .allowsHitTesting(false)
-            }
+            } else {
+                HStack(spacing: 8) {
+                    if viewModel.hasPlaybackContext {
+                        musicCollapsedLayout
+                    } else {
+                        if viewModel.displaySettings.showCollapsedStatusDots {
+                            NotchV2StatusDot(color: collapsedAccentDotColor)
+                        }
 
-            HStack(spacing: 8) {
-                if viewModel.playbackState.isPlaying && !viewModel.hasVoiceOverride {
-                    musicCollapsedLayout
-                } else {
-                    if viewModel.displaySettings.showCollapsedStatusDots {
-                        NotchV2StatusDot(color: collapsedAccentDotColor)
+                        ViewThatFits(in: .horizontal) {
+                            collapsedDetails
+                            collapsedTitleOnly
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    ViewThatFits(in: .horizontal) {
-                        collapsedDetails
-                        collapsedTitleOnly
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .frame(width: 16, height: 16)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.9))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(NotchV2DesignTokens.panelBorder, lineWidth: 1)
+                        )
                 }
-
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
-                    .frame(width: 16, height: 16)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.9))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(NotchV2DesignTokens.panelBorder, lineWidth: 1)
-                    )
+                .padding(.horizontal, 10)
             }
-            .padding(.horizontal, 10)
         }
         .frame(width: viewModel.collapsedSize.width, height: viewModel.collapsedSize.height)
         .contentShape(Rectangle())
@@ -60,6 +61,47 @@ struct NotchV2CollapsedView: View {
     }
 
     private var musicCollapsedLayout: some View {
+        ViewThatFits(in: .horizontal) {
+            musicCollapsedRichLayout
+            musicCollapsedCompactLayout
+            musicCollapsedTinyLayout
+        }
+    }
+
+    private var musicCollapsedRichLayout: some View {
+        HStack(spacing: 6) {
+            CollapsedArtworkView(artworkData: viewModel.playbackState.artwork)
+                .frame(
+                    width: NotchV2DesignTokens.collapsedArtworkSize,
+                    height: NotchV2DesignTokens.collapsedArtworkSize
+                )
+
+            VStack(alignment: .leading, spacing: 0) {
+                MarqueeText(
+                    .constant(viewModel.playbackState.title),
+                    font: NotchV2DesignTokens.Typography.body,
+                    textColor: NotchV2DesignTokens.primaryText,
+                    minDuration: 2.0,
+                    frameWidth: 92
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if sourceBadgeText.isEmpty == false {
+                    Text(sourceBadgeText)
+                        .font(NotchV2DesignTokens.Typography.caption)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            CollapsedMiniWaveform(accent: NotchV2DesignTokens.accentGreen)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var musicCollapsedCompactLayout: some View {
         HStack(spacing: 6) {
             CollapsedArtworkView(artworkData: viewModel.playbackState.artwork)
                 .frame(
@@ -72,11 +114,31 @@ struct NotchV2CollapsedView: View {
                 font: NotchV2DesignTokens.Typography.body,
                 textColor: NotchV2DesignTokens.primaryText,
                 minDuration: 2.0,
-                frameWidth: 100
+                frameWidth: 122
             )
             .frame(maxWidth: .infinity, alignment: .leading)
 
             CollapsedMiniWaveform(accent: NotchV2DesignTokens.accentGreen)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var musicCollapsedTinyLayout: some View {
+        HStack(spacing: 6) {
+            CollapsedArtworkView(artworkData: viewModel.playbackState.artwork)
+                .frame(
+                    width: NotchV2DesignTokens.collapsedArtworkSize,
+                    height: NotchV2DesignTokens.collapsedArtworkSize
+                )
+
+            MarqueeText(
+                .constant(viewModel.playbackState.title),
+                font: NotchV2DesignTokens.Typography.body,
+                textColor: NotchV2DesignTokens.primaryText,
+                minDuration: 2.0,
+                frameWidth: 140
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -111,10 +173,9 @@ struct NotchV2CollapsedView: View {
 
     private var collapsedSubtitle: String? {
         if viewModel.isRecordingActive {
-            if viewModel.realtimeTranscript.isEmpty {
-                return "收音中..."
-            }
-            return "收音中 · \(viewModel.realtimeTranscript)"
+            return ActivityStateLabelFormatter.recordingSubtitleLabel(
+                realtimeTranscript: viewModel.realtimeTranscript
+            )
         }
         return viewModel.collapsedRuntimeSurface.subtitle
     }
@@ -133,6 +194,14 @@ struct NotchV2CollapsedView: View {
         }
 
         return viewModel.collapsedRuntimeSurface.accentColor
+    }
+
+    private var sourceBadgeText: String {
+        NowPlayingSourceLabelFormatter.playbackContextLabel(
+            isPlaying: viewModel.playbackState.isPlaying,
+            bundleIdentifier: viewModel.playbackState.bundleIdentifier,
+            source: viewModel.playbackState.sourceLabel
+        )
     }
 
 }

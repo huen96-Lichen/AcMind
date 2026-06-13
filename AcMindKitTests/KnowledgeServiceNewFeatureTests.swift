@@ -156,4 +156,73 @@ final class KnowledgeServiceNewFeatureTests: XCTestCase {
         XCTAssertNotNil(graphEdge)
         XCTAssertEqual(graphEdge?.relationType, "related")
     }
+
+    func testKnowledgeClosureSummaryShowsActiveCardNextAction() {
+        let card = KnowledgeCard(
+            id: "card-active",
+            sourceItemId: "source-1",
+            distilledOutputId: "note-1",
+            canonicalTitle: "SwiftUI 状态整理",
+            summary: "整理状态管理经验",
+            tags: ["swiftui", "state"],
+            status: .active,
+            vaultFilePath: "Notes/SwiftUI.md",
+            referenceCount: 2,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_100)
+        )
+
+        let summary = KnowledgeClosureSummary.make(from: card)
+
+        XCTAssertEqual(summary.title, "SwiftUI 状态整理")
+        XCTAssertEqual(summary.stateLabel, "活跃")
+        XCTAssertEqual(summary.detail, "整理状态管理经验")
+        XCTAssertEqual(summary.nextActionTitle, "继续关联")
+        XCTAssertEqual(summary.timeline.map(\.title), ["已捕获", "已蒸馏", "已写入 Vault", "已被引用"])
+    }
+
+    func testKnowledgeClosureSummaryShowsArchiveAndRestoreActions() {
+        let archived = KnowledgeCard(
+            id: "card-archived",
+            sourceItemId: "source-2",
+            canonicalTitle: "旧方案",
+            status: .archived
+        )
+        let deleted = KnowledgeCard(
+            id: "card-deleted",
+            sourceItemId: "source-3",
+            canonicalTitle: "废弃资料",
+            status: .deleted
+        )
+
+        let archivedSummary = KnowledgeClosureSummary.make(from: archived)
+        let deletedSummary = KnowledgeClosureSummary.make(from: deleted)
+
+        XCTAssertEqual(archivedSummary.stateLabel, "已归档")
+        XCTAssertEqual(archivedSummary.nextActionTitle, "恢复为活跃")
+        XCTAssertEqual(deletedSummary.stateLabel, "已删除")
+        XCTAssertNil(deletedSummary.nextActionTitle)
+    }
+
+    func testKnowledgeClosureSummaryHighlightsSuggestedEdges() {
+        let card = KnowledgeCard(
+            id: "card-edge",
+            sourceItemId: "source-4",
+            canonicalTitle: "相关知识",
+            status: .active
+        )
+        let edges = [
+            KnowledgeEdge(
+                fromKnowledgeCardId: "card-edge",
+                toKnowledgeCardId: "card-other",
+                relationType: "related",
+                status: .suggested
+            )
+        ]
+
+        let summary = KnowledgeClosureSummary.make(from: card, edges: edges)
+
+        XCTAssertEqual(summary.nextActionTitle, "确认关联")
+        XCTAssertTrue(summary.timeline.contains { $0.title == "待确认关联" })
+    }
 }

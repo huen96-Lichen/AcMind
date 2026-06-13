@@ -15,6 +15,7 @@ import WhisperKit
 ///
 /// 免费: 完全免费，开源 Apache 2.0
 public final class WhisperKitTranscriber: Transcriber, RecordingPrewarmingTranscriber, @unchecked Sendable {
+    private static let logger = AcMindLogger(category: .ai)
 
     // MARK: - Properties
 
@@ -146,7 +147,7 @@ public final class WhisperKitTranscriber: Transcriber, RecordingPrewarmingTransc
             if currentPipeline() != nil { return }
             _ = try await ensurePipeline()
         } catch {
-            print("WhisperKit 预热失败: \(error)")
+            Self.logger.warning("WhisperKit 预热失败: \(error)")
         }
     }
 

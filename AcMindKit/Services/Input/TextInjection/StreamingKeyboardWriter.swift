@@ -36,7 +36,11 @@ public actor StreamingKeyboardWriter {
     private var isCancelled = false
     private var isFinished = false
     private var injectedSuccessfully = true
-    private static let runningUnderTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    private static var runningUnderTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || NSClassFromString("XCTestCase") != nil
+            || Bundle.main.bundlePath.contains("xctest")
+    }
 
     // MARK: - Initialization
 

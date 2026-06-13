@@ -6,6 +6,9 @@ public enum ClipboardPinWindowSizing {
     public static let maxWindowWidth: CGFloat = 480
     public static let maxTextWindowWidth: CGFloat = 420
     public static let maxContentHeight: CGFloat = 520
+    public static let manualResizeMaxWindowWidth: CGFloat = 840
+    public static let manualResizeMaxTextWindowWidth: CGFloat = 760
+    public static let manualResizeMaxWindowHeight: CGFloat = 760
     public static let chromeHeight: CGFloat = 44
     public static let minimumWindowWidth: CGFloat = 280
     public static let minimumWindowHeight: CGFloat = 160
@@ -79,6 +82,89 @@ public enum ClipboardPinWindowSizing {
         return CGSize(
             width: round(max(minimumWindowWidth, width)),
             height: round(max(minimumWindowHeight, height))
+        )
+    }
+
+    public static func expandedPresetWindowSize(
+        for itemType: ClipboardContentType,
+        displayFrame: CGRect,
+        imageSize: CGSize? = nil
+    ) -> CGSize {
+        switch itemType {
+        case .image:
+            let baseSize = imageZoomWindowSize(for: imageSize ?? CGSize(width: 1280, height: 960), displayFrame: displayFrame)
+            let width = min(
+                max(baseSize.width * 1.10, baseSize.width + 72),
+                displayFrame.width * 0.66
+            )
+            let height = min(
+                max(baseSize.height * 1.08, baseSize.height + 48),
+                displayFrame.height * 0.74
+            )
+            return CGSize(
+                width: round(max(minimumWindowWidth, width)),
+                height: round(max(minimumWindowHeight, height))
+            )
+        default:
+            let width = min(
+                max(displayFrame.width * 0.42, 560),
+                min(manualResizeMaxTextWindowWidth, displayFrame.width * 0.58)
+            )
+            let height = min(
+                max(displayFrame.height * 0.42, 360),
+                displayFrame.height * 0.70
+            )
+            return CGSize(
+                width: round(max(minimumWindowWidth, width)),
+                height: round(max(minimumWindowHeight, height))
+            )
+        }
+    }
+
+    public static func manualResizeWindowSize(
+        _ proposedSize: CGSize,
+        itemType: ClipboardContentType,
+        displayFrame: CGRect,
+        imageSize: CGSize? = nil
+    ) -> CGSize {
+        let maxWidth: CGFloat
+        let maxHeight: CGFloat
+
+        switch itemType {
+        case .image:
+            maxWidth = min(manualResizeMaxWindowWidth, max(minimumWindowWidth, displayFrame.width * 0.72))
+            maxHeight = min(manualResizeMaxWindowHeight, max(minimumWindowHeight, displayFrame.height * 0.82))
+        default:
+            maxWidth = min(manualResizeMaxTextWindowWidth, max(minimumWindowWidth, displayFrame.width * 0.58))
+            maxHeight = min(manualResizeMaxWindowHeight, max(minimumWindowHeight, displayFrame.height * 0.84))
+        }
+
+        let clampedWidth = round(min(max(proposedSize.width, minimumWindowWidth), maxWidth))
+        let clampedHeight = round(min(max(proposedSize.height, minimumWindowHeight), maxHeight))
+        return CGSize(width: clampedWidth, height: clampedHeight)
+    }
+
+    public static func clampWindowSize(
+        _ proposedSize: CGSize,
+        itemType: ClipboardContentType,
+        displayFrame: CGRect,
+        imageSize: CGSize? = nil
+    ) -> CGSize {
+        let maxWidth: CGFloat
+        let maxHeight: CGFloat
+
+        if itemType == .image, let imageSize {
+            let imageExpanded = imageZoomWindowSize(for: imageSize, displayFrame: displayFrame)
+            maxWidth = max(imageExpanded.width, minimumWindowWidth)
+            maxHeight = max(imageExpanded.height, minimumWindowHeight)
+        } else {
+            maxWidth = min(maxWindowWidth, max(minimumWindowWidth, displayFrame.width * 0.42))
+            maxHeight = min(maxContentHeight + chromeHeight + 96, max(minimumWindowHeight, displayFrame.height * 0.76))
+        }
+
+        return CGSize(
+            width: round(min(max(proposedSize.width, minimumWindowWidth), maxWidth)),
+            height: round(min(max(proposedSize.height, minimumWindowHeight), maxHeight))
         )
     }
 }

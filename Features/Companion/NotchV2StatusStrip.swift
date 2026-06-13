@@ -15,20 +15,20 @@ struct NotchV2LightStatusStrip: View {
     let items: [NotchV2LightStatusItem]
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 7) {
             ForEach(sortedItems.prefix(6)) { item in
                 statusChip(item)
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 2)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .fill(NotchV2DesignTokens.cardBackgroundDeep.opacity(0.80))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .stroke(NotchV2DesignTokens.separator.opacity(0.36), lineWidth: 1)
         )
     }
@@ -46,33 +46,30 @@ struct NotchV2LightStatusStrip: View {
     }
 
     private func statusChip(_ item: NotchV2LightStatusItem) -> some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Image(systemName: item.icon)
-                .font(NotchV2DesignTokens.Typography.caption)
+                .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(item.accent)
 
-            VStack(alignment: .leading, spacing: 0) {
-                Text(item.title)
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
-                    .lineLimit(1)
-                Text(item.detail)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+            Text("\(item.title) · \(item.detail)")
+                .font(.system(size: 8, weight: .medium, design: .rounded))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
+        .scaleEffect(item.highlighted ? 1.02 : 1.0)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(item.highlighted ? item.accent.opacity(0.12) : NotchV2DesignTokens.innerCardBackground.opacity(0.82))
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(item.highlighted ? item.accent.opacity(0.16) : NotchV2DesignTokens.innerCardBackground.opacity(0.82))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(item.highlighted ? item.accent.opacity(0.18) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(item.highlighted ? item.accent.opacity(0.24) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
         )
+        .shadow(color: item.highlighted ? item.accent.opacity(0.10) : .clear, radius: 5, x: 0, y: 2)
+        .animation(.easeOut(duration: 0.16), value: item.highlighted)
     }
 }
 
@@ -82,11 +79,11 @@ extension NotchV2ViewModel {
 
         items.append(
             NotchV2LightStatusItem(
-                icon: batteryInfo.isCharging ? "bolt.fill" : batteryInfo.isPluggedIn ? "plug.fill" : "battery.100",
-                title: batteryInfo.isInLowPowerMode ? "低电量模式" : "电池",
-                detail: batteryDetailText,
+                icon: batteryIconName,
+                title: batteryInfo.isAvailable == false ? "无电池" : batteryInfo.isInLowPowerMode ? "低电量模式" : "电池",
+                detail: batteryDisplayText,
                 accent: batteryStatusAccent,
-                highlighted: batteryInfo.isInLowPowerMode || batteryInfo.percentage <= 20,
+                highlighted: batteryInfo.isAvailable && (batteryInfo.isInLowPowerMode || batteryInfo.percentage <= 20),
                 priority: 0
             )
         )
@@ -95,8 +92,8 @@ extension NotchV2ViewModel {
             NotchV2LightStatusItem(
                 icon: batteryInfo.isCharging || batteryInfo.isPluggedIn ? "powerplug.fill" : "powerplug",
                 title: batteryInfo.isCharging ? "充电中" : batteryInfo.isPluggedIn ? "接电" : "电源",
-                detail: batteryInfo.powerSourceState.isEmpty ? "电池供电" : batteryInfo.powerSourceState,
-                accent: batteryInfo.isCharging ? .green : batteryInfo.isPluggedIn ? .blue : NotchV2DesignTokens.secondaryText,
+                detail: batteryInfo.isAvailable == false ? "无电池" : batteryInfo.powerSourceState.isEmpty ? "电池供电" : batteryInfo.powerSourceState,
+                accent: batteryInfo.isAvailable == false ? NotchV2DesignTokens.secondaryText : batteryInfo.isCharging ? .green : batteryInfo.isPluggedIn ? .blue : NotchV2DesignTokens.secondaryText,
                 highlighted: batteryInfo.isCharging,
                 priority: 1
             )
@@ -108,7 +105,7 @@ extension NotchV2ViewModel {
                 title: "麦克风",
                 detail: microphonePermissionStatus.displayName,
                 accent: microphoneAccent,
-                highlighted: microphonePermissionStatus != .authorized,
+                highlighted: microphonePermissionStatus == .denied || microphonePermissionStatus == .restricted,
                 priority: 2
             )
         )
@@ -117,7 +114,7 @@ extension NotchV2ViewModel {
             NotchV2LightStatusItem(
                 icon: voiceDisplayIcon,
                 title: voiceDisplayTitle ?? "说入法",
-                detail: voiceDisplaySubtitle ?? "待命",
+                detail: voiceDisplaySubtitle,
                 accent: voiceDisplayAccent,
                 highlighted: isVoicePriorityActive,
                 priority: voiceDisplayPriority.rawValue
@@ -125,25 +122,35 @@ extension NotchV2ViewModel {
         )
 
         items.append(
-            NotchV2LightStatusItem(
-                icon: isCapturing ? "camera.viewfinder" : "camera",
-                title: isCapturing ? "截图处理中" : "截图",
-                detail: isCapturing ? "处理中" : "待命",
-                accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText,
-                highlighted: isCapturing,
-                priority: 4
+                NotchV2LightStatusItem(
+                    icon: isCapturing ? "camera.viewfinder" : "camera",
+                    title: isCapturing ? "截图处理中" : "截图",
+                    detail: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "处理中", idleLabel: "待命"),
+                    accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText,
+                    highlighted: isCapturing,
+                    priority: 4
+                )
             )
-        )
 
-        if playbackState.isPlaying || playbackState.title.isEmpty == false {
+        if playbackState.isPlaying || playbackState.title.isEmpty == false || playbackState.sourceLabel.isEmpty == false || playbackState.bundleIdentifier != nil {
             items.append(
                 NotchV2LightStatusItem(
                     icon: playbackState.isPlaying ? "play.fill" : "pause.fill",
-                    title: playbackState.isPlaying ? "媒体播放" : "媒体暂停",
-                    detail: playbackState.title.isEmpty ? "未命名" : playbackState.title,
+                    title: NowPlayingSourceLabelFormatter.playbackStateLabel(
+                        isPlaying: playbackState.isPlaying,
+                        bundleIdentifier: playbackState.bundleIdentifier,
+                        source: playbackState.sourceLabel,
+                        playingPrefix: "播放中",
+                        pausedPrefix: "已暂停"
+                    ),
+                    detail: NowPlayingSourceLabelFormatter.trackDetailLabel(
+                        title: playbackState.title,
+                        bundleIdentifier: playbackState.bundleIdentifier,
+                        source: playbackState.sourceLabel
+                    ),
                     accent: playbackState.isPlaying ? NotchV2DesignTokens.accentGreen : NotchV2DesignTokens.secondaryText,
-                    highlighted: playbackState.isPlaying,
-                    priority: 7
+                    highlighted: playbackState.isPlaying || playbackState.title.isEmpty == false || playbackState.sourceLabel.isEmpty == false || playbackState.bundleIdentifier != nil,
+                    priority: NotchV2SurfacePriority.music.rawValue
                 )
             )
         }
@@ -200,11 +207,10 @@ extension NotchV2ViewModel {
 
     private var eventCenter: SystemEventCenter { systemEventCenter }
 
-    private var batteryDetailText: String {
-        "\(Int(batteryInfo.percentage.rounded()))%"
-    }
-
     private var batteryStatusAccent: Color {
+        if batteryInfo.isAvailable == false {
+            return NotchV2DesignTokens.secondaryText
+        }
         if batteryInfo.isInLowPowerMode {
             return .orange
         }
@@ -239,12 +245,19 @@ struct NotchV2SystemRail: View {
 
     var body: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "本机状态", symbol: "desktopcomputer", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            NotchV2Card(
+                title: "本机状态",
+                symbol: "desktopcomputer",
+                fillHeight: true,
+                cornerRadius: NotchV2DesignTokens.rightCardRadius
+            ) {
                 VStack(alignment: .leading, spacing: 6) {
                     statusRow(title: "电池", value: viewModel.batteryStateText, accent: viewModel.batteryAccent)
                     statusRow(title: "麦克风", value: viewModel.microphonePermissionStatus.displayName, accent: permissionAccent(for: viewModel.microphonePermissionStatus))
                     statusRow(title: "录屏", value: viewModel.screenRecordingPermissionStatus.displayName, accent: permissionAccent(for: viewModel.screenRecordingPermissionStatus))
                     statusRow(title: "辅助功能", value: viewModel.accessibilityPermissionStatus.displayName, accent: permissionAccent(for: viewModel.accessibilityPermissionStatus))
+
+                    Spacer(minLength: 0)
                 }
             }
         }

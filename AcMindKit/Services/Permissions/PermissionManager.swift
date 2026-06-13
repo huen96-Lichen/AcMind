@@ -98,6 +98,7 @@ public enum AppPermissionStatus: Sendable, Hashable {
 /// - 带详细日志
 @MainActor
 public final class PermissionManager: ObservableObject {
+    private static let logger = AcMindLogger(category: .permissions)
 
     // MARK: - Published State
 
@@ -112,7 +113,7 @@ public final class PermissionManager: ObservableObject {
     // MARK: - Logger
 
     private func log(_ message: String) {
-        print("[AcMind.Permission] \(message)")
+        Self.logger.info(message)
     }
 
     // MARK: - Init

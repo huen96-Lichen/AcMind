@@ -1,9 +1,11 @@
 import Foundation
 import SwiftUI
 import EventKit
+import AcMindKit
 
 @MainActor
 class ScheduleViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .ui)
     // MARK: - Dependencies
 
     private let eventStore = EKEventStore()
@@ -409,7 +411,7 @@ class ScheduleViewModel: ObservableObject {
             do {
                 try eventStore.remove(ekEvent, span: .thisEvent)
             } catch {
-                print("⚠️ 删除系统日历事件失败: \(error.localizedDescription)")
+                Self.logger.error("删除系统日历事件失败: \(error.localizedDescription)")
             }
         }
 
@@ -444,7 +446,7 @@ class ScheduleViewModel: ObservableObject {
                     tag: event.tag
                 )
             } catch {
-                print("⚠️ 更新系统日历事件失败: \(error.localizedDescription)")
+                Self.logger.error("更新系统日历事件失败: \(error.localizedDescription)")
                 return nil
             }
         }
@@ -470,7 +472,7 @@ class ScheduleViewModel: ObservableObject {
                 tag: event.tag
             )
         } catch {
-            print("⚠️ 保存到系统日历失败: \(error.localizedDescription)")
+            Self.logger.error("保存到系统日历失败: \(error.localizedDescription)")
             return nil
         }
     }
@@ -539,7 +541,7 @@ class ScheduleViewModel: ObservableObject {
                     self.accessNotice = self.events.isEmpty ? "没有可显示的日程。" : nil
                 }
             } catch {
-                print("⚠️ EventKit 错误: \(error.localizedDescription)")
+                Self.logger.error("EventKit 错误: \(error.localizedDescription)")
                 await MainActor.run {
                     self.events = localEvents
                     self.accessNotice = localEvents.isEmpty

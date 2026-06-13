@@ -37,6 +37,61 @@ final class PluginManagerTests: XCTestCase {
 
         XCTAssertTrue(plugin.deactivateCalled)
     }
+
+    func testManagementSummariesIncludeDescriptorStatusCapabilitiesAndPolicy() async throws {
+        let pluginRoot = try makePluginRoot()
+        let pluginDirectory = pluginRoot.appendingPathComponent("sample-plugin", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "sample-plugin",
+            name: "Sample Plugin",
+            version: "1.2.3",
+            author: "AcMind",
+            description: "测试插件",
+            capabilities: [.customASR, .customPolish],
+            entryPoint: "main.swift",
+            configPath: pluginDirectory.appendingPathComponent("plugin.json").path
+        )
+        let data = try JSONEncoder().encode(descriptor)
+        try data.write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        await manager.discoverPlugins()
+
+        let summaries = await manager.getManagementSummaries()
+        let summary = try XCTUnwrap(summaries.first)
+        XCTAssertEqual(summary.id, "sample-plugin")
+        XCTAssertEqual(summary.name, "Sample Plugin")
+        XCTAssertEqual(summary.status, .discovered)
+        XCTAssertEqual(summary.capabilityLabels, ["自定义 ASR", "自定义润色"])
+        XCTAssertEqual(summary.policy.permissions, [.fileRead])
+        XCTAssertEqual(summary.policy.resourceLimits.memoryMB, 256)
+        XCTAssertEqual(summary.policy.resourceLimits.cpuPercent, 25)
+        XCTAssertNil(summary.errorMessage)
+    }
+
+    func testPluginSandboxPolicySnapshotExposesPermissionsAndLimits() async {
+        let sandbox = PluginSandbox(
+            pluginId: "policy-plugin",
+            permissions: [.fileRead, .clipboardAccess],
+            maxMemoryMB: 128,
+            maxCPUPercent: 10
+        )
+
+        let policy = await sandbox.policySnapshot()
+
+        XCTAssertEqual(policy.permissions, [.fileRead, .clipboardAccess])
+        XCTAssertEqual(policy.permissionLabels, ["文件读取", "剪贴板访问"])
+        XCTAssertEqual(policy.resourceLimits.memoryMB, 128)
+        XCTAssertEqual(policy.resourceLimits.cpuPercent, 10)
+    }
+
+    private func makePluginRoot() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AcMind-PluginManagerTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
 }
 
 private final class TestPlugin: Plugin, @unchecked Sendable {

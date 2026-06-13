@@ -96,6 +96,185 @@ public struct AgentTask: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
+public enum AgentTaskTimelineStatus: String, Codable, Sendable, Equatable {
+    case pending
+    case running
+    case completed
+    case failed
+}
+
+public struct AgentTaskTimelineItem: Codable, Sendable, Identifiable, Equatable {
+    public let id: String
+    public let title: String
+    public let detail: String?
+    public let status: AgentTaskTimelineStatus
+    public let occurredAt: Date?
+
+    public init(
+        id: String,
+        title: String,
+        detail: String? = nil,
+        status: AgentTaskTimelineStatus,
+        occurredAt: Date? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.detail = detail
+        self.status = status
+        self.occurredAt = occurredAt
+    }
+}
+
+public struct AgentTaskClosureSummary: Codable, Sendable, Equatable {
+    public let taskId: String
+    public let title: String
+    public let stateLabel: String
+    public let detail: String
+    public let nextActionTitle: String?
+    public let canRetry: Bool
+    public let timeline: [AgentTaskTimelineItem]
+
+    public init(
+        taskId: String,
+        title: String,
+        stateLabel: String,
+        detail: String,
+        nextActionTitle: String?,
+        canRetry: Bool,
+        timeline: [AgentTaskTimelineItem]
+    ) {
+        self.taskId = taskId
+        self.title = title
+        self.stateLabel = stateLabel
+        self.detail = detail
+        self.nextActionTitle = nextActionTitle
+        self.canRetry = canRetry
+        self.timeline = timeline
+    }
+
+    public static func make(from task: AgentTask) -> AgentTaskClosureSummary {
+        AgentTaskClosureSummary(
+            taskId: task.id,
+            title: task.title,
+            stateLabel: task.status.displayName,
+            detail: detail(for: task),
+            nextActionTitle: nextActionTitle(for: task),
+            canRetry: task.status == .failed && task.retryCount < task.maxRetries,
+            timeline: timeline(for: task)
+        )
+    }
+
+    private static func detail(for task: AgentTask) -> String {
+        if task.status == .failed, let error = task.errorMessage, error.isEmpty == false {
+            return error
+        }
+
+        if task.status == .completed, task.products.isEmpty == false {
+            return "已生成 \(task.products.count) 个产物"
+        }
+
+        if task.steps.isEmpty == false {
+            let completedCount = task.steps.filter { $0.status == .completed }.count
+            return "\(completedCount)/\(task.steps.count) 个步骤已完成"
+        }
+
+        return task.description.isEmpty ? task.status.displayName : task.description
+    }
+
+    private static func nextActionTitle(for task: AgentTask) -> String? {
+        switch task.status {
+        case .pending:
+            return "开始执行"
+        case .running:
+            return "继续执行"
+        case .waiting:
+            return "处理确认"
+        case .failed:
+            return task.retryCount < task.maxRetries ? "重试任务" : "查看错误"
+        case .completed:
+            return "归档为沉淀"
+        case .archived:
+            return nil
+        }
+    }
+
+    private static func timeline(for task: AgentTask) -> [AgentTaskTimelineItem] {
+        var items: [AgentTaskTimelineItem] = [
+            AgentTaskTimelineItem(
+                id: "\(task.id)-created",
+                title: "已创建",
+                status: .completed,
+                occurredAt: task.createdAt
+            )
+        ]
+
+        if let startedAt = task.startedAt {
+            items.append(
+                AgentTaskTimelineItem(
+                    id: "\(task.id)-started",
+                    title: "已开始",
+                    status: .completed,
+                    occurredAt: startedAt
+                )
+            )
+        }
+
+        items.append(contentsOf: task.steps.sorted { $0.order < $1.order }.map { step in
+            AgentTaskTimelineItem(
+                id: step.id,
+                title: step.title,
+                detail: step.errorMessage ?? step.result ?? step.description.nilIfEmpty,
+                status: timelineStatus(for: step.status),
+                occurredAt: step.completedAt ?? step.startedAt
+            )
+        })
+
+        if let completedAt = task.completedAt {
+            items.append(
+                AgentTaskTimelineItem(
+                    id: "\(task.id)-completed",
+                    title: "已完成",
+                    status: .completed,
+                    occurredAt: completedAt
+                )
+            )
+        }
+
+        if task.status == .failed, let error = task.errorMessage {
+            items.append(
+                AgentTaskTimelineItem(
+                    id: "\(task.id)-failed",
+                    title: "执行失败",
+                    detail: error,
+                    status: .failed,
+                    occurredAt: task.updatedAt
+                )
+            )
+        }
+
+        return items
+    }
+
+    private static func timelineStatus(for stepStatus: StepStatus) -> AgentTaskTimelineStatus {
+        switch stepStatus {
+        case .pending, .skipped:
+            return .pending
+        case .running:
+            return .running
+        case .completed:
+            return .completed
+        case .failed:
+            return .failed
+        }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
+
 /// 任务优先级
 public enum TaskPriority: String, Codable, Sendable, Hashable, CaseIterable {
     case low

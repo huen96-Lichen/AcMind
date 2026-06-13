@@ -4,6 +4,7 @@ import AcMindKit
 
 @MainActor
 class InboxViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .storage)
     // MARK: - Published Properties
     
     @Published var items: [SourceItem] = []
@@ -245,7 +246,7 @@ class InboxViewModel: ObservableObject {
             distilledCount = all.filter { $0.status == .distilled }.count
             exportedCount = all.filter { $0.status == .exported }.count
         } catch {
-            print("Failed to compute stats: \(error)")
+            Self.logger.error("Failed to compute stats: \(error)")
         }
     }
     

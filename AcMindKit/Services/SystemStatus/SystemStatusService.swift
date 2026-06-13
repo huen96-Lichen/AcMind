@@ -1,11 +1,156 @@
 import Foundation
 import Combine
+import AppKit
+
+@MainActor
+public final class SleepAwareRepeatingTimer {
+    public private(set) var isRunning = false
+    public private(set) var isSuspended = false
+
+    private let interval: TimeInterval
+    private let timerQueue: DispatchQueue
+    private let notificationCenter: NotificationCenter
+    private let sleepNotificationName: Notification.Name
+    private let wakeNotificationName: Notification.Name
+    private let handler: @MainActor () -> Void
+    private var timer: DispatchSourceTimer?
+    private var observers: [NSObjectProtocol] = []
+
+    public init(
+        interval: TimeInterval,
+        timerQueue: DispatchQueue = DispatchQueue(label: "com.acmind.system-status.sleep-aware-timer", qos: .utility),
+        notificationCenter: NotificationCenter = .default,
+        sleepNotificationName: Notification.Name = NSWorkspace.willSleepNotification,
+        wakeNotificationName: Notification.Name = NSWorkspace.didWakeNotification,
+        handler: @escaping @MainActor () -> Void
+    ) {
+        self.interval = interval
+        self.timerQueue = timerQueue
+        self.notificationCenter = notificationCenter
+        self.sleepNotificationName = sleepNotificationName
+        self.wakeNotificationName = wakeNotificationName
+        self.handler = handler
+    }
+
+    deinit {
+        if let timer {
+            if isSuspended {
+                timer.resume()
+            }
+            timer.cancel()
+        }
+
+        for observer in observers {
+            notificationCenter.removeObserver(observer)
+        }
+    }
+
+    public func start() {
+        guard isRunning == false else { return }
+        isRunning = true
+        isSuspended = false
+        installObservers()
+        scheduleTimer()
+    }
+
+    public func stop() {
+        if let timer {
+            if isSuspended {
+                timer.resume()
+            }
+            timer.cancel()
+        }
+        timer = nil
+        isRunning = false
+        isSuspended = false
+        for observer in observers {
+            notificationCenter.removeObserver(observer)
+        }
+        observers.removeAll()
+    }
+
+    public func suspend() {
+        guard isRunning, isSuspended == false else { return }
+        timer?.suspend()
+        isSuspended = true
+    }
+
+    public func resume() {
+        guard isRunning, isSuspended else { return }
+        isSuspended = false
+        timer?.resume()
+    }
+
+    public func fireForTesting() {
+        guard isRunning, isSuspended == false else { return }
+        handler()
+    }
+
+    private func installObservers() {
+        guard observers.isEmpty else { return }
+
+        observers = [
+            notificationCenter.addObserver(
+                forName: sleepNotificationName,
+                object: nil,
+                queue: nil
+            ) { [weak self] _ in
+                guard let self else { return }
+
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self.suspend()
+                    }
+                } else {
+                    Task { @MainActor in
+                        self.suspend()
+                    }
+                }
+            },
+            notificationCenter.addObserver(
+                forName: wakeNotificationName,
+                object: nil,
+                queue: nil
+            ) { [weak self] _ in
+                guard let self else { return }
+
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self.resume()
+                    }
+                } else {
+                    Task { @MainActor in
+                        self.resume()
+                    }
+                }
+            }
+        ]
+    }
+
+    private func scheduleTimer() {
+        timer?.cancel()
+
+        let timer = DispatchSource.makeTimerSource(queue: timerQueue)
+        timer.schedule(
+            deadline: .now() + interval,
+            repeating: interval,
+            leeway: .milliseconds(200)
+        )
+        timer.setEventHandler { [weak self] in
+            Task { @MainActor in
+                self?.fireForTesting()
+            }
+        }
+        timer.resume()
+        self.timer = timer
+    }
+}
 
 @MainActor
 public final class SystemStatusService: ObservableObject {
     @Published public private(set) var snapshot = SystemStatusSnapshot()
 
-    private var timer: Timer?
+    private var timer: SleepAwareRepeatingTimer?
     private var isRunning = false
     private let readers: [any SystemStatusReader]
 
@@ -22,17 +167,15 @@ public final class SystemStatusService: ObservableObject {
         isRunning = true
         refresh()
 
-        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.refresh()
-            }
+        let timer = SleepAwareRepeatingTimer(interval: 2.0) { [weak self] in
+            self?.refresh()
         }
-        RunLoop.main.add(timer, forMode: .common)
+        timer.start()
         self.timer = timer
     }
 
     public func stop() {
-        timer?.invalidate()
+        timer?.stop()
         timer = nil
         isRunning = false
     }
@@ -84,6 +227,7 @@ public final class SystemStatusService: ObservableObject {
             powerSensors: merged.powerSensors,
             voltageSensors: merged.voltageSensors,
             currentSensors: merged.currentSensors,
+            thermalThrottle: merged.thermalThrottle,
             thermalState: merged.thermalState,
             loadAverage1m: merged.loadAverage1m,
             loadAverage5m: merged.loadAverage5m,
@@ -129,6 +273,7 @@ public final class SystemStatusService: ObservableObject {
         if rhs.powerSensors.isEmpty == false { result.powerSensors = rhs.powerSensors }
         if rhs.voltageSensors.isEmpty == false { result.voltageSensors = rhs.voltageSensors }
         if rhs.currentSensors.isEmpty == false { result.currentSensors = rhs.currentSensors }
+        if let thermalThrottle = rhs.thermalThrottle { result.thermalThrottle = thermalThrottle }
         if let thermalState = rhs.thermalState { result.thermalState = thermalState }
         if let loadAverage1m = rhs.loadAverage1m { result.loadAverage1m = loadAverage1m }
         if let loadAverage5m = rhs.loadAverage5m { result.loadAverage5m = loadAverage5m }
@@ -152,6 +297,7 @@ public final class SystemStatusService: ObservableObject {
     private static func defaultReaders() -> [any SystemStatusReader] {
         [
             CPUStatusReader(),
+            ThermalStatusReader(),
             MemoryStatusReader(),
             DiskStatusReader(),
             NetworkStatusReader(),

@@ -7,10 +7,12 @@ import AcMindKit
 class ScreenshotPreviewWindowController: NSViewController {
     private let image: NSImage?
     private let captureResult: CaptureResult
+    private let onPin: () -> Void
     
-    init(image: NSImage?, captureResult: CaptureResult) {
+    init(image: NSImage?, captureResult: CaptureResult, onPin: @escaping () -> Void) {
         self.image = image
         self.captureResult = captureResult
+        self.onPin = onPin
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -21,7 +23,8 @@ class ScreenshotPreviewWindowController: NSViewController {
     override func loadView() {
         let previewView = ScreenshotPreviewContentView(
             image: image,
-            captureResult: captureResult
+            captureResult: captureResult,
+            onPin: onPin
         ) { [weak self] in
             self?.dismiss(nil)
         }
@@ -32,23 +35,24 @@ class ScreenshotPreviewWindowController: NSViewController {
 // MARK: - Screenshot Preview Content View
 
 struct ScreenshotPreviewContentView: View {
+    private static let logger = AcMindLogger(category: .capture)
     let image: NSImage?
     let captureResult: CaptureResult
+    let onPin: () -> Void
     let onDismiss: () -> Void
-    private let captureService: CaptureServiceProtocol
     
     @State private var imageSize: CGSize = .zero
 
     init(
         image: NSImage?,
         captureResult: CaptureResult,
-        onDismiss: @escaping () -> Void,
-        captureService: CaptureServiceProtocol = CaptureService()
+        onPin: @escaping () -> Void,
+        onDismiss: @escaping () -> Void
     ) {
         self.image = image
         self.captureResult = captureResult
+        self.onPin = onPin
         self.onDismiss = onDismiss
-        self.captureService = captureService
     }
     
     var body: some View {
@@ -70,11 +74,19 @@ struct ScreenshotPreviewContentView: View {
                 
                 Spacer()
                 
-                Button("保存到收集箱") {
-                    saveToInbox()
-                    onDismiss()
+                HStack(spacing: 8) {
+                    Button("Pin 到桌面") {
+                        onPin()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("保存到收集箱") {
+                        saveToInbox()
+                        onDismiss()
+                    }
+                    .keyboardShortcut(.return)
+                    .buttonStyle(.borderedProminent)
                 }
-                .keyboardShortcut(.return)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -124,6 +136,7 @@ struct ScreenshotPreviewContentView: View {
 // MARK: - Quick Note Panel
 
 struct ScreenshotQuickNotePanel: View {
+    private static let logger = AcMindLogger(category: .capture)
     @Environment(\.dismiss) private var dismiss
     @State private var noteText: String = ""
     @FocusState private var isFocused: Bool
@@ -182,7 +195,7 @@ struct ScreenshotQuickNotePanel: View {
                     object: result
                 )
             } catch {
-                print("保存笔记失败: \(error)")
+                Self.logger.error("保存笔记失败: \(error)")
             }
         }
     }

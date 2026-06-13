@@ -71,6 +71,7 @@ final class CapsulePanel: NSPanel {
 // MARK: - Capsule Content View
 
 struct CapsuleContentView: View {
+    private static let logger = AcMindLogger(category: .capture)
     private let captureService: CaptureServiceProtocol
     private let voiceService: VoiceServiceProtocol
     private let storageService: StorageServiceProtocol
@@ -206,7 +207,7 @@ struct CapsuleContentView: View {
         Task {
             do {
                 let result = try await captureService.captureScreenshot(mode: mode)
-                print("截图成功: \(result.sourceItem.id)")
+                Self.logger.info("截图成功: \(result.sourceItem.id)")
 
                 // 隐藏胶囊
                 await MainActor.run {
@@ -229,9 +230,9 @@ struct CapsuleContentView: View {
         Task {
             do {
                 if let result = try await captureService.captureFromClipboard() {
-                    print("剪贴板采集成功: \(result.sourceItem.id)")
+                    Self.logger.info("剪贴板采集成功: \(result.sourceItem.id)")
                 } else {
-                    print("剪贴板无内容")
+                    Self.logger.warning("剪贴板无内容")
                 }
 
                 await MainActor.run {
@@ -255,7 +256,7 @@ struct CapsuleContentView: View {
         Task {
             do {
                 let result = try await captureService.captureFromManualText(inputText)
-                print("文本采集成功: \(result.sourceItem.id)")
+                Self.logger.info("文本采集成功: \(result.sourceItem.id)")
 
                 await MainActor.run {
                     inputText = ""
@@ -278,7 +279,7 @@ struct CapsuleContentView: View {
         Task {
             do {
                 let result = try await captureService.captureFromWebpage(url: url)
-                print("网页采集成功: \(result.sourceItem.id)")
+                Self.logger.info("网页采集成功: \(result.sourceItem.id)")
 
                 await MainActor.run {
                     CapsulePanel.shared.hide()
@@ -312,7 +313,7 @@ struct CapsuleContentView: View {
                 Task {
                     do {
                         let result = try await captureService.captureFromFile(url: url)
-                        print("文件采集成功: \(result.sourceItem.id)")
+                        Self.logger.info("文件采集成功: \(result.sourceItem.id)")
 
                         await MainActor.run {
                             CapsulePanel.shared.hide()
@@ -423,23 +424,23 @@ struct CapsuleContentView: View {
             do {
                 if let item = try await storage.getSourceItem(id: sourceItemId) {
                     if item.transcript != nil || item.status == .parsed {
-                        print("语音转写完成: \(sourceItemId)")
+                        Self.logger.info("语音转写完成: \(sourceItemId)")
                         return
                     }
                     if item.status == .deleted {
-                        print("语音转写出错")
+                        Self.logger.warning("语音转写出错")
                         return
                     }
                 }
             } catch {
-                print("获取 SourceItem 失败: \(error)")
+                Self.logger.error("获取 SourceItem 失败: \(error)")
             }
 
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             attempts += 1
         }
 
-        print("等待语音转写超时")
+        Self.logger.warning("等待语音转写超时")
     }
 }
 

@@ -210,7 +210,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
     @Published var isRecording = false
     @Published var isProcessing = false
     @Published var isBusy = false
-    @Published var statusText = "正在准备说入法..."
+    @Published var statusText = SayInputPresentationLabelFormatter.preparingText
     @Published var displayText = ""
     @Published var resultTitle = "转写结果"
     @Published var hasResult = false
@@ -259,11 +259,11 @@ final class CompanionVoicePanelViewModel: ObservableObject {
 
         guard coordinator != nil else {
             errorMessage = "服务尚未初始化完成"
-            statusText = "无法启动说入法"
+            statusText = SayInputPresentationLabelFormatter.startFailedText
             return
         }
 
-        statusText = "正在加载设置..."
+        statusText = SayInputPresentationLabelFormatter.loadingSettingsText
         await settingsViewModel.loadSettings()
         await settingsViewModel.loadCompanionSettings()
 
@@ -280,7 +280,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         hasResult = false
         displayText = ""
         resultTitle = "转写结果"
-        statusText = "正在收音..."
+        statusText = SayInputPresentationLabelFormatter.recordingText
 
         // 应用前台应用的感知配置
         await coordinator.applyAppAwareConfiguration()
@@ -302,7 +302,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
             isRecording = true
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "启动失败"
+            statusText = SayInputPresentationLabelFormatter.startFailedText
             NotificationCenter.default.post(name: .companionVoiceCancelled, object: nil)
         }
 
@@ -322,7 +322,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         isProcessing = true
         realtimeText = ""
         isRealtimeMode = false
-        statusText = "正在整理文稿..."
+        statusText = SayInputPresentationLabelFormatter.processingText
         NotificationCenter.default.post(name: .companionVoiceRecordingStopped, object: nil)
         NotificationCenter.default.post(name: .companionVoiceProcessingStarted, object: nil)
 
@@ -339,29 +339,29 @@ final class CompanionVoicePanelViewModel: ObservableObject {
 
             switch outcome.deliveryState {
             case .insertedIntoFocusedField:
-                resultTitle = "已写入当前光标"
-                statusText = "内容已直接写入"
+                resultTitle = SayInputPresentationLabelFormatter.resultTitle(for: .insertedIntoFocusedField)
+                statusText = SayInputPresentationLabelFormatter.resultDetail(for: .insertedIntoFocusedField)
                 NotificationCenter.default.post(
                     name: .companionVoiceProcessingFinished,
                     object: ["destination": NotchV2VoiceCompletionDestination.focusedField.rawValue]
                 )
             case .copiedAndSavedToInbox:
-                resultTitle = "已复制并保存到收集箱"
-                statusText = "已进入收集箱"
+                resultTitle = SayInputPresentationLabelFormatter.resultTitle(for: .copiedAndSavedToInbox)
+                statusText = SayInputPresentationLabelFormatter.resultDetail(for: .copiedAndSavedToInbox)
                 NotificationCenter.default.post(
                     name: .companionVoiceProcessingFinished,
                     object: ["destination": NotchV2VoiceCompletionDestination.inbox.rawValue]
                 )
             case .copiedToClipboard:
-                resultTitle = "已复制到剪贴板"
-                statusText = "可直接粘贴使用"
+                resultTitle = SayInputPresentationLabelFormatter.resultTitle(for: .copiedToClipboard)
+                statusText = SayInputPresentationLabelFormatter.resultDetail(for: .copiedToClipboard)
                 NotificationCenter.default.post(
                     name: .companionVoiceProcessingFinished,
                     object: ["destination": NotchV2VoiceCompletionDestination.clipboard.rawValue]
                 )
             case .awaitingUserChoice:
-                resultTitle = "已准备好"
-                statusText = "内容已复制，等待你决定下一步"
+                resultTitle = SayInputPresentationLabelFormatter.resultTitle(for: .awaitingUserChoice)
+                statusText = SayInputPresentationLabelFormatter.resultDetail(for: .awaitingUserChoice)
                 NotificationCenter.default.post(
                     name: .companionVoiceProcessingFinished,
                     object: ["destination": NotchV2VoiceCompletionDestination.clipboard.rawValue]
@@ -369,7 +369,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
             }
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "处理失败"
+            statusText = SayInputPresentationLabelFormatter.processingFailedText
             isProcessing = false
             isRecording = false
             NotificationCenter.default.post(name: .companionVoiceCancelled, object: nil)
@@ -425,6 +425,6 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         guard displayText.isEmpty == false else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(displayText, forType: .string)
-        statusText = "已复制到剪贴板"
+        statusText = SayInputPresentationLabelFormatter.clipboardCopiedText
     }
 }

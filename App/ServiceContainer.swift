@@ -154,6 +154,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
     @Published public private(set) var isInitialized = false
 
     private var initializationTask: Task<Void, Error>?
+    private let logger = AcMindLogger(category: .lifecycle)
 
     // MARK: - Initialization
 
@@ -263,30 +264,35 @@ public final class ServiceContainer: ObservableObject, Sendable {
                     await runDataMigrationIfNeeded()
                 }
 
-                // 阶段 3: 设置
+                // 阶段 3: 设置迁移（旧 key → 规范化 key）
+                await transition(to: .dataMigration) {
+                    await runSettingsMigrationIfNeeded()
+                }
+
+                // 阶段 4: 设置
                 try await transition(to: .settings) {
                     try await settingsService.setup()
                 }
 
-                // 阶段 3: 权限（检查但不阻塞）
+                // 阶段 5: 权限（检查但不阻塞）
                 await transition(to: .permissions) {
                     _ = await settingsService.checkPermission(.microphone)
                     _ = await settingsService.checkPermission(.screenRecording)
                 }
 
-                // 阶段 4: 采集
+                // 阶段 6: 采集
                 await transition(to: .capture) {
                     await clipboardService.startWatching()
                 }
 
-                // 阶段 5: AI 运行时
+                // 阶段 7: AI 运行时
                 await transition(to: .ai) {
                     _ = aiRuntime
                     // 加载知识卡片历史
                     try? await knowledgeService.setup()
                 }
 
-                // 阶段 6: UI（标记完成）
+                // 阶段 8: UI（标记完成）
                 await transition(to: .ui) {
                     // UI 初始化在 SwiftUI 层完成
                     try? await scheduleService.setup()
@@ -319,37 +325,59 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
     // MARK: - Data Migration
 
+    /// 检测并执行设置迁移
+    private func runSettingsMigrationIfNeeded() async {
+        logger.info("检测设置迁移状态")
+        do {
+            let migrationService = SettingsMigrationService(
+                defaults: .standard,
+                storage: storageService
+            )
+            let result = try await migrationService.runIfNeeded()
+            if result.migrated {
+                logger.info("设置迁移完成，版本 \(result.currentVersion)")
+            } else {
+                logger.info("设置迁移无需变更，版本 \(result.currentVersion)")
+            }
+            if result.appliedVersions.isEmpty == false {
+                logger.debug("设置迁移步骤: \(result.appliedVersions)")
+            }
+        } catch {
+            logger.error("设置迁移失败: \(error.localizedDescription)")
+        }
+    }
+
     /// 检测并执行旧桌面版 → Swift 数据迁移
     /// 在存储层初始化之后、其他服务初始化之前运行
     private func runDataMigrationIfNeeded() async {
         // 检查是否存在旧版数据库
         guard storageService.checkLegacyDatabase() != nil else {
-            print("ℹ️ 未检测到旧版数据库，跳过数据迁移")
+            logger.info("未检测到旧版数据库，跳过数据迁移")
             return
         }
 
-        print("🔄 检测到旧版数据库，开始数据迁移...")
+        logger.info("检测到旧版数据库，开始数据迁移")
         do {
             let migrationService = DataMigrationService(swiftDBPath: URL(fileURLWithPath: storageService.getDatabasePath()))
             let result = try await migrationService.runIfNeeded()
             if result.migrated {
-                print("✅ 数据迁移完成，耗时 \(String(format: "%.2f", result.duration)) 秒")
+                logger.info("数据迁移完成，耗时 \(String(format: "%.2f", result.duration)) 秒")
                 if result.tables.isEmpty == false {
-                    print("📦 迁移表: \(result.tables)")
+                    logger.debug("迁移表: \(result.tables)")
                 }
                 if result.errors.isEmpty == false {
-                    print("⚠️ 迁移过程中出现问题: \(result.errors)")
+                    logger.warning("迁移过程中出现问题: \(result.errors)")
                 }
             }
         } catch let migrationError as DataMigrationService.MigrationError {
             switch migrationError {
             case .migrationAlreadyCompleted:
-                print("ℹ️ 旧数据迁移已完成，跳过")
+                logger.info("旧数据迁移已完成，跳过")
             default:
-                print("⚠️ 数据迁移失败: \(migrationError.localizedDescription)")
+                logger.error("数据迁移失败: \(migrationError.localizedDescription)")
             }
         } catch {
-            print("⚠️ 数据迁移失败: \(error.localizedDescription)")
+            logger.error("数据迁移失败: \(error.localizedDescription)")
         }
     }
 

@@ -1218,6 +1218,10 @@ public actor Database {
         )
     }
 
+    public func deleteSetting(key: String) async throws {
+        try db().execute("DELETE FROM app_settings WHERE key = ?", arguments: [key])
+    }
+
     // MARK: - Migration
 
     public func importFromJSON(_ items: [SourceItem]) async throws -> Int {

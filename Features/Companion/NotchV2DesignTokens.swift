@@ -51,8 +51,8 @@ enum NotchV2DesignTokens {
     static let rightCardRadius: CGFloat = 14
     static let largeRadius: CGFloat = 24
     static let islandBottomRadius: CGFloat = 14
-    static let pagePadding: CGFloat = 20
-    static let cardSpacing: CGFloat = 10
+    static let pagePadding: CGFloat = 16
+    static let cardSpacing: CGFloat = 8
     static let bottomPadding: CGFloat = 8
     static let pillRadius: CGFloat = 999
     static let smallButtonRadius: CGFloat = 14

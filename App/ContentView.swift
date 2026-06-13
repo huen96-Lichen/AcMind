@@ -58,7 +58,7 @@ struct ContentView: View {
             appState.selectSidebarItem(.agent)
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowInbox)) { _ in
-            appState.selectSidebarItem(.inbox)
+            appState.selectSidebarItem(.clipboard)
         }
         .onReceive(NotificationCenter.default.publisher(for: .companionShowSchedule)) { _ in
             appState.selectSidebarItem(.schedule)
@@ -223,16 +223,19 @@ struct MainContent: View {
     var body: some View {
         Group {
             switch selectedItem {
-            case .home, .systemStatus:
+            case .home:
+                WorkspaceHomeView(systemStatusService: serviceContainer.systemStatusService)
+                    .navigationTitle("本机")
+            case .systemStatus:
                 SystemStatusView(systemStatusService: serviceContainer.systemStatusService)
                     .navigationTitle("状态")
             case .agent:
                 AgentDashboardView()
                     .navigationTitle("Agent")
-            case .inbox:
-                InboxView()
-                    .navigationTitle("收集箱")
             case .clipboard:
+                ClipboardView(clipboardPinActions: clipboardPinActions)
+                    .navigationTitle("剪贴板 & 手机同步")
+            case .inbox:
                 ClipboardView(clipboardPinActions: clipboardPinActions)
                     .navigationTitle("剪贴板 & 手机同步")
             case .schedule:

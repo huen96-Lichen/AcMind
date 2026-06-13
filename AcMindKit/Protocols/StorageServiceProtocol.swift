@@ -80,6 +80,7 @@ public protocol StorageServiceProtocol: Sendable {
     // Settings
     func getSetting(key: String) async throws -> String?
     func setSetting(key: String, value: String) async throws
+    func deleteSetting(key: String) async throws
 
     // Migration
     func importFromJSON(_ items: [SourceItem]) async throws -> Int
@@ -118,6 +119,7 @@ public extension StorageServiceProtocol {
     func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem] { [] }
     func addTagToClipboardItem(itemId: String, tagName: String) async throws {}
     func removeTagFromClipboardItem(itemId: String, tagName: String) async throws {}
+    func deleteSetting(key: String) async throws {}
 }
 
 // MARK: - CaptureServiceProtocol

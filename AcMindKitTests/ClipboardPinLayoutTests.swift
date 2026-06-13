@@ -69,7 +69,7 @@ final class ClipboardPinLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(ClipboardPinWindowPresentation.reassertionDelays.last ?? 10, 1.0)
         XCTAssertTrue(ClipboardPinWindowPresentation.collectionBehavior(isAlwaysOnTop: true).contains(.canJoinAllSpaces))
         XCTAssertTrue(ClipboardPinWindowPresentation.collectionBehavior(isAlwaysOnTop: true).contains(.stationary))
-        XCTAssertTrue(ClipboardPinWindowPresentation.collectionBehavior(isAlwaysOnTop: true).contains(.moveToActiveSpace))
+        XCTAssertFalse(ClipboardPinWindowPresentation.collectionBehavior(isAlwaysOnTop: true).contains(.moveToActiveSpace))
         XCTAssertEqual(
             ClipboardPinWindowPresentation.collectionBehavior(isAlwaysOnTop: false),
             [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
@@ -334,6 +334,73 @@ final class ClipboardPinLayoutTests: XCTestCase {
         XCTAssertTrue(ClipboardPinWindowManager.shouldKeepAlive(using: [hiddenPinned, visiblePinned, visibleUnpinned]))
     }
 
+    @MainActor
+    func testClipboardPinManagerKeepsNewWindowRegisteredAfterShow() {
+        let manager = ClipboardPinWindowManager(assetStore: AssetStore())
+        let item = ClipboardItem(
+            type: .text,
+            content: nil,
+            textContent: "pin test",
+            sourceApp: "Notes"
+        )
+
+        manager.show(item: item)
+
+        XCTAssertEqual(manager.openWindowCount, 1)
+        XCTAssertEqual(manager.windowSnapshots.count, 1)
+        XCTAssertTrue(manager.windowSnapshots.first?.isVisible == true)
+        XCTAssertTrue(manager.windowSnapshots.first?.isAlwaysOnTop == true)
+
+        manager.closeAll()
+    }
+
+    @MainActor
+    func testClipboardPinViewModelResizeUpdatesPreferredWindowSizeWithinBounds() {
+        let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let item = ClipboardItem(
+            type: .text,
+            content: nil,
+            textContent: "pin resize verification text",
+            sourceApp: "Notes"
+        )
+        let viewModel = ClipboardPinWindowViewModel(
+            item: item,
+            assetStore: AssetStore(),
+            displayFrame: display
+        )
+        let original = viewModel.preferredWindowSize
+
+        viewModel.resize(by: CGSize(width: 140, height: 120))
+
+        XCTAssertGreaterThan(viewModel.preferredWindowSize.width, original.width)
+        XCTAssertGreaterThan(viewModel.preferredWindowSize.height, original.height)
+        XCTAssertLessThanOrEqual(viewModel.preferredWindowSize.width, ClipboardPinWindowSizing.manualResizeMaxTextWindowWidth)
+        XCTAssertLessThanOrEqual(viewModel.preferredWindowSize.height, ClipboardPinWindowSizing.manualResizeMaxWindowHeight)
+    }
+
+    @MainActor
+    func testClipboardPinViewModelResizeUsesUpdatedDisplayFrameBounds() {
+        let initialDisplay = CGRect(x: 0, y: 0, width: 1600, height: 1000)
+        let smallerDisplay = CGRect(x: 0, y: 0, width: 900, height: 700)
+        let item = ClipboardItem(
+            type: .text,
+            content: nil,
+            textContent: "pin resize verification text",
+            sourceApp: "Notes"
+        )
+        let viewModel = ClipboardPinWindowViewModel(
+            item: item,
+            assetStore: AssetStore(),
+            displayFrame: initialDisplay
+        )
+
+        viewModel.updateDisplayFrame(smallerDisplay)
+        viewModel.resize(by: CGSize(width: 400, height: 400))
+
+        XCTAssertLessThanOrEqual(viewModel.preferredWindowSize.width, smallerDisplay.width * 0.58)
+        XCTAssertLessThanOrEqual(viewModel.preferredWindowSize.height, ClipboardPinWindowSizing.manualResizeMaxWindowHeight)
+    }
+
     func testTextWindowHeightGrowsWithLongerTextAndRespectsMaximum() {
         let shortText = "短文本"
         let longText = String(repeating: "这是一段用于测试悬浮窗高度的较长文本。", count: 80)
@@ -383,6 +450,78 @@ final class ClipboardPinLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(zoomSize.height, display.height * 0.78)
     }
 
+    func testClipboardPinManualResizeWindowSizeKeepsTextWindowsWithinDisplayBounds() {
+        let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let oversized = CGSize(width: 999, height: 999)
+
+        let clamped = ClipboardPinWindowSizing.manualResizeWindowSize(
+            oversized,
+            itemType: .text,
+            displayFrame: display
+        )
+
+        XCTAssertGreaterThanOrEqual(clamped.width, ClipboardPinWindowSizing.minimumWindowWidth)
+        XCTAssertGreaterThanOrEqual(clamped.height, ClipboardPinWindowSizing.minimumWindowHeight)
+        XCTAssertLessThanOrEqual(clamped.width, ClipboardPinWindowSizing.manualResizeMaxTextWindowWidth)
+        XCTAssertLessThanOrEqual(clamped.height, ClipboardPinWindowSizing.manualResizeMaxWindowHeight)
+    }
+
+    func testClipboardPinManualResizeWindowSizeCanExceedOldZoomLimit() {
+        let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let imageSize = CGSize(width: 1280, height: 960)
+        let zoom = ClipboardPinWindowSizing.imageZoomWindowSize(for: imageSize, displayFrame: display)
+
+        let clamped = ClipboardPinWindowSizing.manualResizeWindowSize(
+            CGSize(width: zoom.width + 120, height: zoom.height + 120),
+            itemType: .image,
+            displayFrame: display,
+            imageSize: imageSize
+        )
+
+        XCTAssertGreaterThanOrEqual(clamped.width, zoom.width)
+        XCTAssertGreaterThanOrEqual(clamped.height, zoom.height)
+        XCTAssertLessThanOrEqual(clamped.width, ClipboardPinWindowSizing.manualResizeMaxWindowWidth)
+        XCTAssertLessThanOrEqual(clamped.height, ClipboardPinWindowSizing.manualResizeMaxWindowHeight)
+    }
+
+    func testClipboardPinExpandedPresetWindowSizeIsLargerThanBaseForText() {
+        let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let base = ClipboardPinWindowSizing.textWindowSize(for: "这是一段用于测试的文本内容。", displayFrame: display)
+        let expanded = ClipboardPinWindowSizing.expandedPresetWindowSize(
+            for: .text,
+            displayFrame: display
+        )
+
+        XCTAssertGreaterThanOrEqual(expanded.width, base.width)
+        XCTAssertGreaterThanOrEqual(expanded.height, base.height)
+    }
+
+    @MainActor
+    func testClipboardPinViewModelToggleExpandedSizeRestoresPreviousManualSize() {
+        let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let item = ClipboardItem(
+            type: .text,
+            content: nil,
+            textContent: "pin resize verification text",
+            sourceApp: "Notes"
+        )
+        let viewModel = ClipboardPinWindowViewModel(
+            item: item,
+            assetStore: AssetStore(),
+            displayFrame: display
+        )
+        let original = viewModel.preferredWindowSize
+
+        viewModel.toggleExpandedSize()
+        let expanded = viewModel.preferredWindowSize
+        viewModel.toggleExpandedSize()
+
+        XCTAssertGreaterThanOrEqual(expanded.width, original.width)
+        XCTAssertGreaterThanOrEqual(expanded.height, original.height)
+        XCTAssertEqual(viewModel.preferredWindowSize.width, original.width, accuracy: 2)
+        XCTAssertEqual(viewModel.preferredWindowSize.height, original.height, accuracy: 2)
+    }
+
     func testClipboardCardPresentationPreviewRulesStayAlignedAcrossKinds() {
         let imageItem = ClipboardItem(type: .image, content: "asset-id", textContent: "截图说明", sourceApp: "Safari")
         let fileItem = ClipboardItem(type: .file, content: "/tmp/a.txt", textContent: "路径 A\n路径 B", sourceApp: "Files")
@@ -392,6 +531,64 @@ final class ClipboardPinLayoutTests: XCTestCase {
         XCTAssertEqual(ClipboardCardPresentation.previewLineLimit(for: fileItem), 2)
         XCTAssertEqual(ClipboardCardPresentation.previewLineLimit(for: urlItem), 2)
         XCTAssertEqual(ClipboardCardPresentation.previewText(for: urlItem), "https://openai.com")
+    }
+
+    @MainActor
+    func testClipboardPinStructuredTextParserCompactsProfileCardContent() {
+        let input = """
+        小张师傅
+        00后 入行1年 租车
+        工作机：Redmi K30 Pro/小米14
+        日均时长：10小时
+        月均收入：9-10K
+        """
+
+        let parsed = ClipboardPinWindowViewModel.parseStructuredTextContent(from: input)
+
+        XCTAssertEqual(parsed?.title, "小张师傅")
+        XCTAssertEqual(parsed?.metaLine, "00后 · 入行1年 · 租车")
+        XCTAssertEqual(
+            parsed?.detailRows,
+            [
+                .init(label: "工作机", value: "Redmi K30 Pro / 小米14"),
+                .init(label: "时长", value: "10小时 / 日"),
+                .init(label: "收入", value: "9–10K / 月")
+            ]
+        )
+    }
+
+    @MainActor
+    func testClipboardPinStructuredTextParserIgnoresPlainParagraphs() {
+        let input = "这是一段普通文本，没有明确字段，只需要保留为正文展示。"
+
+        XCTAssertNil(ClipboardPinWindowViewModel.parseStructuredTextContent(from: input))
+    }
+
+    @MainActor
+    func testClipboardPinStructuredTextInitialSizeProvidesMoreVerticalBudget() {
+        let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let structuredText = """
+        小张师傅
+        00后 入行1年 租车
+        工作机：Redmi K30 Pro/小米14
+        日均时长：10小时
+        月均收入：9-10K
+        """
+        let plainText = "短文本"
+
+        let structuredViewModel = ClipboardPinWindowViewModel(
+            item: ClipboardItem(type: .text, content: nil, textContent: structuredText, sourceApp: "Notes"),
+            assetStore: AssetStore(),
+            displayFrame: display
+        )
+        let plainViewModel = ClipboardPinWindowViewModel(
+            item: ClipboardItem(type: .text, content: nil, textContent: plainText, sourceApp: "Notes"),
+            assetStore: AssetStore(),
+            displayFrame: display
+        )
+
+        XCTAssertGreaterThan(structuredViewModel.preferredWindowSize.height, plainViewModel.preferredWindowSize.height)
+        XCTAssertGreaterThanOrEqual(structuredViewModel.preferredWindowSize.width, 360)
     }
 }
 

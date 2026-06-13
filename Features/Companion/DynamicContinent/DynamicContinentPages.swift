@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 import AcMindKit
 
 struct DynamicContinentTodayPage: View {
@@ -31,7 +30,7 @@ struct DynamicContinentSchedulePage: View {
     @StateObject private var scheduleViewModel = ScheduleViewModel()
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
+        NotchV2DashboardLayout(leftColumnWidth: 176, rightColumnWidth: 176) {
             leftColumn
         } centerColumn: {
             centerColumn
@@ -41,7 +40,7 @@ struct DynamicContinentSchedulePage: View {
     }
 
     private var leftColumn: some View {
-        NotchV2Card(title: "今日时间线", symbol: "timeline.selection", padding: 12) {
+        NotchV2Card(title: "今日时间线", symbol: "timeline.selection", padding: 12, fillHeight: true) {
             if scheduleVm.todayEvents.isEmpty {
                 emptyTimeline
             } else {
@@ -388,7 +387,7 @@ struct DynamicContinentSystemStatusPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
+        NotchV2DashboardLayout(leftColumnWidth: 176, rightColumnWidth: 176) {
             leftColumn
         } centerColumn: {
             centerColumn
@@ -399,63 +398,7 @@ struct DynamicContinentSystemStatusPage: View {
 
     private var leftColumn: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "关键指标", symbol: "gauge.high", cornerRadius: NotchV2DesignTokens.cardRadius) {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(viewModel.overviewSystemStatusRows, id: \.title) { row in
-                        miniMetricRow(
-                            icon: metricIcon(for: row.title),
-                            title: row.title,
-                            value: row.value,
-                            accent: row.accent
-                        )
-                    }
-                }
-            }
-
-            NotchV2Card(title: "跳转", symbol: "arrow.triangle.branch", cornerRadius: NotchV2DesignTokens.cardRadius) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("在主窗口查看完整运行状态、进程和问题排查。")
-                        .font(NotchV2DesignTokens.Typography.body)
-                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-
-                    Button("打开系统状态") {
-                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
-                    }
-                    .buttonStyle(.plain)
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .foregroundStyle(NotchV2DesignTokens.accentBlue)
-                }
-            }
-        }
-    }
-
-    private var centerColumn: some View {
-        NotchV2Card(title: "核心摘要", symbol: "cpu", cardAccent: .orange) {
-            let columns = [
-                GridItem(.flexible(), spacing: 8),
-                GridItem(.flexible(), spacing: 8)
-            ]
-
-            return LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                ForEach(viewModel.overviewSystemStatusRows, id: \.title) { row in
-                    metricTile(
-                        title: row.title,
-                        value: row.value,
-                        detail: "",
-                        color: row.accent
-                    )
-                }
-            }
-        }
-    }
-
-    private var rightColumn: some View {
-        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2SystemRail(viewModel: viewModel)
-
-            NotchV2Card(title: "运行摘要", symbol: "desktopcomputer", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            NotchV2Card(title: "运行摘要", symbol: "desktopcomputer", fillHeight: true, cornerRadius: NotchV2DesignTokens.cardRadius) {
                 VStack(alignment: .leading, spacing: 6) {
                     infoRow(label: "主机", value: Host.current().localizedName ?? "Mac")
                     infoRow(label: "系统", value: ProcessInfo.processInfo.operatingSystemVersionString)
@@ -470,19 +413,64 @@ struct DynamicContinentSystemStatusPage: View {
                         .lineLimit(1)
 
                     infoRow(label: "电池", value: viewModel.batteryStateText)
-                    infoRow(label: "电量", value: "\(Int(viewModel.batteryInfo.percentage))%")
+                    infoRow(label: "电量", value: viewModel.batteryDisplayText)
                 }
             }
         }
     }
 
-    private func metricIcon(for title: String) -> String {
-        switch title {
-        case "电池": return "bolt.fill"
-        case "麦克风": return "mic.fill"
-        case "录屏": return "display"
-        case "辅助功能": return "accessibility"
-        default: return "info.circle"
+    private var centerColumn: some View {
+        NotchV2Card(title: "核心摘要", symbol: "cpu", fillHeight: true, cardAccent: .orange) {
+            let columns = [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
+            ]
+
+            return LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                statusMetricTile(
+                    title: "电池电量",
+                    value: viewModel.systemBatterySummary,
+                    detail: viewModel.batteryStateText,
+                    color: .cyan
+                )
+
+                statusMetricTile(
+                    title: "网速（上传下载量）",
+                    value: viewModel.systemNetworkDownloadSummary,
+                    detail: "↑ \(viewModel.systemNetworkUploadSummary)",
+                    color: .green
+                )
+
+                statusMetricTile(
+                    title: "当前设备温度",
+                    value: viewModel.systemTemperatureSummary,
+                    detail: viewModel.systemTemperatureDetail,
+                    color: .orange
+                )
+
+                fanControlTile
+
+                statusMetricTile(
+                    title: "CPU 负载率",
+                    value: viewModel.systemCPUUsageSummary,
+                    detail: "当前使用率",
+                    color: .blue
+                )
+
+                statusMetricTile(
+                    title: "内存负载率",
+                    value: viewModel.systemMemoryUsageSummary,
+                    detail: "当前占用率",
+                    color: .purple
+                )
+            }
+        }
+    }
+
+    private var rightColumn: some View {
+        VStack(spacing: NotchV2DesignTokens.cardSpacing) {
+            NotchV2SystemRail(viewModel: viewModel)
         }
     }
 
@@ -510,7 +498,7 @@ struct DynamicContinentSystemStatusPage: View {
         )
     }
 
-    private func metricTile(title: String, value: String, detail: String, color: Color) -> some View {
+    private func statusMetricTile(title: String, value: String, detail: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(NotchV2DesignTokens.Typography.caption)
@@ -530,6 +518,42 @@ struct DynamicContinentSystemStatusPage: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground)
+        )
+    }
+
+    private var fanControlTile: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("当前设备风扇转速")
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+
+            Text(viewModel.systemFanSummary)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.mint)
+                .lineLimit(1)
+
+            HStack(spacing: 6) {
+                ForEach(viewModel.systemFanControlPresets) { preset in
+                    NotchV2SegmentedPill(
+                        title: preset.rawValue,
+                        isSelected: viewModel.fanControlPreset == preset
+                    ) {
+                        viewModel.selectFanControlPreset(preset)
+                    }
+                }
+            }
+
+            Text(viewModel.systemFanDetail)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(NotchV2DesignTokens.innerCardBackground)

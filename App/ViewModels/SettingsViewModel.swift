@@ -36,6 +36,7 @@ public final class SettingsViewModel: ObservableObject {
     private let settings: SettingsServiceProtocol
     private let storage: StorageServiceProtocol
     private let permissionManager: PermissionManager
+    nonisolated(unsafe) private var didBecomeActiveObserver: NSObjectProtocol?
 
     // MARK: - Published Properties
 
@@ -88,6 +89,9 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var captureScreenshotEnabled: Bool = true
     @Published public var captureAutoRedactionEnabled: Bool = true
     @Published public var captureCensorMode: CensorMode = .pixelate
+    @Published public var captureScreenshotCornerRadius: Double = 0
+    @Published public var captureScreenshotMaxWidth: Double = 0
+    @Published public var captureScreenshotMaxHeight: Double = 0
     @Published public var companionCaptureOpenDetailAfterCapture: Bool = false
     @Published public var companionCaptureShowNotification: Bool = true
     @Published public var voiceInputEnabled: Bool = true
@@ -98,6 +102,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var errorLogEnabled: Bool = true
     private var lastAutoBackupAt: Date?
     @Published public var lastBackupAtText: String = "尚未备份"
+    public var lastBackupAtDate: Date? { lastAutoBackupAt }
 
     // 随身设置
     @Published public var companionEnabled: Bool = true
@@ -137,6 +142,7 @@ public final class SettingsViewModel: ObservableObject {
     // Providers
     @Published public var providers: [ProviderConfig] = []
     @Published public var usageSummary: SettingsUsageSummary = .empty
+    @Published public var usageBurnSnapshot: UsageBurnSnapshot = .empty
     @Published public var isLoading = false
     @Published public var isCheckingForUpdates = false
     @Published public var errorMessage: String?
@@ -152,13 +158,31 @@ public final class SettingsViewModel: ObservableObject {
             permissionManager: self.permissionManager
         )
 
+        didBecomeActiveObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.refreshPermissionStatesFromManager()
+            }
+        }
+
         // 加载设置
         Task {
             await loadSettings()
             await loadPermissions()
             await loadProviders()
             await loadUsageSummary()
+            await loadUsageBurnSnapshot()
             await loadCompanionSettings()
+        }
+    }
+
+    deinit {
+        if let observer = didBecomeActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
@@ -225,9 +249,7 @@ public final class SettingsViewModel: ObservableObject {
 
         // 从 PermissionManager 获取真实权限状态
         await permissionManager.refreshAll()
-        microphonePermissionStatus = mapToCompanionStatus(permissionManager.statuses[.microphone] ?? .unknown)
-        accessibilityPermissionStatus = mapToCompanionStatus(permissionManager.statuses[.accessibility] ?? .unknown)
-        screenRecordingPermissionStatus = mapToCompanionStatus(permissionManager.statuses[.screenRecording] ?? .unknown)
+        refreshPermissionStatesFromManager()
     }
 
     // MARK: - Save Settings
@@ -416,26 +438,40 @@ public final class SettingsViewModel: ObservableObject {
 
     /// 刷新所有权限状态（从 PermissionManager 读取最新状态）
     public func refreshPermissionsFromManager() {
-        microphoneStatus = permissionManager.statuses[.microphone] ?? .unknown
-        screenRecordingStatus = permissionManager.statuses[.screenRecording] ?? .unknown
-        accessibilityStatus = permissionManager.statuses[.accessibility] ?? .unknown
-        fullDiskAccessStatus = permissionManager.statuses[.fullDiskAccess] ?? .unknown
-        notificationsStatus = permissionManager.statuses[.notifications] ?? .unknown
+        refreshPermissionStatesFromManager()
     }
 
     public func loadPermissions() async {
         await permissionManager.refreshAll()
-        refreshPermissionsFromManager()
+        refreshPermissionStatesFromManager()
     }
 
     public func requestPermission(_ permission: SystemPermission) async {
         let kind = permission.toAppPermissionKind
         await permissionManager.request(kind)
-        refreshPermissionsFromManager()
+        refreshPermissionStatesFromManager()
     }
 
     public func openSystemPreferences(for permission: SystemPermission) async {
         permissionManager.openSettingsFor(permission.toAppPermissionKind)
+    }
+
+    private func refreshPermissionStatesFromManager() {
+        let microphone = permissionManager.statuses[.microphone] ?? .unknown
+        let screenRecording = permissionManager.statuses[.screenRecording] ?? .unknown
+        let accessibility = permissionManager.statuses[.accessibility] ?? .unknown
+        let fullDiskAccess = permissionManager.statuses[.fullDiskAccess] ?? .unknown
+        let notifications = permissionManager.statuses[.notifications] ?? .unknown
+
+        microphoneStatus = microphone
+        screenRecordingStatus = screenRecording
+        accessibilityStatus = accessibility
+        fullDiskAccessStatus = fullDiskAccess
+        notificationsStatus = notifications
+
+        microphonePermissionStatus = mapToCompanionStatus(microphone)
+        accessibilityPermissionStatus = mapToCompanionStatus(accessibility)
+        screenRecordingPermissionStatus = mapToCompanionStatus(screenRecording)
     }
 
     // MARK: - Providers
@@ -468,11 +504,16 @@ public final class SettingsViewModel: ObservableObject {
         }
     }
 
+    public func loadUsageBurnSnapshot() async {
+        usageBurnSnapshot = await UsageBurnMonitor.shared.snapshot()
+    }
+
     public func addProvider(_ config: ProviderConfig, apiKey: String? = nil) async {
         do {
             try await settings.addProvider(config, apiKey: apiKey)
             await loadProviders()
             await loadUsageSummary()
+            await loadUsageBurnSnapshot()
         } catch {
             showError(message: error.localizedDescription)
         }
@@ -483,6 +524,7 @@ public final class SettingsViewModel: ObservableObject {
             try await settings.updateProvider(config, apiKey: apiKey)
             await loadProviders()
             await loadUsageSummary()
+            await loadUsageBurnSnapshot()
         } catch {
             showError(message: error.localizedDescription)
         }
@@ -493,6 +535,7 @@ public final class SettingsViewModel: ObservableObject {
             try await settings.removeProvider(id: id)
             await loadProviders()
             await loadUsageSummary()
+            await loadUsageBurnSnapshot()
         } catch {
             showError(message: error.localizedDescription)
         }
@@ -822,6 +865,9 @@ public final class SettingsViewModel: ObservableObject {
             captureScreenshotEnabled: captureScreenshotEnabled,
             captureAutoRedactionEnabled: captureAutoRedactionEnabled,
             captureCensorModeRawValue: captureCensorMode.rawValue,
+            captureScreenshotCornerRadius: captureScreenshotCornerRadius,
+            captureScreenshotMaxWidth: captureScreenshotMaxWidth,
+            captureScreenshotMaxHeight: captureScreenshotMaxHeight,
             companionCaptureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
             companionCaptureOpenDetailAfterCapture: companionCaptureOpenDetailAfterCapture,
             companionCaptureShowNotification: companionCaptureShowNotification,
@@ -944,6 +990,9 @@ public final class SettingsViewModel: ObservableObject {
                 captureScreenshotEnabled: captureScreenshotEnabled,
                 captureAutoRedactionEnabled: captureAutoRedactionEnabled,
                 captureCensorModeRawValue: captureCensorMode.rawValue,
+                captureScreenshotCornerRadius: captureScreenshotCornerRadius,
+                captureScreenshotMaxWidth: captureScreenshotMaxWidth,
+                captureScreenshotMaxHeight: captureScreenshotMaxHeight,
                 companionCaptureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
                 companionCaptureOpenDetailAfterCapture: companionCaptureOpenDetailAfterCapture,
                 companionCaptureShowNotification: companionCaptureShowNotification,
@@ -1032,6 +1081,9 @@ public final class SettingsViewModel: ObservableObject {
         captureScreenshotEnabled = preferences.captureScreenshotEnabled
         captureAutoRedactionEnabled = preferences.captureAutoRedactionEnabled
         captureCensorMode = preferences.captureCensorMode
+        captureScreenshotCornerRadius = preferences.captureScreenshotCornerRadius
+        captureScreenshotMaxWidth = preferences.captureScreenshotMaxWidth
+        captureScreenshotMaxHeight = preferences.captureScreenshotMaxHeight
         companionCaptureAutoSaveToInbox = preferences.companionCaptureAutoSaveToInbox
         companionCaptureOpenDetailAfterCapture = preferences.companionCaptureOpenDetailAfterCapture
         companionCaptureShowNotification = preferences.companionCaptureShowNotification

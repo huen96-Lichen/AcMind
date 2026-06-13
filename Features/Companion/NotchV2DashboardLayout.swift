@@ -11,7 +11,7 @@ struct NotchV2DashboardLayout<Left: View, Center: View, Right: View>: View {
     init(
         leftColumnWidth: CGFloat = 216,
         rightColumnWidth: CGFloat = 240,
-        topInset: CGFloat = 8,
+        topInset: CGFloat = 6,
         @ViewBuilder leftColumn: () -> Left,
         @ViewBuilder centerColumn: () -> Center,
         @ViewBuilder rightColumn: () -> Right
@@ -28,12 +28,14 @@ struct NotchV2DashboardLayout<Left: View, Center: View, Right: View>: View {
         HStack(alignment: .top, spacing: NotchV2DesignTokens.cardSpacing) {
             leftColumn
                 .frame(width: leftColumnWidth, alignment: .topLeading)
+                .frame(maxHeight: .infinity, alignment: .topLeading)
 
             centerColumn
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             rightColumn
                 .frame(width: rightColumnWidth, alignment: .topLeading)
+                .frame(maxHeight: .infinity, alignment: .topLeading)
         }
         .padding(.horizontal, NotchV2DesignTokens.pagePadding)
         .padding(.top, topInset)

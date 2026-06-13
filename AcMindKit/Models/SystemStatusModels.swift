@@ -155,6 +155,34 @@ public struct SystemFanSnapshot: Identifiable, Equatable, Sendable {
     }
 }
 
+public struct SystemThermalThrottleInfo: Identifiable, Equatable, Sendable {
+    public var id: String
+    public var speedLimit: Int?
+    public var schedulerLimit: Int?
+    public var availableCPUs: Int?
+    public var source: String
+    public var isAvailable: Bool
+    public var unavailableReason: String?
+
+    public init(
+        id: String = "thermal-throttle",
+        speedLimit: Int? = nil,
+        schedulerLimit: Int? = nil,
+        availableCPUs: Int? = nil,
+        source: String,
+        isAvailable: Bool,
+        unavailableReason: String? = nil
+    ) {
+        self.id = id
+        self.speedLimit = speedLimit
+        self.schedulerLimit = schedulerLimit
+        self.availableCPUs = availableCPUs
+        self.source = source
+        self.isAvailable = isAvailable
+        self.unavailableReason = unavailableReason
+    }
+}
+
 public struct SystemBatteryDetails: Equatable, Sendable {
     public var percentage: Double?
     public var state: String
@@ -322,6 +350,7 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
     public var powerSensors: [SystemSensorSnapshot]
     public var voltageSensors: [SystemSensorSnapshot]
     public var currentSensors: [SystemSensorSnapshot]
+    public var thermalThrottle: SystemThermalThrottleInfo?
     public var thermalState: String?
     public var loadAverage1m: Double?
     public var loadAverage5m: Double?
@@ -354,6 +383,7 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         powerSensors: [SystemSensorSnapshot] = [],
         voltageSensors: [SystemSensorSnapshot] = [],
         currentSensors: [SystemSensorSnapshot] = [],
+        thermalThrottle: SystemThermalThrottleInfo? = nil,
         thermalState: String? = nil,
         loadAverage1m: Double? = nil,
         loadAverage5m: Double? = nil,
@@ -385,6 +415,7 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         self.powerSensors = powerSensors
         self.voltageSensors = voltageSensors
         self.currentSensors = currentSensors
+        self.thermalThrottle = thermalThrottle
         self.thermalState = thermalState
         self.loadAverage1m = loadAverage1m
         self.loadAverage5m = loadAverage5m
@@ -472,6 +503,7 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
     public var powerSensors: [SystemSensorSnapshot]
     public var voltageSensors: [SystemSensorSnapshot]
     public var currentSensors: [SystemSensorSnapshot]
+    public var thermalThrottle: SystemThermalThrottleInfo?
     public var thermalState: String?
     public var loadAverage1m: Double?
     public var loadAverage5m: Double?
@@ -514,6 +546,7 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         powerSensors: [SystemSensorSnapshot] = [],
         voltageSensors: [SystemSensorSnapshot] = [],
         currentSensors: [SystemSensorSnapshot] = [],
+        thermalThrottle: SystemThermalThrottleInfo? = nil,
         thermalState: String? = nil,
         loadAverage1m: Double? = nil,
         loadAverage5m: Double? = nil,
@@ -554,6 +587,7 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         self.powerSensors = powerSensors
         self.voltageSensors = voltageSensors
         self.currentSensors = currentSensors
+        self.thermalThrottle = thermalThrottle
         self.thermalState = thermalState
         self.loadAverage1m = loadAverage1m
         self.loadAverage5m = loadAverage5m

@@ -2,6 +2,8 @@ import AppKit
 import Combine
 import SwiftUI
 
+private let clipboardPinLogger = AcMindLogger(category: .capture)
+
 @MainActor
 public final class ClipboardPinWindowManager {
     private struct NotificationObserver {
@@ -33,7 +35,7 @@ public final class ClipboardPinWindowManager {
 
     public func show(item: ClipboardItem, preferredDisplayFrame: CGRect? = nil) {
         #if DEBUG
-        print("[ClipboardPin] manager show item=\(item.id) windows=\(windows.count) preferredDisplayFrame=\(String(describing: preferredDisplayFrame))")
+        clipboardPinLogger.info("[ClipboardPin] manager show item=\(item.id) windows=\(windows.count) preferredDisplayFrame=\(String(describing: preferredDisplayFrame))")
         #endif
         if let existing = windows[item.id] {
             existing.controller.setAlwaysOnTop(true)
@@ -308,22 +310,22 @@ public final class ClipboardPinWindowManager {
 }
 
 enum ClipboardPinWindowPresentation {
-    static let styleMask: NSWindow.StyleMask = [.borderless, .hudWindow, .fullSizeContentView, .nonactivatingPanel]
+    static let styleMask: NSWindow.StyleMask = [.borderless, .hudWindow, .fullSizeContentView, .nonactivatingPanel, .resizable]
     static let alwaysOnTopLevel: NSWindow.Level = .screenSaver
     static let fallbackLevel: NSWindow.Level = .floating
     static let reassertionDelays: [TimeInterval] = [0.05, 0.20, 0.60]
 
     static func collectionBehavior(isAlwaysOnTop: Bool) -> NSWindow.CollectionBehavior {
         isAlwaysOnTop
-            ? [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .stationary, .moveToActiveSpace]
+            ? [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .stationary]
             : [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
     }
 }
 
 final class ClipboardPinPanel: NSPanel {
     override var canBecomeKey: Bool { true }
-    override var acceptsFirstResponder: Bool { false }
-    override var canBecomeMain: Bool { true }
+    override var acceptsFirstResponder: Bool { true }
+    override var canBecomeMain: Bool { false }
 }
 
 @MainActor
@@ -384,7 +386,7 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
 
     func reveal() {
         #if DEBUG
-        print("[ClipboardPin] reveal item=\(item.id) visible=\(window.isVisible) frame=\(window.frame) level=\(window.level.rawValue) displayFrame=\(displayFrame)")
+        clipboardPinLogger.info("[ClipboardPin] reveal item=\(item.id) visible=\(window.isVisible) frame=\(window.frame) level=\(window.level.rawValue) displayFrame=\(displayFrame)")
         #endif
         bringToFront(activateApp: true)
     }
@@ -419,21 +421,20 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
     }
 
     private func bringToFront(activateApp: Bool) {
+        refreshDisplayFrame()
         applyWindowLevel()
         window.isFloatingPanel = true
-        window.becomesKeyOnlyIfNeeded = false
         window.alphaValue = 1
         if activateApp, NSApp.isActive == false {
             NSApp.activate(ignoringOtherApps: true)
         }
-        window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
-        window.makeMain()
+        window.orderFrontRegardless()
         DispatchQueue.main.async { [weak self] in
             guard let self, self.window.isVisible else { return }
             self.applyWindowLevel()
-            self.window.orderFrontRegardless()
             self.window.makeKeyAndOrderFront(nil)
+            self.window.orderFrontRegardless()
         }
     }
 
@@ -442,13 +443,14 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
         window.delegate = self
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
+        // Keep resize-handle drags from being captured as window-move gestures.
+        window.isMovableByWindowBackground = false
         window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.04)
         window.isOpaque = false
         window.hasShadow = true
         window.animationBehavior = .utilityWindow
         window.isFloatingPanel = true
-        window.becomesKeyOnlyIfNeeded = false
+        window.becomesKeyOnlyIfNeeded = true
         window.level = ClipboardPinWindowPresentation.alwaysOnTopLevel
         window.collectionBehavior = ClipboardPinWindowPresentation.collectionBehavior(isAlwaysOnTop: true)
         window.standardWindowButton(.closeButton)?.isHidden = true
@@ -460,7 +462,18 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
     private func configureContentView() {
         let rootView = ClipboardPinWindowView(
             viewModel: viewModel,
-            onClose: { [weak self] in self?.close() }
+            onClose: { [weak self] in self?.close() },
+            onToggleAlwaysOnTop: { [weak self] in self?.onToggleAlwaysOnTop() },
+            onToggleExpandedSize: { [weak self] in self?.viewModel.toggleExpandedSize() },
+            onBeginCustomResize: { [weak self] in
+                self?.viewModel.shouldAnimateResize = false
+            },
+            onEndCustomResize: { [weak self] in
+                self?.viewModel.shouldAnimateResize = true
+            },
+            onResize: { [weak self] delta in
+                self?.viewModel.resize(by: delta)
+            }
         )
 
         let hosting = NSHostingView(rootView: rootView)
@@ -472,7 +485,6 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
     private func bindViewModel() {
         viewModel.$preferredWindowSize
             .removeDuplicates()
-            .receive(on: RunLoop.main)
             .sink { [weak self] size in
                 self?.resizeWindow(to: size)
             }
@@ -481,17 +493,26 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
 
     private func resizeWindow(to size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
+        refreshDisplayFrame()
         let targetFrame = Self.anchoredFrame(
             for: size,
             in: displayFrame
         )
-        window.setFrame(targetFrame, display: true, animate: true)
+        window.setFrame(targetFrame, display: true, animate: viewModel.shouldAnimateResize)
         window.contentView?.frame = CGRect(origin: .zero, size: size)
     }
 
     private func positionWindow() {
+        refreshDisplayFrame()
         let size = viewModel.preferredWindowSize
         window.setFrame(Self.anchoredFrame(for: size, in: displayFrame), display: true)
+    }
+
+    private func refreshDisplayFrame() {
+        let updatedFrame = window.screen?.visibleFrame ?? Self.activeDisplayFrame()
+        guard updatedFrame.isNull == false, updatedFrame.isEmpty == false else { return }
+        displayFrame = updatedFrame
+        viewModel.updateDisplayFrame(updatedFrame)
     }
 
     private static func anchoredFrame(for size: CGSize, in displayFrame: CGRect) -> CGRect {
@@ -521,30 +542,32 @@ final class ClipboardPinWindowController: NSObject, NSWindowDelegate {
         onClose()
     }
 
-    func windowDidResignKey(_ notification: Notification) {
-        guard viewModel.isAlwaysOnTop else { return }
-        DispatchQueue.main.async { [weak self] in
-            self?.reassertAlwaysOnTop()
-        }
+}
+
+struct ClipboardPinStructuredTextContent: Equatable {
+    struct DetailRow: Equatable {
+        let label: String
+        let value: String
     }
 
-    func windowDidResignMain(_ notification: Notification) {
-        guard viewModel.isAlwaysOnTop else { return }
-        DispatchQueue.main.async { [weak self] in
-            self?.reassertAlwaysOnTop()
-        }
-    }
+    let title: String
+    let metaLine: String?
+    let detailRows: [DetailRow]
+    let fallbackBody: String?
 }
 
 @MainActor
 final class ClipboardPinWindowViewModel: ObservableObject {
     let item: ClipboardItem
     let assetStore: AssetStore
-    private let displayFrame: CGRect
+    private var displayFrame: CGRect
 
     @Published var loadedImage: NSImage?
     @Published var preferredWindowSize: CGSize
     @Published var isAlwaysOnTop: Bool = true
+    var shouldAnimateResize: Bool = true
+    private var didApplyManualResize = false
+    private var previousWindowSizeBeforeExpand: CGSize?
 
     init(item: ClipboardItem, assetStore: AssetStore, displayFrame: CGRect) {
         self.item = item
@@ -618,6 +641,19 @@ final class ClipboardPinWindowViewModel: ObservableObject {
         item.createdAt.formatted(date: .omitted, time: .shortened)
     }
 
+    var sourceAndTimeText: String {
+        "\(sourceLabel) · \(timestampText)"
+    }
+
+    var timestampAndDetailText: String {
+        [timestampText, contentDetailText]
+            .compactMap { value in
+                guard let value, value.isEmpty == false else { return nil }
+                return value
+            }
+            .joined(separator: " · ")
+    }
+
     var contentDetailText: String? {
         switch item.type {
         case .image:
@@ -636,8 +672,12 @@ final class ClipboardPinWindowViewModel: ObservableObject {
         }
     }
 
+    var structuredTextContent: ClipboardPinStructuredTextContent? {
+        Self.parseStructuredTextContent(from: displayText)
+    }
+
     private func loadContent() {
-        guard item.type == .image, let assetId = item.content else { return }
+        guard item.type == .image || item.type == .video, let assetId = item.content else { return }
         Task { [weak self] in
             guard let self else { return }
             guard let asset = try? await assetStore.getAsset(id: assetId) else { return }
@@ -645,8 +685,57 @@ final class ClipboardPinWindowViewModel: ObservableObject {
             guard let image = assetStore.loadImage(asset: asset, maxPixelSize: maxPixelSize) else { return }
             await MainActor.run {
                 self.loadedImage = image
-                self.preferredWindowSize = ClipboardPinWindowSizing.imageWindowSize(for: image.size, displayFrame: self.displayFrame)
+                if self.didApplyManualResize == false {
+                    self.preferredWindowSize = ClipboardPinWindowSizing.imageWindowSize(for: image.size, displayFrame: self.displayFrame)
+                }
             }
+        }
+    }
+
+    func updateDisplayFrame(_ frame: CGRect) {
+        guard frame.isNull == false, frame.isEmpty == false else { return }
+        displayFrame = frame
+    }
+
+    func resize(by delta: CGSize) {
+        didApplyManualResize = true
+        previousWindowSizeBeforeExpand = nil
+        shouldAnimateResize = false
+        let proposed = CGSize(
+            width: preferredWindowSize.width + delta.width,
+            height: preferredWindowSize.height + delta.height
+        )
+        preferredWindowSize = ClipboardPinWindowSizing.manualResizeWindowSize(
+            proposed,
+            itemType: item.type,
+            displayFrame: displayFrame,
+            imageSize: loadedImage?.size
+        )
+        #if DEBUG
+        clipboardPinLogger.info("[ClipboardPin] resize item=\(item.id) delta=\(delta) proposed=\(proposed) clamped=\(preferredWindowSize)")
+        #endif
+    }
+
+    func toggleExpandedSize() {
+        didApplyManualResize = true
+        shouldAnimateResize = true
+        let expanded = ClipboardPinWindowSizing.expandedPresetWindowSize(
+            for: item.type,
+            displayFrame: displayFrame,
+            imageSize: loadedImage?.size
+        )
+
+        if Self.isClose(preferredWindowSize, expanded), let previousWindowSizeBeforeExpand {
+            preferredWindowSize = ClipboardPinWindowSizing.manualResizeWindowSize(
+                previousWindowSizeBeforeExpand,
+                itemType: item.type,
+                displayFrame: displayFrame,
+                imageSize: loadedImage?.size
+            )
+            self.previousWindowSizeBeforeExpand = nil
+        } else {
+            previousWindowSizeBeforeExpand = preferredWindowSize
+            preferredWindowSize = expanded
         }
     }
 
@@ -658,110 +747,558 @@ final class ClipboardPinWindowViewModel: ObservableObject {
                 height: 260
             )
         default:
-            return ClipboardPinWindowSizing.textWindowSize(for: item.textContent ?? item.content ?? "", displayFrame: displayFrame)
+            let content = item.textContent ?? item.content ?? ""
+            if let structured = parseStructuredTextContent(from: content) {
+                return structuredTextWindowSize(for: structured, displayFrame: displayFrame)
+            }
+            return ClipboardPinWindowSizing.textWindowSize(for: content, displayFrame: displayFrame)
         }
     }
+
+    private nonisolated static func isClose(_ lhs: CGSize, _ rhs: CGSize, tolerance: CGFloat = 2) -> Bool {
+        abs(lhs.width - rhs.width) <= tolerance && abs(lhs.height - rhs.height) <= tolerance
+    }
+
+    private nonisolated static func structuredTextWindowSize(
+        for content: ClipboardPinStructuredTextContent,
+        displayFrame: CGRect
+    ) -> CGSize {
+        let rowCount = CGFloat(content.detailRows.count)
+        let fallbackLines = CGFloat(content.fallbackBody?.split(separator: "\n").count ?? 0)
+        let width = min(
+            ClipboardPinWindowSizing.maxWindowWidth,
+            max(360, displayFrame.width * 0.34)
+        )
+        let estimatedHeight = 188 + rowCount * 38 + fallbackLines * 22
+        let maxHeight = min(
+            ClipboardPinWindowSizing.maxContentHeight + ClipboardPinWindowSizing.chromeHeight + 72,
+            displayFrame.height * 0.72
+        )
+
+        return CGSize(
+            width: round(max(ClipboardPinWindowSizing.minimumWindowWidth, width)),
+            height: round(min(maxHeight, max(220, estimatedHeight)))
+        )
+    }
+
+    nonisolated static func parseStructuredTextContent(from text: String) -> ClipboardPinStructuredTextContent? {
+        let normalizedText = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedText.isEmpty == false else { return nil }
+
+        let rawLines = normalizedText
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        guard rawLines.isEmpty == false else { return nil }
+
+        let title = rawLines[0]
+        var metaLine: String?
+        var detailRows: [ClipboardPinStructuredTextContent.DetailRow] = []
+        var trailingBody: [String] = []
+
+        for (index, line) in rawLines.enumerated() {
+            if index == 0 { continue }
+
+            if let row = parseDetailRow(from: line) {
+                detailRows.append(row)
+                continue
+            }
+
+            if metaLine == nil, let compactMeta = compactMetaLine(from: line) {
+                metaLine = compactMeta
+                continue
+            }
+
+            trailingBody.append(line)
+        }
+
+        let fallbackBody = trailingBody.isEmpty ? nil : trailingBody.joined(separator: "\n")
+        guard detailRows.isEmpty == false || metaLine != nil else { return nil }
+        return ClipboardPinStructuredTextContent(
+            title: title,
+            metaLine: metaLine,
+            detailRows: detailRows,
+            fallbackBody: fallbackBody
+        )
+    }
+
+    private nonisolated static func parseDetailRow(from line: String) -> ClipboardPinStructuredTextContent.DetailRow? {
+        let separators = ["：", ":"]
+        guard let separator = separators.first(where: { line.contains($0) }) else { return nil }
+        let components = line.components(separatedBy: separator)
+        guard components.count >= 2 else { return nil }
+
+        let rawLabel = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawValue = components.dropFirst().joined(separator: separator).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard rawValue.isEmpty == false else { return nil }
+
+        let normalizedLabel = normalizedDetailLabel(from: rawLabel)
+        guard let normalizedLabel else { return nil }
+
+        let normalizedValue = normalizedDetailValue(rawValue, label: normalizedLabel, originalLabel: rawLabel)
+        return .init(label: normalizedLabel, value: normalizedValue)
+    }
+
+    private nonisolated static func compactMetaLine(from line: String) -> String? {
+        guard line.contains("：") == false, line.contains(":") == false else { return nil }
+        let pieces = line
+            .split(whereSeparator: { $0.isWhitespace || $0 == "·" || $0 == "•" || $0 == "|" })
+            .map(String.init)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        guard pieces.count >= 2, pieces.count <= 6 else { return nil }
+        return pieces.joined(separator: " · ")
+    }
+
+    private nonisolated static func normalizedDetailLabel(from rawLabel: String) -> String? {
+        let compact = rawLabel.replacingOccurrences(of: " ", with: "")
+        if compact.contains("工作机") || compact.contains("设备") {
+            return "工作机"
+        }
+        if compact.contains("时长") {
+            return "时长"
+        }
+        if compact.contains("收入") || compact.contains("薪资") {
+            return "收入"
+        }
+        return nil
+    }
+
+    private nonisolated static func normalizedDetailValue(_ rawValue: String, label: String, originalLabel: String) -> String {
+        var value = rawValue
+            .replacingOccurrences(of: "/", with: " / ")
+            .replacingOccurrences(of: "／", with: " / ")
+            .replacingOccurrences(of: "9-10K", with: "9–10K")
+            .replacingOccurrences(of: " - ", with: "–")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        value = value.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+
+        if label == "时长", originalLabel.contains("日均"), value.contains("/ ") == false, value.contains(" / ") == false {
+            value += " / 日"
+        }
+        if label == "收入", originalLabel.contains("月均"), value.contains("/ ") == false, value.contains(" / ") == false {
+            value += " / 月"
+        }
+
+        return value
+    }
+}
+
+private enum PinCardToken {
+    static let cardRadius: CGFloat = 24
+    static let contentRadius: CGFloat = 18
+    static let outerPadding: CGFloat = 16
+    static let overlayHeight: CGFloat = 34
+    static let overlayRadius: CGFloat = 17
+    static let overlayHPadding: CGFloat = 12
+    static let overlayVPadding: CGFloat = 7
+    static let typeIconSize: CGFloat = 36
+    static let typeIconRadius: CGFloat = 12
 }
 
 private struct ClipboardPinWindowView: View {
     @ObservedObject var viewModel: ClipboardPinWindowViewModel
     let onClose: () -> Void
+    let onToggleAlwaysOnTop: () -> Void
+    let onToggleExpandedSize: () -> Void
+    let onBeginCustomResize: () -> Void
+    let onEndCustomResize: () -> Void
+    let onResize: (CGSize) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-
-            Divider()
-                .opacity(0.18)
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                metaBadge
+                closeButton
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
 
             content
+                .overlay(alignment: .bottomTrailing) {
+                    resizeHandle
+                        .padding(.trailing, 8)
+                        .padding(.bottom, 8)
+                }
         }
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.97))
-                .shadow(color: Color(white: 0, opacity: 0.16), radius: 18, x: 0, y: 8)
+            RoundedRectangle(cornerRadius: PinCardToken.cardRadius, style: .continuous)
+                .fill(Color.white.opacity(0.95))
+                .shadow(color: Color(white: 0, opacity: 0.10), radius: 24, x: 0, y: 12)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: PinCardToken.cardRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: PinCardToken.cardRadius, style: .continuous)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
         .frame(minWidth: 280, minHeight: 160)
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: viewModel.typeIcon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(viewModel.item.type.color)
-                .frame(width: 18, height: 18)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.item.type.displayName)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color(nsColor: .labelColor))
-                    .lineLimit(1)
-
-                Text("\(viewModel.sourceLabel) · \(viewModel.timestampText)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .frame(width: 22, height: 22)
-                    .background(Circle().fill(Color(white: 0, opacity: 0.04)))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color(nsColor: .secondaryLabelColor))
-            .help("关闭")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
     }
 
     @ViewBuilder
     private var content: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 10) {
-                if let image = viewModel.loadedImage {
-                    imageCard(image)
-                } else {
-                    textCard(viewModel.displayText)
-                }
+        Group {
+            if viewModel.item.type == .video {
+                videoCard(previewImage: viewModel.loadedImage)
+            } else if let image = viewModel.loadedImage, viewModel.item.type == .image {
+                imageCard(image)
+            } else {
+                textCard
             }
-            .padding(12)
         }
     }
 
-    private func textCard(_ text: String) -> some View {
-        Text(text.isEmpty ? "无内容" : text)
-            .font(.system(size: 14, weight: .regular))
-            .foregroundStyle(Color(nsColor: .labelColor))
-            .textSelection(.enabled)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(nsColor: .textBackgroundColor).opacity(0.58))
-            )
+    private var typeBadge: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: PinCardToken.typeIconRadius, style: .continuous)
+                .fill(.thinMaterial)
+
+            Image(systemName: viewModel.typeIcon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(typeAccentColor)
+        }
+        .frame(width: PinCardToken.typeIconSize, height: PinCardToken.typeIconSize)
+        .overlay(
+            RoundedRectangle(cornerRadius: PinCardToken.typeIconRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.4), lineWidth: 1)
+        )
+    }
+
+    private var closeButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(.thinMaterial)
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+        .help("关闭")
+    }
+
+    private var textCard: some View {
+        ZStack(alignment: .bottomLeading) {
+            ScrollView(.vertical, showsIndicators: false) {
+                textContentSurface
+                    .padding(PinCardToken.outerPadding)
+                    .padding(.bottom, 24)
+            }
+
+            typeBadge
+                .padding(PinCardToken.outerPadding)
+        }
     }
 
     private func imageCard(_ image: NSImage) -> some View {
-        return Image(nsImage: image)
-            .resizable()
-            .scaledToFit()
-            .frame(maxWidth: .infinity, maxHeight: min(360, viewModel.preferredWindowSize.height - 132))
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(white: 0, opacity: 0.035))
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        ZStack(alignment: .bottomLeading) {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: min(420, viewModel.preferredWindowSize.height - 54))
+                .background(Color.black.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous))
+                .overlay(
+                RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+
+            HStack(alignment: .bottom, spacing: 12) {
+                HStack(alignment: .bottom, spacing: 10) {
+                    typeBadge
+                    if viewModel.item.type == .video {
+                        mediaPlayBadge
+                    }
+                }
+            }
+            .padding(18)
+        }
+        .padding(PinCardToken.outerPadding)
+    }
+
+    private func videoCard(previewImage: NSImage?) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            ZStack {
+                if let previewImage {
+                    Image(nsImage: previewImage)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.88),
+                            Color(red: 0.16, green: 0.17, blue: 0.20),
+                            Color.black.opacity(0.84)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+
+                    VStack(spacing: 10) {
+                        Image(systemName: "play.rectangle.fill")
+                            .font(.system(size: 34, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.92))
+
+                        Text("视频内容")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.88))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: min(420, viewModel.preferredWindowSize.height - 54))
+            .background(Color.black.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color(white: 1, opacity: 0.12), lineWidth: 1)
+                RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
             )
-            .contentShape(Rectangle())
+
+            HStack(alignment: .bottom, spacing: 12) {
+                HStack(alignment: .bottom, spacing: 10) {
+                    typeBadge
+                    mediaPlayBadge
+                }
+            }
+            .padding(18)
+        }
+        .padding(PinCardToken.outerPadding)
+    }
+
+    private var textContentSurface: some View {
+        HStack(alignment: .top, spacing: 18) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(typeAccentColor)
+                .frame(width: 4)
+                .padding(.vertical, 14)
+
+            if let structured = viewModel.structuredTextContent {
+                structuredTextContent(structured)
+            } else {
+                fallbackTextContent(viewModel.displayText)
+            }
+        }
+        .padding(.vertical, 24)
+        .padding(.leading, 24)
+        .padding(.trailing, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous)
+                .fill(Color(red: 247 / 255, green: 245 / 255, blue: 1.0))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private func structuredTextContent(_ content: ClipboardPinStructuredTextContent) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(content.title)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color(nsColor: .labelColor))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let metaLine = content.metaLine {
+                Text(metaLine)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                    .padding(.top, 12)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if content.detailRows.isEmpty == false {
+                Rectangle()
+                    .fill(Color.black.opacity(0.08))
+                    .frame(height: 1)
+                    .padding(.top, 14)
+                    .padding(.bottom, 16)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(content.detailRows.enumerated()), id: \.offset) { _, row in
+                        HStack(alignment: .firstTextBaseline, spacing: 18) {
+                            Text(row.label)
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                                .frame(width: 76, alignment: .leading)
+
+                            Text(row.value)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color(nsColor: .labelColor))
+                                .lineLimit(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .layoutPriority(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+            }
+
+            if let fallbackBody = content.fallbackBody, fallbackBody.isEmpty == false {
+                Text(fallbackBody)
+                    .font(.system(size: 14))
+                    .lineSpacing(2)
+                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                    .padding(.top, content.detailRows.isEmpty ? 14 : 16)
+                    .textSelection(.enabled)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func fallbackTextContent(_ text: String) -> some View {
+        Text(text.isEmpty ? "无内容" : text)
+            .font(.system(size: 15, weight: .regular))
+            .lineSpacing(3)
+            .foregroundStyle(Color(nsColor: .labelColor))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var mediaPlayBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "play.fill")
+                .font(.system(size: 12, weight: .semibold))
+            Text(viewModel.contentDetailText ?? "播放")
+                .font(.system(size: 14, weight: .medium))
+        }
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 12)
+        .frame(height: PinCardToken.overlayHeight)
+        .background(Color.black.opacity(0.32))
+        .clipShape(Capsule(style: .continuous))
+    }
+
+    private var metaBadge: some View {
+        HStack(spacing: 12) {
+            Text(viewModel.sourceAndTimeText)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                .lineLimit(1)
+
+            Rectangle()
+                .fill(Color.black.opacity(0.14))
+                .frame(width: 1, height: 18)
+
+            Button(action: onToggleAlwaysOnTop) {
+                Image(systemName: viewModel.isAlwaysOnTop ? "pin.fill" : "ellipsis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+            .help(viewModel.isAlwaysOnTop ? "取消置顶" : "固定到桌面顶端")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, PinCardToken.overlayVPadding)
+        .frame(minHeight: PinCardToken.overlayHeight)
+        .background(.thinMaterial)
+        .clipShape(Capsule(style: .continuous))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.42), lineWidth: 1)
+        )
+    }
+
+    private var typeAccentColor: Color {
+        switch viewModel.item.type {
+        case .image, .video:
+            return Color(red: 108 / 255, green: 92 / 255, blue: 1.0)
+        case .richText, .text:
+            return Color(red: 92 / 255, green: 104 / 255, blue: 1.0)
+        default:
+            return viewModel.item.type.color
+        }
+    }
+
+    private var resizeHandle: some View {
+        ResizeHandle(
+            onToggleExpandedSize: onToggleExpandedSize,
+            onBeginCustomResize: onBeginCustomResize,
+            onEndCustomResize: onEndCustomResize,
+            onDrag: { delta in
+                onResize(delta)
+            }
+        )
+        .help("点按切换大小，长按后拖动自定义大小")
+    }
+}
+
+private struct ResizeHandle: View {
+    let onToggleExpandedSize: () -> Void
+    let onBeginCustomResize: () -> Void
+    let onEndCustomResize: () -> Void
+    let onDrag: (CGSize) -> Void
+    @State private var lastTranslation: CGSize = .zero
+    @State private var isCustomResizing = false
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.72))
+
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                .padding(5)
+        }
+        .frame(width: 40, height: 40, alignment: .bottomTrailing)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.white.opacity(0.26), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard isCustomResizing == false else { return }
+            onToggleExpandedSize()
+        }
+        .gesture(resizeGesture)
+    }
+
+    private var resizeGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.22, maximumDistance: 12)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    if isCustomResizing == false {
+                        isCustomResizing = true
+                        lastTranslation = .zero
+                        onBeginCustomResize()
+                    }
+                case .second(true, let drag?):
+                    if isCustomResizing == false {
+                        isCustomResizing = true
+                        onBeginCustomResize()
+                    }
+                    let delta = CGSize(
+                        width: drag.translation.width - lastTranslation.width,
+                        height: drag.translation.height - lastTranslation.height
+                    )
+                    lastTranslation = drag.translation
+                    guard delta.width != 0 || delta.height != 0 else { return }
+                    #if DEBUG
+                    clipboardPinLogger.info("[ClipboardPin] resize gesture translation=\(drag.translation) delta=\(delta)")
+                    #endif
+                    onDrag(delta)
+                default:
+                    break
+                }
+            }
+            .onEnded { _ in
+                lastTranslation = .zero
+                if isCustomResizing {
+                    onEndCustomResize()
+                }
+                isCustomResizing = false
+            }
     }
 }

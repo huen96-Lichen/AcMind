@@ -53,4 +53,36 @@ final class NotchVoiceSurfacePresentationTests: XCTestCase {
         XCTAssertTrue(SystemEventHUDPolicy.allowsReplacement(for: .sayInput, sayInputLocked: true))
         XCTAssertTrue(SystemEventHUDPolicy.allowsReplacement(for: .volume, sayInputLocked: false))
     }
+
+    func testSystemEventHUDPriorityRanksInteractiveEventsAbovePassiveEvents() {
+        XCTAssertLessThan(SystemEventKind.volume.hudPriority, SystemEventKind.microphone.hudPriority)
+        XCTAssertLessThan(SystemEventKind.microphone.hudPriority, SystemEventKind.screenshot.hudPriority)
+        XCTAssertLessThan(SystemEventKind.screenshot.hudPriority, SystemEventKind.sayInput.hudPriority)
+    }
+
+    func testPendingRequestsSortByPriorityThenArrival() {
+        let first = SystemEventHUDRequest(kind: .volume, queuedAt: Date(timeIntervalSince1970: 1))
+        let second = SystemEventHUDRequest(kind: .screenshot, queuedAt: Date(timeIntervalSince1970: 3))
+        let third = SystemEventHUDRequest(kind: .screenshot, queuedAt: Date(timeIntervalSince1970: 2))
+        let fourth = SystemEventHUDRequest(kind: .sayInput, queuedAt: Date(timeIntervalSince1970: 4))
+
+        let ordered = SystemEventHUDPolicy.orderedPendingRequests([first, second, third, fourth])
+
+        XCTAssertEqual(ordered.map(\.kind), [.sayInput, .screenshot, .screenshot, .volume])
+        XCTAssertEqual(ordered.map(\.queuedAt), [Date(timeIntervalSince1970: 4), Date(timeIntervalSince1970: 2), Date(timeIntervalSince1970: 3), Date(timeIntervalSince1970: 1)])
+    }
+
+    func testRequestPriorityMatchesKindPriority() {
+        XCTAssertEqual(SystemEventHUDRequest(kind: .volume).priority, .low)
+        XCTAssertEqual(SystemEventHUDRequest(kind: .microphone).priority, .medium)
+        XCTAssertEqual(SystemEventHUDRequest(kind: .screenshot).priority, .high)
+        XCTAssertEqual(SystemEventHUDRequest(kind: .sayInput).priority, .critical)
+    }
+
+    func testHigherPriorityEventInterruptsCurrentHud() {
+        XCTAssertTrue(SystemEventHUDPolicy.shouldInterrupt(currentKind: .volume, incomingKind: .screenshot, sayInputLocked: false))
+        XCTAssertFalse(SystemEventHUDPolicy.shouldInterrupt(currentKind: .screenshot, incomingKind: .volume, sayInputLocked: false))
+        XCTAssertTrue(SystemEventHUDPolicy.shouldInterrupt(currentKind: .microphone, incomingKind: .sayInput, sayInputLocked: true))
+        XCTAssertFalse(SystemEventHUDPolicy.shouldInterrupt(currentKind: .volume, incomingKind: .screenshot, sayInputLocked: true))
+    }
 }

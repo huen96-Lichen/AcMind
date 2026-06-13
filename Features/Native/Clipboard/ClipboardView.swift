@@ -6,14 +6,16 @@ struct ClipboardView: View {
     @EnvironmentObject private var serviceContainer: ServiceContainer
     @StateObject private var viewModel: ClipboardViewModel
     let clipboardPinActions: ClipboardPinActions
+    let returnToInboxAction: (() -> Void)?
     @State private var selectedSidebarItem: String? = "all"
     @State private var viewMode: ViewMode = .grid
     @State private var selectedItem: ClipboardItem?
     @State private var pinWindowCount: Int = 0
     private let contentTypeFilters: [ClipboardContentType?] = [nil, .text, .image, .file, .url, .richText, .code, .video]
 
-    init(clipboardPinActions: ClipboardPinActions) {
+    init(clipboardPinActions: ClipboardPinActions, returnToInboxAction: (() -> Void)? = nil) {
         self.clipboardPinActions = clipboardPinActions
+        self.returnToInboxAction = returnToInboxAction
         _viewModel = StateObject(wrappedValue: ClipboardViewModel(
             clipboardService: ServiceContainer.shared.clipboardService
         ))
@@ -60,12 +62,14 @@ struct ClipboardView: View {
             leadingRailWidth: 208,
             trailingRailWidth: 224,
             leadingRail: {
-                SecondarySidebarWithHeader(
-                    title: "剪贴板 & 手机同步",
-                    subtitle: "\(viewModel.items.count) 条内容",
+                SecondarySidebar(
                     sections: sidebarSections,
-                    selectedItem: $selectedSidebarItem
+                    selectedItem: $selectedSidebarItem,
+                    footerAction: returnToInboxAction,
+                    footerTitle: returnToInboxAction == nil ? nil : "返回收集箱",
+                    footerIcon: returnToInboxAction == nil ? nil : "tray"
                 )
+                .padding(.top, 10)
             },
             content: {
                 contentArea

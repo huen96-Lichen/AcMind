@@ -13,6 +13,7 @@ import Combine
 
 /// 电池信息
 public struct BatteryInfo: Sendable {
+    public var isAvailable: Bool
     public var isPluggedIn: Bool
     public var isCharging: Bool
     public var currentCapacity: Float
@@ -29,6 +30,7 @@ public struct BatteryInfo: Sendable {
     }
 
     public init(
+        isAvailable: Bool = true,
         isPluggedIn: Bool = false,
         isCharging: Bool = false,
         currentCapacity: Float = 0,
@@ -39,6 +41,7 @@ public struct BatteryInfo: Sendable {
         powerSourceState: String = "",
         healthPercentage: Float? = nil
     ) {
+        self.isAvailable = isAvailable
         self.isPluggedIn = isPluggedIn
         self.isCharging = isCharging
         self.currentCapacity = currentCapacity
@@ -136,6 +139,7 @@ public class BatteryService: ObservableObject {
             }()
 
             batteryInfo = BatteryInfo(
+                isAvailable: true,
                 isPluggedIn: powerSource == kIOPSACPowerValue,
                 isCharging: isCharging,
                 currentCapacity: currentCapacity,
@@ -147,7 +151,12 @@ public class BatteryService: ObservableObject {
                 healthPercentage: healthPercentage
             )
         } catch {
-            // 保持默认值
+            batteryInfo = BatteryInfo(
+                isAvailable: false,
+                currentCapacity: 0,
+                maxCapacity: 0,
+                powerSourceState: "无电池"
+            )
         }
     }
 
@@ -172,7 +181,7 @@ public struct BatteryIndicatorView: View {
     public var body: some View {
         HStack(spacing: 6) {
             if showPercentage {
-                Text("\(Int(batteryService.batteryInfo.percentage.rounded()))%")
+                Text(batteryService.batteryInfo.isAvailable ? "\(Int(batteryService.batteryInfo.percentage.rounded()))%" : "♾️")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.white)
             }
@@ -183,6 +192,14 @@ public struct BatteryIndicatorView: View {
 
     private var batteryIcon: some View {
         ZStack(alignment: .leading) {
+            if batteryService.batteryInfo.isAvailable == false {
+                Image(systemName: "infinity")
+                    .resizable()
+                    .fontWeight(.thin)
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(Color.white.opacity(0.75))
+                    .frame(width: batteryWidth + 1)
+            } else {
             // 电池轮廓
             Image(systemName: "battery.0")
                 .resizable()
@@ -209,11 +226,15 @@ public struct BatteryIndicatorView: View {
                     .frame(width: 12, height: 12)
                     .frame(width: batteryWidth, height: batteryWidth)
             }
+            }
         }
     }
 
     private var batteryColor: Color {
         let info = batteryService.batteryInfo
+        if info.isAvailable == false {
+            return .white.opacity(0.7)
+        }
         if info.isInLowPowerMode {
             return .yellow
         } else if info.percentage <= 20 && !info.isCharging && !info.isPluggedIn {

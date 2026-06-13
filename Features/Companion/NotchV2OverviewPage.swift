@@ -1,10 +1,11 @@
 import SwiftUI
+import AcMindKit
 
 struct NotchV2OverviewPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 238, rightColumnWidth: 238) {
+        NotchV2DashboardLayout(leftColumnWidth: 232, rightColumnWidth: 232) {
             leftColumn
         } centerColumn: {
             centerColumn
@@ -18,9 +19,10 @@ struct NotchV2OverviewPage: View {
             title: "当前任务",
             symbol: "target",
             padding: 12,
+            fillHeight: true,
             cardAccent: viewModel.activeRuntimeSurface.accentColor
         ) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Circle()
                         .fill(viewModel.activeRuntimeSurface.accentColor)
@@ -54,7 +56,7 @@ struct NotchV2OverviewPage: View {
                 Divider()
                     .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("模块状态")
                         .font(NotchV2DesignTokens.Typography.caption)
                         .foregroundStyle(NotchV2DesignTokens.secondaryText)
@@ -76,6 +78,9 @@ struct NotchV2OverviewPage: View {
                         columns: [
                             GridItem(.flexible(), spacing: 8),
                             GridItem(.flexible(), spacing: 8),
+                            GridItem(.flexible(), spacing: 8),
+                            GridItem(.flexible(), spacing: 8),
+                            GridItem(.flexible(), spacing: 8),
                             GridItem(.flexible(), spacing: 8)
                         ],
                         spacing: 8
@@ -94,7 +99,7 @@ struct NotchV2OverviewPage: View {
                             title: "状态",
                             isSelected: false
                         ) {
-                            (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                            viewModel.openSystemStatusPage()
                         }
 
                         NotchV2ActionButton(
@@ -108,7 +113,13 @@ struct NotchV2OverviewPage: View {
                 }
             }
 
-            NotchV2Card(title: "运行中", symbol: "sparkles", padding: 12, cardAccent: viewModel.activeRuntimeSurface.accentColor) {
+            NotchV2Card(
+                title: "运行中",
+                symbol: "sparkles",
+                padding: 12,
+                fillHeight: true,
+                cardAccent: viewModel.activeRuntimeSurface.accentColor
+            ) {
                 HStack(spacing: 8) {
                     Image(systemName: viewModel.activeRuntimeSurface.symbol)
                         .font(NotchV2DesignTokens.Typography.caption)
@@ -133,16 +144,19 @@ struct NotchV2OverviewPage: View {
                     }
                 }
             }
+
         }
     }
 
     private var rightColumn: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
             if let hint = viewModel.systemAttentionHint {
-                NotchV2SystemAttentionHintCard(hint: hint)
+                NotchV2SystemAttentionHintCard(hint: hint) {
+                    viewModel.openSystemStatusPage()
+                }
             }
 
-            NotchV2Card(title: "系统快览", symbol: "cpu", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            NotchV2Card(title: "系统快览", symbol: "cpu", fillHeight: true, cornerRadius: NotchV2DesignTokens.rightCardRadius) {
                 VStack(alignment: .leading, spacing: 6) {
                     systemStatusRow(
                         icon: batteryIconName,
@@ -171,37 +185,31 @@ struct NotchV2OverviewPage: View {
                         value: viewModel.accessibilityPermissionStatus.displayName,
                         accent: viewModel.accessibilityPermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange
                     )
-                }
-            }
 
-            NotchV2Card(title: "快捷入口", symbol: "arrow.triangle.2.circlepath", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
-                VStack(spacing: 6) {
-                    quickEntryRow(
-                        title: "音乐",
-                        subtitle: "播放与队列",
-                        icon: "music.note",
-                        tint: NotchV2DesignTokens.accentGreen
-                    ) {
-                        viewModel.select(.music)
-                    }
+                    Divider()
+                        .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
-                    quickEntryRow(
-                        title: "AI",
-                        subtitle: "对话入口",
-                        icon: "sparkles",
-                        tint: NotchV2DesignTokens.accentBlue
-                    ) {
-                        viewModel.select(.agent)
+                    Button {
+                        viewModel.openSystemStatusPage()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.up.right.square")
+                            Text("进入状态页")
+                        }
+                        .font(NotchV2DesignTokens.Typography.caption)
+                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(NotchV2DesignTokens.accentBlue.opacity(0.18))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(NotchV2DesignTokens.accentBlue.opacity(0.22), lineWidth: 1)
+                        )
                     }
-
-                    quickEntryRow(
-                        title: "日程",
-                        subtitle: "今日安排",
-                        icon: "calendar",
-                        tint: NotchV2DesignTokens.accentPurple
-                    ) {
-                        viewModel.select(.schedule)
-                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -211,7 +219,13 @@ struct NotchV2OverviewPage: View {
         switch viewModel.activeRuntimeSurface.kind {
         case .voice: return "说入法"
         case .screenshot: return "截图"
-        case .music: return "音乐"
+        case .music:
+            return NowPlayingSourceLabelFormatter.playbackContextLabel(
+                isPlaying: viewModel.playbackState.isPlaying,
+                bundleIdentifier: viewModel.playbackState.bundleIdentifier,
+                source: viewModel.playbackState.sourceLabel,
+                idlePrefix: "音乐"
+            )
         case .schedule: return "日程"
         case .agent: return "AI"
         case .systemStatus: return "状态"
@@ -256,20 +270,7 @@ struct NotchV2OverviewPage: View {
     }
 
     private var batteryIconName: String {
-        if viewModel.batteryInfo.isCharging {
-            return "bolt.fill"
-        }
-        if viewModel.batteryInfo.isPluggedIn {
-            return "plug.fill"
-        }
-        let level = viewModel.batteryInfo.percentage
-        switch level {
-        case ..<10: return "battery.0"
-        case ..<25: return "battery.25"
-        case ..<50: return "battery.50"
-        case ..<75: return "battery.75"
-        default: return "battery.100"
-        }
+        viewModel.batteryIconName
     }
 
     private func compactRow(label: String, value: String) -> some View {
@@ -330,49 +331,4 @@ struct NotchV2OverviewPage: View {
         )
     }
 
-    private func quickEntryRow(
-        title: String,
-        subtitle: String,
-        icon: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(tint.opacity(0.16))
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Image(systemName: icon)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(tint)
-                    )
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(NotchV2DesignTokens.Typography.body)
-                        .foregroundStyle(NotchV2DesignTokens.primaryText)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(NotchV2DesignTokens.Typography.caption)
-                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.weakText)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.82))
-            )
-        }
-        .buttonStyle(.plain)
-    }
 }

@@ -71,6 +71,7 @@ public enum RedactionType: String, Codable, CaseIterable, Sendable {
 public actor AutoRedactorService: ScreenshotRedacting {
     
     public static let shared = AutoRedactorService()
+    private static let logger = AcMindLogger(category: .capture)
     
     private let sensitivePatterns: [(name: RedactionType, pattern: NSRegularExpression)] = {
         let patterns: [(RedactionType, String)] = [
@@ -146,7 +147,7 @@ public actor AutoRedactorService: ScreenshotRedacting {
                 }
             }
         } catch {
-            print("AutoRedactor: OCR failed - \(error)")
+            Self.logger.error("AutoRedactor: OCR failed - \(error)")
         }
         
         return regions

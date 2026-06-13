@@ -150,6 +150,42 @@ final class SystemStatusServiceTests: XCTestCase {
         _ = cancellable
     }
 
+    func testSamplingTimerSuspendsOnSleepAndResumesOnWake() {
+        let center = NotificationCenter()
+        let sleepName = Notification.Name("SystemStatusServiceTests.sleep")
+        let wakeName = Notification.Name("SystemStatusServiceTests.wake")
+        var fireCount = 0
+        let timer = SleepAwareRepeatingTimer(
+            interval: 1.0,
+            notificationCenter: center,
+            sleepNotificationName: sleepName,
+            wakeNotificationName: wakeName
+        ) {
+            fireCount += 1
+        }
+
+        timer.start()
+        XCTAssertTrue(timer.isRunning)
+        XCTAssertFalse(timer.isSuspended)
+
+        center.post(name: sleepName, object: nil)
+        XCTAssertTrue(timer.isRunning)
+        XCTAssertTrue(timer.isSuspended)
+
+        timer.fireForTesting()
+        XCTAssertEqual(fireCount, 0)
+
+        center.post(name: wakeName, object: nil)
+        XCTAssertTrue(timer.isRunning)
+        XCTAssertFalse(timer.isSuspended)
+
+        timer.fireForTesting()
+        XCTAssertEqual(fireCount, 1)
+
+        timer.stop()
+        XCTAssertFalse(timer.isRunning)
+    }
+
     func testFourCharCodeInitializerFallsBackForInvalidSMCKeys() {
         let valid = FourCharCode(fromString: "FNum")
         XCTAssertEqual(valid.toString(), "FNum")

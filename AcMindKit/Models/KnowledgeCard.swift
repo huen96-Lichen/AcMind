@@ -135,6 +135,215 @@ public enum KnowledgeCardStatus: String, Codable, Sendable, Hashable, CaseIterab
     }
 }
 
+public enum KnowledgeTimelineStatus: String, Codable, Sendable, Equatable {
+    case pending
+    case active
+    case completed
+    case archived
+    case deleted
+}
+
+public struct KnowledgeTimelineItem: Codable, Sendable, Identifiable, Equatable {
+    public let id: String
+    public let title: String
+    public let detail: String?
+    public let status: KnowledgeTimelineStatus
+    public let occurredAt: Date?
+
+    public init(
+        id: String,
+        title: String,
+        detail: String? = nil,
+        status: KnowledgeTimelineStatus,
+        occurredAt: Date? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.detail = detail
+        self.status = status
+        self.occurredAt = occurredAt
+    }
+}
+
+public struct KnowledgeClosureSummary: Codable, Sendable, Equatable {
+    public let cardId: String
+    public let title: String
+    public let stateLabel: String
+    public let detail: String
+    public let nextActionTitle: String?
+    public let timeline: [KnowledgeTimelineItem]
+
+    public init(
+        cardId: String,
+        title: String,
+        stateLabel: String,
+        detail: String,
+        nextActionTitle: String?,
+        timeline: [KnowledgeTimelineItem]
+    ) {
+        self.cardId = cardId
+        self.title = title
+        self.stateLabel = stateLabel
+        self.detail = detail
+        self.nextActionTitle = nextActionTitle
+        self.timeline = timeline
+    }
+
+    public static func make(
+        from card: KnowledgeCard,
+        edges: [KnowledgeEdge] = []
+    ) -> KnowledgeClosureSummary {
+        let suggestedEdges = edges.filter { edge in
+            edge.status == .suggested &&
+            (edge.fromKnowledgeCardId == card.id || edge.toKnowledgeCardId == card.id)
+        }
+
+        return KnowledgeClosureSummary(
+            cardId: card.id,
+            title: card.canonicalTitle.isEmpty ? "未命名知识" : card.canonicalTitle,
+            stateLabel: card.status.displayName,
+            detail: detail(for: card, suggestedEdges: suggestedEdges),
+            nextActionTitle: nextActionTitle(for: card, suggestedEdges: suggestedEdges),
+            timeline: timeline(for: card, suggestedEdges: suggestedEdges)
+        )
+    }
+
+    private static func detail(
+        for card: KnowledgeCard,
+        suggestedEdges: [KnowledgeEdge]
+    ) -> String {
+        if suggestedEdges.isEmpty == false {
+            return "有 \(suggestedEdges.count) 条关联待确认"
+        }
+        if let summary = card.summary, summary.isEmpty == false {
+            return summary
+        }
+        if card.referenceCount > 0 {
+            return "已被引用 \(card.referenceCount) 次"
+        }
+        if card.tags.isEmpty == false {
+            return card.tags.joined(separator: " · ")
+        }
+        return card.status.displayName
+    }
+
+    private static func nextActionTitle(
+        for card: KnowledgeCard,
+        suggestedEdges: [KnowledgeEdge]
+    ) -> String? {
+        if suggestedEdges.isEmpty == false {
+            return "确认关联"
+        }
+
+        switch card.status {
+        case .active:
+            return card.referenceCount > 0 ? "继续关联" : "补充关联"
+        case .archived:
+            return "恢复为活跃"
+        case .superseded:
+            return "查看替代卡片"
+        case .deleted:
+            return nil
+        }
+    }
+
+    private static func timeline(
+        for card: KnowledgeCard,
+        suggestedEdges: [KnowledgeEdge]
+    ) -> [KnowledgeTimelineItem] {
+        var items: [KnowledgeTimelineItem] = [
+            KnowledgeTimelineItem(
+                id: "\(card.id)-captured",
+                title: "已捕获",
+                detail: card.sourceItemId,
+                status: .completed,
+                occurredAt: card.createdAt
+            )
+        ]
+
+        if card.distilledOutputId != nil {
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-distilled",
+                    title: "已蒸馏",
+                    status: .completed,
+                    occurredAt: card.updatedAt
+                )
+            )
+        }
+
+        if let vaultPath = card.vaultFilePath, vaultPath.isEmpty == false {
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-vault",
+                    title: "已写入 Vault",
+                    detail: vaultPath,
+                    status: .completed,
+                    occurredAt: card.updatedAt
+                )
+            )
+        }
+
+        if card.referenceCount > 0 {
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-references",
+                    title: "已被引用",
+                    detail: "\(card.referenceCount) 次",
+                    status: .active,
+                    occurredAt: card.lastAccessedAt ?? card.updatedAt
+                )
+            )
+        }
+
+        if suggestedEdges.isEmpty == false {
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-suggested-edges",
+                    title: "待确认关联",
+                    detail: "\(suggestedEdges.count) 条",
+                    status: .pending,
+                    occurredAt: suggestedEdges.map(\.updatedAt).max()
+                )
+            )
+        }
+
+        switch card.status {
+        case .archived:
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-archived",
+                    title: "已归档",
+                    status: .archived,
+                    occurredAt: card.updatedAt
+                )
+            )
+        case .superseded:
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-superseded",
+                    title: "已被替代",
+                    status: .archived,
+                    occurredAt: card.updatedAt
+                )
+            )
+        case .deleted:
+            items.append(
+                KnowledgeTimelineItem(
+                    id: "\(card.id)-deleted",
+                    title: "已删除",
+                    status: .deleted,
+                    occurredAt: card.updatedAt
+                )
+            )
+        case .active:
+            break
+        }
+
+        return items
+    }
+}
+
 // MARK: - KnowledgeEdge（知识关系）
 
 /// 知识卡片之间的关系边

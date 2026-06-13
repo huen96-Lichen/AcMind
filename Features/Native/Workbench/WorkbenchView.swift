@@ -535,6 +535,7 @@ struct WorkbenchArchiveItem: Identifiable, Equatable {
 
 @MainActor
 class WorkbenchViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .storage)
     private let storage: StorageServiceProtocol
 
     @Published var todayItems: [TodayItem] = []
@@ -623,7 +624,7 @@ class WorkbenchViewModel: ObservableObject {
 
                 reconcileNotesIntoProjects()
             } catch {
-                print("⚠️ Workbench 数据加载失败: \(error.localizedDescription)")
+                Self.logger.error("Workbench 数据加载失败: \(error.localizedDescription)")
             }
         }
     }
@@ -754,7 +755,7 @@ class WorkbenchViewModel: ObservableObject {
                     reconcileNotesIntoProjects()
                 }
             } catch {
-                print("⚠️ 保存笔记失败: \(error.localizedDescription)")
+                Self.logger.error("保存笔记失败: \(error.localizedDescription)")
             }
         }
     }
@@ -768,7 +769,7 @@ class WorkbenchViewModel: ObservableObject {
                     reconcileNotesIntoProjects()
                 }
             } catch {
-                print("⚠️ 删除笔记失败: \(error.localizedDescription)")
+                Self.logger.error("删除笔记失败: \(error.localizedDescription)")
             }
         }
     }
@@ -815,7 +816,7 @@ class WorkbenchViewModel: ObservableObject {
                 )
             }
         } catch {
-            print("⚠️ 刷新笔记失败: \(error.localizedDescription)")
+            Self.logger.error("刷新笔记失败: \(error.localizedDescription)")
         }
     }
 
@@ -858,7 +859,7 @@ class WorkbenchViewModel: ObservableObject {
             try text.write(to: url, atomically: true, encoding: .utf8)
             NSWorkspace.shared.open(url)
         } catch {
-            print("⚠️ 写入临时 Markdown 失败: \(error.localizedDescription)")
+            Self.logger.error("写入临时 Markdown 失败: \(error.localizedDescription)")
         }
     }
 }

@@ -27,7 +27,7 @@ public struct CompanionMenuBarLayout {
     public static let expandedWidth: CGFloat = 880
     
     /// 展开态高度
-    public static let expandedHeight: CGFloat = 340
+    public static let expandedHeight: CGFloat = 300
     
     /// 展开态最大高度占屏幕比例
     public static let expandedMaxHeightRatio: CGFloat = 0.58
@@ -218,10 +218,9 @@ public struct CompanionScreenPositioning {
     }
 
     /// 计算展开态面板位置
-    public static func expandedFrame(anchorFrame _: CGRect) -> CGRect {
+    public static func expandedFrame(anchorFrame _: CGRect, height: CGFloat = CompanionMenuBarLayout.expandedHeight) -> CGRect {
         let screen = mainScreen
         let width = CompanionMenuBarLayout.expandedWidth
-        let height = CompanionMenuBarLayout.expandedHeight
         let x = screen.frame.midX - width / 2
         let clampedX = max(screen.frame.minX, min(x, screen.frame.maxX - width))
         let y = screen.frame.maxY - height
@@ -235,9 +234,8 @@ public struct CompanionScreenPositioning {
     }
 
     /// 计算指定屏幕上的展开态面板位置
-    public static func expandedFrame(on screenFrame: CGRect) -> CGRect {
+    public static func expandedFrame(on screenFrame: CGRect, height: CGFloat = CompanionMenuBarLayout.expandedHeight) -> CGRect {
         let width = CompanionMenuBarLayout.expandedWidth
-        let height = CompanionMenuBarLayout.expandedHeight
         let x = screenFrame.midX - width / 2
         let clampedX = max(screenFrame.minX, min(x, screenFrame.maxX - width))
         let y = screenFrame.maxY - height

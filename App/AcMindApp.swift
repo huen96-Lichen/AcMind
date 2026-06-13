@@ -63,7 +63,7 @@ struct AcMindCommands: Commands {
 
             Divider()
 
-            ForEach(SidebarItem.mainItems) { item in
+            ForEach(SidebarItem.shortcutItems) { item in
                 if let shortcut = item.shortcut {
                     Button(item.displayName) {
                         appState.selectSidebarItem(item)

@@ -3,6 +3,118 @@ import XCTest
 
 final class ClipboardPipelineTests: XCTestCase {
 
+    // MARK: - Input Chain Status Tests
+
+    func testClipboardPipelineStatusTracksSuccessfulFlow() async throws {
+        let pipeline = ClipboardPipeline(
+            assetStore: AssetStore(),
+            storage: MockStorageService()
+        )
+        var context = PipelineContext(rawContent: RawClipboardContent(
+            changeCount: 1,
+            sourceApp: "TextEdit",
+            textContent: "Hello from clipboard"
+        ))
+
+        XCTAssertEqual(pipeline.statusSnapshot().phase, .idle)
+
+        try await pipeline.process(&context)
+
+        let status = pipeline.statusSnapshot()
+        XCTAssertEqual(status.source, .clipboard)
+        XCTAssertEqual(status.phase, .succeeded)
+        XCTAssertEqual(status.stepLabel, "分发完成")
+        XCTAssertEqual(status.detail, "剪贴板内容已入库并分发")
+        XCTAssertNil(status.lastErrorMessage)
+        XCTAssertNil(status.nextActionTitle)
+    }
+
+    func testClipboardPipelineStatusTracksIgnoredFlow() async throws {
+        let pipeline = ClipboardPipeline(
+            assetStore: AssetStore(),
+            storage: MockStorageService(),
+            cleaningRulesEvaluator: { _, _ in .ignore }
+        )
+        var context = PipelineContext(rawContent: RawClipboardContent(
+            changeCount: 2,
+            sourceApp: "Password Manager",
+            textContent: "sensitive value"
+        ))
+
+        try await pipeline.process(&context)
+
+        let status = pipeline.statusSnapshot()
+        XCTAssertEqual(status.source, .clipboard)
+        XCTAssertEqual(status.phase, .ignored)
+        XCTAssertEqual(status.stepLabel, "内容转换")
+        XCTAssertEqual(status.detail, "内容已按清理规则忽略")
+        XCTAssertNil(status.lastErrorMessage)
+    }
+
+    func testRecordingHotkeyStatusStartsIdleAndTracksRegisteredActions() async {
+        let service = RecordingHotkeyService()
+
+        var status = await service.statusSnapshot()
+        XCTAssertEqual(status.source, .recordingHotkey)
+        XCTAssertEqual(status.phase, .idle)
+        XCTAssertEqual(status.stepLabel, "等待录音")
+        XCTAssertEqual(status.detail, "录音开始后启用快捷键")
+        XCTAssertEqual(status.activeControlCount, 0)
+        XCTAssertEqual(status.nextActionTitle, "开始录音")
+
+        await service.registerHandler(for: .cancel) {}
+        status = await service.statusSnapshot()
+
+        XCTAssertEqual(status.activeControlCount, 1)
+        XCTAssertEqual(status.phase, .idle)
+    }
+
+    func testRecordingHotkeyStatusTracksListeningAndStop() async throws {
+        let service = RecordingHotkeyService(eventHandlerInstaller: {})
+        await service.registerHandler(for: .cancel) {}
+
+        try await service.startListening()
+
+        var status = await service.statusSnapshot()
+        XCTAssertEqual(status.phase, .listening)
+        XCTAssertEqual(status.stepLabel, "录音中")
+        XCTAssertEqual(status.activeControlCount, 1)
+        XCTAssertEqual(status.nextActionTitle, "停止录音")
+
+        await service.stopListening()
+        status = await service.statusSnapshot()
+
+        XCTAssertEqual(status.phase, .idle)
+        XCTAssertEqual(status.activeControlCount, 0)
+        XCTAssertEqual(status.nextActionTitle, "开始录音")
+    }
+
+    func testRecordingHotkeyInstallFailureRollsBackListeningState() async {
+        let expectedError = NSError(
+            domain: "RecordingHotkeyServiceTests",
+            code: 42,
+            userInfo: [NSLocalizedDescriptionKey: "事件监听不可用"]
+        )
+        let service = RecordingHotkeyService(eventHandlerInstaller: {
+            throw expectedError
+        })
+
+        do {
+            try await service.startListening()
+            XCTFail("Expected listener installation to fail")
+        } catch {
+            XCTAssertEqual((error as NSError).code, expectedError.code)
+        }
+
+        let status = await service.statusSnapshot()
+        let isRecording = await service.isCurrentlyRecording()
+        XCTAssertFalse(isRecording)
+        XCTAssertEqual(status.phase, .failed)
+        XCTAssertEqual(status.detail, "录音快捷键监听启动失败")
+        XCTAssertEqual(status.lastErrorMessage, "事件监听不可用")
+        XCTAssertEqual(status.nextActionTitle, "重试监听")
+    }
+
     // MARK: - DiscoveryStage Tests
 
     func testDiscoveryStageDetectsURL() async throws {

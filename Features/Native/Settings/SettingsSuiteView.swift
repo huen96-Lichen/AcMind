@@ -106,7 +106,11 @@ struct SettingsSuiteView: View {
                 )
                 AppSurfaceMetricTile(
                     title: "Agent 状态",
-                    value: viewModel.companionVoiceEnabled ? "已启用" : "未启用",
+                    value: SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.companionVoiceEnabled,
+                        enabledText: "已启用",
+                        disabledText: "未启用"
+                    ),
                     subtitle: "说入法入口",
                     icon: "sparkles",
                     tint: viewModel.companionVoiceEnabled ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
@@ -301,7 +305,14 @@ struct SettingsSuiteView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     settingsRow(key: "默认语言", value: viewModel.voiceDefaultLanguage)
                     settingsRow(key: "翻译目标", value: translationLanguageDisplayName(viewModel.translationLanguage))
-                    settingsRow(key: "自动润色", value: viewModel.voiceAutoPolish ? "开启" : "关闭")
+                    settingsRow(
+                        key: "自动润色",
+                        value: SettingsStatusLabelFormatter.binaryState(
+                            isEnabled: viewModel.voiceAutoPolish,
+                            enabledText: "开启",
+                            disabledText: "关闭"
+                        )
+                    )
                     settingsRow(key: "润色模式", value: viewModel.voicePolishMode.displayName)
                 }
             }
@@ -366,7 +377,10 @@ struct SettingsSuiteView: View {
 
             settingsCard(title: "截图热键", subtitle: "快捷键配置") {
                 VStack(alignment: .leading, spacing: 8) {
-                    settingsRow(key: "截图热键", value: viewModel.captureScreenshotHotkey.isEmpty ? "未设置" : viewModel.captureScreenshotHotkey)
+                    settingsRow(
+                        key: "截图热键",
+                        value: SettingsStatusLabelFormatter.fallbackText(value: viewModel.captureScreenshotHotkey)
+                    )
                 }
             }
         }
@@ -423,6 +437,11 @@ struct SettingsSuiteView: View {
                             Task { await viewModel.openSystemPreferences(for: .notifications) }
                         }
                     )
+
+                    Text(AppNotificationService.strategySummary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -507,7 +526,7 @@ struct SettingsSuiteView: View {
             viewModel.screenRecordingPermissionStatus
         ]
         let grantedCount = statuses.filter { $0 == .authorized }.count
-        return "\(grantedCount)/\(statuses.count) 已授权"
+        return SettingsStatusLabelFormatter.permissionSummary(grantedCount: grantedCount, totalCount: statuses.count)
     }
 
     private var permissionTint: Color {

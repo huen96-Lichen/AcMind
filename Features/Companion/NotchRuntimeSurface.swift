@@ -33,8 +33,8 @@ struct NotchRuntimeSurface: Equatable {
 
     static let idle = NotchRuntimeSurface(
         kind: .idle,
-        title: "Agent 待命",
-        subtitle: "当前状态 · 总览",
+        title: "当前状态总览",
+        subtitle: "当前状态总览",
         symbol: "sparkles",
         accentColor: NotchV2DesignTokens.secondaryText,
         priority: .defaultState
@@ -107,7 +107,11 @@ enum NotchRuntimeSurfaceDispatcher {
         return NotchRuntimeSurface(
             kind: .voice,
             title: context.voiceSurfaceState.displayTitle ?? "说入法",
-            subtitle: context.voiceSurfaceState.displaySubtitle ?? "等待输入",
+            subtitle: ActivityStateLabelFormatter.activityLabel(
+                isActive: context.voiceSurfaceState.isActive,
+                activeLabel: context.voiceSurfaceState.displaySubtitle ?? "等待输入",
+                idleLabel: "待命"
+            ),
             symbol: context.voiceSurfaceState.displayIcon,
             accentColor: voiceAccent(for: context.voiceSurfaceState),
             priority: context.voiceSurfaceState.surfacePriority
@@ -132,16 +136,16 @@ enum NotchRuntimeSurfaceDispatcher {
 
         let message: String
         let accent: Color
-        if context.microphonePermissionStatus != .authorized {
+        if isPermissionNeedingAttention(context.microphonePermissionStatus) {
             message = "麦克风权限需要处理"
             accent = .orange
-        } else if context.screenRecordingPermissionStatus != .authorized {
+        } else if isPermissionNeedingAttention(context.screenRecordingPermissionStatus) {
             message = "录屏权限需要处理"
             accent = .orange
-        } else if context.accessibilityPermissionStatus != .authorized {
+        } else if isPermissionNeedingAttention(context.accessibilityPermissionStatus) {
             message = "辅助功能权限需要处理"
             accent = .orange
-        } else if context.batteryInfo.percentage <= 20, context.batteryInfo.isCharging == false {
+        } else if context.batteryInfo.isAvailable, context.batteryInfo.percentage <= 20, context.batteryInfo.isCharging == false {
             message = "电量较低"
             accent = .red
         } else {
@@ -160,17 +164,23 @@ enum NotchRuntimeSurfaceDispatcher {
     }
 
     private static func musicSurface(context: NotchRuntimeSurfaceContext, scope: NotchRuntimeSurfaceScope) -> NotchRuntimeSurface? {
-        guard context.playbackState.isPlaying,
-              context.isModuleEnabled(.music),
-              context.allows(.music, scope: scope) else { return nil }
+        guard context.isModuleEnabled(.music),
+              context.allows(.music, scope: scope),
+              context.playbackState.isPlaying || context.playbackState.title.isEmpty == false || context.playbackState.sourceLabel.isEmpty == false || context.playbackState.bundleIdentifier != nil else { return nil }
+
         let title = context.playbackState.title.isEmpty ? "音乐播放中" : context.playbackState.title
-        let artist = context.playbackState.artist.isEmpty ? "未知艺术家" : context.playbackState.artist
+        let trackSummary = NowPlayingSourceLabelFormatter.trackSummaryLabel(
+            artist: context.playbackState.artist,
+            album: context.playbackState.album,
+            bundleIdentifier: context.playbackState.bundleIdentifier,
+            source: context.playbackState.sourceLabel
+        )
         return NotchRuntimeSurface(
             kind: .music,
             title: title,
-            subtitle: "♪ \(artist)",
+            subtitle: "♪ \(trackSummary)",
             symbol: "music.note",
-            accentColor: NotchV2DesignTokens.accentPurple,
+            accentColor: context.playbackState.isPlaying ? NotchV2DesignTokens.accentPurple : NotchV2DesignTokens.secondaryText,
             priority: .music
         )
     }
@@ -198,7 +208,11 @@ enum NotchRuntimeSurfaceDispatcher {
         } else if context.voiceSurfaceState.isActive {
             subtitle = context.voiceSurfaceState.displaySubtitle ?? "等待输入"
         } else if context.selectedPage == .agent {
-            subtitle = "执行中心已展开"
+            subtitle = ActivityStateLabelFormatter.activityLabel(
+                isActive: true,
+                activeLabel: "执行中心已展开",
+                idleLabel: "准备接收新的输入"
+            )
         } else {
             subtitle = "准备接收新的输入"
         }
@@ -213,10 +227,19 @@ enum NotchRuntimeSurfaceDispatcher {
     }
 
     private static func needsSystemAttention(context: NotchRuntimeSurfaceContext) -> Bool {
-        context.microphonePermissionStatus != .authorized ||
-        context.screenRecordingPermissionStatus != .authorized ||
-        context.accessibilityPermissionStatus != .authorized ||
-        (context.batteryInfo.percentage <= 20 && context.batteryInfo.isCharging == false)
+        isPermissionNeedingAttention(context.microphonePermissionStatus) ||
+        isPermissionNeedingAttention(context.screenRecordingPermissionStatus) ||
+        isPermissionNeedingAttention(context.accessibilityPermissionStatus) ||
+        (context.batteryInfo.isAvailable && context.batteryInfo.percentage <= 20 && context.batteryInfo.isCharging == false)
+    }
+
+    private static func isPermissionNeedingAttention(_ status: AppPermissionStatus) -> Bool {
+        switch status {
+        case .denied, .restricted, .needsSystemSettings:
+            return true
+        case .unknown, .notDetermined, .requesting, .authorized, .failed:
+            return false
+        }
     }
 
     private static func voiceAccent(for state: NotchV2VoiceSurfaceState) -> Color {

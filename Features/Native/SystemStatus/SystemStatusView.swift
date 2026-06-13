@@ -5,11 +5,12 @@ import AcMindKit
 struct SystemStatusView: View {
     @StateObject private var viewModel: SystemStatusViewModel
     @State private var pulsePhase = false
+    @State private var showSecondaryDetails = false
 
     private enum DashboardLayout {
         static let heroCardHeight: CGFloat = 224
         static let sideCardWidth: CGFloat = 224
-        static let statusMatrixHeight: CGFloat = 60
+        static let statusMatrixHeight: CGFloat = 82
         static let permissionStripHeight: CGFloat = 42
     }
 
@@ -50,8 +51,8 @@ struct SystemStatusView: View {
         VStack(alignment: .leading, spacing: 4) {
             dashboardKpiRow
             dashboardOverviewCard
-            dashboardUtilityGrid
-            dashboardBottomRow
+            dashboardSummaryStrip
+            dashboardSecondaryDetailsSection
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 0)
@@ -93,6 +94,12 @@ struct SystemStatusView: View {
                             dashboardMiniLine(title: "GPU", value: viewModel.gpuSummary)
                         } else {
                             dashboardMiniLine(title: "GPU", value: "采样中")
+                        }
+
+                        if viewModel.hasThermalThrottleData {
+                            dashboardMiniLineColored(title: "热节流", value: viewModel.thermalThrottleSummary, tint: .red)
+                        } else {
+                            dashboardMiniLine(title: "热节流", value: viewModel.thermalThrottleDetail)
                         }
                     }
                 }
@@ -221,6 +228,9 @@ struct SystemStatusView: View {
                     if viewModel.hasTemperatureData {
                         dashboardLegendChip(title: "温度", tint: .orange)
                     }
+                    if viewModel.hasThermalThrottleData {
+                        dashboardLegendChip(title: "热节流", tint: .red)
+                    }
                     dashboardLegendChip(title: "磁盘", tint: .orange)
                     Spacer(minLength: 0)
                 }
@@ -232,20 +242,55 @@ struct SystemStatusView: View {
                     if viewModel.hasGPUData {
                         dashboardMetricChip(title: "GPU", value: viewModel.gpuSummary, tint: .indigo)
                     }
-                    dashboardMetricChip(title: "热状态", value: viewModel.snapshot.thermalState ?? "—", tint: .green)
+                    dashboardMetricChip(title: "热状态", value: viewModel.thermalThrottleSummary, tint: .red)
                 }
             }
         }
         .frame(maxWidth: .infinity)
     }
 
+    private var dashboardSummaryStrip: some View {
+        HStack(alignment: .center, spacing: 4) {
+            dashboardFooterChip(title: "采样", value: viewModel.samplingStatusText)
+            dashboardFooterChip(title: "刷新", value: viewModel.refreshHint)
+            dashboardFooterChip(title: "权限", value: viewModel.permissionFooterSummary)
+            dashboardFooterChip(title: "热节流", value: viewModel.thermalThrottleSummary)
+        }
+        .padding(.horizontal, 2)
+        .padding(.bottom, 2)
+    }
+
+    private var dashboardSecondaryDetailsSection: some View {
+        DisclosureGroup(isExpanded: $showSecondaryDetails) {
+            VStack(alignment: .leading, spacing: 4) {
+                dashboardUtilityGrid
+                dashboardBottomRow
+            }
+            .padding(.top, 6)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.down.circle")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                Text("次级详情")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                Text("温度 / 风扇 / 进程 / 快捷操作")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 2)
+            .padding(.vertical, 4)
+        }
+        .padding(.top, 2)
+    }
+
     private var dashboardPermissionStateStrip: some View {
         let permissions = Array(viewModel.snapshot.permissions.prefix(6))
-        let availableCount = permissions.filter(\.isAvailable).count
-        let unavailableCount = permissions.filter { $0.isAvailable == false }.count
-        let unknownCount = permissions.filter { permission in
-            permission.isAvailable && permission.value == nil
-        }.count
+        let authorizedCount = permissions.filter { SystemStatusLabelFormatter.permissionStateLabel(for: $0) == "已授权" }.count
+        let unavailableCount = permissions.filter { SystemStatusLabelFormatter.permissionStateLabel(for: $0) == "不可用" }.count
+        let unknownCount = permissions.filter { SystemStatusLabelFormatter.permissionStateLabel(for: $0) == "未知" }.count
         let totalCount = max(permissions.count, 1)
 
         return VStack(alignment: .leading, spacing: 6) {
@@ -264,7 +309,7 @@ struct SystemStatusView: View {
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 99, style: .continuous)
                         .fill(.green.opacity(0.78))
-                        .frame(width: proxy.size.width * CGFloat(availableCount) / CGFloat(totalCount))
+                        .frame(width: proxy.size.width * CGFloat(authorizedCount) / CGFloat(totalCount))
 
                     RoundedRectangle(cornerRadius: 99, style: .continuous)
                         .fill(.orange.opacity(0.78))
@@ -287,8 +332,8 @@ struct SystemStatusView: View {
             )
 
             HStack(spacing: 6) {
-                dashboardPermissionStatePill(title: "可用", value: "\(availableCount)", tint: .green)
-                dashboardPermissionStatePill(title: "关注", value: "\(unavailableCount)", tint: .orange)
+                dashboardPermissionStatePill(title: "已授权", value: "\(authorizedCount)", tint: .green)
+                dashboardPermissionStatePill(title: "不可用", value: "\(unavailableCount)", tint: .orange)
                 dashboardPermissionStatePill(title: "未知", value: "\(unknownCount)", tint: .secondary)
             }
         }
@@ -317,7 +362,7 @@ struct SystemStatusView: View {
 
     private var dashboardUtilityGrid: some View {
         HStack(alignment: .top, spacing: 4) {
-            AppSurfaceCard(title: "网络", subtitle: "速率 · 接口 · Wi‑Fi", padding: 5) {
+            AppSurfaceCard(title: "网络", subtitle: "速率 · 接口 · Wi‑Fi", padding: 5, fillHeight: true) {
                 VStack(alignment: .leading, spacing: 3) {
                     DashboardSparklineChart(values: viewModel.networkHistory, tint: .green, lineWidth: 2.2)
                         .frame(height: 30)
@@ -332,7 +377,7 @@ struct SystemStatusView: View {
             }
 
             if viewModel.hasBattery {
-                AppSurfaceCard(title: "电源", subtitle: "电池与功率", padding: 5) {
+                AppSurfaceCard(title: "电源", subtitle: "电池与功率", padding: 5, fillHeight: true) {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 5) {
                             DashboardRingGauge(progress: viewModel.snapshot.batteryLevel, tint: .cyan, label: viewModel.batterySummary)
@@ -355,7 +400,7 @@ struct SystemStatusView: View {
                     }
                 }
             } else {
-                AppSurfaceCard(title: "供电", subtitle: "外接电源", padding: 6) {
+                AppSurfaceCard(title: "供电", subtitle: "外接电源", padding: 6, fillHeight: true) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             Image(systemName: "powerplug.fill")
@@ -377,7 +422,7 @@ struct SystemStatusView: View {
                 }
             }
 
-            AppSurfaceCard(title: "权限", subtitle: "紧凑状态矩阵", padding: 5) {
+            AppSurfaceCard(title: "权限", subtitle: "紧凑状态矩阵", padding: 5, fillHeight: true) {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 3), count: 2), spacing: 3) {
                     ForEach(Array(viewModel.snapshot.permissions.prefix(6))) { permission in
                         dashboardPermissionCell(permission)
@@ -385,11 +430,12 @@ struct SystemStatusView: View {
                 }
             }
         }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var dashboardBottomRow: some View {
         HStack(alignment: .top, spacing: 4) {
-            AppSurfaceCard(title: "设备温度", subtitle: viewModel.hasTemperatureData ? "\(viewModel.snapshot.temperatureSensors.count) 个传感器" : "SMC", padding: 4) {
+            AppSurfaceCard(title: "设备温度", subtitle: viewModel.hasTemperatureData ? "\(viewModel.snapshot.temperatureSensors.count) 个传感器" : "SMC", padding: 4, fillHeight: true) {
                 VStack(alignment: .leading, spacing: 1) {
                     if viewModel.hasTemperatureData {
                         if let primarySensor = viewModel.snapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
@@ -441,7 +487,7 @@ struct SystemStatusView: View {
                 }
             }
 
-            AppSurfaceCard(title: "风扇转速", subtitle: viewModel.hasFanData ? "\(viewModel.snapshot.fanSensors.count) 个风扇" : "SMC", padding: 4) {
+            AppSurfaceCard(title: "风扇转速", subtitle: viewModel.hasFanData ? "\(viewModel.snapshot.fanSensors.count) 个风扇" : "SMC", padding: 4, fillHeight: true) {
                 VStack(alignment: .leading, spacing: 1) {
                     if viewModel.hasFanData {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -463,7 +509,7 @@ struct SystemStatusView: View {
                         }
                     } else {
                         dashboardPulsingPlaceholder(icon: "fanblades", color: .blue)
-                     }
+                    }
                 }
             }
 
@@ -486,6 +532,7 @@ struct SystemStatusView: View {
                 }
             }
         }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func dashboardTopBadge(icon: String, title: String, tint: Color = AppSurfaceTokens.cardBackgroundSoft) -> some View {
@@ -714,6 +761,10 @@ struct SystemStatusView: View {
                 }
                 dashboardStatusRow(title: "权限", value: viewModel.permissionFooterSummary, tint: .blue, icon: "checkmark.shield")
             }
+            HStack(spacing: 3) {
+                dashboardStatusRow(title: "热节流", value: viewModel.thermalThrottleSummary, tint: .red, icon: "flame.fill")
+                dashboardStatusRow(title: "来源", value: viewModel.thermalThrottleDetail, tint: .red, icon: "info.circle")
+            }
         }
     }
 
@@ -745,8 +796,8 @@ struct SystemStatusView: View {
     }
 
     private func dashboardPermissionCell(_ item: SystemPermissionSnapshot) -> some View {
-        let statusText = item.value ?? "—"
-        let statusTint = dashboardPermissionTint(statusText: statusText, isAvailable: item.isAvailable)
+        let statusText = SystemStatusLabelFormatter.permissionStateLabel(for: item)
+        let statusTint = dashboardPermissionTint(statusText: statusText)
 
         return HStack(spacing: 7) {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -916,14 +967,14 @@ struct SystemStatusView: View {
         )
     }
 
-    private func dashboardPermissionTint(statusText: String, isAvailable: Bool) -> Color {
-        if isAvailable == false || statusText.contains("拒绝") {
-            return .orange
-        }
-        if statusText.contains("授权") || statusText.contains("允许") {
+    private func dashboardPermissionTint(statusText: String) -> Color {
+        if statusText == "已授权" {
             return .green
         }
-        if statusText.contains("未") {
+        if statusText == "已拒绝" || statusText == "受限" || statusText == "不可用" {
+            return .orange
+        }
+        if statusText == "未知" {
             return .secondary
         }
         return .blue
@@ -1399,6 +1450,18 @@ final class SystemStatusViewModel: ObservableObject {
         return "采样中"
     }
 
+    var thermalThrottleSummary: String {
+        SystemStatusLabelFormatter.thermalThrottleSummary(snapshot.thermalThrottle)
+    }
+
+    var thermalThrottleDetail: String {
+        SystemStatusLabelFormatter.thermalThrottleDetail(snapshot.thermalThrottle)
+    }
+
+    var hasThermalThrottleData: Bool {
+        snapshot.thermalThrottle?.isAvailable == true
+    }
+
     var fanPrimaryValue: String {
         let values = snapshot.fanSensors.compactMap { $0.value }
         guard values.isEmpty == false else { return "—" }
@@ -1416,15 +1479,7 @@ final class SystemStatusViewModel: ObservableObject {
     }
 
     var permissionFooterSummary: String {
-        guard snapshot.permissions.isEmpty == false else { return "—" }
-        let warningCount = snapshot.permissions.filter { permission in
-            guard let value = permission.value else { return true }
-            return value.contains("拒绝") || value.contains("未确定")
-        }.count
-        if warningCount == 0 {
-            return "全部正常"
-        }
-        return "\(warningCount) 项需关注"
+        SystemStatusLabelFormatter.permissionOverviewSummary(snapshot.permissions)
     }
 
     var temperatureSummary: String {

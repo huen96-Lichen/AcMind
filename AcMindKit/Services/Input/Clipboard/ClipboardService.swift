@@ -13,6 +13,7 @@ import Combine
 /// 5. 复制回写到系统剪贴板
 @MainActor
 public final class ClipboardService: ClipboardServiceProtocol {
+    private static let logger = AcMindLogger(category: .clipboard)
     
     // MARK: - Dependencies
     
@@ -160,7 +161,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
         do {
             try await pipeline.process(&context)
         } catch {
-            print("Pipeline error: \(error)")
+            Self.logger.error("Pipeline error: \(error)")
             return
         }
 
@@ -208,7 +209,7 @@ public final class ClipboardService: ClipboardServiceProtocol {
             items = try await storage.listClipboardItems(limit: maxHistoryItems)
             pipeline.validation.rebuildHashes(from: Array(items.prefix(50)))
         } catch {
-            print("加载剪贴板历史失败: \(error)")
+            Self.logger.error("加载剪贴板历史失败: \(error)")
             items = []
         }
     }

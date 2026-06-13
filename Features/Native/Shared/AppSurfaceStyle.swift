@@ -63,17 +63,20 @@ struct AppSurfaceCard<Content: View>: View {
     let title: String?
     let subtitle: String?
     let padding: CGFloat
+    let fillHeight: Bool
     @ViewBuilder let content: Content
 
     init(
         title: String? = nil,
         subtitle: String? = nil,
         padding: CGFloat = 20,
+        fillHeight: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
         self.padding = padding
+        self.fillHeight = fillHeight
         self.content = content()
     }
 
@@ -95,6 +98,7 @@ struct AppSurfaceCard<Content: View>: View {
             content
         }
         .padding(padding)
+        .frame(maxWidth: .infinity, maxHeight: fillHeight ? .infinity : nil, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackground)
@@ -311,6 +315,332 @@ struct AppSurfaceEmptyState: View {
     }
 }
 
+struct AppSurfaceDialogFrame<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let icon: String
+    let tint: Color
+    let width: CGFloat
+    @ViewBuilder let content: Content
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        icon: String,
+        tint: Color = AppSurfaceTokens.accentBlue,
+        width: CGFloat = 420,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self.tint = tint
+        self.width = width
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(tint.opacity(0.12))
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(tint)
+                }
+                .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            content
+        }
+        .padding(18)
+        .frame(width: width, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius + 2, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            AppSurfaceTokens.cardBackground,
+                            AppSurfaceTokens.cardBackgroundSoft
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius + 2, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.9), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 8)
+    }
+}
+
+struct AppSurfaceDialogActionRow: View {
+    let primaryTitle: String
+    let secondaryTitle: String
+    let tertiaryTitle: String?
+    let primaryRole: ButtonRole?
+    let secondaryRole: ButtonRole?
+    let tertiaryRole: ButtonRole?
+    let primaryDisabled: Bool
+    let secondaryDisabled: Bool
+    let tertiaryDisabled: Bool
+    let primaryAction: () -> Void
+    let secondaryAction: () -> Void
+    let tertiaryAction: (() -> Void)?
+
+    init(
+        primaryTitle: String,
+        secondaryTitle: String,
+        tertiaryTitle: String? = nil,
+        primaryRole: ButtonRole? = nil,
+        secondaryRole: ButtonRole? = nil,
+        tertiaryRole: ButtonRole? = nil,
+        primaryDisabled: Bool = false,
+        secondaryDisabled: Bool = false,
+        tertiaryDisabled: Bool = false,
+        primaryAction: @escaping () -> Void,
+        secondaryAction: @escaping () -> Void,
+        tertiaryAction: (() -> Void)? = nil
+    ) {
+        self.primaryTitle = primaryTitle
+        self.secondaryTitle = secondaryTitle
+        self.tertiaryTitle = tertiaryTitle
+        self.primaryRole = primaryRole
+        self.secondaryRole = secondaryRole
+        self.tertiaryRole = tertiaryRole
+        self.primaryDisabled = primaryDisabled
+        self.secondaryDisabled = secondaryDisabled
+        self.tertiaryDisabled = tertiaryDisabled
+        self.primaryAction = primaryAction
+        self.secondaryAction = secondaryAction
+        self.tertiaryAction = tertiaryAction
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(secondaryTitle, role: secondaryRole) {
+                secondaryAction()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .disabled(secondaryDisabled)
+
+            if let tertiaryTitle, let tertiaryAction {
+                Button(tertiaryTitle, role: tertiaryRole) {
+                    tertiaryAction()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .disabled(tertiaryDisabled)
+            }
+
+            Spacer(minLength: 0)
+
+            Button(primaryTitle, role: primaryRole) {
+                primaryAction()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
+            .disabled(primaryDisabled)
+        }
+    }
+}
+
+struct AppSurfaceConfirmationCard: View {
+    let title: String
+    let message: String
+    let icon: String
+    let tint: Color
+    let primaryTitle: String
+    let secondaryTitle: String
+    let tertiaryTitle: String?
+    let footerNote: String?
+    let primaryAction: () -> Void
+    let secondaryAction: () -> Void
+    let tertiaryAction: (() -> Void)?
+
+    init(
+        title: String,
+        message: String,
+        icon: String,
+        tint: Color = AppSurfaceTokens.accentBlue,
+        primaryTitle: String,
+        secondaryTitle: String,
+        tertiaryTitle: String? = nil,
+        footerNote: String? = "选完就会关闭窗口，不会再额外弹系统对话框。",
+        primaryAction: @escaping () -> Void,
+        secondaryAction: @escaping () -> Void,
+        tertiaryAction: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.message = message
+        self.icon = icon
+        self.tint = tint
+        self.primaryTitle = primaryTitle
+        self.secondaryTitle = secondaryTitle
+        self.tertiaryTitle = tertiaryTitle
+        self.footerNote = footerNote
+        self.primaryAction = primaryAction
+        self.secondaryAction = secondaryAction
+        self.tertiaryAction = tertiaryAction
+    }
+
+    var body: some View {
+        AppSurfaceDialogFrame(
+            title: title,
+            subtitle: message,
+            icon: icon,
+            tint: tint
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                AppSurfaceDialogActionRow(
+                    primaryTitle: primaryTitle,
+                    secondaryTitle: secondaryTitle,
+                    tertiaryTitle: tertiaryTitle,
+                    primaryAction: primaryAction,
+                    secondaryAction: secondaryAction,
+                    tertiaryAction: tertiaryAction
+                )
+
+                if let footerNote {
+                    Text(footerNote)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
+                }
+            }
+        }
+    }
+}
+
+struct AppSurfaceReminderCard: View {
+    let title: String
+    let message: String
+    let icon: String
+    let tint: Color
+    let actionTitle: String
+    let action: () -> Void
+
+    init(
+        title: String,
+        message: String,
+        icon: String,
+        tint: Color = AppSurfaceTokens.accentBlue,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.message = message
+        self.icon = icon
+        self.tint = tint
+        self.actionTitle = actionTitle
+        self.action = action
+    }
+
+    var body: some View {
+        AppSurfaceDialogFrame(
+            title: title,
+            subtitle: message,
+            icon: icon,
+            tint: tint
+        ) {
+            HStack {
+                Spacer(minLength: 0)
+                Button(actionTitle) {
+                    action()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+            }
+        }
+    }
+}
+
+struct AppSurfacePromptCard: View {
+    let title: String
+    let message: String
+    let icon: String
+    let tint: Color
+    let placeholder: String
+    @Binding var text: String
+    let confirmTitle: String
+    let cancelTitle: String
+    let footerNote: String?
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    init(
+        title: String,
+        message: String,
+        icon: String,
+        tint: Color = AppSurfaceTokens.accentBlue,
+        placeholder: String,
+        text: Binding<String>,
+        confirmTitle: String,
+        cancelTitle: String,
+        footerNote: String? = nil,
+        onConfirm: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.title = title
+        self.message = message
+        self.icon = icon
+        self.tint = tint
+        self.placeholder = placeholder
+        self._text = text
+        self.confirmTitle = confirmTitle
+        self.cancelTitle = cancelTitle
+        self.footerNote = footerNote
+        self.onConfirm = onConfirm
+        self.onCancel = onCancel
+    }
+
+    var body: some View {
+        AppSurfaceDialogFrame(
+            title: title,
+            subtitle: message,
+            icon: icon,
+            tint: tint
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                TextField(placeholder, text: $text)
+                    .textFieldStyle(.roundedBorder)
+
+                AppSurfaceDialogActionRow(
+                    primaryTitle: confirmTitle,
+                    secondaryTitle: cancelTitle,
+                    primaryRole: nil,
+                    secondaryRole: nil,
+                    primaryDisabled: text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                    primaryAction: onConfirm,
+                    secondaryAction: onCancel
+                )
+
+                if let footerNote {
+                    Text(footerNote)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
+                }
+            }
+        }
+    }
+}
+
 struct WorkspacePageShell<Leading: View, Content: View, Trailing: View>: View {
     let title: String
     let subtitle: String?
@@ -351,20 +681,24 @@ struct WorkspacePageShell<Leading: View, Content: View, Trailing: View>: View {
                 Divider()
 
                 HStack(spacing: 0) {
-                    leadingRail()
-                        .frame(width: leadingRailWidth, alignment: .topLeading)
-                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                    if leadingRailWidth > 0 {
+                        leadingRail()
+                            .frame(width: leadingRailWidth, alignment: .topLeading)
+                            .frame(maxHeight: .infinity, alignment: .topLeading)
 
-                    Divider()
+                        Divider()
+                    }
 
                     content()
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                    Divider()
+                    if trailingRailWidth > 0 {
+                        Divider()
 
-                    trailingRail()
-                        .frame(width: trailingRailWidth, alignment: .topLeading)
-                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                        trailingRail()
+                            .frame(width: trailingRailWidth, alignment: .topLeading)
+                            .frame(maxHeight: .infinity, alignment: .topLeading)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }

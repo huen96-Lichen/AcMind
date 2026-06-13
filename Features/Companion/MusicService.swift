@@ -9,9 +9,11 @@
 import AppKit
 import ApplicationServices
 import Combine
+import AcMindKit
 import OSLog
 import SwiftUI
 import Darwin
+import Vision
 
 // MARK: - Playback State
 
@@ -28,6 +30,7 @@ public struct PlaybackState: Sendable {
     public var isShuffled: Bool
     public var repeatMode: RepeatMode
     public var bundleIdentifier: String?
+    public var sourceLabel: String
     public var lastUpdated: Date
 
     public init(
@@ -42,6 +45,7 @@ public struct PlaybackState: Sendable {
         isShuffled: Bool = false,
         repeatMode: RepeatMode = .off,
         bundleIdentifier: String? = nil,
+        sourceLabel: String = "",
         lastUpdated: Date = Date()
     ) {
         self.title = title
@@ -55,6 +59,7 @@ public struct PlaybackState: Sendable {
         self.isShuffled = isShuffled
         self.repeatMode = repeatMode
         self.bundleIdentifier = bundleIdentifier
+        self.sourceLabel = sourceLabel
         self.lastUpdated = lastUpdated
     }
 }
@@ -69,7 +74,7 @@ public enum RepeatMode: String, Sendable, CaseIterable {
 
 // MARK: - Now Playing Snapshot
 
-private struct NowPlayingSnapshot: Sendable {
+struct NowPlayingSnapshot: Sendable {
     let title: String
     let artist: String
     let album: String
@@ -107,9 +112,18 @@ public class MusicService: ObservableObject {
     @Published public var playbackRate: Double = 1.0
     @Published public var isShuffled: Bool = false
     @Published public var repeatMode: RepeatMode = .off
+    @Published public var lyrics: String?
+    @Published public var isLoadingLyrics: Bool = false
+    @Published public var sourceLabel: String = ""
 
     private var updateTimer: Timer?
     private var currentArtworkData: Data?
+    private var lastLyricsKey: String?
+    private var stalenessTracker = NowPlayingStalenessTracker(clearThreshold: 2)
+    private var nowPlayingAdapterProcess: Process?
+    private var nowPlayingAdapterPipeHandler: JSONLinesPipeHandler?
+    private var nowPlayingAdapterTask: Task<Void, Never>?
+    private var nowPlayingAdapterIsRunning = false
 
     // MARK: - Initialization
 
@@ -122,48 +136,225 @@ public class MusicService: ObservableObject {
     private func setupMediaMonitoring() {
         Self.logger.debug("Starting music monitoring")
 
+        Task { await startNowPlayingStreamIfAvailable() }
+
         // 使用定时器定期更新
         updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                await self?.updateNowPlayingInfo()
+                guard let self else { return }
+                if self.nowPlayingAdapterIsRunning, self.hasPlaybackContext() {
+                    return
+                }
+                await self.updateNowPlayingInfo()
             }
         }
 
         Task { await updateNowPlayingInfo() }
     }
 
+    private func hasPlaybackContext() -> Bool {
+        songTitle.isEmpty == false ||
+        artistName.isEmpty == false ||
+        album.isEmpty == false ||
+        bundleIdentifier != nil ||
+        sourceLabel.isEmpty == false
+    }
+
+    private func adapterRepeatMode(from value: Int) -> RepeatMode {
+        switch value {
+        case 2:
+            return .one
+        case 3:
+            return .all
+        default:
+            return .off
+        }
+    }
+
+    private func startNowPlayingStreamIfAvailable() async {
+        guard
+            let scriptURL = Bundle.main.url(forResource: "mediaremote-adapter", withExtension: "pl"),
+            let frameworkPath = Bundle.main.privateFrameworksPath?.appending("/MediaRemoteAdapter.framework")
+        else {
+            Self.logger.debug("MediaRemote adapter resources missing, using polling fallback")
+            return
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
+        process.arguments = [scriptURL.path, frameworkPath, "stream"]
+
+        let pipeHandler = JSONLinesPipeHandler()
+        process.standardOutput = pipeHandler.getPipe()
+
+        do {
+            try process.run()
+        } catch {
+            Self.logger.debug("Failed to launch mediaremote adapter: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
+        process.terminationHandler = { [weak self] _ in
+            Task { @MainActor in
+                self?.nowPlayingAdapterIsRunning = false
+                self?.nowPlayingAdapterProcess = nil
+                self?.nowPlayingAdapterPipeHandler = nil
+                self?.nowPlayingAdapterTask?.cancel()
+                self?.nowPlayingAdapterTask = nil
+            }
+        }
+
+        nowPlayingAdapterProcess = process
+        nowPlayingAdapterPipeHandler = pipeHandler
+        nowPlayingAdapterIsRunning = true
+
+        nowPlayingAdapterTask = Task { [weak self] in
+            await self?.consumeNowPlayingStream()
+        }
+    }
+
+    private func consumeNowPlayingStream() async {
+        guard let pipeHandler = nowPlayingAdapterPipeHandler else { return }
+
+        await pipeHandler.readJSONLines(as: NowPlayingAdapterUpdate.self) { [weak self] update in
+            await self?.handleNowPlayingAdapterUpdate(update)
+        }
+    }
+
+    private func handleNowPlayingAdapterUpdate(_ update: NowPlayingAdapterUpdate) async {
+        let payload = update.payload
+        let diff = update.diff ?? false
+
+        let resolvedTitle = payload.title ?? (diff ? songTitle : "")
+        let resolvedArtist = payload.artist ?? (diff ? artistName : "")
+        let resolvedAlbum = payload.album ?? (diff ? album : "")
+        let resolvedDuration = payload.duration ?? (diff ? songDuration : 0)
+
+        let resolvedCurrentTime: TimeInterval
+        if let elapsedTime = payload.elapsedTime {
+            resolvedCurrentTime = elapsedTime
+        } else if diff {
+            if payload.playing == false {
+                let timeSinceLastUpdate = Date().timeIntervalSince(timestampDate)
+                resolvedCurrentTime = elapsedTime + (playbackRate * timeSinceLastUpdate)
+            } else {
+                resolvedCurrentTime = elapsedTime
+            }
+        } else {
+            resolvedCurrentTime = 0
+        }
+
+        let resolvedIsShuffled: Bool
+        if let shuffleMode = payload.shuffleMode {
+            resolvedIsShuffled = shuffleMode != 1
+        } else if diff {
+            resolvedIsShuffled = isShuffled
+        } else {
+            resolvedIsShuffled = false
+        }
+
+        let resolvedRepeatMode: RepeatMode
+        if let repeatModeValue = payload.repeatMode {
+            resolvedRepeatMode = adapterRepeatMode(from: repeatModeValue)
+        } else if diff {
+            resolvedRepeatMode = repeatMode
+        } else {
+            resolvedRepeatMode = .off
+        }
+
+        let resolvedArtworkData: Data?
+        if let artworkDataString = payload.artworkData {
+            resolvedArtworkData = Data(base64Encoded: artworkDataString.trimmingCharacters(in: .whitespacesAndNewlines))
+        } else if !diff {
+            resolvedArtworkData = nil
+        } else {
+            resolvedArtworkData = currentArtworkData
+        }
+
+        let resolvedIsPlaying = payload.playing ?? (diff ? isPlaying : false)
+        var resolvedPlaybackRate = payload.playbackRate ?? (diff ? playbackRate : 1.0)
+        if resolvedIsPlaying == false {
+            resolvedPlaybackRate = 0
+        } else if payload.playbackRate == nil, resolvedPlaybackRate <= 0 {
+            resolvedPlaybackRate = 1.0
+        }
+        let resolvedBundleIdentifier = (
+            payload.parentApplicationBundleIdentifier ??
+            payload.bundleIdentifier ??
+            (diff ? bundleIdentifier : nil)
+        )
+
+        let snapshot = NowPlayingSnapshot(
+            title: resolvedTitle,
+            artist: resolvedArtist,
+            album: resolvedAlbum,
+            artworkData: resolvedArtworkData,
+            duration: resolvedDuration,
+            elapsedTime: resolvedCurrentTime,
+            playbackRate: resolvedPlaybackRate,
+            bundleIdentifier: resolvedBundleIdentifier,
+            source: ""
+        )
+
+        // Preserve repeat/shuffle state after the snapshot apply.
+        isShuffled = resolvedIsShuffled
+        repeatMode = resolvedRepeatMode
+
+        apply(snapshot: snapshot)
+    }
+
     // MARK: - Media Detection Methods
 
     private func updateNowPlayingInfo() async {
+        var fallbackSnapshot: NowPlayingSnapshot?
+
         if let snapshot = await LegacyPlayerNowPlayingProbe.fetch(logger: Self.logger) {
-            apply(snapshot: snapshot)
-            return
+            if snapshot.isPlaying {
+                stalenessTracker.recordSourceFound()
+                apply(snapshot: snapshot)
+                return
+            }
+            fallbackSnapshot = fallbackSnapshot ?? snapshot
         }
 
         if let snapshot = await QishuiMusicNowPlayingProbe.fetch(logger: Self.logger) {
-            apply(snapshot: snapshot)
-            return
+            if snapshot.isPlaying {
+                stalenessTracker.recordSourceFound()
+                apply(snapshot: snapshot)
+                return
+            }
+            fallbackSnapshot = fallbackSnapshot ?? snapshot
         }
 
         if let snapshot = await MediaRemoteNowPlayingProbe.fetch(logger: Self.logger) {
-            apply(snapshot: snapshot)
+            if snapshot.isPlaying {
+                stalenessTracker.recordSourceFound()
+                apply(snapshot: snapshot)
+                return
+            }
+            fallbackSnapshot = fallbackSnapshot ?? snapshot
+        }
+
+        if let browserSnapshot = await BrowserNowPlayingProbe.fetch(logger: Self.logger) {
+            stalenessTracker.recordSourceFound()
+            apply(snapshot: browserSnapshot)
             return
         }
 
-        if let snapshot = await SafariNowPlayingProbe.fetch(logger: Self.logger) {
-            apply(snapshot: snapshot)
+        if let fallbackSnapshot {
+            stalenessTracker.recordSourceFound()
+            apply(snapshot: fallbackSnapshot)
             return
         }
 
         Self.logger.debug("No now playing source found")
-        if !songTitle.isEmpty || isPlaying {
-            isPlaying = false
-            timestampDate = Date()
-            broadcastState()
+        if stalenessTracker.recordSourceMissing() {
+            clearNowPlayingState()
         }
     }
 
     private func apply(snapshot: NowPlayingSnapshot) {
+        let titleChanged = snapshot.title != songTitle
         songTitle = snapshot.title
         artistName = snapshot.artist
         album = snapshot.album
@@ -172,6 +363,10 @@ public class MusicService: ObservableObject {
         playbackRate = snapshot.playbackRate
         isPlaying = snapshot.isPlaying
         bundleIdentifier = snapshot.bundleIdentifier
+        sourceLabel = NowPlayingSourceLabelFormatter.displayName(
+            bundleIdentifier: snapshot.bundleIdentifier,
+            source: snapshot.source
+        )
         timestampDate = Date()
         if let artworkData = snapshot.artworkData, let image = NSImage(data: artworkData) {
             albumArt = image
@@ -184,6 +379,31 @@ public class MusicService: ObservableObject {
         Self.logger.debug(
             "Now playing hit: source=\(snapshot.source, privacy: .public) title=\(snapshot.title, privacy: .public) artist=\(snapshot.artist, privacy: .public) bundle=\(snapshot.bundleIdentifier ?? "unknown", privacy: .public)"
         )
+        broadcastState()
+        if titleChanged { fetchLyrics() }
+    }
+
+    private func clearNowPlayingState() {
+        guard !songTitle.isEmpty || !artistName.isEmpty || !album.isEmpty || isPlaying || bundleIdentifier != nil || sourceLabel.isEmpty == false else {
+            return
+        }
+
+        songTitle = ""
+        artistName = ""
+        album = ""
+        albumArt = nil
+        currentArtworkData = nil
+        isPlaying = false
+        songDuration = 0
+        elapsedTime = 0
+        playbackRate = 1.0
+        bundleIdentifier = nil
+        sourceLabel = ""
+        timestampDate = Date()
+        lyrics = nil
+        isLoadingLyrics = false
+        lastLyricsKey = nil
+        stalenessTracker.reset()
         broadcastState()
     }
 
@@ -201,6 +421,7 @@ public class MusicService: ObservableObject {
             isShuffled: isShuffled,
             repeatMode: repeatMode,
             bundleIdentifier: bundleIdentifier,
+            sourceLabel: sourceLabel,
             lastUpdated: Date()
         )
         NotificationCenter.default.post(
@@ -230,63 +451,69 @@ public class MusicService: ObservableObject {
 
     // MARK: - Playback Control
 
+    nonisolated private func sendMediaRemoteCommand(_ command: UInt32) {
+        let frameworkURL = URL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework")
+        guard let bundle = CFBundleCreate(kCFAllocatorDefault, frameworkURL as CFURL) else { return }
+        guard let symbol = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteSendCommand" as CFString) else { return }
+        typealias SendCommandFunction = @convention(c) (UInt32, UnsafeMutableRawPointer?) -> Bool
+        let fn = unsafeBitCast(symbol, to: SendCommandFunction.self)
+        _ = fn(command, nil)
+    }
+
     public func togglePlay() {
-        Task {
-            _ = try? await executeAppleScript("""
-            tell application "System Events"
-                set processList to name of every process
-            end tell
-            
-            if processList contains "汽水音乐" then
-                tell application "汽水音乐" to playpause
-            else if processList contains "网易云音乐" then
-                tell application "网易云音乐" to playpause
-            else if processList contains "Music" then
-                tell application "Music" to playpause
-            else if processList contains "Spotify" then
-                tell application "Spotify" to playpause
-            end if
-            """)
-        }
+        sendMediaRemoteCommand(2)
     }
 
     public func nextTrack() {
-        Task {
-            _ = try? await executeAppleScript("""
-            tell application "System Events"
-                set processList to name of every process
-            end tell
-            
-            if processList contains "汽水音乐" then
-                tell application "汽水音乐" to next track
-            else if processList contains "网易云音乐" then
-                tell application "网易云音乐" to next track
-            else if processList contains "Music" then
-                tell application "Music" to next track
-            else if processList contains "Spotify" then
-                tell application "Spotify" to next track
-            end if
-            """)
-        }
+        sendMediaRemoteCommand(4)
     }
 
     public func previousTrack() {
-        Task {
-            _ = try? await executeAppleScript("""
-            tell application "System Events"
-                set processList to name of every process
-            end tell
-            
-            if processList contains "汽水音乐" then
-                tell application "汽水音乐" to previous track
-            else if processList contains "网易云音乐" then
-                tell application "网易云音乐" to previous track
-            else if processList contains "Music" then
-                tell application "Music" to previous track
-            else if processList contains "Spotify" then
-                tell application "Spotify" to previous track
-            end if
-            """)
+        sendMediaRemoteCommand(5)
+    }
+
+    public func fetchLyrics() {
+        let title = songTitle
+        let artist = artistName
+        guard !title.isEmpty else {
+            lyrics = nil
+            return
+        }
+        let key = "\(title)|\(artist)"
+        if key == lastLyricsKey, lyrics != nil { return }
+        lastLyricsKey = key
+        isLoadingLyrics = true
+        Task.detached { [weak self] in
+            let result = await Self.requestLyrics(title: title, artist: artist)
+            await MainActor.run {
+                self?.lyrics = result
+                self?.isLoadingLyrics = false
+            }
+        }
+    }
+
+    private static func requestLyrics(title: String, artist: String) async -> String? {
+        var components = URLComponents(string: "https://lrclib.net/api/get")!
+        components.queryItems = [
+            URLQueryItem(name: "track_name", value: title),
+            URLQueryItem(name: "artist_name", value: artist)
+        ]
+        guard let url = components.url else { return nil }
+        var request = URLRequest(url: url)
+        request.setValue("AcMind/1.0", forHTTPHeaderField: "User-Agent")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return nil }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let synced = json?["syncedLyrics"] as? String, !synced.isEmpty {
+                return synced
+            }
+            if let plain = json?["plainLyrics"] as? String, !plain.isEmpty {
+                return plain
+            }
+            return nil
+        } catch {
+            return nil
         }
     }
 
@@ -307,13 +534,14 @@ public class MusicService: ObservableObject {
 
 private func runAppleScript(_ source: String) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AcMind", category: "MusicService")
         var error: NSDictionary?
         if let script = NSAppleScript(source: source) {
             let result = script.executeAndReturnError(&error)
             if let error = error {
                 let code = error[NSAppleScript.errorNumber] as? Int ?? -1
                 let message = error[NSAppleScript.errorMessage] as? String ?? "AppleScript execution failed"
-                print("[AcMind.MusicService] AppleScript error code=\(code) message=\(message)")
+                logger.error("[AcMind.MusicService] AppleScript error code=\(code) message=\(message)")
                 continuation.resume(throwing: NSError(domain: "AppleScript", code: code, userInfo: error as? [String: Any]))
             } else {
                 continuation.resume(returning: result.stringValue ?? "")
@@ -336,34 +564,60 @@ private enum MediaRemoteNowPlayingProbe {
                 return
             }
 
-            let symbolName = "MRMediaRemoteGetNowPlayingInfo" as CFString
-            guard let symbol = CFBundleGetFunctionPointerForName(bundle, symbolName) else {
-                logger.debug("MediaRemote symbol missing: \(symbolName as String, privacy: .public)")
+            guard let getNowPlayingInfo = getFunctionPointer(bundle: bundle, name: "MRMediaRemoteGetNowPlayingInfo") else {
+                logger.debug("MediaRemote symbol missing: MRMediaRemoteGetNowPlayingInfo")
                 continuation.resume(returning: nil)
                 return
             }
 
-            typealias Function = @convention(c) (DispatchQueue, @escaping (CFDictionary?) -> Void) -> Void
-            let function = unsafeBitCast(symbol, to: Function.self)
+            typealias InfoFunction = @convention(c) (DispatchQueue, @escaping (CFDictionary?) -> Void) -> Void
+            typealias BoolFunction = @convention(c) (DispatchQueue, @escaping (CFBoolean?) -> Void) -> Void
 
-            function(.main) { info in
-                guard let info else {
-                    logger.debug("MediaRemote returned no now playing dictionary")
-                    continuation.resume(returning: nil)
-                    return
+            if let getIsPlaying = getFunctionPointer(bundle: bundle, name: "MRMediaRemoteGetNowPlayingApplicationIsPlaying") {
+                let isPlayingFn = unsafeBitCast(getIsPlaying, to: BoolFunction.self)
+                isPlayingFn(.main) { playing in
+                    let systemIsPlaying = (playing as? Bool) ?? false
+                    let infoFn = unsafeBitCast(getNowPlayingInfo, to: InfoFunction.self)
+                    infoFn(.main) { info in
+                        continuation.resume(returning: Self.buildSnapshot(
+                            info: info, systemIsPlaying: systemIsPlaying, logger: logger
+                        ))
+                    }
                 }
-
-                let dictionary = info as NSDictionary
-                let snapshot = NowPlayingSnapshot.make(from: dictionary, source: "MediaRemote")
-                if let snapshot {
-                    continuation.resume(returning: snapshot)
-                } else {
-                    let keys = dictionary.allKeys.compactMap { $0 as? String }.sorted()
-                    logger.debug("MediaRemote dictionary did not contain readable keys: \(keys.joined(separator: ","), privacy: .public)")
-                    continuation.resume(returning: nil)
+            } else {
+                let infoFn = unsafeBitCast(getNowPlayingInfo, to: InfoFunction.self)
+                infoFn(.main) { info in
+                    continuation.resume(returning: Self.buildSnapshot(
+                        info: info, systemIsPlaying: nil, logger: logger
+                    ))
                 }
             }
         }
+    }
+
+    private static func getFunctionPointer(bundle: CFBundle, name: String) -> UnsafeMutableRawPointer? {
+        CFBundleGetFunctionPointerForName(bundle, name as CFString)
+    }
+
+    private static func buildSnapshot(info: CFDictionary?, systemIsPlaying: Bool?, logger: Logger) -> NowPlayingSnapshot? {
+        guard let info else {
+            logger.debug("MediaRemote returned no now playing dictionary")
+            return nil
+        }
+
+        let dictionary = info as NSDictionary
+        if let snapshot = NowPlayingSnapshot.make(
+            from: dictionary,
+            source: "MediaRemote",
+            systemIsPlaying: systemIsPlaying,
+            allowBrowserBundles: false
+        ) {
+            return snapshot
+        }
+
+        let keys = dictionary.allKeys.compactMap { $0 as? String }.sorted()
+        logger.debug("MediaRemote dictionary did not contain readable keys: \(keys.joined(separator: ","), privacy: .public)")
+        return nil
     }
 }
 
@@ -437,7 +691,7 @@ private enum LegacyPlayerNowPlayingProbe {
     }
 }
 
-private enum SafariNowPlayingProbe {
+private enum BrowserNowPlayingProbe {
     private struct Adapter {
         let name: String
         let bundleIdentifier: String
@@ -445,21 +699,21 @@ private enum SafariNowPlayingProbe {
     }
 
     static func fetch(logger: Logger) async -> NowPlayingSnapshot? {
-        guard let adapter = adapters.first else { return nil }
-
-        guard isApplicationAvailable(bundleIdentifier: adapter.bundleIdentifier) else {
-            logger.debug("Skipping missing browser: \(adapter.name, privacy: .public)")
-            return nil
-        }
-
-        do {
-            let result = try await runAppleScript(adapter.script)
-            if let snapshot = NowPlayingSnapshot.make(fromBrowserAppleScript: result, source: adapter.name, bundleIdentifier: adapter.bundleIdentifier) {
-                logger.debug("Browser adapter hit: \(adapter.name, privacy: .public)")
-                return snapshot
+        for adapter in adapters {
+            guard isApplicationAvailable(bundleIdentifier: adapter.bundleIdentifier) else {
+                logger.debug("Skipping missing browser: \(adapter.name, privacy: .public)")
+                continue
             }
-        } catch {
-            logger.debug("Browser adapter failed: \(adapter.name, privacy: .public) reason=\(error.localizedDescription, privacy: .public)")
+
+            do {
+                let result = try await runAppleScript(adapter.script)
+                if let snapshot = NowPlayingSnapshot.make(fromBrowserAppleScript: result, source: adapter.name, bundleIdentifier: adapter.bundleIdentifier) {
+                    logger.debug("Browser adapter hit: \(adapter.name, privacy: .public)")
+                    return snapshot
+                }
+            } catch {
+                logger.debug("Browser adapter failed: \(adapter.name, privacy: .public) reason=\(error.localizedDescription, privacy: .public)")
+            }
         }
 
         return nil
@@ -474,6 +728,33 @@ private enum SafariNowPlayingProbe {
                     applicationName: "Safari",
                     browserLabel: "Safari浏览器",
                     tabAccessor: "current tab of front window"
+                )
+            ),
+            Adapter(
+                name: "Chrome浏览器",
+                bundleIdentifier: "com.google.Chrome",
+                script: browserScript(
+                    applicationName: "Google Chrome",
+                    browserLabel: "Chrome浏览器",
+                    tabAccessor: "active tab of front window"
+                )
+            ),
+            Adapter(
+                name: "Edge浏览器",
+                bundleIdentifier: "com.microsoft.Edge",
+                script: browserScript(
+                    applicationName: "Microsoft Edge",
+                    browserLabel: "Edge浏览器",
+                    tabAccessor: "active tab of front window"
+                )
+            ),
+            Adapter(
+                name: "Brave浏览器",
+                bundleIdentifier: "com.brave.Browser",
+                script: browserScript(
+                    applicationName: "Brave Browser",
+                    browserLabel: "Brave浏览器",
+                    tabAccessor: "active tab of front window"
                 )
             )
         ]
@@ -504,13 +785,113 @@ private enum SafariNowPlayingProbe {
     }
 }
 
+// MARK: - MediaRemote Adapter Stream
+
+private struct NowPlayingAdapterUpdate: Codable, Sendable {
+    let payload: NowPlayingAdapterPayload
+    let diff: Bool?
+}
+
+private struct NowPlayingAdapterPayload: Codable, Sendable {
+    let title: String?
+    let artist: String?
+    let album: String?
+    let duration: Double?
+    let elapsedTime: Double?
+    let shuffleMode: Int?
+    let repeatMode: Int?
+    let artworkData: String?
+    let timestamp: String?
+    let playbackRate: Double?
+    let playing: Bool?
+    let parentApplicationBundleIdentifier: String?
+    let bundleIdentifier: String?
+}
+
+@MainActor
+private final class JSONLinesPipeHandler {
+    private let pipe: Pipe
+    private let fileHandle: FileHandle
+    private var buffer = ""
+
+    init() {
+        pipe = Pipe()
+        fileHandle = pipe.fileHandleForReading
+    }
+
+    func getPipe() -> Pipe {
+        pipe
+    }
+
+    func readJSONLines<T: Decodable & Sendable>(as type: T.Type, onLine: @escaping @Sendable (T) async -> Void) async {
+        do {
+            try await processLines(as: type, onLine: onLine)
+        } catch {
+            Self.logger?.debug("JSON line reader stopped: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func processLines<T: Decodable & Sendable>(as type: T.Type, onLine: @escaping @Sendable (T) async -> Void) async throws {
+        while true {
+            let data = try await readData()
+            guard data.isEmpty == false else { break }
+
+            if let chunk = String(data: data, encoding: .utf8) {
+                buffer.append(chunk)
+
+                while let range = buffer.range(of: "\n") {
+                    let line = String(buffer[..<range.lowerBound])
+                    buffer = String(buffer[range.upperBound...])
+
+                    if line.isEmpty == false {
+                        await processJSONLine(line, as: type, onLine: onLine)
+                    }
+                }
+            }
+        }
+    }
+
+    private func processJSONLine<T: Decodable & Sendable>(_ line: String, as type: T.Type, onLine: @escaping @Sendable (T) async -> Void) async {
+        guard let data = line.data(using: .utf8) else { return }
+        do {
+            let decodedObject = try JSONDecoder().decode(T.self, from: data)
+            await onLine(decodedObject)
+        } catch {
+            // Ignore malformed JSON lines from the adapter stream.
+        }
+    }
+
+    private func readData() async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            fileHandle.readabilityHandler = { handle in
+                let data = handle.availableData
+                handle.readabilityHandler = nil
+                continuation.resume(returning: data)
+            }
+        }
+    }
+
+    func close() async {
+        do {
+            fileHandle.readabilityHandler = nil
+            try fileHandle.close()
+        } catch {
+            // Nothing to clean up if the pipe has already been torn down.
+        }
+    }
+
+    private nonisolated static var logger: Logger? {
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "AcMind", category: "MusicService")
+    }
+}
+
 private enum QishuiMusicNowPlayingProbe {
     private struct Candidate {
         let text: String
         let frame: CGRect
     }
 
-    private static let accessibilityPromptFlagKey = "AcMind.MusicService.didPromptAccessibility"
+    private nonisolated(unsafe) static var didLogMissingAccessibilityThisLaunch = false
 
     static func fetch(logger: Logger) async -> NowPlayingSnapshot? {
         guard isApplicationAvailable(bundleIdentifier: "com.soda.music") else {
@@ -530,39 +911,46 @@ private enum QishuiMusicNowPlayingProbe {
             return nil
         }
 
-        if AXIsProcessTrusted() == false {
-            if UserDefaults.standard.bool(forKey: Self.accessibilityPromptFlagKey) == false {
-                UserDefaults.standard.set(true, forKey: Self.accessibilityPromptFlagKey)
-                let options: [String: Any] = ["AXTrustedCheckOptionPrompt": true]
-                let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
-                logger.debug("Accessibility prompt requested for 汽水音乐, trusted=\(trusted)")
-            } else {
-                logger.debug("Accessibility not trusted for 汽水音乐, waiting for grant")
+        guard let windowFrame = visibleWindowFrame(for: app.processIdentifier) else {
+            logger.debug("汽水音乐 visible window frame not found")
+            return nil
+        }
+
+        var candidates: [Candidate] = []
+
+        if AXIsProcessTrusted() {
+            let axApp = AXUIElementCreateApplication(app.processIdentifier)
+            if let window = frontWindow(of: axApp) {
+                let axWindowFrame = rectValue(of: window, attribute: "AXFrame" as CFString) ?? windowFrame
+                candidates = collectTextCandidates(from: window)
+                if candidates.isEmpty {
+                    candidates = await collectOCRTextCandidates(from: axWindowFrame, logger: logger)
+                } else {
+                    let ocrCandidates = await collectOCRTextCandidates(from: axWindowFrame, logger: logger)
+                    candidates.append(contentsOf: ocrCandidates)
+                }
+            } else if !didLogMissingAccessibilityThisLaunch {
+                didLogMissingAccessibilityThisLaunch = true
+                logger.debug("Accessibility trusted but 汽水音乐 front window not found, falling back to OCR")
             }
-            return nil
         }
 
-        let axApp = AXUIElementCreateApplication(app.processIdentifier)
-
-        guard let window = frontWindow(of: axApp) else {
-            logger.debug("汽水音乐 front window not found")
-            return nil
-        }
-
-        let windowFrame = rectValue(of: window, attribute: "AXFrame" as CFString) ?? .zero
-        let candidates = collectStaticTextCandidates(from: window)
-        
         if candidates.isEmpty {
-            logger.debug("汽水音乐 accessibility tree yielded no text candidates")
+            candidates = await collectOCRTextCandidates(from: windowFrame, logger: logger)
+        }
+
+        if candidates.isEmpty {
+            logger.debug("汽水音乐 yielded no text candidates")
             return nil
         }
 
-        guard let title = pickQishuiTitle(from: candidates, windowFrame: windowFrame) else {
+        let lyricsTrack = pickQishuiTrackFromLyricsScreen(from: candidates, windowFrame: windowFrame)
+        guard let title = lyricsTrack?.title ?? pickQishuiTitle(from: candidates, windowFrame: windowFrame) else {
             logger.debug("汽水音乐 title candidate not found")
             return nil
         }
 
-        let artist = pickQishuiArtist(from: candidates, title: title, windowFrame: windowFrame) ?? ""
+        let artist = lyricsTrack?.artist ?? pickQishuiArtist(from: candidates, title: title, windowFrame: windowFrame) ?? ""
         let elapsed = parseElapsedTime(from: candidates) ?? 0
         let total = parseTotalTime(from: candidates) ?? 0
 
@@ -591,15 +979,26 @@ private enum QishuiMusicNowPlayingProbe {
         return window
     }
 
-    private static func collectStaticTextCandidates(from element: AXUIElement) -> [Candidate] {
+    private static func collectTextCandidates(from element: AXUIElement) -> [Candidate] {
         var results: [Candidate] = []
 
         func walk(_ element: AXUIElement) {
             let role = stringValue(of: element, attribute: kAXRoleAttribute as CFString) ?? ""
-            if role == "AXStaticText" {
-                let text = stringValue(of: element, attribute: kAXValueAttribute as CFString) ?? ""
-                if text.isEmpty == false, let frame = rectValue(of: element, attribute: "AXFrame" as CFString) {
-                    results.append(Candidate(text: text, frame: frame))
+            let values = [
+                stringValue(of: element, attribute: kAXValueAttribute as CFString),
+                stringValue(of: element, attribute: kAXTitleAttribute as CFString),
+                stringValue(of: element, attribute: kAXDescriptionAttribute as CFString),
+                stringValue(of: element, attribute: "AXHelp" as CFString)
+            ]
+
+            if role == "AXStaticText" || role == "AXButton" || role == "AXLink" || values.contains(where: { ($0 ?? "").isEmpty == false }) {
+                if let frame = rectValue(of: element, attribute: "AXFrame" as CFString) {
+                    for text in values.compactMap({ $0 }) {
+                        let cleaned = cleanQishuiText(text)
+                        if cleaned.isEmpty == false {
+                            results.append(Candidate(text: cleaned, frame: frame))
+                        }
+                    }
                 }
             }
 
@@ -612,15 +1011,95 @@ private enum QishuiMusicNowPlayingProbe {
         return results
     }
 
+    private static func collectOCRTextCandidates(
+        from windowFrame: CGRect,
+        logger: Logger
+    ) async -> [Candidate] {
+        guard windowFrame.width > 0, windowFrame.height > 0 else { return [] }
+        let image = CGWindowListCreateImage(windowFrame, [.optionOnScreenOnly], kCGNullWindowID, [.bestResolution])
+
+        guard let image else {
+            logger.debug("汽水音乐 OCR capture failed")
+            return []
+        }
+
+        return await withCheckedContinuation { continuation in
+            let request = VNRecognizeTextRequest { request, error in
+                if let error {
+                    logger.debug("汽水音乐 OCR failed: \(error.localizedDescription, privacy: .public)")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
+                let candidates = observations.compactMap { observation -> Candidate? in
+                    guard let text = observation.topCandidates(1).first?.string else { return nil }
+                    let cleaned = cleanQishuiText(text)
+                    guard cleaned.isEmpty == false else { return nil }
+
+                    let boundingBox = observation.boundingBox
+                    let frame = CGRect(
+                        x: windowFrame.minX + boundingBox.minX * windowFrame.width,
+                        y: windowFrame.minY + (1 - boundingBox.maxY) * windowFrame.height,
+                        width: boundingBox.width * windowFrame.width,
+                        height: boundingBox.height * windowFrame.height
+                    )
+                    return Candidate(text: cleaned, frame: frame)
+                }
+                continuation.resume(returning: candidates)
+            }
+            request.recognitionLevel = .accurate
+            request.recognitionLanguages = ["zh-Hans", "ja-JP", "en-US"]
+            request.usesLanguageCorrection = true
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
+                } catch {
+                    logger.debug("汽水音乐 OCR request failed: \(error.localizedDescription, privacy: .public)")
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+    }
+
+    private static func visibleWindowFrame(for processIdentifier: pid_t) -> CGRect? {
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+
+        let candidates = windowList.compactMap { windowInfo -> CGRect? in
+            guard let ownerPID = windowInfo[kCGWindowOwnerPID as String] as? pid_t,
+                  ownerPID == processIdentifier else {
+                return nil
+            }
+
+            guard let layer = windowInfo[kCGWindowLayer as String] as? Int, layer == 0 else {
+                return nil
+            }
+
+            guard let bounds = windowInfo[kCGWindowBounds as String] as? [String: Any] else {
+                return nil
+            }
+
+            return CGRect(dictionaryRepresentation: bounds as CFDictionary)
+        }
+
+        return candidates.max(by: {
+            ($0.width * $0.height) < ($1.width * $1.height)
+        })
+    }
+
     private static func pickQishuiTitle(from candidates: [Candidate], windowFrame: CGRect) -> String? {
         let titleCandidates = candidates.filter { candidate in
             guard candidate.frame.width >= 80, candidate.frame.width <= 240 else { return false }
             guard candidate.frame.height >= 12, candidate.frame.height <= 28 else { return false }
             guard candidate.frame.minX > windowFrame.minX + windowFrame.width * 0.20 else { return false }
             guard candidate.frame.minY > windowFrame.minY + windowFrame.height * 0.45 else { return false }
-            guard candidate.frame.minY < windowFrame.minY + windowFrame.height * 0.72 else { return false }
+            guard candidate.frame.minY < windowFrame.minY + windowFrame.height * 0.90 else { return false }
             guard ignoredTexts.contains(candidate.text) == false else { return false }
             guard candidate.text.contains(" / ") == false else { return false }
+            guard isQishuiNoise(candidate.text) == false else { return false }
             return true
         }
 
@@ -635,6 +1114,51 @@ private enum QishuiMusicNowPlayingProbe {
             .text
     }
 
+    private static func pickQishuiTrackFromLyricsScreen(from candidates: [Candidate], windowFrame: CGRect) -> (title: String, artist: String?)? {
+        let titleCandidates = candidates.filter { candidate in
+            let normalizedX = (candidate.frame.midX - windowFrame.minX) / max(windowFrame.width, 1)
+            let normalizedY = (candidate.frame.midY - windowFrame.minY) / max(windowFrame.height, 1)
+            guard normalizedX >= 0.22, normalizedX <= 0.62 else { return false }
+            guard normalizedY >= 0.54, normalizedY <= 0.90 else { return false }
+            guard candidate.frame.height >= 16, candidate.frame.height <= 48 else { return false }
+            guard candidate.text.count <= 36 else { return false }
+            guard ignoredTexts.contains(candidate.text) == false else { return false }
+            guard isQishuiNoise(candidate.text) == false else { return false }
+            return true
+        }
+
+        guard let titleCandidate = titleCandidates.sorted(by: { lhs, rhs in
+            if abs(lhs.frame.height - rhs.frame.height) > 2 {
+                return lhs.frame.height > rhs.frame.height
+            }
+            return lhs.frame.minY < rhs.frame.minY
+        }).first else {
+            return nil
+        }
+
+        let artist = candidates.filter { candidate in
+            let normalizedX = (candidate.frame.midX - windowFrame.minX) / max(windowFrame.width, 1)
+            guard candidate.text != titleCandidate.text else { return false }
+            guard normalizedX >= 0.22, normalizedX <= 0.62 else { return false }
+            guard candidate.frame.minY >= titleCandidate.frame.maxY - 2 else { return false }
+            guard candidate.frame.minY <= titleCandidate.frame.maxY + 48 else { return false }
+            guard candidate.frame.height >= 10, candidate.frame.height <= 28 else { return false }
+            guard candidate.text.count <= 32 else { return false }
+            guard ignoredTexts.contains(candidate.text) == false else { return false }
+            guard isQishuiNoise(candidate.text) == false else { return false }
+            return true
+        }
+        .sorted {
+            let lhsDistance = abs($0.frame.minY - titleCandidate.frame.maxY)
+            let rhsDistance = abs($1.frame.minY - titleCandidate.frame.maxY)
+            return lhsDistance < rhsDistance
+        }
+        .first?
+        .text
+
+        return (titleCandidate.text, artist)
+    }
+
     private static func pickQishuiArtist(from candidates: [Candidate], title: String, windowFrame: CGRect) -> String? {
         let titleFrame = candidates.first(where: { $0.text == title })?.frame ?? .zero
         let artistCandidates = candidates.filter { candidate in
@@ -646,6 +1170,7 @@ private enum QishuiMusicNowPlayingProbe {
             guard candidate.frame.minY <= titleFrame.minY + 40 else { return false }
             guard ignoredTexts.contains(candidate.text) == false else { return false }
             guard candidate.text.contains(" / ") == false else { return false }
+            guard isQishuiNoise(candidate.text) == false else { return false }
             return true
         }
 
@@ -710,6 +1235,23 @@ private enum QishuiMusicNowPlayingProbe {
         "作曲：风姿优优"
     ]
 
+    private static func cleanQishuiText(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func isQishuiNoise(_ text: String) -> Bool {
+        if text.isEmpty { return true }
+        if text.range(of: timePattern, options: .regularExpression) != nil { return true }
+        if text.contains("歌手") || text.contains("歌曲") || text.contains("专辑") { return true }
+        if text.contains("SVIP") || text.contains("VIP") || text.contains("w+") { return true }
+        if text.contains("搜索") || text.contains("推荐") || text.contains("收藏") { return true }
+        if text.hasPrefix("作词") || text.hasPrefix("作曲") { return true }
+        return false
+    }
+
     private static func children(of element: AXUIElement) -> [AXUIElement] {
         guard let value = attr(element, kAXChildrenAttribute as CFString) as? [AXUIElement] else {
             return []
@@ -736,6 +1278,14 @@ private enum QishuiMusicNowPlayingProbe {
         return rect
     }
 
+    private static func intValue(of element: AXUIElement, attribute: CFString) -> Int? {
+        guard let rawValue = attr(element, attribute) else { return nil }
+        if let number = rawValue as? NSNumber {
+            return number.intValue
+        }
+        return nil
+    }
+
     private static func attr(_ element: AXUIElement, _ attribute: CFString) -> CFTypeRef? {
         var value: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(element, attribute, &value)
@@ -747,8 +1297,13 @@ private func isApplicationAvailable(bundleIdentifier: String) -> Bool {
     NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) != nil
 }
 
-private extension NowPlayingSnapshot {
-    static func make(from dictionary: NSDictionary, source: String) -> NowPlayingSnapshot? {
+extension NowPlayingSnapshot {
+    static func make(
+        from dictionary: NSDictionary,
+        source: String,
+        systemIsPlaying: Bool? = nil,
+        allowBrowserBundles: Bool = true
+    ) -> NowPlayingSnapshot? {
         let title = stringValue(from: dictionary, keys: [
             "kMRMediaRemoteNowPlayingInfoTitle",
             "Title",
@@ -779,15 +1334,33 @@ private extension NowPlayingSnapshot {
             "elapsedTime",
             "playbackProgress"
         ]) ?? 0
-        let playbackRate = doubleValue(from: dictionary, keys: [
+        let explicitRate = doubleValue(from: dictionary, keys: [
             "kMRMediaRemoteNowPlayingInfoPlaybackRate",
             "playbackRate"
-        ]) ?? (duration > 0 ? 1.0 : 0.0)
+        ])
+        let playbackRate: Double
+        if let explicitRate {
+            playbackRate = explicitRate
+        } else if let systemIsPlaying {
+            playbackRate = systemIsPlaying ? 1.0 : 0.0
+        } else if title.isEmpty == false {
+            playbackRate = 1.0
+        } else {
+            playbackRate = 0.0
+        }
         let artworkData = dataValue(from: dictionary, keys: [
             "kMRMediaRemoteNowPlayingInfoArtworkData",
             "artworkData",
             "artwork"
         ])
+
+        if allowBrowserBundles == false, isBrowserBundleIdentifier(bundleIdentifier) {
+            return nil
+        }
+
+        if isBrowserBundleIdentifier(bundleIdentifier), WebNowPlayingParser.isBrowserHomepageTitle(title) {
+            return nil
+        }
 
         guard title.isEmpty == false || artist.isEmpty == false || album.isEmpty == false else {
             return nil
@@ -829,81 +1402,25 @@ private extension NowPlayingSnapshot {
 
     static func make(fromBrowserAppleScript output: String, source: String, bundleIdentifier: String) -> NowPlayingSnapshot? {
         guard output.isEmpty == false else { return nil }
-        let parts = output.components(separatedBy: "|||")
-        guard parts.count >= 3 else { return nil }
-
-        let title = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
-        let second = parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespacesAndNewlines) : ""
-        let third = parts.count > 2 ? parts[2].trimmingCharacters(in: .whitespacesAndNewlines) : source
-        let urlString = second.contains("://") ? second : ""
-        let browserLabel = second.contains("://") ? third : second
-        let displayTitle = cleanBrowserTitle(title)
-        let host = URL(string: urlString)?.host?.lowercased() ?? ""
-        guard isLikelyBrowserMediaSource(host: host, title: displayTitle) else {
+        guard let metadata = WebNowPlayingParser.parse(
+            fromBrowserAppleScript: output,
+            source: source,
+            bundleIdentifier: bundleIdentifier
+        ) else {
             return nil
         }
 
-        let isBilibili = host.contains("bilibili.com") || displayTitle.localizedCaseInsensitiveContains("bilibili") || displayTitle.contains("哔哩哔哩")
-
-        guard displayTitle.isEmpty == false else { return nil }
-
         return NowPlayingSnapshot(
-            title: displayTitle,
-            artist: browserLabel.isEmpty ? source : browserLabel,
-            album: isBilibili ? "Bilibili" : (URL(string: urlString)?.host ?? urlString),
+            title: metadata.title,
+            artist: metadata.artist,
+            album: metadata.album,
             artworkData: nil,
             duration: 0,
             elapsedTime: 0,
             playbackRate: 1.0,
-            bundleIdentifier: bundleIdentifier,
-            source: isBilibili ? "\(source)/Bilibili" : source
+            bundleIdentifier: metadata.bundleIdentifier,
+            source: metadata.source
         )
-    }
-
-    private static func cleanBrowserTitle(_ title: String) -> String {
-        title
-            .replacingOccurrences(of: " - 哔哩哔哩", with: "")
-            .replacingOccurrences(of: " - bilibili", with: "", options: .caseInsensitive)
-            .replacingOccurrences(of: "_哔哩哔哩", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func isLikelyBrowserMediaSource(host: String, title: String) -> Bool {
-        let host = host.lowercased()
-        let title = title.lowercased()
-
-        let allowedHosts = [
-            "youtube.com",
-            "youtu.be",
-            "music.youtube.com",
-            "bilibili.com",
-            "live.bilibili.com",
-            "spotify.com",
-            "music.163.com",
-            "y.qq.com",
-            "kuwo.cn",
-            "kugou.com",
-            "soundcloud.com",
-            "podcasts.apple.com"
-        ]
-
-        if allowedHosts.contains(where: { host == $0 || host.hasSuffix(".\($0)") }) {
-            return true
-        }
-
-        let titleKeywords = [
-            "播放",
-            "正在播放",
-            "music",
-            "song",
-            "album",
-            "playlist",
-            "radio",
-            "podcast",
-            "bilibili",
-            "哔哩哔哩"
-        ]
-        return titleKeywords.contains(where: { title.contains($0) })
     }
 
     private static func stringValue(from dictionary: NSDictionary, keys: [String]) -> String? {
@@ -974,6 +1491,16 @@ private extension NowPlayingSnapshot {
 
         return nil
     }
+}
+
+private func isBrowserBundleIdentifier(_ bundleIdentifier: String?) -> Bool {
+    guard let bundleIdentifier else { return false }
+    return [
+        "com.apple.Safari",
+        "com.google.Chrome",
+        "com.microsoft.Edge",
+        "com.brave.Browser"
+    ].contains(bundleIdentifier)
 }
 
 // MARK: - Music Visualizer View
@@ -1150,7 +1677,15 @@ public struct MiniMusicPlayerView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
             } else {
-                Text("未播放")
+                Text(
+                    NowPlayingSourceLabelFormatter.playbackContextLabel(
+                        isPlaying: false,
+                        bundleIdentifier: musicService.bundleIdentifier,
+                        source: musicService.sourceLabel,
+                        playingPrefix: "播放中",
+                        idlePrefix: "未播放"
+                    )
+                )
                     .font(.system(size: 11))
                     .foregroundStyle(Color.white.opacity(0.5))
             }
@@ -1159,7 +1694,11 @@ public struct MiniMusicPlayerView: View {
         .padding(.vertical, 4)
         .background(
             Capsule()
-                .fill(Color.black.opacity(0.3))
+                .fill(Color.black.opacity(isHovered ? 0.38 : 0.3))
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(isHovered ? 0.18 : 0.08), lineWidth: 1)
         )
         .onHover { hovering in
             isHovered = hovering

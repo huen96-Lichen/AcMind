@@ -49,6 +49,7 @@ final class NotchPanel: NSPanel {
             viewModel = NotchV2ViewModel(
                 panelController: self,
                 batteryService: serviceContainer.batteryService,
+                systemStatusService: serviceContainer.systemStatusService,
                 systemEventCenter: serviceContainer.systemEventCenter,
                 musicService: serviceContainer.musicService
             )
@@ -185,7 +186,7 @@ final class NotchPanel: NSPanel {
         }
         let screenFrame = screenFrame ?? currentScreenFrame()
         let frame = viewModel.presentationState.isExpandedVisual
-            ? CompanionScreenPositioning.expandedFrame(on: screenFrame)
+            ? CompanionScreenPositioning.expandedFrame(on: screenFrame, height: viewModel.expandedHeight)
             : CompanionScreenPositioning.collapsedFrame(on: screenFrame)
         applyWindowFrame(frame)
         lastKnownScreenFrame = screenFrame
@@ -381,7 +382,7 @@ final class NotchPanel: NSPanel {
 
         let screenFrame = lastKnownScreenFrame ?? currentScreenFrame()
         let targetFrame = state.targetFrameIsExpanded
-            ? CompanionScreenPositioning.expandedFrame(on: screenFrame)
+            ? CompanionScreenPositioning.expandedFrame(on: screenFrame, height: viewModel.expandedHeight)
             : CompanionScreenPositioning.collapsedFrame(on: screenFrame)
 
         if lastAppliedFrame != targetFrame {

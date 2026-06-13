@@ -28,19 +28,99 @@ public struct SyncStatus: Sendable, Equatable {
     public let syncInProgress: Bool
     public let lastSyncByType: [SyncDataType: Date]
     public let pendingChanges: Int
+    public let lastErrorMessage: String?
 
     public init(
         isEnabled: Bool = false,
         lastSyncDate: Date? = nil,
         syncInProgress: Bool = false,
         lastSyncByType: [SyncDataType: Date] = [:],
-        pendingChanges: Int = 0
+        pendingChanges: Int = 0,
+        lastErrorMessage: String? = nil
     ) {
         self.isEnabled = isEnabled
         self.lastSyncDate = lastSyncDate
         self.syncInProgress = syncInProgress
         self.lastSyncByType = lastSyncByType
         self.pendingChanges = pendingChanges
+        self.lastErrorMessage = lastErrorMessage
+    }
+}
+
+public struct CloudSyncStatusSummary: Sendable, Equatable {
+    public let title: String
+    public let detail: String
+    public let canRetry: Bool
+    public let retryTitle: String?
+
+    public init(title: String, detail: String, canRetry: Bool, retryTitle: String?) {
+        self.title = title
+        self.detail = detail
+        self.canRetry = canRetry
+        self.retryTitle = retryTitle
+    }
+
+    public static func make(from status: SyncStatus, now: Date = Date()) -> CloudSyncStatusSummary {
+        guard status.isEnabled else {
+            return CloudSyncStatusSummary(
+                title: "云同步未开启",
+                detail: "开启后会同步个人词典、知识卡片、蒸馏笔记、Agent 任务和设置。",
+                canRetry: false,
+                retryTitle: nil
+            )
+        }
+
+        if status.syncInProgress {
+            return CloudSyncStatusSummary(
+                title: "云同步进行中",
+                detail: "正在拉取和推送最新数据，请稍候。",
+                canRetry: false,
+                retryTitle: nil
+            )
+        }
+
+        if let error = status.lastErrorMessage, error.isEmpty == false {
+            return CloudSyncStatusSummary(
+                title: "云同步需要重试",
+                detail: error,
+                canRetry: true,
+                retryTitle: "重试同步"
+            )
+        }
+
+        guard let lastSyncDate = status.lastSyncDate else {
+            return CloudSyncStatusSummary(
+                title: "云同步待首次运行",
+                detail: "开启后还没有完成过同步，可以手动触发一次。",
+                canRetry: true,
+                retryTitle: "立即同步"
+            )
+        }
+
+        let typeCount = status.lastSyncByType.count
+        let typeText = typeCount > 0 ? " · 已覆盖 \(typeCount) 类数据" : ""
+        return CloudSyncStatusSummary(
+            title: "云同步正常",
+            detail: "最近同步于 \(relativeTime(from: lastSyncDate, to: now))\(typeText)",
+            canRetry: false,
+            retryTitle: nil
+        )
+    }
+
+    private static func relativeTime(from date: Date, to now: Date) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        if seconds < 60 {
+            return "刚刚"
+        }
+        let minutes = seconds / 60
+        if minutes < 60 {
+            return "\(minutes) 分钟前"
+        }
+        let hours = minutes / 60
+        if hours < 24 {
+            return "\(hours) 小时前"
+        }
+        return "\(hours / 24) 天前"
     }
 }
 
@@ -53,6 +133,7 @@ public protocol CloudSyncServiceProtocol: Sendable {
     func isSyncEnabled() async -> Bool
     func setSyncEnabled(_ enabled: Bool) async
     func lastSyncDate() async -> Date?
+    func getSyncStatus() async -> SyncStatus
 }
 
 // MARK: - Cloud Sync Service
@@ -66,6 +147,7 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
     private var lastSync: Date?
     private var syncInProgress = false
     private var lastSyncByType: [SyncDataType: Date] = [:]
+    private var lastErrorMessage: String?
 
     private let personalDictionaryKey = "com.acmind.sync.personalDictionary"
     private let knowledgeCardsKey = "com.acmind.sync.knowledgeCards"
@@ -96,12 +178,15 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         guard !syncInProgress else { return }
 
         syncInProgress = true
+        lastErrorMessage = nil
         Self.ubiquitousStore.synchronize()
 
         await pull()
         await push()
 
-        lastSync = Date()
+        if lastErrorMessage == nil {
+            lastSync = Date()
+        }
         syncInProgress = false
     }
 
@@ -145,7 +230,8 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
             isEnabled: await isSyncEnabled(),
             lastSyncDate: lastSync,
             syncInProgress: syncInProgress,
-            lastSyncByType: lastSyncByType
+            lastSyncByType: lastSyncByType,
+            lastErrorMessage: lastErrorMessage
         )
     }
 
@@ -158,6 +244,10 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
     private func isWithinSizeLimit(_ json: String, limitKB: Int = 900) -> Bool {
         let sizeBytes = json.utf8.count
         return sizeBytes <= limitKB * 1024
+    }
+
+    private func recordSyncFailure(_ message: String) {
+        lastErrorMessage = message
     }
 
     // MARK: - External Change
@@ -247,7 +337,10 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         let localCards = (try? await storage.listKnowledgeCards(status: nil)) ?? []
         guard let data = try? JSONEncoder().encode(localCards),
               let json = String(data: data, encoding: .utf8) else { return }
-        guard isWithinSizeLimit(json) else { return }
+        guard isWithinSizeLimit(json) else {
+            recordSyncFailure("知识卡片超过 iCloud 同步大小限制，请精简内容后重试。")
+            return
+        }
         Self.ubiquitousStore.set(json, forKey: knowledgeCardsKey)
         lastSyncByType[.knowledgeCards] = Date()
     }
@@ -287,7 +380,10 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         let localNotes = (try? await storage.listDistilledNotes()) ?? []
         guard let data = try? JSONEncoder().encode(localNotes),
               let json = String(data: data, encoding: .utf8) else { return }
-        guard isWithinSizeLimit(json) else { return }
+        guard isWithinSizeLimit(json) else {
+            recordSyncFailure("蒸馏笔记超过 iCloud 同步大小限制，请精简内容后重试。")
+            return
+        }
         Self.ubiquitousStore.set(json, forKey: distilledNotesKey)
         lastSyncByType[.distilledNotes] = Date()
     }

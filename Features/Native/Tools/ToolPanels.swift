@@ -1,4 +1,5 @@
 import AppKit
+import AcMindKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -94,7 +95,7 @@ struct JSONFormatterPanel: View {
                 Button {
                     viewModel.format(pretty: true)
                 } label: {
-                    Text(viewModel.isWorking ? "处理中..." : "美化 JSON")
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "美化 JSON")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
@@ -102,7 +103,7 @@ struct JSONFormatterPanel: View {
                 Button {
                     viewModel.format(pretty: false)
                 } label: {
-                    Text(viewModel.isWorking ? "处理中..." : "压缩 JSON")
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "压缩 JSON")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isWorking)
@@ -181,7 +182,7 @@ struct JSONFormatterPanel: View {
 final class JSONFormatterViewModel: ObservableObject {
     @Published var inputText = ""
     @Published var outputText = ""
-    @Published var statusText = "等待输入 JSON"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("JSON")
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var lastSavedURL: URL?
@@ -189,7 +190,7 @@ final class JSONFormatterViewModel: ObservableObject {
     func clear() {
         inputText = ""
         outputText = ""
-        statusText = "等待输入 JSON"
+        statusText = ToolStatusLabelFormatter.waitingToInput("JSON")
         errorMessage = nil
         isWorking = false
         lastSavedURL = nil
@@ -198,19 +199,19 @@ final class JSONFormatterViewModel: ObservableObject {
     func loadFromClipboard() {
         if let string = NSPasteboard.general.string(forType: .string), !string.isEmpty {
             inputText = string
-            statusText = "已读取剪贴板内容"
+            statusText = ToolStatusLabelFormatter.clipboardLoadedText
             errorMessage = nil
         } else {
-            ToastManager.shared.show(.warning, "剪贴板里没有可用文本")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noClipboardText())
         }
     }
 
     func format(pretty: Bool) {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
-            errorMessage = "请输入 JSON 再执行格式化"
-            statusText = "等待输入 JSON"
-            ToastManager.shared.show(.warning, "请输入 JSON")
+            errorMessage = ToolStatusLabelFormatter.enterInput("JSON")
+            statusText = ToolStatusLabelFormatter.waitingToInput("JSON")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("JSON"))
             return
         }
 
@@ -219,12 +220,12 @@ final class JSONFormatterViewModel: ObservableObject {
 
         do {
             outputText = try JSONFormattingSupport.format(trimmed, pretty: pretty)
-            statusText = pretty ? "JSON 已美化" : "JSON 已压缩"
+            statusText = ToolStatusLabelFormatter.jsonFormatted(pretty: pretty)
             lastSavedURL = nil
-            ToastManager.shared.show(.success, pretty ? "JSON 已美化" : "JSON 已压缩")
+            ToastManager.shared.show(.success, ToolStatusLabelFormatter.jsonFormatted(pretty: pretty))
         } catch {
             outputText = ""
-            statusText = "格式化失败"
+            statusText = ToolStatusLabelFormatter.failed("格式化")
             errorMessage = error.localizedDescription
             ToastManager.shared.show(.error, error.localizedDescription)
         }
@@ -234,13 +235,13 @@ final class JSONFormatterViewModel: ObservableObject {
 
     func copyOutput() {
         guard outputText.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的结果")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("结果"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
-        ToastManager.shared.show(.success, "结果已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("结果"))
     }
 
     func saveOutput() {
@@ -255,9 +256,9 @@ final class JSONFormatterViewModel: ObservableObject {
             do {
                 try outputText.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "结果已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("结果"))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -390,7 +391,7 @@ struct Base64CodecPanel: View {
                 Button {
                     viewModel.execute()
                 } label: {
-                    Text(viewModel.isWorking ? "处理中..." : viewModel.mode.actionTitle)
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : viewModel.mode.actionTitle)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
@@ -501,7 +502,7 @@ enum Base64CodecMode: String, CaseIterable, Identifiable {
 final class Base64CodecViewModel: ObservableObject {
     @Published var inputText = ""
     @Published var outputText = ""
-    @Published var statusText = "等待输入文本"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("文本")
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var mode: Base64CodecMode = .encode
@@ -510,7 +511,7 @@ final class Base64CodecViewModel: ObservableObject {
     func clear() {
         inputText = ""
         outputText = ""
-        statusText = "等待输入文本"
+        statusText = ToolStatusLabelFormatter.waitingToInput("文本")
         errorMessage = nil
         isWorking = false
         mode = .encode
@@ -520,19 +521,19 @@ final class Base64CodecViewModel: ObservableObject {
     func loadFromClipboard() {
         if let string = NSPasteboard.general.string(forType: .string), !string.isEmpty {
             inputText = string
-            statusText = "已读取剪贴板内容"
+            statusText = ToolStatusLabelFormatter.clipboardLoadedText
             errorMessage = nil
         } else {
-            ToastManager.shared.show(.warning, "剪贴板里没有可用文本")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noClipboardText())
         }
     }
 
     func execute() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
-            errorMessage = "请输入文本再执行 Base64 操作"
-            statusText = "等待输入文本"
-            ToastManager.shared.show(.warning, "请输入文本")
+            errorMessage = ToolStatusLabelFormatter.enterInput("文本")
+            statusText = ToolStatusLabelFormatter.waitingToInput("文本")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("文本"))
             return
         }
 
@@ -543,28 +544,28 @@ final class Base64CodecViewModel: ObservableObject {
         switch mode {
         case .encode:
             outputText = Data(trimmed.utf8).base64EncodedString()
-            statusText = "已编码为 Base64"
-            ToastManager.shared.show(.success, "已编码为 Base64")
+            statusText = ToolStatusLabelFormatter.base64Encoded()
+            ToastManager.shared.show(.success, ToolStatusLabelFormatter.base64Encoded())
 
         case .decode:
             let normalized = trimmed.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
             guard let data = Data(base64Encoded: normalized, options: [.ignoreUnknownCharacters]) else {
                 outputText = ""
-                statusText = "解码失败"
-                errorMessage = "输入不是有效的 Base64 字符串"
-                ToastManager.shared.show(.error, "输入不是有效的 Base64 字符串")
+                statusText = ToolStatusLabelFormatter.decodeFailed()
+                errorMessage = ToolStatusLabelFormatter.invalidBase64()
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.invalidBase64())
                 isWorking = false
                 return
             }
 
             if let decoded = String(data: data, encoding: .utf8) {
                 outputText = decoded
-                statusText = "已解码为文本"
-                ToastManager.shared.show(.success, "已解码为文本")
+                statusText = ToolStatusLabelFormatter.base64DecodedText()
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.base64DecodedText())
             } else {
                 outputText = data.map { String(format: "%02X", $0) }.joined(separator: " ")
-                statusText = "已解码为字节十六进制"
-                ToastManager.shared.show(.warning, "内容不是 UTF-8，已显示十六进制")
+                statusText = ToolStatusLabelFormatter.base64DecodedHex()
+                ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nonUTF8ShownAsHex())
             }
         }
 
@@ -573,13 +574,13 @@ final class Base64CodecViewModel: ObservableObject {
 
     func copyOutput() {
         guard outputText.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的结果")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("结果"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
-        ToastManager.shared.show(.success, "结果已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("结果"))
     }
 
     func saveOutput() {
@@ -594,9 +595,9 @@ final class Base64CodecViewModel: ObservableObject {
             do {
                 try outputText.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "结果已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("结果"))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -699,7 +700,7 @@ struct MarkdownCleanerPanel: View {
                 Button {
                     viewModel.clean()
                 } label: {
-                    Text(viewModel.isWorking ? "处理中..." : "整理 Markdown")
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "整理 Markdown")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
@@ -762,7 +763,7 @@ struct MarkdownCleanerPanel: View {
 final class MarkdownCleanerViewModel: ObservableObject {
     @Published var inputText = ""
     @Published var outputText = ""
-    @Published var statusText = "等待输入 Markdown"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("Markdown")
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var lastSavedURL: URL?
@@ -770,7 +771,7 @@ final class MarkdownCleanerViewModel: ObservableObject {
     func clear() {
         inputText = ""
         outputText = ""
-        statusText = "等待输入 Markdown"
+        statusText = ToolStatusLabelFormatter.waitingToInput("Markdown")
         errorMessage = nil
         isWorking = false
         lastSavedURL = nil
@@ -779,19 +780,19 @@ final class MarkdownCleanerViewModel: ObservableObject {
     func loadFromClipboard() {
         if let string = NSPasteboard.general.string(forType: .string), !string.isEmpty {
             inputText = string
-            statusText = "已读取剪贴板内容"
+            statusText = ToolStatusLabelFormatter.clipboardLoadedText
             errorMessage = nil
         } else {
-            ToastManager.shared.show(.warning, "剪贴板里没有可用文本")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noClipboardText())
         }
     }
 
     func clean() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
-            errorMessage = "请输入 Markdown 再执行整理"
-            statusText = "等待输入 Markdown"
-            ToastManager.shared.show(.warning, "请输入 Markdown")
+            errorMessage = ToolStatusLabelFormatter.enterInput("Markdown")
+            statusText = ToolStatusLabelFormatter.waitingToInput("Markdown")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("Markdown"))
             return
         }
 
@@ -800,22 +801,25 @@ final class MarkdownCleanerViewModel: ObservableObject {
 
         let result = MarkdownCleaningSupport.clean(trimmed)
         outputText = result.text
-        statusText = "已整理 Markdown，清理了 \(result.trimmedTrailingSpaces) 处尾随空格，压缩了 \(result.collapsedBlankLines) 处空行"
+        statusText = ToolStatusLabelFormatter.markdownCleanedSummary(
+            trimmedTrailingSpaces: result.trimmedTrailingSpaces,
+            collapsedBlankLines: result.collapsedBlankLines
+        )
         lastSavedURL = nil
-        ToastManager.shared.show(.success, "Markdown 已整理")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("Markdown"))
 
         isWorking = false
     }
 
     func copyOutput() {
         guard outputText.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的结果")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("结果"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
-        ToastManager.shared.show(.success, "结果已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("结果"))
     }
 
     func saveOutput() {
@@ -830,9 +834,9 @@ final class MarkdownCleanerViewModel: ObservableObject {
             do {
                 try outputText.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "结果已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("结果"))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -1010,7 +1014,7 @@ struct TextComparePanel: View {
                 Button {
                     viewModel.compare()
                 } label: {
-                    Text(viewModel.isWorking ? "处理中..." : "开始比较")
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "开始比较")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
@@ -1137,7 +1141,7 @@ final class TextCompareViewModel: ObservableObject {
     @Published var rightText = ""
     @Published var diffLines: [DiffLine] = []
     @Published var summaryText = ""
-    @Published var statusText = "等待输入两段文本"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("两段文本")
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var lastSavedURL: URL?
@@ -1151,7 +1155,7 @@ final class TextCompareViewModel: ObservableObject {
         rightText = ""
         diffLines = []
         summaryText = ""
-        statusText = "等待输入两段文本"
+        statusText = ToolStatusLabelFormatter.waitingToInput("两段文本")
         errorMessage = nil
         isWorking = false
         lastSavedURL = nil
@@ -1162,9 +1166,9 @@ final class TextCompareViewModel: ObservableObject {
         let rightLines = splitLines(rightText)
 
         guard leftLines.isEmpty == false || rightLines.isEmpty == false else {
-            errorMessage = "请输入两段文本再开始比较"
-            statusText = "等待输入两段文本"
-            ToastManager.shared.show(.warning, "请输入两段文本")
+            errorMessage = ToolStatusLabelFormatter.enterInput("两段文本")
+            statusText = ToolStatusLabelFormatter.waitingToInput("两段文本")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("两段文本"))
             return
         }
 
@@ -1174,33 +1178,33 @@ final class TextCompareViewModel: ObservableObject {
         let result = TextComparisonSupport.compare(leftLines: leftLines, rightLines: rightLines)
         diffLines = result.lines
         summaryText = result.summary
-        statusText = "比较完成"
+        statusText = ToolStatusLabelFormatter.completed("比较")
         lastSavedURL = nil
-        ToastManager.shared.show(.success, "文本对比已完成")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.completed("文本对比"))
 
         isWorking = false
     }
 
     func copySummary() {
         guard summaryText.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的摘要")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("摘要"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(summaryText, forType: .string)
-        ToastManager.shared.show(.success, "摘要已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("摘要"))
     }
 
     func copyDiff() {
         guard diffLines.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的差异")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("差异"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(diffText, forType: .string)
-        ToastManager.shared.show(.success, "差异已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("差异"))
     }
 
     func saveDiff() {
@@ -1215,9 +1219,9 @@ final class TextCompareViewModel: ObservableObject {
             do {
                 try diffText.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "差异已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("差异"))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -1640,7 +1644,7 @@ final class SRTTFCPXMLViewModel: ObservableObject {
     @Published var subtitles: [SRTSubtitle] = []
     @Published var originalSubtitles: [SRTSubtitle] = []
     @Published var errorMessage: String?
-    @Published var statusText = "等待导入 SRT"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToImport("SRT")
     @Published var isLoading = false
     @Published var generatedFCPXML: String = ""
     @Published var lastSavedURL: URL?
@@ -1665,8 +1669,8 @@ final class SRTTFCPXMLViewModel: ObservableObject {
     func loadFromClipboard() {
         guard let content = NSPasteboard.general.string(forType: .string), !content.isEmpty else {
             errorMessage = nil
-            statusText = "剪贴板为空"
-            ToastManager.shared.show(.warning, "剪贴板为空")
+            statusText = ToolStatusLabelFormatter.clipboardEmpty()
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.clipboardEmpty())
             return
         }
 
@@ -1676,13 +1680,13 @@ final class SRTTFCPXMLViewModel: ObservableObject {
         do {
             subtitles = try SRTParser.parse(content)
             originalSubtitles = subtitles
-            statusText = "已导入 \(subtitles.count) 条字幕"
-            ToastManager.shared.show(.success, "已导入 \(subtitles.count) 条字幕")
+            statusText = ToolStatusLabelFormatter.loadedCount(subtitles.count, noun: "字幕")
+            ToastManager.shared.show(.success, ToolStatusLabelFormatter.loadedCount(subtitles.count, noun: "字幕"))
         } catch {
             subtitles = []
             originalSubtitles = []
             errorMessage = error.localizedDescription
-            statusText = "解析失败"
+            statusText = ToolStatusLabelFormatter.failed("解析")
             ToastManager.shared.show(.error, error.localizedDescription)
         }
 
@@ -1693,7 +1697,7 @@ final class SRTTFCPXMLViewModel: ObservableObject {
         let find = batchFindText
         let replace = batchReplaceText
         guard find.isEmpty == false else {
-            ToastManager.shared.show(.warning, "请输入要替换的内容")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("要替换的内容"))
             return
         }
 
@@ -1706,14 +1710,14 @@ final class SRTTFCPXMLViewModel: ObservableObject {
             )
         }
 
-        statusText = "已批量替换 \(find) → \(replace.isEmpty ? "(空)" : replace)"
-        ToastManager.shared.show(.success, "批量替换完成")
+        statusText = ToolStatusLabelFormatter.completed("批量替换")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.completed("批量替换"))
     }
 
     func deleteByKeyword() {
         let keyword = deleteKeyword
         guard keyword.isEmpty == false else {
-            ToastManager.shared.show(.warning, "请输入要删除的关键词")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("要删除的关键词"))
             return
         }
 
@@ -1722,30 +1726,30 @@ final class SRTTFCPXMLViewModel: ObservableObject {
         let removed = before - subtitles.count
 
         if removed > 0 {
-            statusText = "已删除包含「\(keyword)」的 \(removed) 条字幕"
-            ToastManager.shared.show(.success, "已删除 \(removed) 条字幕")
+            statusText = ToolStatusLabelFormatter.deletedSubtitleSummary(keyword: keyword, removed: removed)
+            ToastManager.shared.show(.success, ToolStatusLabelFormatter.deleted("字幕"))
         } else {
-            statusText = "没有找到包含「\(keyword)」的字幕"
-            ToastManager.shared.show(.info, "没有找到匹配的字幕")
+            statusText = ToolStatusLabelFormatter.noSubtitleMatch(keyword)
+            ToastManager.shared.show(.info, ToolStatusLabelFormatter.noMatchFound("字幕"))
         }
     }
 
     func deleteSubtitle(at index: Int) {
         guard index >= 0 && index < subtitles.count else { return }
         subtitles.remove(at: index)
-        statusText = "已删除第 \(index + 1) 条字幕"
-        ToastManager.shared.show(.success, "已删除字幕")
+        statusText = ToolStatusLabelFormatter.deletedSubtitle(index: index + 1)
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.deleted("字幕"))
     }
 
     func restoreOriginal() {
         subtitles = originalSubtitles
-        statusText = "已恢复原始字幕"
-        ToastManager.shared.show(.info, "已恢复原始字幕")
+        statusText = ToolStatusLabelFormatter.restored("原始字幕")
+        ToastManager.shared.show(.info, ToolStatusLabelFormatter.restored("原始字幕"))
     }
 
     func generateFCPXML() {
         guard subtitles.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可生成的字幕")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noContentToGenerate("字幕"))
             return
         }
 
@@ -1762,24 +1766,24 @@ final class SRTTFCPXMLViewModel: ObservableObject {
             fontFace: fontFace
         )
 
-        statusText = "已生成 FCPXML，包含 \(subtitles.count) 条字幕"
-        ToastManager.shared.show(.success, "FCPXML 已生成")
+        statusText = ToolStatusLabelFormatter.generatedFCPXMLSummary(subtitleCount: subtitles.count)
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.generated("FCPXML"))
     }
 
     func copyFCPXML() {
         guard generatedFCPXML.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的内容")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("内容"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(generatedFCPXML, forType: .string)
-        ToastManager.shared.show(.success, "FCPXML 已复制到剪贴板")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copiedToClipboard("FCPXML"))
     }
 
     func downloadFCPXML() {
         guard generatedFCPXML.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可下载的内容")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noContentToGenerate("下载的内容"))
             return
         }
 
@@ -1792,9 +1796,9 @@ final class SRTTFCPXMLViewModel: ObservableObject {
             do {
                 try generatedFCPXML.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "文件已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("文件"))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -1808,7 +1812,7 @@ final class SRTTFCPXMLViewModel: ObservableObject {
         subtitles = []
         originalSubtitles = []
         errorMessage = nil
-        statusText = "等待导入 SRT"
+        statusText = ToolStatusLabelFormatter.waitingToImport("SRT")
         isLoading = false
         generatedFCPXML = ""
         lastSavedURL = nil

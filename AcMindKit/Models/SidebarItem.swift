@@ -19,7 +19,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public static var coreWorkflow: [SidebarItem] {
-        [.home, .agent, .inbox, .clipboard, .schedule, .workbench]
+        [.home, .agent, .clipboard, .schedule, .workbench]
     }
 
     public static var companionCapabilities: [SidebarItem] {
@@ -27,11 +27,15 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     }
 
     public static var systemItems: [SidebarItem] {
-        [.settings, .modelManagement]
+        [.systemStatus, .settings, .modelManagement]
     }
 
     public static var mainItems: [SidebarItem] {
         coreWorkflow + companionCapabilities + systemItems
+    }
+
+    public static var shortcutItems: [SidebarItem] {
+        [.agent, .clipboard, .schedule, .workbench, .dynamicContinent, .systemStatus, .voiceEntry, .modelManagement, .settings]
     }
 
     public var displayName: String {
@@ -73,7 +77,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return nil
         case .agent: return KeyboardShortcut(key: "1", modifiers: [.command])
         case .inbox: return KeyboardShortcut(key: "2", modifiers: [.command])
-        case .clipboard: return KeyboardShortcut(key: "3", modifiers: [.command])
+        case .clipboard: return KeyboardShortcut(key: "2", modifiers: [.command])
         case .schedule: return KeyboardShortcut(key: "4", modifiers: [.command])
         case .workbench: return KeyboardShortcut(key: "5", modifiers: [.command])
         case .dynamicContinent: return KeyboardShortcut(key: "6", modifiers: [.command])
@@ -94,9 +98,9 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home, .agent, .inbox, .clipboard, .schedule, .workbench:
             return .coreWorkflow
-        case .dynamicContinent, .voiceEntry, .systemStatus:
+        case .dynamicContinent, .voiceEntry:
             return .companionCapabilities
-        case .modelManagement, .settings:
+        case .systemStatus, .modelManagement, .settings:
             return .system
         }
     }

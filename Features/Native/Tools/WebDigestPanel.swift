@@ -191,7 +191,7 @@ struct WebDigestPanel: View {
 final class WebDigestViewModel: ObservableObject {
     @Published var urlString = ""
     @Published var markdown = ""
-    @Published var statusText = "等待输入 URL"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("URL")
     @Published var errorMessage: String?
     @Published var isGenerating = false
     @Published var lastSavedURL: URL?
@@ -205,7 +205,7 @@ final class WebDigestViewModel: ObservableObject {
     func clear() {
         urlString = ""
         markdown = ""
-        statusText = "等待输入 URL"
+        statusText = ToolStatusLabelFormatter.waitingToInput("URL")
         errorMessage = nil
         isGenerating = false
         lastSavedURL = nil
@@ -214,14 +214,14 @@ final class WebDigestViewModel: ObservableObject {
     func generateMarkdown() {
         guard let url = normalizeURL(urlString) else {
             errorMessage = "请输入有效的网址，例如 https://example.com"
-            statusText = "URL 无效"
-            ToastManager.shared.show(.warning, "请输入有效的网址")
+            statusText = ToolStatusLabelFormatter.failed("解析 URL")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.invalidInput("网址"))
             return
         }
 
         isGenerating = true
         errorMessage = nil
-        statusText = "正在调用 defuddle..."
+        statusText = ToolStatusLabelFormatter.running("调用 defuddle")
         markdown = ""
 
         Task {
@@ -237,21 +237,21 @@ final class WebDigestViewModel: ObservableObject {
                 await MainActor.run {
                     self.isGenerating = false
                     if output.isEmpty {
-                        self.statusText = "完成，但没有提取到正文"
+                        self.statusText = ToolStatusLabelFormatter.completed("提取正文")
                         self.errorMessage = "defuddle 没有返回可用的 Markdown 内容。"
-                        ToastManager.shared.show(.warning, "没有提取到可用正文")
+                        ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noContentAvailable("正文"))
                     } else {
                         self.markdown = output
-                        self.statusText = "已生成 Markdown"
+                        self.statusText = ToolStatusLabelFormatter.completed("生成 Markdown")
                         self.errorMessage = nil
-                        ToastManager.shared.show(.success, "网页已转换为 Markdown")
+                        ToastManager.shared.show(.success, ToolStatusLabelFormatter.convertedToMarkdown("网页"))
                     }
                 }
             } catch {
                 let message = friendlyMessage(for: error)
                 await MainActor.run {
                     self.isGenerating = false
-                    self.statusText = "生成失败"
+                    self.statusText = ToolStatusLabelFormatter.failed("生成")
                     self.errorMessage = message
                     ToastManager.shared.show(.error, message)
                 }
@@ -261,13 +261,13 @@ final class WebDigestViewModel: ObservableObject {
 
     func copyMarkdown() {
         guard markdown.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的 Markdown")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("Markdown"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(markdown, forType: .string)
-        ToastManager.shared.show(.success, "Markdown 已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copiedMarkdown())
     }
 
     func saveMarkdown() {
@@ -282,9 +282,9 @@ final class WebDigestViewModel: ObservableObject {
             do {
                 try markdown.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.savedTo(url.lastPathComponent))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }

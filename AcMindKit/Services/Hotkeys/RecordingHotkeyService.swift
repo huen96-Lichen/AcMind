@@ -22,10 +22,19 @@ public actor RecordingHotkeyService {
     private var eventHandler: EventHandlerRef?
     private var handlers: [RecordingHotkeyAction: () -> Void] = [:]
     private var onPunctuationAppended: (@Sendable (Character) -> Void)?
+    private var lastErrorMessage: String?
+    private var statusUpdatedAt = Date()
+    private let eventHandlerInstaller: (@Sendable () throws -> Void)?
     
     // MARK: - Initialization
     
-    public init() {}
+    public init() {
+        eventHandlerInstaller = nil
+    }
+
+    init(eventHandlerInstaller: @escaping @Sendable () throws -> Void) {
+        self.eventHandlerInstaller = eventHandlerInstaller
+    }
     
     // MARK: - Public Methods
     
@@ -33,8 +42,22 @@ public actor RecordingHotkeyService {
     public func startListening() async throws {
         guard !isRecording else { return }
         isRecording = true
-        
-        try installEventHandler()
+
+        do {
+            if let eventHandlerInstaller {
+                try eventHandlerInstaller()
+            } else {
+                try installEventHandler()
+            }
+            lastErrorMessage = nil
+            statusUpdatedAt = Date()
+        } catch {
+            isRecording = false
+            eventHandler = nil
+            lastErrorMessage = error.localizedDescription
+            statusUpdatedAt = Date()
+            throw error
+        }
     }
     
     /// 停止监听录音中的快捷键
@@ -49,25 +72,69 @@ public actor RecordingHotkeyService {
         
         handlers.removeAll()
         onPunctuationAppended = nil
+        lastErrorMessage = nil
+        statusUpdatedAt = Date()
     }
     
     /// 注册快捷键动作
     public func registerHandler(for action: RecordingHotkeyAction, handler: @escaping () -> Void) {
         handlers[action] = handler
+        statusUpdatedAt = Date()
     }
     
     /// 注销快捷键动作
     public func unregisterHandler(for action: RecordingHotkeyAction) {
         handlers.removeValue(forKey: action)
+        statusUpdatedAt = Date()
     }
-    
+
     public func setPunctuationHandler(_ handler: (@Sendable (Character) -> Void)?) {
         onPunctuationAppended = handler
+        statusUpdatedAt = Date()
     }
     
     /// 检查是否正在录音
     public func isCurrentlyRecording() -> Bool {
         return isRecording
+    }
+
+    public func statusSnapshot() -> InputChainStatusSnapshot {
+        let activeControlCount = handlers.count + (onPunctuationAppended == nil ? 0 : 1)
+
+        if let lastErrorMessage {
+            return InputChainStatusSnapshot(
+                source: .recordingHotkey,
+                phase: .failed,
+                stepLabel: "快捷键监听",
+                detail: "录音快捷键监听启动失败",
+                activeControlCount: activeControlCount,
+                nextActionTitle: "重试监听",
+                lastErrorMessage: lastErrorMessage,
+                updatedAt: statusUpdatedAt
+            )
+        }
+
+        if isRecording {
+            return InputChainStatusSnapshot(
+                source: .recordingHotkey,
+                phase: .listening,
+                stepLabel: "录音中",
+                detail: "录音快捷键已启用",
+                activeControlCount: activeControlCount,
+                nextActionTitle: "停止录音",
+                updatedAt: statusUpdatedAt
+            )
+        }
+
+        return InputChainStatusSnapshot(
+            source: .recordingHotkey,
+            phase: .idle,
+            stepLabel: "等待录音",
+            detail: "录音开始后启用快捷键",
+            activeControlCount: activeControlCount,
+            nextActionTitle: "开始录音",
+            updatedAt: statusUpdatedAt
+        )
     }
     
     // MARK: - Event Handling

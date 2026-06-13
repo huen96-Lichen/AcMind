@@ -53,6 +53,45 @@ public struct PluginDescriptor: Codable, Sendable, Identifiable {
     }
 }
 
+// MARK: - Plugin Management Summary
+
+public struct PluginManagementSummary: Identifiable, Sendable, Equatable {
+    public let id: String
+    public let name: String
+    public let version: String
+    public let author: String?
+    public let description: String?
+    public let status: PluginStatus
+    public let capabilities: [PluginCapability]
+    public let capabilityLabels: [String]
+    public let policy: PluginSandboxPolicySnapshot
+    public let errorMessage: String?
+
+    public init(
+        id: String,
+        name: String,
+        version: String,
+        author: String?,
+        description: String?,
+        status: PluginStatus,
+        capabilities: [PluginCapability],
+        capabilityLabels: [String],
+        policy: PluginSandboxPolicySnapshot,
+        errorMessage: String?
+    ) {
+        self.id = id
+        self.name = name
+        self.version = version
+        self.author = author
+        self.description = description
+        self.status = status
+        self.capabilities = capabilities
+        self.capabilityLabels = capabilityLabels
+        self.policy = policy
+        self.errorMessage = errorMessage
+    }
+}
+
 // MARK: - Plugin Manager
 
 public actor PluginManager {
@@ -69,9 +108,10 @@ public actor PluginManager {
     private let pluginsDirectory: URL
     private let fileManager = FileManager.default
 
-    public init() {
-        pluginsDirectory = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    public init(pluginsDirectory: URL? = nil) {
+        let defaultPluginsDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("AcMind/Plugins")
+        self.pluginsDirectory = pluginsDirectory ?? defaultPluginsDirectory
     }
 
     // MARK: - Discovery
@@ -205,6 +245,71 @@ public actor PluginManager {
     public func getAllStatuses() -> [String: PluginStatus] { pluginStatuses }
     public func getPluginError(id: String) -> String? { pluginErrors[id] }
     public func getActivePluginCount() -> Int { plugins.count }
+
+    public func getManagementSummaries() async -> [PluginManagementSummary] {
+        var summaries: [PluginManagementSummary] = []
+        for descriptor in discoveredDescriptors.values {
+            let sandbox = PluginSandbox(pluginId: descriptor.id)
+            let policy = await sandbox.policySnapshot()
+            summaries.append(
+                PluginManagementSummary(
+                    id: descriptor.id,
+                    name: descriptor.name,
+                    version: descriptor.version,
+                    author: descriptor.author,
+                    description: descriptor.description,
+                    status: pluginStatuses[descriptor.id] ?? .discovered,
+                    capabilities: descriptor.capabilities,
+                    capabilityLabels: descriptor.capabilities.map(\.displayName),
+                    policy: policy,
+                    errorMessage: pluginErrors[descriptor.id]
+                )
+            )
+        }
+
+        for plugin in plugins.values where discoveredDescriptors[plugin.id] == nil {
+            let sandbox = PluginSandbox(pluginId: plugin.id)
+            let policy = await sandbox.policySnapshot()
+            summaries.append(
+                PluginManagementSummary(
+                    id: plugin.id,
+                    name: plugin.name,
+                    version: plugin.version,
+                    author: nil,
+                    description: nil,
+                    status: pluginStatuses[plugin.id] ?? .active,
+                    capabilities: plugin.capabilities,
+                    capabilityLabels: plugin.capabilities.map(\.displayName),
+                    policy: policy,
+                    errorMessage: pluginErrors[plugin.id]
+                )
+            )
+        }
+
+        return summaries.sorted { lhs, rhs in
+            if lhs.status != rhs.status {
+                return lhs.status.sortOrder < rhs.status.sortOrder
+            }
+            return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+    }
+}
+
+private extension PluginStatus {
+    var sortOrder: Int {
+        switch self {
+        case .active:
+            return 0
+        case .loading:
+            return 1
+        case .error:
+            return 2
+        case .discovered:
+            return 3
+        case .inactive:
+            return 4
+        }
+    }
 }
 
 // MARK: - Plugin Errors

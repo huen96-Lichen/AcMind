@@ -15,6 +15,7 @@ import ScreenCaptureKit
 /// 6. 语音输入
 /// 7. OCR 文本提取
 public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
+    private static let logger = AcMindLogger(category: .capture)
     
     // MARK: - Dependencies
     
@@ -67,10 +68,11 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         }
 
         let preparedImage = await prepareCapturedScreenshot(image, preferences: preferences)
+        let finalImage = await finalizeCapturedScreenshot(preparedImage, preferences: preferences)
         
         // 保存图片到 AssetStore
         let assetFile = try await assetStore.saveImage(
-            preparedImage,
+            finalImage,
             fileName: "screenshot_\(Date().timeIntervalSince1970).png"
         )
         
@@ -107,9 +109,10 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
 
         let image = try await captureVisibleScrollScreenshot()
         let preparedImage = await prepareCapturedScreenshot(image, preferences: preferences)
+        let finalImage = await finalizeCapturedScreenshot(preparedImage, preferences: preferences)
 
         let assetFile = try await assetStore.saveImage(
-            preparedImage,
+            finalImage,
             fileName: "scrollshot_\(Date().timeIntervalSince1970).png"
         )
 
@@ -201,6 +204,15 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         }
 
         return await screenshotRedactor.redact(image, mode: preferences.captureCensorMode)
+    }
+
+    func finalizeCapturedScreenshot(_ image: NSImage, preferences: SettingsLocalPreferences) async -> NSImage {
+        let options = ScreenshotPostProcessingOptions(
+            cornerRadius: preferences.captureScreenshotCornerRadius,
+            maxWidth: preferences.captureScreenshotMaxWidth > 0 ? preferences.captureScreenshotMaxWidth : nil,
+            maxHeight: preferences.captureScreenshotMaxHeight > 0 ? preferences.captureScreenshotMaxHeight : nil
+        )
+        return await ScreenshotImagePostProcessor.process(image, options: options)
     }
 
     private func captureVisibleScrollScreenshot() async throws -> NSImage {
@@ -577,18 +589,18 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     /// 请求屏幕录制权限
     /// 先尝试系统 API 请求，失败则回退到仅检查
     private func requestScreenCapturePermission() async -> Bool {
-        print("[AcMind.Capture] requesting screen capture permission")
+        Self.logger.info("requesting screen capture permission")
         
         // 先检查当前权限状态
         let preflight = CGPreflightScreenCaptureAccess()
-        print("[AcMind.Capture] preflight result: \(preflight)")
+        Self.logger.debug("preflight result: \(preflight)")
         if preflight {
             return true
         }
         
         // 尝试触发系统权限提示
         let requested = CGRequestScreenCaptureAccess()
-        print("[AcMind.Capture] request result: \(requested)")
+        Self.logger.debug("request result: \(requested)")
         if requested {
             return true
         }
@@ -611,7 +623,7 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         
         // 再次检查
         let hasAccess = CGPreflightScreenCaptureAccess()
-        print("[AcMind.Capture] final check result: \(hasAccess)")
+        Self.logger.debug("final check result: \(hasAccess)")
         return hasAccess
     }
     

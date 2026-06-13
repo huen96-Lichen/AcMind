@@ -8,6 +8,7 @@ import Foundation
 /// 使用 DashScope Paraformer WebSocket API 进行实时语音识别
 /// token 参数为 DashScope API Key
 public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
+    fileprivate static let logger = AcMindLogger(category: .ai)
 
     private let appId: String
     private let token: String
@@ -46,6 +47,7 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
         audioData: Data,
         onUpdate: @escaping @Sendable (TranscriptionSnapshot) async -> Void
     ) async throws -> String {
+        let logger = AcMindLogger(category: .ai)
         let taskId = UUID().uuidString
         var collectedText = ""
 
@@ -125,7 +127,7 @@ public final class AliCloudTranscriber: Transcriber, @unchecked Sendable {
                     }
                 case .failure(let error):
                     isFinished = true
-                    print("[AliCloudASR] WebSocket receive error: \(error)")
+                    logger.warning("[AliCloudASR] WebSocket receive error: \(error)")
                 }
             }
         }
@@ -446,7 +448,7 @@ public actor AliCloudRealtimeSession: RealtimeTranscriptionSession {
             case "error":
                 isFinished = true
                 let errorMessage = (json["payload"] as? [String: Any])?["message"] as? String ?? "未知错误"
-                print("[AliCloudRealtimeSession] ASR error: \(errorMessage)")
+                AliCloudTranscriber.logger.error("[AliCloudRealtimeSession] ASR error: \(errorMessage)")
 
             default:
                 break

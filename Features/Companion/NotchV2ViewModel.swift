@@ -60,6 +60,22 @@ enum NotchCloseBlocker: Equatable {
     }
 }
 
+enum FanControlPreset: String, CaseIterable, Identifiable {
+    case low = "10%"
+    case medium = "50%"
+    case high = "100%"
+
+    var id: String { rawValue }
+
+    var speedRatio: Double {
+        switch self {
+        case .low: return 0.10
+        case .medium: return 0.50
+        case .high: return 1.0
+        }
+    }
+}
+
 @MainActor
 final class NotchV2ViewModel: ObservableObject {
     struct OverviewMetric: Identifiable {
@@ -86,6 +102,7 @@ final class NotchV2ViewModel: ObservableObject {
 
     struct SystemAttentionHintCard: View {
         let hint: AttentionHint
+        let openStatusAction: () -> Void
 
         var body: some View {
             NotchV2Card(title: hint.title, symbol: hint.symbol, cornerRadius: NotchV2DesignTokens.rightCardRadius) {
@@ -111,7 +128,7 @@ final class NotchV2ViewModel: ObservableObject {
                     }
 
                     Button("查看状态") {
-                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                        openStatusAction()
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -126,6 +143,8 @@ final class NotchV2ViewModel: ObservableObject {
     @Published var displaySettings: CompanionDisplaySettings = CompanionDisplaySettingsStore.load()
     @Published var collapsedSize: CGSize = CGSize(width: CompanionMenuBarLayout.collapsedWidth, height: CompanionMenuBarLayout.collapsedHeight)
     @Published var playbackState = PlaybackState()
+    @Published var lyrics: String?
+    @Published var isLoadingLyrics = false
     @Published var isVoiceRecording = false
     @Published var isVoiceProcessing = false
     @Published var voiceSurfaceState: NotchV2VoiceSurfaceState = .idle
@@ -133,11 +152,13 @@ final class NotchV2ViewModel: ObservableObject {
     @Published var status: CompanionStatus = .ready
     @Published var lastTranscription: CompanionVoiceTranscription?
     @Published var batteryInfo = BatteryInfo()
+    @Published private(set) var systemStatusSnapshot = SystemStatusSnapshot()
     @Published var microphonePermissionStatus: AppPermissionStatus = .unknown
     @Published var screenRecordingPermissionStatus: AppPermissionStatus = .unknown
     @Published var accessibilityPermissionStatus: AppPermissionStatus = .unknown
-    @Published var activeModelLabel: String = "未配置模型"
-    @Published var activeProviderStatus: String = "未配置"
+    @Published var activeModelLabel: String = SettingsStatusLabelFormatter.unconfiguredModelText
+    @Published var activeProviderStatus: String = SettingsStatusLabelFormatter.unconfiguredProviderText
+    @Published var fanControlPreset: FanControlPreset = .medium
     @Published var quickAskDraft: String = ""
     @Published var quickAskMessages: [ChatMessage] = []
     @Published var quickAskIsSending: Bool = false
@@ -185,8 +206,9 @@ final class NotchV2ViewModel: ObservableObject {
     private let batteryService: BatteryService
     private let aiRuntime: AIRuntimeProtocol
     private let quickAskService: AgentQuickAskService
+    private let systemStatusService: SystemStatusService
     let systemEventCenter: SystemEventCenter
-    private let musicService: MusicService
+    let musicService: MusicService
     private let permissionManager: PermissionManager
     private let panelController: NotchPanelControlling
     private var cancellables = Set<AnyCancellable>()
@@ -208,6 +230,14 @@ final class NotchV2ViewModel: ObservableObject {
             guard let module = action.module else { return true }
             return isModuleEnabled(module)
         }
+    }
+
+    var hasPlaybackContext: Bool {
+        playbackState.title.isEmpty == false ||
+        playbackState.artist.isEmpty == false ||
+        playbackState.album.isEmpty == false ||
+        playbackState.bundleIdentifier != nil ||
+        playbackState.sourceLabel.isEmpty == false
     }
 
     private var runtimeSurfaceContext: NotchRuntimeSurfaceContext {
@@ -238,8 +268,8 @@ final class NotchV2ViewModel: ObservableObject {
         [
             .init(icon: status.icon, title: "Agent", value: status.displayName, accent: status.color),
             .init(icon: "cpu", title: "模型", value: activeModelLabel, accent: NotchV2DesignTokens.accentBlue),
-            .init(icon: "mic.fill", title: "说入法", value: isVoiceRecording ? "正在收音" : "待命", accent: isVoiceRecording ? .red : NotchV2DesignTokens.secondaryText),
-            .init(icon: "camera.viewfinder", title: "截图", value: isCapturing ? "处理中" : "待命", accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText)
+            .init(icon: "mic.fill", title: "说入法", value: ActivityStateLabelFormatter.activityLabel(isActive: isVoiceRecording, activeLabel: "正在收音", idleLabel: "待命"), accent: isVoiceRecording ? .red : NotchV2DesignTokens.secondaryText),
+            .init(icon: "camera.viewfinder", title: "截图", value: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "处理中", idleLabel: "待命"), accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText)
         ]
     }
 
@@ -265,11 +295,13 @@ final class NotchV2ViewModel: ObservableObject {
     init(
         panelController: NotchPanelControlling,
         batteryService: BatteryService,
+        systemStatusService: SystemStatusService,
         systemEventCenter: SystemEventCenter,
         musicService: MusicService
     ) {
         self.panelController = panelController
         self.batteryService = batteryService
+        self.systemStatusService = systemStatusService
         self.systemEventCenter = systemEventCenter
         self.musicService = musicService
         permissionManager = PermissionManager()
@@ -279,6 +311,7 @@ final class NotchV2ViewModel: ObservableObject {
             storage: StorageService()
         )
         playbackState = snapshot()
+        systemStatusSnapshot = systemStatusService.snapshot
         lastTranscription = nil
         quickAskMessages = [
             ChatMessage(
@@ -291,6 +324,7 @@ final class NotchV2ViewModel: ObservableObject {
         syncDisplaySettings()
         setupObservers()
         setupSystemObservers()
+        bindMusicService()
         syncSystemStatus()
         Task { await syncAIState() }
     }
@@ -320,6 +354,15 @@ final class NotchV2ViewModel: ObservableObject {
         guard isPageEnabled(page) else { return }
         selectedPage = page
         requestOpen(page: page)
+    }
+
+    func openSystemStatusPage() {
+        selectedPage = .systemStatus
+        requestOpen(page: .systemStatus)
+    }
+
+    func openSystemStatusWindow() {
+        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
     }
 
     func requestHide() {
@@ -359,18 +402,7 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     var expandedHeight: CGFloat {
-        switch effectiveSelectedPage {
-        case .overview:
-            return NotchV2DesignTokens.expandedOverviewHeight
-        case .music:
-            return NotchV2DesignTokens.expandedMusicHeight
-        case .agent:
-            return NotchV2DesignTokens.expandedAgentHeight
-        case .schedule:
-            return NotchV2DesignTokens.expandedScheduleHeight
-        case .systemStatus:
-            return NotchV2DesignTokens.expandedSystemStatusHeight
-        }
+        CompanionMenuBarLayout.expandedHeight
     }
 
     var effectiveSelectedPage: NotchV2Page {
@@ -426,7 +458,7 @@ final class NotchV2ViewModel: ObservableObject {
         case .schedule:
             return isModuleEnabled(.schedule)
         case .systemStatus:
-            return isModuleEnabled(.systemStatus)
+            return true
         }
     }
 
@@ -434,7 +466,13 @@ final class NotchV2ViewModel: ObservableObject {
         voiceSurfaceState.displayTitle
     }
 
+    var batteryDisplayText: String {
+        guard batteryInfo.isAvailable else { return "♾️" }
+        return "\(Int(batteryInfo.percentage.rounded()))%"
+    }
+
     var batteryStateText: String {
+        guard batteryInfo.isAvailable else { return "♾️ · 无电池" }
         let percentage = Int(batteryInfo.percentage.rounded())
         if batteryInfo.isInLowPowerMode {
             return "\(percentage)% · 低电量模式"
@@ -448,7 +486,29 @@ final class NotchV2ViewModel: ObservableObject {
         return "\(percentage)%"
     }
 
+    var batteryIconName: String {
+        guard batteryInfo.isAvailable else { return "infinity" }
+        if batteryInfo.isCharging {
+            return "bolt.fill"
+        }
+        if batteryInfo.isPluggedIn {
+            return "plug.fill"
+        }
+
+        let level = batteryInfo.percentage
+        switch level {
+        case ..<10: return "battery.0"
+        case ..<25: return "battery.25"
+        case ..<50: return "battery.50"
+        case ..<75: return "battery.75"
+        default: return "battery.100"
+        }
+    }
+
     var batteryAccent: Color {
+        if batteryInfo.isAvailable == false {
+            return NotchV2DesignTokens.secondaryText
+        }
         if batteryInfo.isInLowPowerMode {
             return .orange
         }
@@ -461,8 +521,85 @@ final class NotchV2ViewModel: ObservableObject {
         return NotchV2DesignTokens.secondaryText
     }
 
-    var voiceDisplaySubtitle: String? {
-        voiceSurfaceState.displaySubtitle
+    var systemBatterySummary: String {
+        batteryDisplayText
+    }
+
+    var systemNetworkSummary: String {
+        guard let download = systemStatusSnapshot.networkDownloadMBps,
+              let upload = systemStatusSnapshot.networkUploadMBps else {
+            return "—"
+        }
+        return "↓ \(formatMBps(download)) · ↑ \(formatMBps(upload))"
+    }
+
+    var systemNetworkDownloadSummary: String {
+        guard let download = systemStatusSnapshot.networkDownloadMBps else { return "—" }
+        return formatMBps(download)
+    }
+
+    var systemNetworkUploadSummary: String {
+        guard let upload = systemStatusSnapshot.networkUploadMBps else { return "—" }
+        return formatMBps(upload)
+    }
+
+    var systemTemperatureSummary: String {
+        if let sensor = systemStatusSnapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+            return sensor.value.map { formatTemperature($0) } ?? "—"
+        }
+        if let batteryTemperature = systemStatusSnapshot.battery?.temperatureC {
+            return formatTemperature(batteryTemperature)
+        }
+        return "—"
+    }
+
+    var systemTemperatureDetail: String {
+        if let sensor = systemStatusSnapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }) {
+            return sensor.name
+        }
+        if systemStatusSnapshot.battery?.temperatureC != nil {
+            return "电池温度"
+        }
+        return "采样中"
+    }
+
+    var systemFanSummary: String {
+        let values = systemStatusSnapshot.fanSensors.compactMap { $0.value }
+        guard values.isEmpty == false else { return "—" }
+        let average = values.reduce(0, +) / Double(values.count)
+        return formatRPM(average)
+    }
+
+    var systemFanDetail: String {
+        guard systemStatusSnapshot.fanSensors.isEmpty == false else { return "采样中" }
+        if systemStatusSnapshot.fanSensors.allSatisfy({ $0.isAutomatic == true }) {
+            return "\(systemStatusSnapshot.fanSensors.count) 个风扇 · 自动"
+        }
+        return "\(systemStatusSnapshot.fanSensors.count) 个风扇 · 只读"
+    }
+
+    var systemCPUUsageSummary: String {
+        formatPercent(systemStatusSnapshot.cpuUsage)
+    }
+
+    var systemMemoryUsageSummary: String {
+        formatPercent(systemStatusSnapshot.memoryUsagePercent)
+    }
+
+    var systemFanControlPresets: [FanControlPreset] {
+        FanControlPreset.allCases
+    }
+
+    func selectFanControlPreset(_ preset: FanControlPreset) {
+        fanControlPreset = preset
+    }
+
+    var voiceDisplaySubtitle: String {
+        ActivityStateLabelFormatter.activityLabel(
+            isActive: voiceSurfaceState.isActive,
+            activeLabel: voiceSurfaceState.displaySubtitle ?? "等待输入",
+            idleLabel: "待命"
+        )
     }
 
     var voiceDisplayIcon: String {
@@ -566,7 +703,7 @@ final class NotchV2ViewModel: ObservableObject {
     }
 
     private var systemAttentionHintData: AttentionHint? {
-        if microphonePermissionStatus != .authorized {
+        if permissionNeedsAttention(microphonePermissionStatus) {
             return AttentionHint(
                 symbol: "mic.fill",
                 title: "系统提醒",
@@ -575,7 +712,7 @@ final class NotchV2ViewModel: ObservableObject {
             )
         }
 
-        if screenRecordingPermissionStatus != .authorized {
+        if permissionNeedsAttention(screenRecordingPermissionStatus) {
             return AttentionHint(
                 symbol: "display",
                 title: "系统提醒",
@@ -584,7 +721,7 @@ final class NotchV2ViewModel: ObservableObject {
             )
         }
 
-        if accessibilityPermissionStatus != .authorized {
+        if permissionNeedsAttention(accessibilityPermissionStatus) {
             return AttentionHint(
                 symbol: "accessibility",
                 title: "系统提醒",
@@ -593,7 +730,7 @@ final class NotchV2ViewModel: ObservableObject {
             )
         }
 
-        if batteryInfo.percentage <= 20, batteryInfo.isCharging == false {
+        if batteryInfo.isAvailable, batteryInfo.percentage <= 20, batteryInfo.isCharging == false {
             return AttentionHint(
                 symbol: "battery.25",
                 title: "系统提醒",
@@ -605,11 +742,27 @@ final class NotchV2ViewModel: ObservableObject {
         return nil
     }
 
+    private func permissionNeedsAttention(_ status: AppPermissionStatus) -> Bool {
+        switch status {
+        case .denied, .restricted, .needsSystemSettings:
+            return true
+        case .unknown, .notDetermined, .requesting, .authorized, .failed:
+            return false
+        }
+    }
+
     private func setupSystemObservers() {
         batteryService.$batteryInfo
             .receive(on: RunLoop.main)
             .sink { [weak self] info in
                 self?.batteryInfo = info
+            }
+            .store(in: &cancellables)
+
+        systemStatusService.$snapshot
+            .receive(on: RunLoop.main)
+            .sink { [weak self] snapshot in
+                self?.systemStatusSnapshot = snapshot
             }
             .store(in: &cancellables)
 
@@ -642,11 +795,27 @@ final class NotchV2ViewModel: ObservableObject {
         }
     }
 
+    private func bindMusicService() {
+        musicService.$lyrics
+            .receive(on: RunLoop.main)
+            .sink { [weak self] lyrics in
+                self?.lyrics = lyrics
+            }
+            .store(in: &cancellables)
+
+        musicService.$isLoadingLyrics
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isLoading in
+                self?.isLoadingLyrics = isLoading
+            }
+            .store(in: &cancellables)
+    }
+
     private func syncAIState() async {
         let providers = await aiRuntime.listProviders()
         guard let provider = providers.first(where: { $0.enabled }) ?? providers.first else {
-            activeModelLabel = "未配置模型"
-            activeProviderStatus = "未配置"
+            activeModelLabel = SettingsStatusLabelFormatter.unconfiguredModelText
+            activeProviderStatus = SettingsStatusLabelFormatter.unconfiguredProviderText
             selectedQuickAskProviderId = nil
             selectedQuickAskModelId = nil
             return
@@ -738,6 +907,26 @@ final class NotchV2ViewModel: ObservableObject {
     private var quickAskContextSummary: String {
         let focus = activeRuntimeSurface.subtitle.isEmpty ? activeRuntimeSurface.title : activeRuntimeSurface.subtitle
         return "\(activeRuntimeSurface.title) · \(focus)"
+    }
+
+    private func formatMBps(_ value: Double) -> String {
+        guard value.isFinite else { return "—" }
+        return String(format: "%.1f MB/s", value)
+    }
+
+    private func formatTemperature(_ value: Double) -> String {
+        guard value.isFinite else { return "—" }
+        return String(format: "%.1f°C", value)
+    }
+
+    private func formatPercent(_ value: Double) -> String {
+        guard value.isFinite else { return "—" }
+        return String(format: "%.0f%%", value)
+    }
+
+    private func formatRPM(_ value: Double) -> String {
+        guard value.isFinite else { return "—" }
+        return String(format: "%.0f RPM", value)
     }
 
     @objc private func handlePlaybackStateChanged(_ notification: Notification) {
@@ -927,8 +1116,8 @@ final class NotchV2ViewModel: ObservableObject {
 
         systemEventCenter.publish(
             .sayInput,
-            title: "说入法",
-            detail: "准备收音",
+            title: SayInputPresentationLabelFormatter.hudTitle(for: .idle),
+            detail: SayInputPresentationLabelFormatter.openingText,
             duration: 1.2
         )
         NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
@@ -964,6 +1153,7 @@ final class NotchV2ViewModel: ObservableObject {
             isShuffled: service.isShuffled,
             repeatMode: service.repeatMode,
             bundleIdentifier: service.bundleIdentifier,
+            sourceLabel: service.sourceLabel,
             lastUpdated: Date()
         )
     }

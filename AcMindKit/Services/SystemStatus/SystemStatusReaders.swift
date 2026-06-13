@@ -81,6 +81,123 @@ public struct CPUStatusReader: SystemStatusReader {
     }
 }
 
+public struct ThermalStatusReader: SystemStatusReader {
+    private let outputProvider: @Sendable () async -> String?
+
+    public init(outputProvider: (@Sendable () async -> String?)? = nil) {
+        self.outputProvider = outputProvider ?? { await Self.defaultOutputProvider() }
+    }
+
+    public func read() async -> SystemStatusPartialSnapshot {
+        var partial = SystemStatusPartialSnapshot()
+
+        guard let output = await outputProvider(),
+              let throttle = Self.parseThermalThrottleOutput(output) else {
+            partial.thermalThrottle = SystemThermalThrottleInfo(
+                source: "pmset -g therm",
+                isAvailable: false,
+                unavailableReason: "pmset -g therm 无输出"
+            )
+            partial.unavailableReasons.append(.init(
+                id: "thermal-throttle-unavailable",
+                category: "thermal",
+                message: "热节流信息不可用",
+                detail: "pmset -g therm 读取失败或无数据"
+            ))
+            partial.thermalState = "不可用"
+            return partial
+        }
+
+        partial.thermalThrottle = throttle
+        partial.thermalState = Self.thermalStateText(for: throttle)
+        return partial
+    }
+
+    public static func parseThermalThrottleOutput(_ output: String) -> SystemThermalThrottleInfo? {
+        let lines = output.split(whereSeparator: \.isNewline)
+        var speedLimit: Int?
+        var schedulerLimit: Int?
+        var availableCPUs: Int?
+        var sawValue = false
+
+        for lineSubsequence in lines {
+            let line = String(lineSubsequence)
+            if let value = intValue(from: line, keys: ["CPU_Speed_Limit", "CPU Speed Limit"]) {
+                speedLimit = value
+                sawValue = true
+            }
+            if let value = intValue(from: line, keys: ["CPU_Scheduler_Limit", "CPU Scheduler Limit"]) {
+                schedulerLimit = value
+                sawValue = true
+            }
+            if let value = intValue(from: line, keys: ["CPU_Available_CPUs", "CPU Available CPUs"]) {
+                availableCPUs = value
+                sawValue = true
+            }
+        }
+
+        guard sawValue else { return nil }
+        return SystemThermalThrottleInfo(
+            speedLimit: speedLimit,
+            schedulerLimit: schedulerLimit,
+            availableCPUs: availableCPUs,
+            source: "pmset -g therm",
+            isAvailable: true,
+            unavailableReason: nil
+        )
+    }
+
+    private static func defaultOutputProvider() async -> String? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+                process.arguments = ["-g", "therm"]
+
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    continuation.resume(returning: String(data: data, encoding: .utf8))
+                } catch {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
+    private static func thermalStateText(for throttle: SystemThermalThrottleInfo) -> String {
+        guard throttle.isAvailable else { return "不可用" }
+
+        if let speed = throttle.speedLimit {
+            if speed >= 90 { return "正常" }
+            if speed >= 70 { return "轻度节流" }
+            if speed >= 40 { return "中度节流" }
+            return "严重节流"
+        }
+
+        return "已采样"
+    }
+
+    private static func intValue(from line: String, keys: [String]) -> Int? {
+        for key in keys {
+            guard line.contains(key) else { continue }
+            let separators = CharacterSet(charactersIn: "=:")
+            let parts = line.components(separatedBy: separators)
+            guard parts.count >= 2 else { continue }
+            let rawValue = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            if let value = Int(rawValue) {
+                return value
+            }
+        }
+        return nil
+    }
+}
+
 public struct MemoryStatusReader: SystemStatusReader {
     public init() {}
 

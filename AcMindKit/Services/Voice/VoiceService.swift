@@ -13,6 +13,7 @@ import CoreAudio
 /// 5. 文本插入（通过 TextInjector）
 /// 6. 状态管理和回调
 public actor VoiceService: VoiceServiceProtocol {
+    private static let logger = AcMindLogger(category: .input)
 
     // MARK: - Dependencies
 
@@ -361,7 +362,7 @@ public actor VoiceService: VoiceServiceProtocol {
 
         } catch {
             updateStatus(.error)
-            print("转写失败: \(error)")
+            Self.logger.error("转写失败: \(error)")
         }
     }
 

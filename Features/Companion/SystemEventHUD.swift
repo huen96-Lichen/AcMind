@@ -72,6 +72,8 @@ final class SystemEventCenter: ObservableObject {
 
     private var dismissTask: Task<Void, Never>?
     private var sayInputLocked: Bool = false
+    private var currentRequest: SystemEventHUDRequest?
+    private var pendingRequests: [SystemEventHUDRequest] = []
 
     init() {
         setupVoiceLockObservers()
@@ -127,9 +129,18 @@ final class SystemEventCenter: ObservableObject {
     @objc private func handleSayInputUnlocked(_ notification: Notification) {
         sayInputLocked = false
         sayInputActive = false
+        flushPendingRequests()
     }
 
     func publish(_ kind: SystemEventKind, title: String? = nil, detail: String? = nil, progress: Double? = nil, duration: TimeInterval = 1.5) {
+        let request = SystemEventHUDRequest(
+            kind: kind,
+            title: title,
+            detail: detail,
+            progress: progress,
+            duration: duration
+        )
+
         let displaySettings = CompanionDisplaySettingsStore.load()
         guard displaySettings.showSystemEventHUD, displaySettings.enabledSystemEventKinds.contains(kind) else {
             return
@@ -163,33 +174,48 @@ final class SystemEventCenter: ObservableObject {
             updateSayInputLockState(title: title, detail: detail)
         }
 
-        guard SystemEventHUDPolicy.allowsReplacement(for: kind, sayInputLocked: sayInputLocked) else {
-            return
-        }
+        enqueueHUDRequest(request)
+    }
 
-        let item = SystemEventHUDItem(
-            kind: kind,
-            title: title ?? defaultTitle(for: kind, progress: progress),
-            detail: detail ?? defaultDetail(for: kind, progress: progress),
-            progress: progress
-        )
+    var pendingHUDKinds: [SystemEventKind] {
+        pendingRequests.map(\.kind)
+    }
 
-        dismissTask?.cancel()
-        withAnimation(.spring(response: 0.26, dampingFraction: 0.82)) {
-            currentHUD = item
-        }
-
-        if kind == .sayInput && sayInputLocked {
-            return
-        }
-
-        dismissTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                self?.dismiss(animated: true)
+    func enqueueHUDRequest(_ request: SystemEventHUDRequest) {
+        if currentRequest == nil {
+            guard SystemEventHUDPolicy.allowsReplacement(for: request.kind, sayInputLocked: sayInputLocked) else {
+                pendingRequests.append(request)
+                pendingRequests = SystemEventHUDPolicy.orderedPendingRequests(pendingRequests)
+                return
             }
+            present(request)
+            return
         }
+
+        guard let currentRequest else {
+            pendingRequests.append(request)
+            pendingRequests = SystemEventHUDPolicy.orderedPendingRequests(pendingRequests)
+            return
+        }
+
+        if currentRequest.kind == request.kind {
+            present(request)
+            return
+        }
+
+        if SystemEventHUDPolicy.shouldInterrupt(
+            currentKind: currentRequest.kind,
+            incomingKind: request.kind,
+            sayInputLocked: sayInputLocked
+        ) {
+            pendingRequests.append(currentRequest)
+            pendingRequests = SystemEventHUDPolicy.orderedPendingRequests(pendingRequests)
+            present(request)
+            return
+        }
+
+        pendingRequests.append(request)
+        pendingRequests = SystemEventHUDPolicy.orderedPendingRequests(pendingRequests)
     }
 
     private func updateSayInputLockState(title: String?, detail: String?) {
@@ -206,6 +232,7 @@ final class SystemEventCenter: ObservableObject {
     func dismiss(animated: Bool = false) {
         dismissTask?.cancel()
         dismissTask = nil
+        currentRequest = nil
         if animated {
             withAnimation(.easeOut(duration: 0.18)) {
                 currentHUD = nil
@@ -218,6 +245,43 @@ final class SystemEventCenter: ObservableObject {
             currentHUD = nil
             screenshotInProgress = false
         }
+
+        flushPendingRequests()
+    }
+
+    private func present(_ request: SystemEventHUDRequest) {
+        let item = SystemEventHUDItem(
+            kind: request.kind,
+            title: request.title ?? defaultTitle(for: request.kind, progress: request.progress),
+            detail: request.detail ?? defaultDetail(for: request.kind, progress: request.progress),
+            progress: request.progress
+        )
+
+        currentRequest = request
+        dismissTask?.cancel()
+
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.82)) {
+            currentHUD = item
+        }
+
+        if request.duration <= 0 || request.kind == .sayInput && sayInputLocked {
+            return
+        }
+
+        dismissTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(request.duration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.dismiss(animated: true)
+            }
+        }
+    }
+
+    private func flushPendingRequests() {
+        guard currentRequest == nil else { return }
+        guard let next = pendingRequests.first else { return }
+        pendingRequests.removeFirst()
+        present(next)
     }
 
     private func defaultTitle(for kind: SystemEventKind, progress: Double?) -> String {
@@ -231,7 +295,7 @@ final class SystemEventCenter: ObservableObject {
         case .microphone:
             return "麦克风"
         case .sayInput:
-            return "说入法"
+            return SayInputPresentationLabelFormatter.hudTitle(for: .idle)
         case .screenshot:
             return "截图"
         }
@@ -248,7 +312,7 @@ final class SystemEventCenter: ObservableObject {
         case .microphone:
             return microphoneMuted == true ? "已静音" : "正常收音"
         case .sayInput:
-            return sayInputActive ? "正在收音" : "已结束"
+            return sayInputActive ? SayInputPresentationLabelFormatter.recordingText : SayInputPresentationLabelFormatter.finishedText
         case .screenshot:
             return screenshotInProgress ? "处理中" : "已完成"
         }
@@ -305,7 +369,37 @@ struct SystemEventHUDView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(event.kind.accent.opacity(0.25), lineWidth: 1)
             )
+            .overlay(alignment: .bottomTrailing) {
+                if center.pendingHUDKinds.isEmpty == false {
+                    Text(pendingQueueText)
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.9))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(event.kind.accent.opacity(0.18), lineWidth: 1)
+                        )
+                        .padding(.trailing, 10)
+                        .padding(.bottom, 8)
+                }
+            }
             .transition(.move(edge: .top).combined(with: .opacity))
         }
+    }
+
+    private var pendingQueueText: String {
+        let pendingKinds = center.pendingHUDKinds
+        guard pendingKinds.isEmpty == false else { return "" }
+
+        let head = pendingKinds.prefix(3).map(\.displayName).joined(separator: " / ")
+        if pendingKinds.count > 3 {
+            return "排队中 · \(head) +\(pendingKinds.count - 3)"
+        }
+        return "排队中 · \(head)"
     }
 }

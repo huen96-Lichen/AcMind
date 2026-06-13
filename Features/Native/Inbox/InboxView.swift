@@ -4,20 +4,38 @@ import AcMindKit
 struct InboxView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = InboxViewModel()
-    @State private var selectedSidebarItem: String? = "all"
     @State private var selectedItem: SourceItem?
     @State private var searchQuery = ""
+    let clipboardPinActions: ClipboardPinActions
+
+    init(clipboardPinActions: ClipboardPinActions) {
+        self.clipboardPinActions = clipboardPinActions
+    }
+
+    private var selectedSidebarItem: Binding<String?> {
+        Binding(
+            get: { appState.inboxWorkspaceSelection },
+            set: { appState.inboxWorkspaceSelection = $0 ?? "all" }
+        )
+    }
 
     private var sidebarSections: [SecondarySidebarSection] {
         [
             SecondarySidebarSection(
+                id: "workspace",
+                title: "工作区",
+                items: [
+                    SecondarySidebarItem(id: "all", title: "收集箱", icon: "tray", badge: "\(viewModel.items.count)"),
+                    SecondarySidebarItem(id: "clipboardWorkspace", title: "剪贴板 & 手机同步", icon: "doc.on.clipboard")
+                ]
+            ),
+            SecondarySidebarSection(
                 id: "source",
                 title: "来源",
                 items: [
-                    SecondarySidebarItem(id: "all", title: "全部", icon: "tray", badge: "\(viewModel.items.count)"),
                     SecondarySidebarItem(id: "voice", title: "说入法", icon: "mic"),
                     SecondarySidebarItem(id: "screenshot", title: "截图 / OCR", icon: "camera.viewfinder"),
-                    SecondarySidebarItem(id: "clipboard", title: "剪贴板", icon: "doc.on.clipboard"),
+                    SecondarySidebarItem(id: "clipboard", title: "剪贴板入箱", icon: "tray.and.arrow.down"),
                     SecondarySidebarItem(id: "agent", title: "Agent 生成", icon: "sparkles")
                 ]
             ),
@@ -41,10 +59,10 @@ struct InboxView: View {
                 (item.previewText?.lowercased().contains(searchQuery.lowercased()) ?? false)
 
             let matchesSource: Bool
-            switch selectedSidebarItem {
-            case "voice": matchesSource = item.type == .audio
-            case "screenshot": matchesSource = item.type == .screenshot
-            case "clipboard": matchesSource = item.type == .text
+            switch selectedSidebarItem.wrappedValue {
+            case "voice": matchesSource = item.source == .voice || item.type == .audio
+            case "screenshot": matchesSource = item.source == .screenshot || item.type == .screenshot
+            case "clipboard": matchesSource = item.source == .clipboard
             case "agent": matchesSource = item.isAgentGenerated
             case "pending": matchesSource = item.status == .pending
             case "refined": matchesSource = item.status == .distilled
@@ -57,37 +75,44 @@ struct InboxView: View {
     }
 
     var body: some View {
-        WorkspacePageShell(
-            title: "收集箱",
-            subtitle: "\(viewModel.items.count) 条内容",
-            leadingRailWidth: 208,
-            trailingRailWidth: 224,
-            leadingRail: {
-                SecondarySidebarWithHeader(
-                    title: "收集箱",
-                    subtitle: "\(viewModel.items.count) 条内容",
-                    sections: sidebarSections,
-                    selectedItem: $selectedSidebarItem
-                )
-            },
-            content: {
-                itemList
-            },
-            trailingRail: {
-                inboxSummaryRail
+        if appState.inboxWorkspaceSelection == "clipboardWorkspace" {
+            ClipboardView(
+                clipboardPinActions: clipboardPinActions,
+                returnToInboxAction: { appState.selectInboxWorkspace("all") }
+            )
+        } else {
+            WorkspacePageShell(
+                title: "收集箱",
+                subtitle: "\(viewModel.items.count) 条内容",
+                leadingRailWidth: 208,
+                trailingRailWidth: 224,
+                leadingRail: {
+                    SecondarySidebarWithHeader(
+                        title: "收集箱",
+                        subtitle: "\(viewModel.items.count) 条内容",
+                        sections: sidebarSections,
+                        selectedItem: selectedSidebarItem
+                    )
+                },
+                content: {
+                    itemList
+                },
+                trailingRail: {
+                    inboxSummaryRail
+                }
+            )
+            .background(AppVisualBackdrop())
+            .onAppear {
+                Task {
+                    await viewModel.loadItems()
+                    await focusPendingCaptureDetailIfNeeded()
+                }
             }
-        )
-        .background(AppVisualBackdrop())
-        .onAppear {
-            Task {
-                await viewModel.loadItems()
-                await focusPendingCaptureDetailIfNeeded()
-            }
-        }
-        .onChange(of: appState.pendingInboxDetailSourceItemID) { _, _ in
-            Task {
-                await viewModel.loadItems()
-                await focusPendingCaptureDetailIfNeeded()
+            .onChange(of: appState.pendingInboxDetailSourceItemID) { _, _ in
+                Task {
+                    await viewModel.loadItems()
+                    await focusPendingCaptureDetailIfNeeded()
+                }
             }
         }
     }
@@ -199,7 +224,7 @@ struct InboxView: View {
         guard let pendingItemID = appState.pendingInboxDetailSourceItemID else { return }
 
         if let item = viewModel.items.first(where: { $0.id == pendingItemID }) {
-            selectedSidebarItem = "all"
+            appState.inboxWorkspaceSelection = "all"
             selectedItem = item
             appState.pendingInboxDetailSourceItemID = nil
         }

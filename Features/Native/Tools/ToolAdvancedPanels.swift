@@ -187,7 +187,7 @@ struct DocumentConverterPanel: View {
                 Button {
                     viewModel.convert()
                 } label: {
-                    Text(viewModel.isConverting ? "处理中..." : "转换为 Markdown")
+                    Text(viewModel.isConverting ? ToolStatusLabelFormatter.processingText : "转换为 Markdown")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isConverting || viewModel.sourceURL == nil)
@@ -290,7 +290,7 @@ struct DocumentConverterPanel: View {
 final class DocumentConverterViewModel: ObservableObject {
     @Published var sourceURL: URL?
     @Published var outputMarkdown = ""
-    @Published var statusText = "请选择一个文档"
+    @Published var statusText = ToolStatusLabelFormatter.promptToSelect("文档")
     @Published var errorMessage: String?
     @Published var engineLabel = "waiting"
     @Published var isConverting = false
@@ -299,7 +299,7 @@ final class DocumentConverterViewModel: ObservableObject {
     func clear() {
         sourceURL = nil
         outputMarkdown = ""
-        statusText = "请选择一个文档"
+        statusText = ToolStatusLabelFormatter.promptToSelect("文档")
         errorMessage = nil
         engineLabel = "waiting"
         isConverting = false
@@ -328,20 +328,20 @@ final class DocumentConverterViewModel: ObservableObject {
             sourceURL = panel.url
             outputMarkdown = ""
             errorMessage = nil
-            statusText = "已选择文件，等待转换"
+            statusText = ToolStatusLabelFormatter.selectedWaiting("文件", waitingFor: "转换")
             engineLabel = "ready"
         }
     }
 
-    func convert() {
+        func convert() {
         guard let sourceURL else {
-            ToastManager.shared.show(.warning, "请选择要转换的文档")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.promptToSelect("文档"))
             return
         }
 
         isConverting = true
         errorMessage = nil
-        statusText = "正在转换..."
+        statusText = ToolStatusLabelFormatter.running("转换")
         outputMarkdown = ""
         engineLabel = "running"
 
@@ -350,15 +350,15 @@ final class DocumentConverterViewModel: ObservableObject {
                 let result = try await DocumentConversionSupport.convert(sourceURL: sourceURL)
                 await MainActor.run {
                     self.outputMarkdown = result.markdown
-                    self.statusText = "已转换为 Markdown"
+                    self.statusText = ToolStatusLabelFormatter.completed("转换为 Markdown")
                     self.engineLabel = result.engine
                     self.isConverting = false
-                    ToastManager.shared.show(.success, "文档已转换为 Markdown")
+                    ToastManager.shared.show(.success, ToolStatusLabelFormatter.convertedToMarkdown("文档"))
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
-                    self.statusText = "转换失败"
+                    self.statusText = ToolStatusLabelFormatter.failed("转换")
                     self.engineLabel = "error"
                     self.isConverting = false
                     ToastManager.shared.show(.error, error.localizedDescription)
@@ -369,13 +369,13 @@ final class DocumentConverterViewModel: ObservableObject {
 
     func copyOutput() {
         guard outputMarkdown.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的 Markdown")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("Markdown"))
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputMarkdown, forType: .string)
-        ToastManager.shared.show(.success, "Markdown 已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copiedMarkdown())
     }
 
     func saveOutput() {
@@ -388,9 +388,9 @@ final class DocumentConverterViewModel: ObservableObject {
             do {
                 try outputMarkdown.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.savedTo(url.lastPathComponent))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -606,7 +606,7 @@ struct OCRPanel: View {
                 Button {
                     viewModel.recognize()
                 } label: {
-                    Text(viewModel.isWorking ? "处理中..." : "开始识别")
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "开始识别")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isWorking || viewModel.sourceURL == nil)
@@ -698,7 +698,7 @@ struct OCRPanel: View {
 final class OCRViewModel: ObservableObject {
     @Published var sourceURL: URL?
     @Published var outputText = ""
-    @Published var statusText = "请选择图片或从剪贴板识别"
+    @Published var statusText = ToolStatusLabelFormatter.promptToSelect("图片或从剪贴板识别")
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var lastSavedURL: URL?
@@ -706,7 +706,7 @@ final class OCRViewModel: ObservableObject {
     func clear() {
         sourceURL = nil
         outputText = ""
-        statusText = "请选择图片或从剪贴板识别"
+        statusText = ToolStatusLabelFormatter.promptToSelect("图片或从剪贴板识别")
         errorMessage = nil
         isWorking = false
         lastSavedURL = nil
@@ -723,21 +723,21 @@ final class OCRViewModel: ObservableObject {
             sourceURL = panel.url
             outputText = ""
             errorMessage = nil
-            statusText = "已选择图片，等待识别"
+            statusText = ToolStatusLabelFormatter.selectedWaiting("图片", waitingFor: "识别")
             lastSavedURL = nil
         }
     }
 
     func recognizeFromClipboard() {
         guard let image = NSPasteboard.general.readObjects(forClasses: [NSImage.self])?.first as? NSImage else {
-            ToastManager.shared.show(.warning, "剪贴板里没有图片")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noClipboardImage())
             return
         }
 
         sourceURL = nil
         outputText = ""
         errorMessage = nil
-        statusText = "正在识别剪贴板图片..."
+        statusText = ToolStatusLabelFormatter.running("识别剪贴板图片")
         isWorking = true
         lastSavedURL = nil
 
@@ -746,14 +746,14 @@ final class OCRViewModel: ObservableObject {
                 let result = try await VisionOCR.recognizeText(in: image.tiffRepresentation ?? Data())
                 await MainActor.run {
                     self.outputText = result.text
-                    self.statusText = "识别完成，共 \(result.blocks.count) 个文本块"
+                    self.statusText = "\(ToolStatusLabelFormatter.completed("识别"))，共 \(result.blocks.count) 个文本块"
                     self.isWorking = false
-                    ToastManager.shared.show(.success, "OCR 识别完成")
+                    ToastManager.shared.show(.success, ToolStatusLabelFormatter.ocrCompleted())
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
-                    self.statusText = "识别失败"
+                    self.statusText = ToolStatusLabelFormatter.failed("识别")
                     self.isWorking = false
                     ToastManager.shared.show(.error, error.localizedDescription)
                 }
@@ -763,14 +763,14 @@ final class OCRViewModel: ObservableObject {
 
     func recognize() {
         guard let sourceURL else {
-            ToastManager.shared.show(.warning, "请选择图片")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.chooseImage())
             return
         }
 
         isWorking = true
         errorMessage = nil
         outputText = ""
-        statusText = "正在识别..."
+        statusText = ToolStatusLabelFormatter.running("识别")
         lastSavedURL = nil
 
         Task {
@@ -778,14 +778,14 @@ final class OCRViewModel: ObservableObject {
                 let result = try await VisionOCR.recognizeText(inFileAtPath: sourceURL.path)
                 await MainActor.run {
                     self.outputText = result.text
-                    self.statusText = "识别完成，共 \(result.blocks.count) 个文本块"
+                    self.statusText = "\(ToolStatusLabelFormatter.completed("识别"))，共 \(result.blocks.count) 个文本块"
                     self.isWorking = false
-                    ToastManager.shared.show(.success, "OCR 识别完成")
+                    ToastManager.shared.show(.success, ToolStatusLabelFormatter.ocrCompleted())
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
-                    self.statusText = "识别失败"
+                    self.statusText = ToolStatusLabelFormatter.failed("识别")
                     self.isWorking = false
                     ToastManager.shared.show(.error, error.localizedDescription)
                 }
@@ -795,13 +795,13 @@ final class OCRViewModel: ObservableObject {
 
     func copyOutput() {
         guard outputText.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可复制的识别结果")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noRecognizedResults())
             return
         }
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
-        ToastManager.shared.show(.success, "识别结果已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.recognizedResultsCopied())
     }
 
     func saveOutput() {
@@ -816,9 +816,9 @@ final class OCRViewModel: ObservableObject {
             do {
                 try outputText.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "识别结果已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.recognizedResultsSaved())
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -997,7 +997,7 @@ struct ImageProcessingPanel: View {
                 Button {
                     viewModel.process()
                 } label: {
-                    Text(viewModel.isProcessing ? "处理中..." : "处理图片")
+                    Text(viewModel.isProcessing ? ToolStatusLabelFormatter.processingText : "处理图片")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isProcessing || viewModel.hasSource == false)
@@ -1217,7 +1217,7 @@ final class ImageProcessingViewModel: ObservableObject {
     @Published var outputData: Data?
     @Published var outputSummary: String?
     @Published var clipboardInfo: String?
-    @Published var statusText = "请选择图片"
+    @Published var statusText = ToolStatusLabelFormatter.promptToSelect("图片")
     @Published var errorMessage: String?
     @Published var isProcessing = false
     @Published var outputFormat: ImageOutputFormat = .jpeg
@@ -1236,7 +1236,7 @@ final class ImageProcessingViewModel: ObservableObject {
         outputData = nil
         outputSummary = nil
         clipboardInfo = nil
-        statusText = "请选择图片"
+        statusText = ToolStatusLabelFormatter.promptToSelect("图片")
         errorMessage = nil
         isProcessing = false
         outputFormat = .jpeg
@@ -1261,13 +1261,13 @@ final class ImageProcessingViewModel: ObservableObject {
             outputSummary = nil
             lastSavedURL = nil
             errorMessage = nil
-            statusText = "已选择图片，等待处理"
+            statusText = ToolStatusLabelFormatter.selectedWaiting("图片", waitingFor: "处理")
         }
     }
 
     func loadFromClipboard() {
         guard let image = NSPasteboard.general.readObjects(forClasses: [NSImage.self])?.first as? NSImage else {
-            ToastManager.shared.show(.warning, "剪贴板里没有图片")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noClipboardImage())
             return
         }
 
@@ -1277,7 +1277,7 @@ final class ImageProcessingViewModel: ObservableObject {
         outputData = image.tiffRepresentation
         outputSummary = "剪贴板图片：\(Int(image.size.width)) × \(Int(image.size.height))"
         clipboardInfo = outputSummary
-        statusText = "已导入剪贴板图片，等待处理"
+        statusText = ToolStatusLabelFormatter.importedWaiting("剪贴板图片", waitingFor: "处理")
         errorMessage = nil
         lastSavedURL = nil
     }
@@ -1286,7 +1286,7 @@ final class ImageProcessingViewModel: ObservableObject {
         let maxDimension = Int(maxDimensionText.trimmingCharacters(in: .whitespacesAndNewlines))
         isProcessing = true
         errorMessage = nil
-        statusText = "正在处理图片..."
+        statusText = ToolStatusLabelFormatter.running("处理图片")
         outputData = nil
         outputSummary = nil
         lastSavedURL = nil
@@ -1308,17 +1308,17 @@ final class ImageProcessingViewModel: ObservableObject {
                     quality: quality
                 )
             } else {
-                throw ToolShellError.launchFailed("请选择图片")
+                throw ToolShellError.launchFailed(ToolStatusLabelFormatter.chooseImage())
             }
 
             previewImage = result.previewImage
             outputData = result.data
             outputSummary = "输出 \(Int(result.outputSize.width)) × \(Int(result.outputSize.height))，格式 \(result.outputFormat.title)"
-            statusText = "图片处理完成"
-            ToastManager.shared.show(.success, "图片已处理")
+            statusText = ToolStatusLabelFormatter.completed("图片处理")
+            ToastManager.shared.show(.success, ToolStatusLabelFormatter.imageProcessed())
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "处理失败"
+            statusText = ToolStatusLabelFormatter.failed("处理")
             ToastManager.shared.show(.error, error.localizedDescription)
         }
 
@@ -1335,9 +1335,9 @@ final class ImageProcessingViewModel: ObservableObject {
             do {
                 try outputData.write(to: url)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "已保存到 \(url.lastPathComponent)")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.savedTo(url.lastPathComponent))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }
@@ -1447,7 +1447,7 @@ struct BatchRenamePanel: View {
                 Button {
                     viewModel.applyRename()
                 } label: {
-                    Text(viewModel.isRenaming ? "处理中..." : "执行重命名")
+                    Text(viewModel.isRenaming ? ToolStatusLabelFormatter.processingText : "执行重命名")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isRenaming || viewModel.previewItems.isEmpty)
@@ -1592,7 +1592,7 @@ struct RenamePreviewItem: Identifiable {
 final class BatchRenameViewModel: ObservableObject {
     @Published var folderURL: URL?
     @Published var previewItems: [RenamePreviewItem] = []
-    @Published var statusText = "请选择文件夹"
+    @Published var statusText = ToolStatusLabelFormatter.promptToSelect("文件夹")
     @Published var errorMessage: String?
     @Published var isRenaming = false
     @Published var prefixText = ""
@@ -1604,7 +1604,7 @@ final class BatchRenameViewModel: ObservableObject {
     func clear() {
         folderURL = nil
         previewItems = []
-        statusText = "请选择文件夹"
+        statusText = ToolStatusLabelFormatter.promptToSelect("文件夹")
         errorMessage = nil
         isRenaming = false
         prefixText = ""
@@ -1623,14 +1623,14 @@ final class BatchRenameViewModel: ObservableObject {
         if panel.runModal() == .OK {
             folderURL = panel.url
             errorMessage = nil
-            statusText = "已选择文件夹，正在读取文件"
+            statusText = ToolStatusLabelFormatter.selectedRunning("文件夹", action: "读取文件")
             refreshPreview()
         }
     }
 
     func refreshPreview() {
         guard let folderURL else {
-            ToastManager.shared.show(.warning, "请选择文件夹")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.chooseFolder())
             return
         }
 
@@ -1654,36 +1654,36 @@ final class BatchRenameViewModel: ObservableObject {
                 return RenamePreviewItem(originalURL: url, proposedURL: proposed, isDirectory: isDirectory == true)
             }
 
-            statusText = previewItems.isEmpty ? "文件夹为空" : "已生成预览"
+            statusText = previewItems.isEmpty ? ToolStatusLabelFormatter.emptyState("文件夹") : ToolStatusLabelFormatter.completed("生成预览")
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "读取文件夹失败"
+            statusText = ToolStatusLabelFormatter.failed("读取文件夹")
         }
     }
 
     func applyRename() {
         guard folderURL != nil else {
-            ToastManager.shared.show(.warning, "请选择文件夹")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.chooseFolder())
             return
         }
 
         guard previewItems.isEmpty == false else {
-            ToastManager.shared.show(.warning, "没有可重命名的项目")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noRenamableItems())
             return
         }
 
         let targetPaths = Set(previewItems.map(\.proposedURL.path))
         if targetPaths.count != previewItems.count {
             errorMessage = "预览中存在重复目标名称，请先调整规则"
-            statusText = "存在命名冲突"
-            ToastManager.shared.show(.error, "预览中存在重复目标名称")
+            statusText = ToolStatusLabelFormatter.conflictState("命名")
+            ToastManager.shared.show(.error, ToolStatusLabelFormatter.duplicateTargetNames())
             return
         }
 
         isRenaming = true
         errorMessage = nil
-        statusText = "正在重命名..."
+        statusText = ToolStatusLabelFormatter.running("重命名")
 
         do {
             for item in previewItems {
@@ -1698,8 +1698,8 @@ final class BatchRenameViewModel: ObservableObject {
                 try FileManager.default.moveItem(at: item.originalURL, to: item.proposedURL)
             }
 
-            ToastManager.shared.show(.success, "批量重命名完成")
-            statusText = "重命名完成"
+            ToastManager.shared.show(.success, ToolStatusLabelFormatter.batchRenameCompleted())
+            statusText = ToolStatusLabelFormatter.completed("重命名")
             if let folderURL {
                 let refreshedFolder = folderURL
                 self.folderURL = refreshedFolder
@@ -1707,7 +1707,7 @@ final class BatchRenameViewModel: ObservableObject {
             }
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "重命名失败"
+            statusText = ToolStatusLabelFormatter.failed("重命名")
             ToastManager.shared.show(.error, error.localizedDescription)
         }
 
@@ -1848,7 +1848,7 @@ struct SRTToFCPXMLPanel: View {
                 .disabled(convertedXML.isEmpty)
 
                 if showCopied {
-                    Text("已复制!")
+                    Text(ToolStatusLabelFormatter.copiedText())
                         .font(.caption)
                         .foregroundStyle(.green)
                 }

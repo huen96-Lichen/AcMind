@@ -155,6 +155,8 @@ struct ShortcutRow: View {
                     TextField("动作名称", text: $shortcut.action)
                         .textFieldStyle(.plain)
                         .font(.body.weight(.medium))
+                        .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
+                        .layoutPriority(1)
                 } else {
                     Text(shortcut.action)
                         .font(.body)
@@ -166,12 +168,15 @@ struct ShortcutRow: View {
                         .textFieldStyle(.plain)
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
+                        .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
+                        .layoutPriority(1)
                 } else {
                     Text(shortcut.description)
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer()
 
@@ -179,7 +184,7 @@ struct ShortcutRow: View {
                 if shortcut.isEditable {
                     TextField("快捷键", text: $shortcut.shortcut)
                         .textFieldStyle(.roundedBorder)
-                        .frame(width: 110)
+                        .frame(minWidth: 110)
                 } else {
                     ForEach(shortcut.shortcut.split(separator: " "), id: \.self) { key in
                         Text(String(key))

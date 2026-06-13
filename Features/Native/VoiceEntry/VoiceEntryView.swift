@@ -66,7 +66,14 @@ struct VoiceEntryView: View {
             VStack(alignment: .leading, spacing: 16) {
                 AppSurfaceCard(title: "入口概览", subtitle: "只读摘要", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
-                        railSummaryRow(title: "启用", value: viewModel.companionVoiceEnabled ? "已启用" : "已关闭")
+                        railSummaryRow(
+                            title: "启用",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.companionVoiceEnabled,
+                                enabledText: "已启用",
+                                disabledText: "已关闭"
+                            )
+                        )
                         railSummaryRow(title: "快捷键", value: viewModel.companionVoiceShortcut)
                         railSummaryRow(title: "触发", value: viewModel.voiceTriggerMode.displayName)
                     }
@@ -75,9 +82,23 @@ struct VoiceEntryView: View {
                 AppSurfaceCard(title: "识别与输出", subtitle: "真实设置状态", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         railSummaryRow(title: "ASR", value: providerDisplayName(viewModel.voiceDefaultProvider))
-                        railSummaryRow(title: "润色", value: viewModel.voiceAutoPolish ? viewModel.voicePolishMode.displayName : "关闭")
+                        railSummaryRow(
+                            title: "润色",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.voiceAutoPolish,
+                                enabledText: viewModel.voicePolishMode.displayName,
+                                disabledText: "关闭"
+                            )
+                        )
                         railSummaryRow(title: "输出", value: viewModel.voiceOutputMode.displayName)
-                        railSummaryRow(title: "收集箱", value: viewModel.voiceSaveToInbox ? "写入" : "不写入")
+                        railSummaryRow(
+                            title: "收集箱",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.voiceSaveToInbox,
+                                enabledText: "写入",
+                                disabledText: "不写入"
+                            )
+                        )
                     }
                 }
             }
@@ -117,7 +138,11 @@ struct VoiceEntryView: View {
                 title: "入口",
                 icon: "keyboard",
                 rows: [
-                    ("启用状态", viewModel.companionVoiceEnabled ? "已启用" : "已关闭"),
+                    ("启用状态", SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.companionVoiceEnabled,
+                        enabledText: "已启用",
+                        disabledText: "已关闭"
+                    )),
                     ("快捷键", viewModel.companionVoiceShortcut),
                     ("触发模式", viewModel.voiceTriggerMode.displayName)
                 ]
@@ -129,7 +154,11 @@ struct VoiceEntryView: View {
                 rows: [
                     ("ASR 引擎", providerDisplayName(viewModel.voiceDefaultProvider)),
                     ("首选语言", languageDisplayName(viewModel.preferredLanguage)),
-                    ("润色模式", viewModel.voiceAutoPolish ? viewModel.voicePolishMode.displayName : "关闭")
+                    ("润色模式", SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.voiceAutoPolish,
+                        enabledText: viewModel.voicePolishMode.displayName,
+                        disabledText: "关闭"
+                    ))
                 ]
             )
 
@@ -139,8 +168,16 @@ struct VoiceEntryView: View {
                 rows: [
                     ("输出方式", viewModel.voiceOutputMode.displayName),
                     ("翻译目标", translationLanguageDisplayName(viewModel.translationLanguage)),
-                    ("收集箱", viewModel.voiceSaveToInbox ? "写入" : "不写入"),
-                    ("连续输入", viewModel.voiceAllowContinuation ? continuationText : "关闭")
+                    ("收集箱", SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.voiceSaveToInbox,
+                        enabledText: "写入",
+                        disabledText: "不写入"
+                    )),
+                    ("连续输入", SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.voiceAllowContinuation,
+                        enabledText: continuationText,
+                        disabledText: "关闭"
+                    ))
                 ]
             )
         }
@@ -277,7 +314,14 @@ struct VoiceEntryView: View {
 
     private var runtimeCard: some View {
         settingCard(title: "当前链路", description: "这张卡展示当前页面真正控制的运行链。") {
-            pipelineRow("快捷键入口", viewModel.companionVoiceEnabled ? viewModel.companionVoiceShortcut : "已关闭")
+            pipelineRow(
+                "快捷键入口",
+                SettingsStatusLabelFormatter.binaryState(
+                    isEnabled: viewModel.companionVoiceEnabled,
+                    enabledText: viewModel.companionVoiceShortcut,
+                    disabledText: "已关闭"
+                )
+            )
             divider
             pipelineRow("悬浮入口", "CompanionVoicePanel")
             divider
@@ -383,7 +427,8 @@ struct VoiceEntryView: View {
             Spacer()
             TextField("", text: value)
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 180)
+                .frame(minWidth: 180)
+                .layoutPriority(1)
         }
         .frame(minHeight: 44)
     }
@@ -467,7 +512,11 @@ struct VoiceEntryView: View {
         let output = viewModel.voiceOutputMode.displayName
         let translated = viewModel.voiceOutputMode == .translate ? " → \(translationLanguageDisplayName(viewModel.translationLanguage))" : ""
         let summary = "\(output)\(translated)"
-        return viewModel.voiceSaveToInbox ? "\(summary) + 收集箱" : summary
+        return SettingsStatusLabelFormatter.binaryState(
+            isEnabled: viewModel.voiceSaveToInbox,
+            enabledText: "\(summary) + 收集箱",
+            disabledText: summary
+        )
     }
 
     private var asrProviderOptions: [(id: String, title: String)] {
@@ -537,11 +586,15 @@ struct VoiceEntryView: View {
                 HStack(spacing: 10) {
                     TextField("匹配", text: correctionRuleBinding(for: rule, keyPath: \.pattern))
                         .textFieldStyle(.roundedBorder)
+                        .frame(minWidth: 120)
+                        .layoutPriority(1)
                     Image(systemName: "arrow.right")
                         .font(.system(size: 11))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                     TextField("替换", text: correctionRuleBinding(for: rule, keyPath: \.replacement))
                         .textFieldStyle(.roundedBorder)
+                        .frame(minWidth: 120)
+                        .layoutPriority(1)
                     Toggle("正则", isOn: correctionRuleBinding(for: rule, keyPath: \.isRegex))
                         .labelsHidden()
                         .toggleStyle(.switch)

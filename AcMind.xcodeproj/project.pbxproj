@@ -12,6 +12,15 @@
 		0E43A7A1E470D167AFAD33C9 /* AgentQuickAskServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */; };
 		13368FE91E928A672B830E8E /* SidebarItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FA6BB8339B7405BF83EAEE /* SidebarItemTests.swift */; };
 		15949678016CFF62ADE25EFC /* SayInputCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD44DDB60310419F0B14859C /* SayInputCoordinatorTests.swift */; };
+		18A1F4D0A000000000000001 /* ActivityStateLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A1F4D0A000000000000002 /* ActivityStateLabelFormatter.swift */; };
+		18A1F4D0A000000000000003 /* SayInputPresentationLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A1F4D0A000000000000004 /* SayInputPresentationLabelFormatter.swift */; };
+		18A1F4D0A000000000000005 /* SettingsStatusLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A1F4D0A000000000000006 /* SettingsStatusLabelFormatter.swift */; };
+		18A1F4D0A000000000000007 /* ToolStatusLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A1F4D0A000000000000008 /* ToolStatusLabelFormatter.swift */; };
+		18A1F4D0A000000000000009 /* SystemStatusLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A1F4D0A00000000000000A /* SystemStatusLabelFormatter.swift */; };
+		A10000000000000000000629 /* AcMindLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000628 /* AcMindLogger.swift */; };
+		A10000000000000000000632 /* UsageBurnMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000635 /* UsageBurnMonitor.swift */; };
+		A10000000000000000000633 /* AIUsageBurnLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000636 /* AIUsageBurnLabelFormatter.swift */; };
+		A10000000000000000000634 /* UsageBurnMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000637 /* UsageBurnMonitorTests.swift */; };
 		1C0651F25CDCE99CAB905DD8 /* NotchDashboardData.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE3B0498600B4B7DC5FCBA6 /* NotchDashboardData.swift */; };
 		207E12CABBA98EB84C016909 /* ClipboardPinNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C4E1C47034FFAA162FF8EF /* ClipboardPinNotifications.swift */; };
 		21A69308863F294061C2F55D /* SystemStatusCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D638B1E68AA2B66772A43D /* SystemStatusCleanupTests.swift */; };
@@ -50,6 +59,10 @@
 		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Assets.xcassets */; };
 		A10000000000000000000009 /* AcMindKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; };
 		A1000000000000000000000A /* AcMindKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* AcMindKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		41EBD65C796C4C698875EE21 /* MediaRemoteAdapter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AA833C84F0843D18BEF9B4B /* MediaRemoteAdapter.framework */; };
+		E50DC46E3E0A46B489B15E83 /* MediaRemoteAdapter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6AA833C84F0843D18BEF9B4B /* MediaRemoteAdapter.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8F6A205219734ADAB96F744A /* mediaremote-adapter.pl in Resources */ = {isa = PBXBuildFile; fileRef = C288AEE8DFA8467A858268FD /* mediaremote-adapter.pl */; };
+		91B08DA114AC423999AF8C35 /* MediaRemoteAdapterTestClient in Resources */ = {isa = PBXBuildFile; fileRef = E198C375D4104B26A66C1397 /* MediaRemoteAdapterTestClient */; };
 		A1000000000000000000000C /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* SidebarView.swift */; };
 		A10000000000000000000016 /* AcMindKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* AcMindKit.swift */; };
 		A10000000000000000000018 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Database.swift */; };
@@ -77,11 +90,16 @@
 		A1000000000000000000007C /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008C /* OllamaProvider.swift */; };
 		A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* OpenAICompatibleProvider.swift */; };
 		A1000000000000000000007E /* CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* CaptureService.swift */; };
+		B7D1F0A10000000000000001 /* ScreenshotPostProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D1F0A10000000000000002 /* ScreenshotPostProcessor.swift */; };
+		C1A1C1A10000000000000001 /* NowPlayingSourceLabelFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1C1A10000000000000002 /* NowPlayingSourceLabelFormatter.swift */; };
+		C1A1C1A10000000000000003 /* WebNowPlayingParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1C1A10000000000000004 /* WebNowPlayingParser.swift */; };
+		C1A1C1A10000000000000005 /* NowPlayingStalenessTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1C1A10000000000000006 /* NowPlayingStalenessTracker.swift */; };
 		A1000000000000000000007F /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ClipboardService.swift */; };
 		A10000000000000000000080 /* DistillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* DistillService.swift */; };
 		A10000000000000000000081 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* ExportService.swift */; };
 		A10000000000000000000082 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* KnowledgeService.swift */; };
 		A10000000000000000000096 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000093 /* SettingsService.swift */; };
+		A10000000000000000000601 /* SettingsMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000600 /* SettingsMigrationService.swift */; };
 		A10000000000000000000097 /* AssetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* AssetStore.swift */; };
 		A10000000000000000000098 /* VoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000095 /* VoiceService.swift */; };
 		A10000000000000000000099 /* SettingsServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000006D /* SettingsServiceProtocol.swift */; };
@@ -215,6 +233,7 @@
 		A10000000000000000000493 /* SettingsBackupPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000492 /* SettingsBackupPolicyTests.swift */; };
 		A10000000000000000000494 /* SettingsLocalPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000495 /* SettingsLocalPreferences.swift */; };
 		A10000000000000000000496 /* SettingsLocalPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000497 /* SettingsLocalPreferencesTests.swift */; };
+		A10000000000000000000627 /* SystemThermalThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000626 /* SystemThermalThrottleTests.swift */; };
 		A10000000000000000000499 /* AppNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000498 /* AppNotificationService.swift */; };
 		A1000000000000000000049A /* AppNotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000049B /* AppNotificationServiceTests.swift */; };
 		A100000000000000000004A1 /* ModelRoutingTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000004A0 /* ModelRoutingTypes.swift */; };
@@ -323,6 +342,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				A1000000000000000000000A /* AcMindKit.framework in Embed Frameworks */,
+				E50DC46E3E0A46B489B15E83 /* MediaRemoteAdapter.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -374,6 +394,9 @@
 		A10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000008 /* AcMindKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AcMindKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6AA833C84F0843D18BEF9B4B /* MediaRemoteAdapter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Resources/mediaremote-adapter/MediaRemoteAdapter.framework; sourceTree = SOURCE_ROOT; };
+		C288AEE8DFA8467A858268FD /* mediaremote-adapter.pl */ = {isa = PBXFileReference; lastKnownFileType = text.script.perl; path = Resources/mediaremote-adapter/mediaremote-adapter.pl; sourceTree = SOURCE_ROOT; };
+		E198C375D4104B26A66C1397 /* MediaRemoteAdapterTestClient */ = {isa = PBXFileReference; lastKnownFileType = compiled.mach-o.executable; path = Resources/mediaremote-adapter/MediaRemoteAdapterTestClient; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000000B /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sidebar/SidebarView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000015 /* AcMindKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit.swift; sourceTree = "<group>"; };
 		A10000000000000000000017 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
@@ -405,11 +428,21 @@
 		A1000000000000000000008C /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OllamaProvider.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008D /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/Providers/OpenAICompatibleProvider.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008E /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/CaptureService.swift; sourceTree = SOURCE_ROOT; };
+		B7D1F0A10000000000000002 /* ScreenshotPostProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/ScreenshotPostProcessor.swift; sourceTree = SOURCE_ROOT; };
+		18A1F4D0A000000000000002 /* ActivityStateLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/ActivityStateLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		18A1F4D0A000000000000004 /* SayInputPresentationLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/SayInputPresentationLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		18A1F4D0A000000000000006 /* SettingsStatusLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SettingsStatusLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		18A1F4D0A000000000000008 /* ToolStatusLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/ToolStatusLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		18A1F4D0A00000000000000A /* SystemStatusLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatusLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		C1A1C1A10000000000000002 /* NowPlayingSourceLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/NowPlayingSourceLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		C1A1C1A10000000000000004 /* WebNowPlayingParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/WebNowPlayingParser.swift; sourceTree = SOURCE_ROOT; };
+		C1A1C1A10000000000000006 /* NowPlayingStalenessTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/NowPlayingStalenessTracker.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000008F /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Clipboard/ClipboardService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000090 /* DistillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/DistillService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000091 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Workflow/ExportService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000092 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Knowledge/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000093 /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Settings/SettingsService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000600 /* SettingsMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Settings/SettingsMigrationService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000094 /* AssetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/AssetStore.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000095 /* VoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/VoiceService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000010D /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ViewModels/SettingsViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -543,8 +576,14 @@
 		A10000000000000000000492 /* SettingsBackupPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/SettingsBackupPolicyTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000495 /* SettingsLocalPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/SettingsLocalPreferences.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000497 /* SettingsLocalPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/SettingsLocalPreferencesTests.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000628 /* AcMindLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AcMindLogger.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000626 /* SystemThermalThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/SystemThermalThrottleTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000498 /* AppNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Notifications/AppNotificationService.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000049B /* AppNotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/AppNotificationServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000630 /* AcMindLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/AcMindLoggerTests.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000635 /* UsageBurnMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AI/UsageBurnMonitor.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000636 /* AIUsageBurnLabelFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/AIUsageBurnLabelFormatter.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000637 /* UsageBurnMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/UsageBurnMonitorTests.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000004A0 /* ModelRoutingTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/ModelRoutingTypes.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000004A2 /* AgentModelRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentModelRouter.swift; sourceTree = SOURCE_ROOT; };
 		A100000000000000000004A5 /* RecentToolsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/RecentToolsStore.swift; sourceTree = SOURCE_ROOT; };
@@ -637,6 +676,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000009 /* AcMindKit.framework in Frameworks */,
+				41EBD65C796C4C698875EE21 /* MediaRemoteAdapter.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -790,6 +830,14 @@
 				A10000000000000000000138 /* Hotkeys */,
 				A10000000000000000000139 /* Permissions */,
 				A100000000000000000001A9 /* UI */,
+				18A1F4D0A000000000000002 /* ActivityStateLabelFormatter.swift */,
+				18A1F4D0A000000000000004 /* SayInputPresentationLabelFormatter.swift */,
+				18A1F4D0A000000000000006 /* SettingsStatusLabelFormatter.swift */,
+				18A1F4D0A000000000000008 /* ToolStatusLabelFormatter.swift */,
+				18A1F4D0A00000000000000A /* SystemStatusLabelFormatter.swift */,
+				C1A1C1A10000000000000002 /* NowPlayingSourceLabelFormatter.swift */,
+				C1A1C1A10000000000000006 /* NowPlayingStalenessTracker.swift */,
+				C1A1C1A10000000000000004 /* WebNowPlayingParser.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -823,10 +871,21 @@
 			path = Design;
 			sourceTree = "<group>";
 		};
+		71E8247B78C4472F954D5573 /* mediaremote-adapter */ = {
+			isa = PBXGroup;
+			children = (
+				C288AEE8DFA8467A858268FD /* mediaremote-adapter.pl */,
+				E198C375D4104B26A66C1397 /* MediaRemoteAdapterTestClient */,
+				6AA833C84F0843D18BEF9B4B /* MediaRemoteAdapter.framework */,
+			);
+			path = "mediaremote-adapter";
+			sourceTree = "<group>";
+		};
 		A10000000000000000000063 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000004 /* Assets.xcassets */,
+				71E8247B78C4472F954D5573 /* mediaremote-adapter */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -915,6 +974,7 @@
 			children = (
 				A1000000000000000000008E /* CaptureService.swift */,
 				A1000000000000000000051B /* ScrollCaptureService.swift */,
+				B7D1F0A10000000000000002 /* ScreenshotPostProcessor.swift */,
 				A100000000000000000001A6 /* AutoRedactorService.swift */,
 			);
 			path = Capture;
@@ -997,6 +1057,7 @@
 			children = (
 				A10000000000000000000093 /* SettingsService.swift */,
 				A10000000000000000000505 /* CompanionConfigurationStore.swift */,
+				A10000000000000000000600 /* SettingsMigrationService.swift */,
 				A10000000000000000000463 /* AppAwareSettingsService.swift */,
 			);
 			path = Settings;
@@ -1170,6 +1231,7 @@
 				A100000000000000000004AF /* CompanionDisplaySettingsStoreTests.swift */,
 				A10000000000000000000492 /* SettingsBackupPolicyTests.swift */,
 				A10000000000000000000497 /* SettingsLocalPreferencesTests.swift */,
+				A10000000000000000000626 /* SystemThermalThrottleTests.swift */,
 				A10000000000000000000516 /* CaptureServiceScreenshotPolicyTests.swift */,
 				A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */,
 				A1000000000000000000051D /* SourceItemTests.swift */,
@@ -1447,6 +1509,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000005 /* Assets.xcassets in Resources */,
+				8F6A205219734ADAB96F744A /* mediaremote-adapter.pl in Resources */,
+				91B08DA114AC423999AF8C35 /* MediaRemoteAdapterTestClient in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1598,6 +1662,15 @@
 				A1000000000000000000007D /* OpenAICompatibleProvider.swift in Sources */,
 				A1000000000000000000007E /* CaptureService.swift in Sources */,
 				A1000000000000000000051A /* ScrollCaptureService.swift in Sources */,
+				B7D1F0A10000000000000001 /* ScreenshotPostProcessor.swift in Sources */,
+				18A1F4D0A000000000000001 /* ActivityStateLabelFormatter.swift in Sources */,
+				18A1F4D0A000000000000003 /* SayInputPresentationLabelFormatter.swift in Sources */,
+				18A1F4D0A000000000000005 /* SettingsStatusLabelFormatter.swift in Sources */,
+				18A1F4D0A000000000000007 /* ToolStatusLabelFormatter.swift in Sources */,
+				18A1F4D0A000000000000009 /* SystemStatusLabelFormatter.swift in Sources */,
+				C1A1C1A10000000000000001 /* NowPlayingSourceLabelFormatter.swift in Sources */,
+				C1A1C1A10000000000000005 /* NowPlayingStalenessTracker.swift in Sources */,
+				C1A1C1A10000000000000003 /* WebNowPlayingParser.swift in Sources */,
 				A1000000000000000000007F /* ClipboardService.swift in Sources */,
 				B10000000000000000000002 /* PipelineContext.swift in Sources */,
 				B10000000000000000000004 /* PipelineStage.swift in Sources */,
@@ -1617,7 +1690,11 @@
 				A10000000000000000000081 /* ExportService.swift in Sources */,
 				A10000000000000000000082 /* KnowledgeService.swift in Sources */,
 				A10000000000000000000096 /* SettingsService.swift in Sources */,
+				A10000000000000000000629 /* AcMindLogger.swift in Sources */,
+				A10000000000000000000632 /* UsageBurnMonitor.swift in Sources */,
+				A10000000000000000000633 /* AIUsageBurnLabelFormatter.swift in Sources */,
 				A10000000000000000000504 /* CompanionConfigurationStore.swift in Sources */,
+				A10000000000000000000601 /* SettingsMigrationService.swift in Sources */,
 				A10000000000000000000097 /* AssetStore.swift in Sources */,
 				A10000000000000000000488 /* WorkbenchProjectStore.swift in Sources */,
 				A100000000000000000004A4 /* RecentToolsStore.swift in Sources */,
@@ -1724,6 +1801,9 @@
 				A100000000000000000004AE /* CompanionDisplaySettingsStoreTests.swift in Sources */,
 				A10000000000000000000493 /* SettingsBackupPolicyTests.swift in Sources */,
 				A10000000000000000000496 /* SettingsLocalPreferencesTests.swift in Sources */,
+				A10000000000000000000631 /* AcMindLoggerTests.swift in Sources */,
+				A10000000000000000000634 /* UsageBurnMonitorTests.swift in Sources */,
+				A10000000000000000000627 /* SystemThermalThrottleTests.swift in Sources */,
 				A1000000000000000000049A /* AppNotificationServiceTests.swift in Sources */,
 				A10000000000000000000517 /* CaptureServiceScreenshotPolicyTests.swift in Sources */,
 				A10000000000000000000519 /* DesktopCapsuleConfigTests.swift in Sources */,
@@ -1933,6 +2013,10 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcMind 需要使用麦克风进行语音输入和语音转文字。";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSUserNotificationAlertStyle = alert;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Resources/mediaremote-adapter",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1969,6 +2053,10 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcMind 需要使用麦克风进行语音输入和语音转文字。";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSUserNotificationAlertStyle = alert;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Resources/mediaremote-adapter",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

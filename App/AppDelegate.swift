@@ -21,6 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var capsuleWindowController: CapsuleWindowController?
     private var oobeWindowController: OOBEWindowController?
     private var clipboardPinWindowManager: ClipboardPinWindowManager?
+    private var screenshotPreviewWindow: NSWindow?
 
     // MARK: - Notch Panel
 
@@ -58,6 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var registeredVoiceShortcut: KeyboardShortcut?
     private var isCompanionRuntimeEnabled = true
     private var isTerminating = false
+    private let logger = AcMindLogger(category: .lifecycle)
     private lazy var notchPanelController = NotchPanel.shared
     private lazy var desktopCapsuleController = DesktopCapsulePanel.shared
 
@@ -288,9 +290,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showClipboardPinWindow(item: ClipboardItem) {
         guard isTerminating == false else { return }
-        #if DEBUG
-        print("[ClipboardPin] request pin item=\(item.id) type=\(item.type.displayName)")
-        #endif
         if clipboardPinWindowManager == nil {
             let assetStore = self.assetStore ?? AssetStore()
             clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: assetStore)
@@ -298,23 +297,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         clipboardPinWindowManager?.show(item: item)
     }
 
+    func showClipboardPinWindow(captureResult: CaptureResult) {
+        let item = ClipboardItem.pinItem(from: captureResult)
+        showClipboardPinWindow(item: item)
+    }
+
     func hideClipboardPinWindows() {
         #if DEBUG
-        print("[ClipboardPin] hide all request")
+        logger.debug("ClipboardPin hide all request", file: "AppDelegate")
         #endif
         clipboardPinWindowManager?.hideAll()
     }
 
     func showClipboardPinWindows() {
         #if DEBUG
-        print("[ClipboardPin] show all request")
+        logger.debug("ClipboardPin show all request", file: "AppDelegate")
         #endif
         clipboardPinWindowManager?.showAll()
     }
 
     func closeClipboardPinWindows() {
         #if DEBUG
-        print("[ClipboardPin] close all request")
+        logger.debug("ClipboardPin close all request", file: "AppDelegate")
         #endif
         clipboardPinWindowManager?.closeAll()
     }
@@ -501,6 +505,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInlineToastNotification(_:)),
+            name: .acmindInlineToastRequested,
+            object: nil
+        )
+
         // 监听刘海面板导航通知 - 打开主窗口并切换路由
         NotificationCenter.default.addObserver(
             self,
@@ -570,7 +581,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handleAppDidBecomeActive(_ notification: Notification) {
         // App 回到前台时刷新所有权限状态
         Task {
-            print("[AcMind.App] app did become active, refreshing permissions")
+            logger.info("App did become active, refreshing permissions", file: "AppDelegate")
             await permissionManager?.refreshAll()
             await updateClipboardCapturePolicy(isAppActive: true)
         }
@@ -644,7 +655,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 await MainActor.run {
                     appState.showError(.serviceUnavailable("删除收集项"))
                 }
-                print("⚠️ 删除收集项失败: \(error.localizedDescription)")
+                logger.error("删除收集项失败: \(error.localizedDescription)", file: "AppDelegate")
             }
         }
     }
@@ -682,6 +693,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.showVoicePanel()
             }
         }
+    }
+
+    @objc private func handleInlineToastNotification(_ notification: Notification) {
+        let title = (notification.userInfo?["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = (notification.userInfo?["body"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let styleRaw = notification.userInfo?["style"] as? String
+
+        let messageParts = [title, body].compactMap { value -> String? in
+            guard let value, value.isEmpty == false else { return nil }
+            return value
+        }
+
+        let message = messageParts.joined(separator: " · ")
+        guard message.isEmpty == false else { return }
+
+        let toastType: NotchToastType
+        switch AppInlineNotificationStyle(rawValue: styleRaw ?? "") ?? .info {
+        case .success: toastType = .success
+        case .error: toastType = .error
+        case .warning: toastType = .warning
+        case .info: toastType = .info
+        }
+
+        ToastManager.shared.show(toastType, message)
     }
 
     @objc private func handleHotCornersDidChange(_ notification: Notification) {
@@ -741,7 +776,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         registeredGlobalShortcuts.removeAll()
 
-        for item in SidebarItem.mainItems {
+        for item in SidebarItem.shortcutItems {
             guard let shortcut = item.shortcut else { continue }
 
             do {
@@ -753,7 +788,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 registeredGlobalShortcuts.append(shortcut)
             } catch {
-                print("⚠️ 注册全局快捷键失败: \(item.displayName) - \(error.localizedDescription)")
+                logger.error("注册全局快捷键失败: \(item.displayName) - \(error.localizedDescription)", file: "AppDelegate")
             }
         }
 
@@ -769,7 +804,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 registeredGlobalShortcuts.append(shortcut)
             } catch {
-                print("⚠️ 注册截图热键失败: \(hotkeyString) - \(error.localizedDescription)")
+                logger.error("注册截图热键失败: \(hotkeyString) - \(error.localizedDescription)", file: "AppDelegate")
             }
         }
     }
@@ -798,8 +833,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupFnKeyMonitor()
         setupHeadphoneMonitor()
 
-        if let shortcut = UserDefaults.standard.string(forKey: "companionVoiceShortcut"), !shortcut.isEmpty {
-            registerVoiceShortcut(shortcut)
+        if !configuration.voiceShortcut.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            registerVoiceShortcut(configuration.voiceShortcut)
         }
     }
 
@@ -828,7 +863,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 registeredCompanionShortcuts.append(shortcut)
             } catch {
-                print("⚠️ 注册随身快捷键失败: \(shortcutConfig.action) - \(error.localizedDescription)")
+                logger.error("注册随身快捷键失败: \(shortcutConfig.action) - \(error.localizedDescription)", file: "AppDelegate")
             }
         }
     }
@@ -848,7 +883,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 registeredVoiceShortcut = shortcut
             } catch {
-                print("⚠️ 注册语音快捷键失败: \(shortcutString) - \(error.localizedDescription)")
+                logger.error("注册语音快捷键失败: \(shortcutString) - \(error.localizedDescription)", file: "AppDelegate")
                 ToastManager.shared.show(.error, "语音快捷键注册失败，请检查快捷键是否与其他应用冲突")
             }
         }
@@ -1019,20 +1054,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openApplication(bundleIdentifier: String) {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            print("⚠️ 未找到应用: \(bundleIdentifier)")
+            logger.warning("未找到应用: \(bundleIdentifier)", file: "AppDelegate")
             return
         }
 
         NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
             if let error {
-                print("⚠️ 打开应用失败: \(error.localizedDescription)")
+                self.logger.error("打开应用失败: \(error.localizedDescription)", file: "AppDelegate")
             }
         }
     }
 
     private func openURL(_ urlString: String) {
         guard let url = URL(string: urlString) else {
-            print("⚠️ 无效 URL: \(urlString)")
+            logger.warning("无效 URL: \(urlString)", file: "AppDelegate")
             return
         }
 
@@ -1058,7 +1093,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case "mainWindow":
             toggleMainWindow()
         default:
-            print("⚠️ 未知功能: \(identifier)")
+            logger.warning("未知功能: \(identifier)", file: "AppDelegate")
         }
     }
 
@@ -1066,7 +1101,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let item = SidebarItem(rawValue: routeIdentifier) {
             showPreferredSurface(for: item)
         } else {
-            print("⚠️ 未知内部路由: \(routeIdentifier)")
+            logger.warning("未知内部路由: \(routeIdentifier)", file: "AppDelegate")
         }
     }
 
@@ -1105,7 +1140,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 showMainWindow()
             }
         case .systemStatus:
-            appState.selectSidebarItem(.home)
+            appState.selectSidebarItem(.systemStatus)
             showMainWindow()
         case .voiceEntry:
             appState.selectSidebarItem(.voiceEntry)
@@ -1117,7 +1152,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func showSystemStatus() {
-        appState.selectSidebarItem(.home)
+        appState.selectSidebarItem(.systemStatus)
         showMainWindow()
     }
 
@@ -1222,6 +1257,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        screenshotPreviewWindow = previewWindow
         previewWindow.title = "截图预览"
         previewWindow.center()
         
@@ -1229,8 +1265,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let previewView = ScreenshotPreviewView(
             image: image,
             captureResult: result,
-            onDismiss: {
-                previewWindow.close()
+            onPin: { [weak self] in
+                self?.showClipboardPinWindow(captureResult: result)
+            },
+            onDismiss: { [weak self] in
+                self?.screenshotPreviewWindow?.close()
+                self?.screenshotPreviewWindow = nil
             }
         )
         previewWindow.contentView = NSHostingView(rootView: previewView)
@@ -1342,11 +1382,21 @@ extension Notification.Name {
     static let headphoneLongPressEnd = Notification.Name("headphone.longPressEnd")
 }
 
+extension AppDelegate: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        if window == screenshotPreviewWindow {
+            screenshotPreviewWindow = nil
+        }
+    }
+}
+
 // MARK: - Screenshot Preview View
 
 struct ScreenshotPreviewView: View {
     let image: NSImage?
     let captureResult: CaptureResult
+    let onPin: () -> Void
     let onDismiss: () -> Void
     
     @State private var imageSize: CGSize = .zero
@@ -1370,11 +1420,19 @@ struct ScreenshotPreviewView: View {
                 
                 Spacer()
                 
-                Button("保存到收集箱") {
-                    saveToInbox()
-                    onDismiss()
+                HStack(spacing: 8) {
+                    Button("Pin 到桌面") {
+                        onPin()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("保存到收集箱") {
+                        saveToInbox()
+                        onDismiss()
+                    }
+                    .keyboardShortcut(.return)
+                    .buttonStyle(.borderedProminent)
                 }
-                .keyboardShortcut(.return)
             }
             .padding()
             .background(AppSurfaceTokens.cardBackgroundSoft)

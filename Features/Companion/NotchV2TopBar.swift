@@ -71,8 +71,9 @@ struct NotchV2TopBar: View {
                 icon: "desktopcomputer",
                 title: "状态",
                 accent: NotchV2DesignTokens.cardBackgroundStrong,
+                isSelected: viewModel.effectiveSelectedPage == .systemStatus,
                 action: {
-                    (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                    viewModel.openSystemStatusPage()
                 }
             )
 
@@ -122,21 +123,10 @@ struct NotchV2TopBar: View {
     }
 
     private var voiceCompactTitle: String {
-        switch viewModel.voiceSurfaceState {
-        case .idle:
-            return "说入法"
-        case .listening:
-            if viewModel.realtimeTranscript.isEmpty {
-                return "收音中"
-            }
-            return "收音中 · \(viewModel.realtimeTranscript)"
-        case .processing:
-            return "清洗中"
-        case .completed:
-            return "已写入"
-        case .cancelled:
-            return "已取消"
-        }
+        ActivityStateLabelFormatter.voiceCompactLabel(
+            state: viewModel.voiceSurfaceState,
+            realtimeTranscript: viewModel.realtimeTranscript
+        )
     }
 
     private func statusPill(icon: String, title: String, accent: Color) -> some View {
@@ -181,10 +171,13 @@ struct NotchV2TopBar: View {
     }
 
     private var batteryText: String {
-        "\(Int(viewModel.batteryInfo.percentage.rounded()))%"
+        viewModel.batteryDisplayText
     }
 
     private var batteryAccent: Color {
+        if viewModel.batteryInfo.isAvailable == false {
+            return NotchV2DesignTokens.secondaryText
+        }
         if viewModel.batteryInfo.isInLowPowerMode {
             return .orange
         }
@@ -198,21 +191,7 @@ struct NotchV2TopBar: View {
     }
 
     private var batteryIconName: String {
-        if viewModel.batteryInfo.isCharging {
-            return "bolt.fill"
-        }
-        if viewModel.batteryInfo.isPluggedIn {
-            return "plug.fill"
-        }
-
-        let level = viewModel.batteryInfo.percentage
-        switch level {
-        case ..<10: return "battery.0"
-        case ..<25: return "battery.25"
-        case ..<50: return "battery.50"
-        case ..<75: return "battery.75"
-        default: return "battery.100"
-        }
+        viewModel.batteryIconName
     }
 
     private func topNavButton(title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {

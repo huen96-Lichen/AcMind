@@ -84,6 +84,69 @@ final class AgentTaskBoardServiceTests: XCTestCase {
         XCTAssertNil(retried?.errorMessage)
         XCTAssertEqual(retried?.retryCount, 1)
     }
+
+    func testTaskClosureSummaryShowsTimelineAndNextActionForRunningTask() {
+        let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let startedAt = Date(timeIntervalSince1970: 1_700_000_060)
+        let task = AgentTask(
+            id: "task-running",
+            title: "整理会议纪要",
+            status: .running,
+            steps: [
+                TaskStep(title: "读取转写", status: .completed, order: 0, completedAt: startedAt),
+                TaskStep(title: "生成摘要", status: .running, order: 1, startedAt: startedAt)
+            ],
+            currentStepIndex: 1,
+            createdAt: createdAt,
+            updatedAt: startedAt,
+            startedAt: startedAt
+        )
+
+        let summary = AgentTaskClosureSummary.make(from: task)
+
+        XCTAssertEqual(summary.title, "整理会议纪要")
+        XCTAssertEqual(summary.stateLabel, "执行中")
+        XCTAssertEqual(summary.nextActionTitle, "继续执行")
+        XCTAssertEqual(summary.timeline.map(\.title), ["已创建", "已开始", "读取转写", "生成摘要"])
+        XCTAssertEqual(summary.timeline.last?.status, .running)
+    }
+
+    func testTaskClosureSummaryShowsRetryActionForFailedTaskWithinRetryLimit() {
+        let task = AgentTask(
+            id: "task-failed",
+            title: "同步知识卡片",
+            status: .failed,
+            errorMessage: "网络超时",
+            retryCount: 1,
+            maxRetries: 3
+        )
+
+        let summary = AgentTaskClosureSummary.make(from: task)
+
+        XCTAssertEqual(summary.stateLabel, "失败")
+        XCTAssertEqual(summary.detail, "网络超时")
+        XCTAssertEqual(summary.nextActionTitle, "重试任务")
+        XCTAssertTrue(summary.canRetry)
+    }
+
+    func testTaskClosureSummaryShowsArchiveActionForCompletedTaskWithProducts() {
+        let task = AgentTask(
+            id: "task-completed",
+            title: "生成周报",
+            status: .completed,
+            products: [
+                TaskProduct(name: "周报.md", type: .markdown)
+            ],
+            completedAt: Date(timeIntervalSince1970: 1_700_000_120)
+        )
+
+        let summary = AgentTaskClosureSummary.make(from: task)
+
+        XCTAssertEqual(summary.stateLabel, "已完成")
+        XCTAssertEqual(summary.detail, "已生成 1 个产物")
+        XCTAssertEqual(summary.nextActionTitle, "归档为沉淀")
+        XCTAssertFalse(summary.canRetry)
+    }
 }
 
 final class MockTaskStorage: StorageServiceProtocol, @unchecked Sendable {

@@ -269,7 +269,7 @@ struct BatchDownloadResultItem: Identifiable, Hashable {
 final class BatchDownloadViewModel: ObservableObject {
     @Published var pageURLString = ""
     @Published var outputFolder: URL = ToolFileSupport.defaultDownloadDirectory(named: "BatchDownloads")
-    @Published var statusText = "等待输入网页 URL"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("网页 URL")
     @Published var errorMessage: String?
     @Published var isRunning = false
     @Published var results: [BatchDownloadResultItem] = []
@@ -283,7 +283,7 @@ final class BatchDownloadViewModel: ObservableObject {
     func clear() {
         pageURLString = ""
         outputFolder = ToolFileSupport.defaultDownloadDirectory(named: "BatchDownloads")
-        statusText = "等待输入网页 URL"
+        statusText = ToolStatusLabelFormatter.waitingToInput("网页 URL")
         errorMessage = nil
         isRunning = false
         results = []
@@ -302,16 +302,16 @@ final class BatchDownloadViewModel: ObservableObject {
 
     func startDownload() {
         guard let pageURL = normalizeURL(pageURLString) else {
-            statusText = "URL 无效"
+            statusText = ToolStatusLabelFormatter.invalidURL("URL")
             errorMessage = "请输入有效网页地址。"
-            ToastManager.shared.show(.warning, "请输入有效网页地址")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.invalidInput("网页地址"))
             return
         }
 
         isRunning = true
         errorMessage = nil
         results = []
-        statusText = "正在抓取网页资源..."
+        statusText = ToolStatusLabelFormatter.running("抓取网页资源")
 
         Task {
             do {
@@ -323,14 +323,14 @@ final class BatchDownloadViewModel: ObservableObject {
                 )
                 await MainActor.run {
                     self.results = downloadResults
-                    self.statusText = "完成，下载了 \(downloadResults.filter(\.isDownloaded).count) 个资源"
+                    self.statusText = ToolStatusLabelFormatter.completedDownloadCount(downloadResults.filter(\.isDownloaded).count, noun: "资源")
                     self.isRunning = false
-                    ToastManager.shared.show(.success, "批量下载完成")
+                    ToastManager.shared.show(.success, ToolStatusLabelFormatter.completed("批量下载"))
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
-                    self.statusText = "下载失败"
+                    self.statusText = ToolStatusLabelFormatter.failed("下载")
                     self.isRunning = false
                     ToastManager.shared.show(.error, error.localizedDescription)
                 }
@@ -343,7 +343,7 @@ final class BatchDownloadViewModel: ObservableObject {
         let summary = results.map { "\($0.sourceURL.absoluteString) -> \($0.destinationURL.path)" }.joined(separator: "\n")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(summary, forType: .string)
-        ToastManager.shared.show(.success, "摘要已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("摘要"))
     }
 
     func openOutputFolder() {
@@ -698,7 +698,7 @@ final class VideoDownloadViewModel: ObservableObject {
     @Published var videoURLString = ""
     @Published var format: VideoDownloadFormat = .best
     @Published var outputFolder: URL = ToolFileSupport.defaultDownloadDirectory(named: "VideoDownloads")
-    @Published var statusText = "等待输入视频 URL"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("视频 URL")
     @Published var errorMessage: String?
     @Published var isRunning = false
     @Published var downloadedFiles: [VideoDownloadItem] = []
@@ -707,7 +707,7 @@ final class VideoDownloadViewModel: ObservableObject {
         videoURLString = ""
         format = .best
         outputFolder = ToolFileSupport.defaultDownloadDirectory(named: "VideoDownloads")
-        statusText = "等待输入视频 URL"
+        statusText = ToolStatusLabelFormatter.waitingToInput("视频 URL")
         errorMessage = nil
         isRunning = false
         downloadedFiles = []
@@ -726,23 +726,23 @@ final class VideoDownloadViewModel: ObservableObject {
 
     func startDownload() {
         guard let url = normalizeURL(videoURLString) else {
-            statusText = "URL 无效"
+            statusText = ToolStatusLabelFormatter.invalidURL("URL")
             errorMessage = "请输入有效视频地址。"
-            ToastManager.shared.show(.warning, "请输入有效视频地址")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.invalidInput("视频地址"))
             return
         }
 
         guard let ytDLP = ToolBinaryResolver.executablePath(named: "yt-dlp") else {
-            statusText = "未找到 yt-dlp"
+            statusText = ToolStatusLabelFormatter.missingTool("yt-dlp")
             errorMessage = "请先安装 yt-dlp。"
-            ToastManager.shared.show(.error, "未找到 yt-dlp")
+            ToastManager.shared.show(.error, ToolStatusLabelFormatter.missingTool("yt-dlp"))
             return
         }
 
         isRunning = true
         errorMessage = nil
         downloadedFiles = []
-        statusText = "正在调用 yt-dlp..."
+        statusText = ToolStatusLabelFormatter.running("调用 yt-dlp")
 
         Task {
             do {
@@ -760,18 +760,18 @@ final class VideoDownloadViewModel: ObservableObject {
                     }
                     if latestFiles.isEmpty {
                         self.statusText = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            ? "下载完成"
+                            ? ToolStatusLabelFormatter.completed("下载")
                             : result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
                     } else {
-                        self.statusText = "下载完成，生成 \(latestFiles.count) 个文件"
+                        self.statusText = ToolStatusLabelFormatter.completedDownloadCount(latestFiles.count, noun: "文件")
                     }
                     self.isRunning = false
-                    ToastManager.shared.show(.success, "视频下载完成")
+                    ToastManager.shared.show(.success, ToolStatusLabelFormatter.downloadCompleted("视频"))
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
-                    self.statusText = "下载失败"
+                    self.statusText = ToolStatusLabelFormatter.failed("下载")
                     self.isRunning = false
                     ToastManager.shared.show(.error, error.localizedDescription)
                 }
@@ -783,7 +783,7 @@ final class VideoDownloadViewModel: ObservableObject {
         guard let latest = downloadedFiles.first else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(latest.destinationURL.path, forType: .string)
-        ToastManager.shared.show(.success, "文件路径已复制")
+        ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("文件路径"))
     }
 
     func openOutputFolder() {
@@ -862,8 +862,8 @@ struct ModelManagementPanel: View {
                     .buttonStyle(.bordered)
                 }
             ),
-            leadingRailWidth: 232,
-            trailingRailWidth: 232,
+            leadingRailWidth: 216,
+            trailingRailWidth: 0,
             leadingRail: {
                 leftPane
             },
@@ -871,7 +871,7 @@ struct ModelManagementPanel: View {
                 detailPane
             },
             trailingRail: {
-                modelSummaryRail
+                EmptyView()
             }
         )
         .background(AppSurfaceTokens.background)
@@ -1003,65 +1003,41 @@ struct ModelManagementPanel: View {
         .background(AppSurfaceTokens.background)
     }
 
-    private var modelSummaryRail: some View {
+    private var detailPane: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "当前状态", subtitle: "当前筛选结果的汇总", padding: 14) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        summaryRow(title: "条目", value: "\(viewModel.filteredItems.count) / \(viewModel.items.count)")
-                        summaryRow(title: "默认项", value: "\(viewModel.summary.defaultCount)")
-                        summaryRow(title: "已下载", value: "\(viewModel.summary.downloadedCount)")
-                    }
-                }
-
-                AppSurfaceCard(title: "选中项", subtitle: "当前条目的摘要", padding: 14) {
-                    if let item = viewModel.selectedItem {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(item.displayName)
+            VStack(alignment: .leading, spacing: 14) {
+                AppSurfaceCard(title: "当前状态", subtitle: "筛选结果与选中项摘要", padding: 12) {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("条目 \(viewModel.filteredItems.count) / \(viewModel.items.count)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text(item.domain.displayName)
-                                .font(.system(size: 12))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            Text(item.detailText ?? item.statusLabel)
+                            Text("默认项 \(viewModel.summary.defaultCount) · 已下载 \(viewModel.summary.downloadedCount)")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
-                    } else {
-                        Text("尚未选择模型")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                        Spacer(minLength: 0)
+
+                        if let item = viewModel.selectedItem {
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text(item.displayName)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                                    .lineLimit(1)
+                                Text("\(item.domain.displayName) · \(item.statusLabel)")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                    .lineLimit(1)
+                            }
+                        } else {
+                            Text("尚未选择条目")
+                                .font(.system(size: 12))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        }
                     }
                 }
 
-                AppSurfaceCard(title: "操作", subtitle: "只保留当前条目的动作", padding: 14) {
-                    VStack(spacing: 8) {
-                        Button("清除筛选") { viewModel.clearFilters() }
-                            .buttonStyle(.bordered)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-            .padding(16)
-        }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
-    }
-
-    private func summaryRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 12))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Spacer()
-            Text(value)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-        }
-    }
-
-    private var detailPane: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
                 if let item = viewModel.selectedItem {
                     detailHeader(item)
                     detailFacts(item)
@@ -1071,7 +1047,7 @@ struct ModelManagementPanel: View {
                     detailEmptyState
                 }
             }
-            .padding(24)
+            .padding(18)
         }
         .background(
             LinearGradient(
@@ -1208,21 +1184,21 @@ struct ModelManagementPanel: View {
     }
 
     private func detailHeader(_ item: ModelManagementItem) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 18)
                         .fill(iconTint(for: item).opacity(0.15))
-                        .frame(width: 64, height: 64)
+                        .frame(width: 56, height: 56)
                     Image(systemName: iconName(for: item))
-                        .font(.system(size: 25, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(iconTint(for: item))
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 8) {
                         Text(item.displayName)
-                            .font(.title2)
+                            .font(.system(size: 19, weight: .semibold))
                             .fontWeight(.semibold)
                         if item.isDefault {
                             badge("默认", tint: .blue)
@@ -1245,7 +1221,7 @@ struct ModelManagementPanel: View {
                 Spacer()
             }
         }
-        .padding(18)
+        .padding(16)
         .background(RoundedRectangle(cornerRadius: 20).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
@@ -1385,7 +1361,7 @@ struct ModelManagementPanel: View {
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
-        .padding(24)
+        .padding(20)
         .background(RoundedRectangle(cornerRadius: 20).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
@@ -1690,7 +1666,7 @@ final class ModelManagementViewModel: ObservableObject {
     private let aiRuntime: AIRuntimeProtocol
 
     @Published var items: [ModelManagementItem] = []
-    @Published var statusText = "等待加载"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToLoad("")
     @Published var busyItemID: String?
     @Published var errorMessage: String?
     @Published var searchQuery = ""
@@ -1738,11 +1714,15 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     var defaultAIProviderName: String {
-        items.first(where: { $0.domain == .ai && $0.isDefault })?.displayName ?? "未设置"
+        ToolStatusLabelFormatter.fallbackText(
+            value: items.first(where: { $0.domain == .ai && $0.isDefault })?.displayName ?? ""
+        )
     }
 
     var defaultSpeechProviderName: String {
-        items.first(where: { $0.domain == .speechRecognition && $0.isDefault })?.displayName ?? "未设置"
+        ToolStatusLabelFormatter.fallbackText(
+            value: items.first(where: { $0.domain == .speechRecognition && $0.isDefault })?.displayName ?? ""
+        )
     }
 
     var voiceCloneStatusText: String {
@@ -1809,7 +1789,7 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     func refresh() async {
-        statusText = "正在加载模型数据..."
+        statusText = ToolStatusLabelFormatter.loading("模型数据")
         errorMessage = nil
 
         async let settingsTask = settingsService.getSettings()
@@ -1831,10 +1811,10 @@ final class ModelManagementViewModel: ObservableObject {
             apiKeyAvailabilityByProviderID = await loadKeyAvailability(for: keyProbeIDs(for: providers))
             items = buildItems()
             ensureSelectionVisible()
-            statusText = "已加载 \(items.count) 个条目"
+            statusText = ToolStatusLabelFormatter.loadedCount(items.count, noun: "条目")
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "加载失败"
+            statusText = ToolStatusLabelFormatter.failed("加载")
         }
     }
 
@@ -1928,14 +1908,11 @@ final class ModelManagementViewModel: ObservableObject {
         let aiItems = providerConfigs.map { provider in
             let models = providerModelsByID[provider.id] ?? []
             let hasKey = apiKeyAvailabilityByProviderID[provider.id] ?? false
-            let status: String
-            if provider.enabled == false {
-                status = "已停用"
-            } else if provider.providerType == .local || hasKey {
-                status = "可用"
-            } else {
-                status = "待配置"
-            }
+            let status = provider.enabled == false
+                ? "已停用"
+                : ToolStatusLabelFormatter.availabilityState(
+                    isAvailable: provider.providerType == .local || hasKey
+                )
 
             return ModelManagementItem(
                 id: "ai.\(provider.id)",
@@ -1946,7 +1923,10 @@ final class ModelManagementViewModel: ObservableObject {
                 isEnabled: provider.enabled,
                 isAvailable: provider.enabled && (provider.providerType == .local || hasKey),
                 isDownloaded: provider.providerType == .local || provider.tier.isLocal,
-                sizeLabel: provider.modelId.isEmpty ? "未配置模型" : provider.modelId,
+                sizeLabel: ToolStatusLabelFormatter.fallbackText(
+                    value: provider.modelId,
+                    fallback: SettingsStatusLabelFormatter.unconfiguredModelText
+                ),
                 statusLabel: status,
                 tags: [
                     provider.providerType.displayName,
@@ -2054,7 +2034,7 @@ final class ModelManagementViewModel: ObservableObject {
         if provider.isLocal {
             return isLocalSpeechProvider(provider) ? "已下载" : "未下载"
         }
-        return speechAvailability(for: provider) ? "可用" : "待配置"
+        return ToolStatusLabelFormatter.availabilityState(isAvailable: speechAvailability(for: provider))
     }
 
     private func speechAvailability(for provider: STTProvider) -> Bool {
@@ -2318,7 +2298,7 @@ struct APITestPanel: View {
                 if let provider = viewModel.selectedProvider {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("类型：\(provider.providerType.displayName)")
-                        Text("模型 ID: \(provider.modelId.isEmpty ? "未设置" : provider.modelId)")
+                        Text("模型 ID: \(ToolStatusLabelFormatter.fallbackText(value: provider.modelId))")
                         Text("基础地址: \(provider.baseURL.isEmpty ? provider.providerType.defaultBaseURL : provider.baseURL)")
                     }
                     .font(.caption)
@@ -2423,7 +2403,7 @@ final class APITestViewModel: ObservableObject {
     @Published var selectedProviderId: String?
     @Published var testPrompt = "请用一句话回答：AcMind 的连通检查成功了吗？"
     @Published var outputText = ""
-    @Published var statusText = "等待加载提供商"
+    @Published var statusText = ToolStatusLabelFormatter.waitingToLoad("提供商")
     @Published var isRunning = false
     @Published var lastSavedURL: URL?
 
@@ -2438,7 +2418,7 @@ final class APITestViewModel: ObservableObject {
     func refreshProviders() async {
         providers = await aiRuntime.listProviders()
         selectedProviderId = selectedProviderId ?? providers.first?.id
-        statusText = providers.isEmpty ? "暂无提供商可检查" : "已加载 \(providers.count) 个提供商"
+            statusText = providers.isEmpty ? ToolStatusLabelFormatter.noItemsAvailable("提供商") : ToolStatusLabelFormatter.loadedCount(providers.count, noun: "提供商")
     }
 
     func runHealthCheck() async {
@@ -2446,14 +2426,14 @@ final class APITestViewModel: ObservableObject {
         isRunning = true
         outputText = ""
         lastSavedURL = nil
-        statusText = "正在进行连通检查..."
+        statusText = ToolStatusLabelFormatter.running("进行连通检查")
         do {
             let ok = try await aiRuntime.healthCheck(providerId: providerId)
             outputText = ok ? "连通检查：正常" : "连通检查：失败"
-            statusText = ok ? "连通检查通过" : "连通检查失败"
+            statusText = ok ? ToolStatusLabelFormatter.passed("连通检查") : ToolStatusLabelFormatter.failed("连通检查")
         } catch {
             outputText = error.localizedDescription
-            statusText = "连通检查失败"
+            statusText = ToolStatusLabelFormatter.failed("连通检查")
         }
         isRunning = false
     }
@@ -2463,14 +2443,14 @@ final class APITestViewModel: ObservableObject {
         isRunning = true
         outputText = ""
         lastSavedURL = nil
-        statusText = "正在拉取模型列表..."
+        statusText = ToolStatusLabelFormatter.running("拉取模型列表")
         do {
             let models = try await aiRuntime.listModels(providerId: providerId)
             outputText = models.isEmpty ? "没有返回模型列表" : models.joined(separator: "\n")
-            statusText = "模型列表已获取"
+            statusText = ToolStatusLabelFormatter.fetched("模型列表")
         } catch {
             outputText = error.localizedDescription
-            statusText = "模型列表获取失败"
+            statusText = ToolStatusLabelFormatter.failed("模型列表获取")
         }
         isRunning = false
     }
@@ -2480,7 +2460,7 @@ final class APITestViewModel: ObservableObject {
         isRunning = true
         outputText = ""
         lastSavedURL = nil
-        statusText = "正在发送对话验证..."
+        statusText = ToolStatusLabelFormatter.running("发送对话验证")
         do {
             let modelId = selectedProvider?.modelId.trimmingCharacters(in: .whitespacesAndNewlines)
             let response = try await aiRuntime.chat(
@@ -2489,10 +2469,10 @@ final class APITestViewModel: ObservableObject {
                 model: (modelId?.isEmpty == false) ? modelId : nil
             )
             outputText = response.content
-            statusText = "对话验证完成"
+            statusText = ToolStatusLabelFormatter.completed("对话验证")
         } catch {
             outputText = error.localizedDescription
-            statusText = "对话验证失败"
+            statusText = ToolStatusLabelFormatter.failed("对话验证")
         }
         isRunning = false
     }
@@ -2501,7 +2481,7 @@ final class APITestViewModel: ObservableObject {
         guard outputText.isEmpty == false else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputText, forType: .string)
-        ToastManager.shared.show(.success, "结果已复制")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.copied("结果"))
     }
 
     func saveOutput() {
@@ -2516,9 +2496,9 @@ final class APITestViewModel: ObservableObject {
             do {
                 try outputText.write(to: url, atomically: true, encoding: .utf8)
                 lastSavedURL = url
-                ToastManager.shared.show(.success, "结果已保存")
+                ToastManager.shared.show(.success, ToolStatusLabelFormatter.saved("结果"))
             } catch {
-                ToastManager.shared.show(.error, "保存失败: \(error.localizedDescription)")
+                ToastManager.shared.show(.error, ToolStatusLabelFormatter.saveFailed(error.localizedDescription))
             }
         }
     }

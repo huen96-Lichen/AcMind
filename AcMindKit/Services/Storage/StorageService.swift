@@ -245,6 +245,10 @@ public final class StorageService: StorageServiceProtocol, @unchecked Sendable {
     public func setSetting(key: String, value: String) async throws {
         try await db.setSetting(key: key, value: value)
     }
+
+    public func deleteSetting(key: String) async throws {
+        try await db.deleteSetting(key: key)
+    }
     
     // MARK: - Migration
     

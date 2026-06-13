@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对照组 UI 组件目录 v0.4</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=SF+Pro+Display:wght@300;400;500;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg-0:#0a0a0c;--bg-1:#111116;--bg-2:#1a1a22;--bg-3:#24242e;
+  --bg-card:rgba(255,255,255,0.03);--bg-card-hover:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.06);--border-hover:rgba(255,255,255,0.12);
+  --text-0:#f0f0f4;--text-1:#a0a0b0;--text-2:#606070;
+  --accent-1:#6c8cff;--accent-2:#ff6c8c;--accent-3:#6cffa0;--accent-4:#ffc06c;--accent-5:#c06cff;--accent-6:#6cd8ff;--accent-7:#ff9f43;
+  --radius:12px;--radius-sm:8px;--radius-xs:6px;
+  --mono:'JetBrains Mono',monospace;--sans:'Outfit',sans-serif;
+  --sidebar-w:260px;--topbar-h:56px;
+}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--sans);background:var(--bg-0);color:var(--text-0);overflow:hidden;height:100vh}
+
+.app{display:grid;grid-template-columns:var(--sidebar-w) 1fr;grid-template-rows:var(--topbar-h) 1fr;height:100vh}
+
+/* topbar */
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--bg-1);border-bottom:1px solid var(--border);position:relative;z-index:10}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent-1),transparent);opacity:0.3}
+.logo{font-weight:700;font-size:1.05rem;letter-spacing:-0.02em;display:flex;align-items:center;gap:10px}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--accent-1);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.7)}}
+.search-box{flex:1;max-width:420px;position:relative;margin:0 auto}
+.search-box input{width:100%;padding:7px 14px 7px 34px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-0);font-family:var(--sans);font-size:0.85rem;outline:none;transition:border 0.2s}
+.search-box input:focus{border-color:var(--accent-1)}
+.search-box input::placeholder{color:var(--text-2)}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-2)}
+.stats{font-size:0.75rem;color:var(--text-2);font-family:var(--mono);white-space:nowrap}
+
+/* sidebar */
+.sidebar{background:var(--bg-1);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0;scrollbar-width:thin;scrollbar-color:var(--bg-3) transparent}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px}
+.nav-group{margin-bottom:2px}
+.nav-label{padding:8px 20px 4px;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-2);font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:6px 20px;cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;font-size:0.82rem;color:var(--text-1)}
+.nav-item:hover{background:rgba(255,255,255,0.03);color:var(--text-0)}
+.nav-item.active{background:rgba(108,140,255,0.08);color:var(--accent-1);border-left-color:var(--accent-1)}
+.nav-item .badge{margin-left:auto;font-size:0.6rem;font-family:var(--mono);background:var(--bg-3);color:var(--text-2);padding:1px 6px;border-radius:10px}
+.nav-item.active .badge{background:rgba(108,140,255,0.15);color:var(--accent-1)}
+.nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* main */
+.main{overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--bg-3) transparent}
+.main::-webkit-scrollbar{width:6px}
+.main::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:3px}
+
+/* filter */
+.filter-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.filter-chip{padding:4px 12px;border-radius:16px;font-size:0.72rem;cursor:pointer;background:var(--bg-2);border:1px solid var(--border);color:var(--text-1);transition:all 0.15s;font-family:var(--sans)}
+.filter-chip:hover{border-color:var(--border-hover);color:var(--text-0)}
+.filter-chip.active{background:rgba(108,140,255,0.12);border-color:var(--accent-1);color:var(--accent-1)}
+
+/* project header */
+.project-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.project-icon{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;color:#fff}
+.project-title{font-size:1.2rem;font-weight:600;letter-spacing:-0.02em}
+.project-subtitle{font-size:0.75rem;color:var(--text-2);margin-top:1px}
+
+/* component grid */
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.comp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.comp-card:hover{background:var(--bg-card-hover);border-color:var(--border-hover);transform:translateY(-1px);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+.comp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity 0.2s}
+.comp-card:hover::before{opacity:1}
+
+/* preview area */
+.comp-preview{padding:16px;min-height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.comp-info{padding:12px 14px}
+.comp-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.comp-name{font-family:var(--mono);font-size:0.82rem;font-weight:600;color:var(--text-0)}
+.comp-type{font-size:0.6rem;padding:2px 7px;border-radius:10px;font-family:var(--mono);white-space:nowrap;flex-shrink:0}
+.comp-desc{font-size:0.78rem;color:var(--text-1);line-height:1.45;margin-bottom:6px}
+.comp-path{font-size:0.65rem;color:var(--text-2);font-family:var(--mono);padding:4px 8px;background:var(--bg-2);border-radius:var(--radius-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
+.comp-tags{display:flex;flex-wrap:wrap;gap:3px}
+.comp-tag{font-size:0.6rem;padding:1px 7px;border-radius:4px;background:var(--bg-2);color:var(--text-2)}
+
+/* color accents per project */
+[data-project="hermespet"] .nav-dot,[data-project="hermespet"] .project-icon{background:#6c8cff}
+[data-project="hermespet"] .comp-card::before{background:linear-gradient(90deg,#6c8cff,#8ca8ff)}
+[data-project="hermespet"] .comp-type{background:rgba(108,140,255,0.12);color:#6c8cff}
+[data-project="boringnotch"] .nav-dot,[data-project="boringnotch"] .project-icon{background:#ff6c8c}
+[data-project="boringnotch"] .comp-card::before{background:linear-gradient(90deg,#ff6c8c,#ff8ca8)}
+[data-project="boringnotch"] .comp-type{background:rgba(255,108,140,0.12);color:#ff6c8c}
+[data-project="ccstatistics"] .nav-dot,[data-project="ccstatistics"] .project-icon{background:#6cffa0}
+[data-project="ccstatistics"] .comp-card::before{background:linear-gradient(90deg,#6cffa0,#8cffb8)}
+[data-project="ccstatistics"] .comp-type{background:rgba(108,255,160,0.12);color:#6cffa0}
+[data-project="hot"] .nav-dot,[data-project="hot"] .project-icon{background:#ffc06c}
+[data-project="hot"] .comp-card::before{background:linear-gradient(90deg,#ffc06c,#ffd08c)}
+[data-project="hot"] .comp-type{background:rgba(255,192,108,0.12);color:#ffc06c}
+[data-project="iglance"] .nav-dot,[data-project="iglance"] .project-icon{background:#c06cff}
+[data-project="iglance"] .comp-card::before{background:linear-gradient(90deg,#c06cff,#d08cff)}
+[data-project="iglance"] .comp-type{background:rgba(192,108,255,0.12);color:#c06cff}
+[data-project="typeno"] .nav-dot,[data-project="typeno"] .project-icon{background:#6cd8ff}
+[data-project="typeno"] .comp-card::before{background:linear-gradient(90deg,#6cd8ff,#8ce0ff)}
+[data-project="typeno"] .comp-type{background:rgba(108,216,255,0.12);color:#6cd8ff}
+[data-project="istat"] .nav-dot,[data-project="istat"] .project-icon{background:#ff9f43}
+[data-project="istat"] .comp-card::before{background:linear-gradient(90deg,#ff9f43,#ffb86c)}
+[data-project="istat"] .comp-type{background:rgba(255,159,67,0.12);color:#ff9f43}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:40px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-1);border:1px solid var(--border);border-radius:16px;width:100%;max-width:960px;max-height:85vh;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);display:flex;flex-direction:column}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--mono);font-size:1.05rem;font-weight:600}
+.modal-close{width:30px;height:30px;border-radius:8px;border:none;background:var(--bg-3);color:var(--text-1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.15s}
+.modal-close:hover{background:var(--accent-2);color:#fff}
+.modal-body{overflow-y:auto;padding:20px;flex:1;scrollbar-width:thin;scrollbar-color:var(--bg-3) transparent}
+.modal-body::-webkit-scrollbar{width:4px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px}
+.modal-preview-area{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:24px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;min-height:120px}
+.modal-section{margin-bottom:16px}
+.modal-section-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-2);margin-bottom:6px;font-weight:600}
+.modal-kv{display:grid;grid-template-columns:100px 1fr;gap:4px 10px;font-size:0.78rem}
+.modal-kv dt{color:var(--text-2)}
+.modal-kv dd{color:var(--text-1)}
+.code-block{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-family:var(--mono);font-size:0.74rem;line-height:1.55;color:var(--text-1);overflow-x:auto;white-space:pre;tab-size:2;max-height:300px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--bg-3) transparent}
+.code-block::-webkit-scrollbar{width:4px;height:4px}
+.code-block::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px}
+.tag-list{display:flex;flex-wrap:wrap;gap:5px}
+.tag{padding:2px 9px;border-radius:5px;font-size:0.7rem;background:var(--bg-3);color:var(--text-1)}
+.empty{text-align:center;padding:60px 20px;color:var(--text-2)}
+.empty-icon{font-size:2.5rem;margin-bottom:10px;opacity:0.3}
+.empty-text{font-size:0.85rem}
+
+/* ── macOS-style preview components ── */
+.pr-macmenu{display:flex;gap:12px;align-items:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;color:rgba(255,255,255,0.85)}
+.pr-menuitem{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:4px}
+.pr-menuitem svg{opacity:0.7}
+
+.pr-dropdown{background:rgba(30,30,40,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px;min-width:200px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.pr-dd-section{padding:4px 8px;font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+.pr-dd-item{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;border-radius:4px;color:rgba(255,255,255,0.8);cursor:default}
+.pr-dd-item:hover{background:rgba(108,140,255,0.2)}
+.pr-dd-value{color:rgba(255,255,255,0.5);font-family:var(--mono);font-size:11px}
+.pr-dd-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin:4px 8px;overflow:hidden}
+.pr-dd-bar-fill{height:100%;border-radius:2px}
+.pr-dd-sep{height:1px;background:rgba(255,255,255,0.06);margin:4px 0}
+
+.pr-settings{background:rgba(30,30,40,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px;min-width:260px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px}
+.pr-settings-title{font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:12px}
+.pr-setting-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.pr-setting-label{color:rgba(255,255,255,0.7)}
+.pr-toggle{width:36px;height:20px;background:rgba(108,140,255,0.6);border-radius:10px;position:relative;cursor:pointer}
+.pr-toggle::after{content:'';position:absolute;top:2px;right:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:all 0.2s}
+.pr-toggle.on{background:rgba(108,140,255,0.8)}
+.pr-toggle.off{background:rgba(255,255,255,0.15)}
+.pr-toggle.off::after{right:auto;left:2px}
+
+.pr-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;min-width:200px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.pr-card-title{font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:4px}
+.pr-card-desc{font-size:11px;color:rgba(255,255,255,0.5);line-height:1.4}
+.pr-card-value{font-size:22px;font-weight:700;color:rgba(255,255,255,0.9);font-family:var(--mono)}
+.pr-card-label{font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase}
+
+.pr-graph{position:relative;width:100%;height:48px}
+.pr-graph svg{width:100%;height:100%}
+
+.pr-ring{width:48px;height:48px;position:relative}
+.pr-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.pr-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);font-family:var(--mono)}
+
+.pr-island{background:rgba(20,20,28,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:8px 16px;display:flex;align-items:center;gap:10px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;color:rgba(255,255,255,0.85);box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.pr-island-dot{width:6px;height:6px;border-radius:50%;background:#6cffa0;animation:pulse 1.5s ease-in-out infinite}
+
+.pr-hud{background:rgba(20,20,28,0.9);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:10px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:13px;color:rgba(255,255,255,0.9);box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+.pr-hud-icon{font-size:18px}
+.pr-hud-value{font-size:20px;font-weight:700;font-family:var(--mono)}
+
+.pr-notch{background:#1a1a22;border-radius:0 0 16px 16px;padding:6px 20px;display:flex;align-items:center;gap:8px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;color:rgba(255,255,255,0.7);position:relative}
+.pr-notch::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:rgba(255,255,255,0.05)}
+
+.pr-bubble{background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;color:rgba(255,255,255,0.8);position:relative;max-width:180px}
+.pr-bubble::after{content:'';position:absolute;bottom:-6px;left:20px;width:12px;height:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-top:none;border-left:none;transform:rotate(45deg)}
+
+.pr-progress{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;width:100%}
+.pr-progress-fill{height:100%;border-radius:2px;transition:width 0.3s}
+
+.pr-tab{display:flex;gap:2px;background:rgba(255,255,255,0.04);border-radius:8px;padding:2px}
+.pr-tab-item{padding:5px 12px;border-radius:6px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;color:rgba(255,255,255,0.5);cursor:default}
+.pr-tab-item.active{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.9)}
+
+.pr-stat-row{display:flex;gap:8px}
+.pr-stat{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;min-width:90px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.pr-stat-label{font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px}
+.pr-stat-value{font-size:16px;font-weight:700;color:rgba(255,255,255,0.9);font-family:var(--mono)}
+
+.pr-overlay{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-width:220px}
+.pr-overlay-title{font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:8px}
+.pr-overlay-text{font-size:11px;color:rgba(255,255,255,0.6);line-height:1.4}
+.pr-overlay-btns{display:flex;gap:6px;margin-top:10px}
+.pr-btn{padding:5px 14px;border-radius:6px;font-size:11px;font-weight:500;border:none;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.pr-btn-primary{background:rgba(108,140,255,0.8);color:#fff}
+.pr-btn-secondary{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7)}
+
+.pr-wave{display:flex;align-items:end;gap:2px;height:20px}
+.pr-wave-bar{width:3px;border-radius:2px;animation:wave 1s ease-in-out infinite}
+@keyframes wave{0%,100%{height:4px}50%{height:18px}}
+
+.pr-sparkline{display:flex;align-items:end;gap:1px;height:20px}
+.pr-spark-bar{width:3px;border-radius:1px}
+
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .comp-grid{grid-template-columns:1fr}
+}
+.view-switch{display:flex;align-items:center;gap:2px;background:var(--bg-2);padding:4px;border-radius:10px;border:1px solid var(--border)}
+.view-switch-item{padding:6px 14px;font-size:0.78rem;color:rgba(255,255,255,0.5);border-radius:7px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.view-switch-item:hover{color:rgba(255,255,255,0.8)}
+.view-switch-item.active{background:var(--accent-1);color:#0a0a10;font-weight:600}
+.tech-section{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:14px}
+.tech-subtitle{font-size:0.72rem;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600}
+.tech-api-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.tech-api{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px}
+.tech-api-name{font-family:var(--mono);font-size:0.72rem;color:rgba(255,159,67,0.9);margin-bottom:4px;font-weight:600}
+.tech-api-desc{font-size:0.72rem;color:rgba(255,255,255,0.6);line-height:1.5}
+.tech-tips{font-size:0.82rem;color:rgba(255,255,255,0.72);line-height:1.65}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-project="hermespet">
+  <header class="topbar">
+    <div class="logo"><div class="logo-dot"></div>UI 组件目录</div>
+    <div class="view-switch">
+      <div class="view-switch-item ${at=='catalog'?'active':''}" onclick="sw('catalog')">组件目录</div>
+      <div class="view-switch-item ${at=='tech'?'active':''}" onclick="sw('tech')">技术实现 · iStat 数据采集</div>
+    </div>
+    <div class="search-box" style="display:${at=='catalog'?'flex':'none'}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="搜索组件名、类型、标签…" autocomplete="off">
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="main" id="main"></main>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const P=[
+{id:'hermespet',name:'HermesPet',icon:'H',sub:'macOS 桌宠 AI 助手',c:'#6c8cff',comps:[
+{n:'ChatView',t:'SwiftUI View',p:'Sources/ChatView.swift',d:'AI 对话主视图，流式渲染、Markdown、代码块高亮',tags:['对话','Markdown','流式'],code:'struct ChatView: View {\n    @ObservedObject var viewModel: ChatViewModel\n    var body: some View {\n        VStack(spacing: 0) {\n            messagesScrollView\n            inputBar\n        }\n    }\n}',preview:'chatview'},
+{n:'ChatComponents',t:'SwiftUI Views',p:'Sources/ChatComponents.swift',d:'对话气泡、Tool 卡片、代码块、选项按钮集合',tags:['气泡','代码块','Tool'],code:'// MessageBubble — 用户/AI 消息气泡\n// ToolCallCard — 工具调用卡片\n// CodeBlockView — 语法高亮代码块\n// OptionButton — 可选操作按钮\n// StreamingIndicator — 打字动画',preview:'chatcomponents'},
+{n:'MarkdownRenderer',t:'SwiftUI View',p:'Sources/MarkdownRenderer.swift',d:'自研 Markdown 渲染器，支持可交互选项卡片',tags:['Markdown','渲染','富文本'],code:'struct MarkdownRenderer: View {\n    let markdown: String\n    var body: some View {\n        // AST → SwiftUI 组件树\n    }\n}',preview:'markdown'},
+{n:'SettingsView',t:'SwiftUI View',p:'Sources/SettingsView.swift',d:'设置页面，多 Provider 配置、API Key、快捷键',tags:['设置','配置','表单'],code:'struct SettingsView: View {\n    var body: some View {\n        TabView { ... }\n    }\n}',preview:'settings'},
+{n:'QuickAskWindow',t:'NSWindow',p:'Sources/QuickAskWindow.swift',d:'全局快速提问浮窗，Command+K 唤起',tags:['浮窗','快速提问','全局'],code:'class QuickAskWindow: NSWindow {\n    // level = .floating\n    // Command+K 热键\n    // AI 选择 + 历史记录\n}',preview:'quickask'},
+{n:'QuestionCardView',t:'SwiftUI View',p:'Sources/QuestionCardView.swift',d:'AI 主动提问的交互卡片',tags:['卡片','交互','AI'],code:'struct QuestionCardView: View {\n    let question: String\n    let options: [String]\n}',preview:'questioncard'},
+{n:'PermissionCardView',t:'SwiftUI View',p:'Sources/PermissionCardView.swift',d:'Claude/Codex 工具调用审批卡片',tags:['权限','审批','卡片'],code:'struct PermissionCardView: View {\n    let toolName: String\n    let onApprove: () -> Void\n    let onDeny: () -> Void\n}',preview:'permissioncard'},
+{n:'VoiceTranscriptOverlay',t:'SwiftUI View',p:'Sources/VoiceTranscriptOverlay.swift',d:'语音转写浮层，波形动画 + 实时文本',tags:['语音','转写','浮层'],code:'struct VoiceTranscriptOverlay: View {\n    let transcript: String\n    let isListening: Bool\n}',preview:'voicetranscript'},
+{n:'DynamicIslandController',t:'NSWindowController',p:'Sources/DynamicIslandController.swift',d:'灵动岛控制器，管理浮窗位置、层级和动画',tags:['灵动岛','窗口','动画'],code:'class DynamicIslandController {\n    // NSPanel, level = .floating\n    // 展开/收起动画\n    // z-order 管理\n}',preview:'dynamicisland'},
+{n:'PinCardOverlay',t:'SwiftUI View',p:'Sources/PinCardOverlay.swift',d:'可固定在屏幕上的笔记/提示卡片',tags:['卡片','固定','浮层'],code:'struct PinCardOverlay: View {\n    let content: String\n    @Binding var isPinned: Bool\n}',preview:'pincard'},
+{n:'PetHeaderStrip',t:'SwiftUI View',p:'Sources/PetHeaderStrip.swift',d:'桌宠顶部状态条，连接状态 + 模型信息',tags:['状态条','桌宠','指示器'],code:'struct PetHeaderStrip: View {\n    let connectionStatus: ConnectionStatus\n    let modelName: String\n}',preview:'headerstrip'},
+{n:'IntelligenceOverlay',t:'SwiftUI View',p:'Sources/IntelligenceOverlay.swift',d:'智能感知浮层，OCR 识别 + 上下文建议',tags:['OCR','智能','浮层'],code:'struct IntelligenceOverlay: View {\n    let ocrResult: String\n    let suggestions: [String]\n}',preview:'intelligence'},
+{n:'ChoiceMenuOverlay',t:'SwiftUI View',p:'Sources/ChoiceMenuOverlay.swift',d:'AI 多选项弹出菜单',tags:['菜单','浮层','选择'],code:'struct ChoiceMenuOverlay: View {\n    let choices: [String]\n    let onSelect: (String) -> Void\n}',preview:'choicemenu'},
+{n:'ClawdBubbleOverlay',t:'SwiftUI View',p:'Sources/ClawdBubbleOverlay.swift',d:'桌宠气泡浮层，简短提示和状态',tags:['气泡','浮层','桌宠'],code:'struct ClawdBubbleOverlay: View {\n    let message: String\n    @Binding var isShowing: Bool\n}',preview:'bubble'},
+{n:'CanvasView',t:'SwiftUI View',p:'Sources/CanvasView.swift',d:'画布/工作区，模板选择 + 多画布管理',tags:['画布','工作区','模板'],code:'struct CanvasView: View {\n    @ObservedObject var service: CanvasService\n}',preview:'canvas'}
+]},
+{id:'boringnotch',name:'boring.notch',icon:'B',sub:'Notch 交互增强',c:'#ff6c8c',comps:[
+{n:'NotchShape',t:'SwiftUI Shape',p:'components/Notch/NotchShape.swift',d:'Notch 区域自定义形状，Path 精确绘制刘海轮廓',tags:['Shape','Notch','路径'],code:'struct NotchShape: Shape {\n    var topCornerRadius: CGFloat\n    func path(in rect: Rect) -> Path { ... }\n}',preview:'notchshape'},
+{n:'NotchHomeView',t:'SwiftUI View',p:'components/Notch/NotchHomeView.swift',d:'Notch 收起状态默认展示',tags:['Notch','主页','收起'],code:'struct NotchHomeView: View {\n    // 时钟 + 音乐迷你控件\n}',preview:'notchhome'},
+{n:'MusicVisualizer',t:'SwiftUI View',p:'components/Music/MusicVisualizer.swift',d:'Metal 着色器音频可视化，波形/频谱',tags:['音频','可视化','Metal'],code:'struct MusicVisualizer: View {\n    let audioLevels: [Float]\n    // Metal 着色器\n}',preview:'musicviz'},
+{n:'ShelfView',t:'SwiftUI View',p:'components/Shelf/Views/ShelfView.swift',d:'书架视图，文件/链接/书签拖放',tags:['书架','文件','拖放'],code:'struct ShelfView: View {\n    @ObservedObject var viewModel: ShelfStateViewModel\n}',preview:'shelf'},
+{n:'AnimatedFace',t:'SwiftUI View',p:'components/AnimatedFace.swift',d:'Notch 拟人化表情动画',tags:['表情','动画','拟人化'],code:'struct AnimatedFace: View {\n    let faceState: FaceState\n    // idle/happy/sleeping\n}',preview:'face'},
+{n:'HoverButton',t:'SwiftUI View',p:'components/HoverButton.swift',d:'悬停按钮，hover 背景高亮',tags:['按钮','悬停','交互'],code:'struct HoverButton: View {\n    let icon: String\n    @State var isHovered = false\n}',preview:'hoverbtn'},
+{n:'ProgressIndicator',t:'SwiftUI View',p:'components/ProgressIndicator.swift',d:'自定义进度指示器，环形/线性',tags:['进度','环形','指示器'],code:'struct ProgressIndicator: View {\n    let progress: Double\n    let style: ProgressStyle\n}',preview:'progress'},
+{n:'TabButton',t:'SwiftUI View',p:'components/Tabs/TabButton.swift',d:'自定义 Tab 按钮 + 动画指示器',tags:['Tab','按钮','动画'],code:'struct TabButton: View {\n    let title: String\n    let isSelected: Bool\n}',preview:'tabbtn'},
+{n:'HelloAnimation',t:'SwiftUI View',p:'animations/HelloAnimation.swift',d:'首次启动欢迎动画',tags:['动画','欢迎','启动'],code:'struct HelloAnimation: View {\n    @Binding var isRunning: Bool\n}',preview:'hello'},
+{n:'ActionBar',t:'SwiftUI View',p:'extensions/ActionBar.swift',d:'底部快捷操作按钮行',tags:['操作栏','底部','快捷'],code:'struct ActionBar: View {\n    let actions: [ActionItem]\n}',preview:'actionbar'},
+{n:'EmptyState',t:'SwiftUI View',p:'components/EmptyState.swift',d:'空状态占位视图',tags:['空状态','占位','引导'],code:'struct EmptyState: View {\n    let icon: String\n    let title: String\n}',preview:'empty'},
+{n:'WhatsNewView',t:'SwiftUI View',p:'components/WhatsNewView.swift',d:'更新日志视图',tags:['更新日志','新功能'],code:'struct WhatsNewView: View {\n    let features: [FeatureItem]\n}',preview:'whatsnew'}
+]},
+{id:'ccstatistics',name:'cc-statistics',icon:'C',sub:'Claude Code 统计',c:'#6cffa0',comps:[
+{n:'DashboardView',t:'SwiftUI View',p:'Views/DashboardView.swift',d:'主仪表盘，会话统计 + Token 用量 + 费用',tags:['仪表盘','统计','图表'],code:'struct DashboardView: View {\n    @ObservedObject var viewModel: StatsViewModel\n}',preview:'dashboard'},
+{n:'Components',t:'SwiftUI Views',p:'Views/Components.swift',d:'共享组件：StatCard / ProgressRing / TagBadge / MiniSparkline',tags:['组件库','卡片','图表'],code:'// StatCard — 数值统计卡片\n// ProgressRing — 环形进度\n// TagBadge — 标签徽章\n// MiniSparkline — 迷你火花线',preview:'cccomponents'},
+{n:'IslandOverlay',t:'NSPanel',p:'IslandOverlay.swift',d:'Dynamic Island 浮窗，compact/expanded，12 种动画',tags:['灵动岛','浮窗','动画'],code:'class IslandOverlay {\n    // NSPanel, level = .mainMenu + 3\n    // 12 种动画状态\n}',preview:'island'},
+{n:'FloatingPanel',t:'NSPanel',p:'FloatingPanel.swift',d:'浮动面板，透明标题栏 + 毛玻璃',tags:['浮动面板','毛玻璃'],code:'class FloatingPanel: NSPanel {\n    // NSVisualEffectView\n    // 自动定位右侧\n}',preview:'floatingpanel'},
+{n:'GuideOverlay',t:'SwiftUI View',p:'Views/GuideOverlay.swift',d:'新手引导浮层',tags:['引导','浮层','新手'],code:'struct GuideOverlay: View {\n    @Binding var isShowing: Bool\n}',preview:'guide'}
+]},
+{id:'hot',name:'Hot',icon:'🌡',sub:'CPU 热节流监控',c:'#ffc06c',comps:[
+{n:'GraphView',t:'NSView',p:'Hot/Classes/GraphView.swift',d:'双折线图（Speed + Temperature）+ 渐变填充',tags:['图表','折线图','Core Graphics'],code:'class GraphView: NSView {\n    // NSBezierPath 双折线\n    // NSGradient 渐变填充\n    // 50 数据点\n}',preview:'linegraph'},
+{n:'SensorViewController',t:'NSViewController',p:'Hot/Classes/SensorViewController.swift',d:'温度传感器列表，颜色编码',tags:['传感器','列表','AppKit'],code:'class SensorViewController: NSViewController {\n    // NSTableView + 颜色编码\n}',preview:'sensorlist'},
+{n:'InfoViewController',t:'NSViewController',p:'Hot/Classes/InfoViewController.swift',d:'嵌入菜单的系统信息视图',tags:['系统信息','菜单嵌入'],code:'class InfoViewController: NSViewController {\n    // 嵌入 NSMenu\n    // CPU + 电池 + 内存\n}',preview:'infoview'},
+{n:'GraphWindowController',t:'NSWindowController',p:'Hot/Classes/GraphWindowController.swift',d:'图表独立弹窗，"在所有桌面显示"',tags:['弹窗','浮动窗口','图表'],code:'class GraphWindowController: NSWindowController {\n    // 独立浮动窗口\n    // 支持所有桌面\n}',preview:'graphwindow'}
+]},
+{id:'iglance',name:'iGlance',icon:'i',sub:'全硬件监控',c:'#c06cff',comps:[
+{n:'BarGraph',t:'NSImage Generator',p:'Graphs/BarGraph.swift',d:'菜单栏柱状图，渲染为 NSImage 状态栏图标',tags:['图表','柱状图','菜单栏'],code:'class BarGraph: GraphProtocol {\n    func getImage(...) -> NSImage { ... }\n}',preview:'bargraph'},
+{n:'LineGraph',t:'NSImage Generator',p:'Graphs/LineGraph.swift',d:'菜单栏折线图，宽度可配置',tags:['图表','折线图','菜单栏'],code:'class LineGraph: GraphProtocol {\n    var queue = Queue<Double>()\n}',preview:'linegraphmenu'},
+{n:'MenuBarItem',t:'Protocol + Class',p:'MenuBarItems/MenuBarItem.swift',d:'状态栏项基类，MenuBarItemManager 统一管理',tags:['状态栏','基类','管理器'],code:'protocol MenuBarItemProtocol {\n    var statusItem: NSStatusItem\n    func update()\n}',preview:'menubaritem'},
+{n:'RepeatingTimer',t:'GCD Timer',p:'RepeatingTimer.swift',d:'DispatchSource 定时器，suspend/resume + 睡眠管理',tags:['定时器','GCD','节能'],code:'class RepeatingTimer {\n    let timer: DispatchSourceTimer\n    func suspend() / resume()\n}',preview:'timer'}
+]},
+{id:'typeno',name:'TypeNo',icon:'T',sub:'键盘输入工具',c:'#6cd8ff',comps:[
+{n:'main.swift',t:'Swift Entry',p:'Sources/Typeno/main.swift',d:'极简入口，CGEventTap 全局键盘拦截',tags:['入口','极简','键盘'],code:'// TypeNo — 键盘输入拦截/转换\n// CGEventTap 全局拦截\n// 纯 AppKit',preview:'typeno'}
+]},
+{id:'istat',name:'iStat Menus',icon:'◆',sub:'专业系统监控（逆向分析）',c:'#ff9f43',comps:[
+{n:'MenuBarTextItem',t:'BBRMenubarKit',p:'BBRMenubarKit (compiled)',d:'菜单栏文本项：CPU 45% / 72°C / 8.2GB 等纯文本或图标+文本组合',tags:['菜单栏','文本','图标'],code:'// BBRMenubarItem 子类\n// NSAttributedString 渲染\n// 支持图标+文本/纯文本/纯图标',preview:'ism_textitem'},
+{n:'MenuBarGraphItem',t:'BBRMenubarKit',p:'BBRMenubarKit (compiled)',d:'菜单栏迷你图表项：实时 CPU/内存/网络折线图或柱状图',tags:['菜单栏','图表','实时'],code:'// BBRMenubarGraphItem + GraphRenderer\n// Metal 高性能渲染 + 图像缓存',preview:'ism_graphitem'},
+{n:'CPUDualLineChart',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'CPU 双线面积图：蓝色（用户%）+ 粉色（系统%）从中心线向上下绘制',tags:['CPU','图表','面积图'],code:'// BBRMenuCPUActivityChart\n// 双线对称柱状图（上蓝/下粉）\n// 随数据滚动 + 图例标签',preview:'ism_culinechart'},
+{n:'CPUPerCoreRings',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'每核环形图：能效核心（粉色环）+ 性能核心（蓝色环）分两排展示',tags:['CPU','多核','环形图'],code:'// BBRMenuPerCoreSection\n// 8-16 个 CoreRingView\n// 粉/蓝双色区分 E-core / P-core\n// 每个环显示单核利用率',preview:'ism_coreperf'},
+{n:'CPUMenu',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'CPU 下拉菜单：双线图表 + 每核环 + 进程列表 + 负载 + 运行时间',tags:['CPU','下拉菜单','进程'],code:'// BBRMenuCPU\n// CPUActivitySection + PerCoreSection\n// TopProcessSection + LoadAvgSection\n// UptimeSection',preview:'ism_cpumenu'},
+{n:'MemoryPressureRing',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'内存压力环：大型"PRESSURE"百分比环，背景灰色轨道',tags:['内存','压力','环形'],code:'// BBRMenuMemoryPressureSection\n// 外环轨道 + 内环进度\n// 压力值 = pressure_level / 4\n// 颜色根据压力变化(绿→黄→红)',preview:'ism_memring'},
+{n:'MemoryUsageRing',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'内存用量环：大型百分比环 + 分段颜色（灰/蓝/黄/粉 = 可用/App/压缩/联动）',tags:['内存','用量','环形','分段'],code:'// BBRMenuMemorySection.UsageRing\n// multi-segment ring: Wired/Compressed/Anonymous/Cached/Files\n// 颜色分段从右侧 0° 开始顺时针累加\n// 中心显示大百分比 + 标题',preview:'ism_memusering'},
+{n:'MemoryDetailRows',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'内存明细行：彩色圆点 + 分类名 + GB值 + 迷你进度条',tags:['内存','明细','列表'],code:'// App内存 / 联动内存 / 已压缩 / 可用\n// ColorDot + Label + Value + ProgressBar\n// 每行独立进度（相对于总内存）',preview:'ism_memrows'},
+{n:'MemoryMenu',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'内存下拉菜单：压力环 + 用量环 + 明细行 + 交换分区',tags:['内存','下拉菜单','压力'],code:'// BBRMenuMemory\n// PressureRingView + UsageRingView\n// MemoryDetailRows\n// SwapUsageBar (写入分页/读取分页)',preview:'ism_memmenu'},
+{n:'DiskUsageCard',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'磁盘用量卡：左侧用量环（含百分比内嵌）+ 磁盘名 + 可用空间',tags:['磁盘','用量','卡片'],code:'// BBRMenuDiskVolumeCard\n// Ring(percent) + Name + "1.43 TB 可用"\n// 多磁盘多卡片列表',preview:'ism_diskusage'},
+{n:'DiskSpeedCard',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'磁盘读写速度卡：大号 KB/s 文本 + 迷你双色柱状图（粉读/蓝写）',tags:['磁盘','速度','图表'],code:'// BBRMenuDiskSpeedCard\n// Large "426 KB/s" (read, pink label)\n// Large "375 KB/s" (write, blue label)\n// Mini center-line bar chart\n// 底部汇总"读: 493 KB/s 写: 496 KB/s"',preview:'ism_diskspeed'},
+{n:'DiskMenu',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'磁盘下拉菜单：多磁盘卡片 + 读写速度卡 + 进程磁盘读写列表',tags:['磁盘','下拉菜单','读写'],code:'// BBRMenuDisk\n// VolumeCards (multi-disk)\n// DiskSpeedCard\n// ProcessDiskIOTable (imagant, mDNSResponder...)',preview:'ism_diskmenu'},
+{n:'NetworkSpeedCard',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'网络速度卡：上传/下载大号 KB/s + 迷你中心线柱状图',tags:['网络','速度','图表'],code:'// BBRMenuNetworkSpeedCard\n// Pink "上传 0 KB/s" label + value\n// Blue "下载 0 KB/s" label + value\n// Center-line mini chart (same as DiskSpeedCard)',preview:'ism_netspeed'},
+{n:'NetworkDetailCard',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'网络详情卡：Ping 值（绿色状态点）+ 公共 IP 地址',tags:['网络','Ping','IP'],code:'// BBRMenuNetworkDetail\n// PingRow: [greenDot] istatmenus.app  22ms\n// PublicIPRow: "公共 IP 地址  11.22.33.44"',preview:'ism_netdetail'},
+{n:'BottomStatusRings',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'底部状态三环：CPU温度° / GPU温度° / FANS转速% 横向排列',tags:['状态','环形','温度','风扇'],code:'// BBRMenuBottomStatusBar\n// Ring(CPU temp "44°" + "3.92GHz")\n// Ring(GPU temp "88°" + "0.55GHz")\n// Ring(FANS "22%" + RPM)\n// 三环横向等分',preview:'ism_bottomrings'},
+{n:'SensorDetailMenu',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'传感器详情菜单：按分组（气温/功率/风扇/频率）+ 每行带迷你温度环',tags:['传感器','温度','详情'],code:'// BBRMenuSensors.SectionList\n// 气温: APPLE SSD/CPU能效/PSSD/Wi-Fi/内存/图形卡/气流\n// 功率: CPU/GPU/总 (W)\n// 风扇: RPM + 迷你环\n// 频率: P-core/E-core/GPU (GHz)',preview:'ism_sensordetail'},
+{n:'GPUMultiRingCard',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'GPU 多环卡片：GPU% / 内存 / 温度 / GHz 四个小环横向排列，每环中心大数值',tags:['GPU','环形','多指标'],code:'// BBRMenuGPUSection\n// 4 RingViews horizontal: GPU(44%), Mem(22%), Temp(50°), GHz(0.22)\n// 每环中心为大数字\n// FPS 在右上角 ("176 FPS")',preview:'ism_gpu4ring'},
+{n:'BatteryBar',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'电池水平条：蓝色进度条 + 左侧"电池" + 右侧剩余时间',tags:['电池','进度条'],code:'// BBRMenuBatteryBatteryRow\n// HorizontalProgressBar(blue)\n// "电池" label + "剩余 2:22"\n// 简化条形图替代环形',preview:'ism_battbar'},
+{n:'BatteryHealthRings',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'电池健康双环：左环百分比+剩余时间 / 右环健康100%红色',tags:['电池','健康','环形'],code:'// BBRMenuBatteryHealthView\n// Left Ring: "44%" + "2:22"\n// Right Ring: "100%" + "健康" (pink/red color)\n// 双环横向并排',preview:'ism_batthealth'},
+{n:'KeyboardUsageBar',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'键盘使用条：蓝色水平条 + 标签 + 百分比',tags:['键盘','进度条'],code:'// BBRMenuPeripheral.KeyboardRow\n// "键盘" label + BlueProgressBar(44%)\n// 监控键盘输入事件频率',preview:'ism_keyboard'},
+{n:'PowerTrendChart',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'功率趋势图：顶部"W 值 + 时间选择器"下方连续柱状图',tags:['功率','图表','趋势'],code:'// BBRMenuPowerChartView\n// TopBar: "6.7 W" + "1小时 selector"\n// Bottom: continuous bar chart (all blue)\n// X-axis time labels, Y-axis auto-scale Watts',preview:'ism_powerchart'},
+{n:'WeatherMultiDayForecast',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'多日天气行：时间轴 + 天气图标 + 温度高低 + 湿度百分比',tags:['天气','预报','时间轴'],code:'// BBRMenuWeatherForecastSection\n// Top row: hourly icons (sun/cloud/rain)\n// Middle: temp numbers per hour\n// Bottom: humidity % with grey arc\n// Date header: "5:00 6:00 ... 11:00"',preview:'ism_weathermulti'},
+{n:'WeatherTodaySummary',t:'BBRMenuKit',p:'BBRMenuKit (compiled)',d:'今日天气摘要：大字温度 "22°" + 标签"今天第22" + 天气图标 + 温度范围 12-24',tags:['天气','今日','摘要'],code:'// BBRMenuWeatherTodaySummary\n// Large "22.2°" number at top\n// Icon + "今天第 22" + cloud icon\n// Temperature range "12° / 24°" bottom\n// Weather description text at very bottom',preview:'ism_weathertoday'},
+{n:'SettingsPanel',t:'BBRSettings',p:'BBRSettings (compiled)',d:'设置面板：侧边栏分类导航 + 200+ 设置键 + 实时菜单栏预览',tags:['设置','导航','预览'],code:'// BBRSettings framework\n// SideNav: 通用/CPU/内存/磁盘/网络/传感器/电池/天气/时钟\n// Live menu bar preview at bottom\n// Toggle + selector + text fields',preview:'ism_settings'}
+]}
+];
+
+let ap='hermespet',af='all',sq='',at='catalog';
+
+function render(){
+  if(at==='tech'){rsTech();rmTech();usTech();}
+  else{rs();rm();us();}
+}
+
+function sw(v){at=v;render();}
+
+function rsTech(){
+  document.getElementById('sidebar').innerHTML=`
+    <div class="nav-group" data-project="tech">
+      <div class="nav-label">数据采集 · API</div>
+      ${techNotes.map((n,i)=>`
+      <div class="nav-item ${i===0?'active':''}" onclick="sm(${i})">
+        <div class="nav-dot" style="background:rgba(255,159,67,0.9)"></div>
+        <span style="font-size:0.75rem;line-height:1.4;color:rgba(255,255,255,0.7)">${n.title.split(' · ')[0]}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+let activeTechIdx=0;
+function sm(i){activeTechIdx=i;rmTech();}
+
+function rmTech(){
+  const m=document.getElementById('main');
+  const n=techNotes[activeTechIdx];
+  m.innerHTML=`
+    <div class="project-header" data-project="tech">
+      <div class="project-icon" style="background:linear-gradient(135deg,#ff9f43,#ff6c8c)">◆</div>
+      <div><div class="project-title">${n.title}</div><div class="project-subtitle">iStat Menus 系统采集实现 · 可直接用于 AcMind</div></div>
+    </div>
+    <div class="tech-section">
+      <div class="tech-subtitle">相关 API</div>
+      <div class="tech-api-list">
+        ${n.apis.map(a=>`<div class="tech-api"><div class="tech-api-name">${a[0]}</div><div class="tech-api-desc">${a[1]}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="tech-section">
+      <div class="tech-subtitle">实现要点</div>
+      <div class="tech-tips">${n.tips}</div>
+    </div>
+    <div class="tech-section">
+      <div class="tech-subtitle">Swift 代码示例</div>
+      <div class="code-block">${esc(n.swift)}</div>
+    </div>`;
+}
+
+function usTech(){
+  document.getElementById('stats').textContent=`${techNotes.length} 个数据域 · ${techNotes.reduce((s,n)=>s+n.apis.length,0)} 个 API`;
+}
+
+function rs(){
+  document.getElementById('sidebar').innerHTML=P.map(p=>`
+    <div class="nav-group" data-project="${p.id}">
+      <div class="nav-label">${p.name}</div>
+      <div class="nav-item ${p.id===ap?'active':''}" onclick="sp('${p.id}')">
+        <div class="nav-dot"></div><span>${p.sub}</span>
+        <span class="badge">${p.comps.length}</span>
+      </div>
+    </div>`).join('');
+}
+
+function sp(id){ap=id;af='all';document.getElementById('app').dataset.project=id;render();}
+
+function fc(){
+  const p=P.find(x=>x.id===ap);if(!p)return[];
+  let c=p.comps;
+  if(af!=='all')c=c.filter(x=>x.tags.some(t=>t.includes(af))||x.t.includes(af));
+  if(sq){const q=sq.toLowerCase();c=c.filter(x=>x.n.toLowerCase().includes(q)||x.t.toLowerCase().includes(q)||x.d.toLowerCase().includes(q)||x.tags.some(t=>t.includes(q)));}
+  return c;
+}
+
+function gt(){
+  const p=P.find(x=>x.id===ap);if(!p)return[];
+  const s=new Set();p.comps.forEach(c=>c.tags.forEach(t=>s.add(t)));return[...s].sort();
+}
+
+function rm(){
+  const m=document.getElementById('main'),p=P.find(x=>x.id===ap);if(!p)return;
+  const ts=gt(),cs=fc();
+  m.innerHTML=`
+    <div class="project-header" data-project="${p.id}">
+      <div class="project-icon">${p.icon}</div>
+      <div><div class="project-title">${p.name}</div><div class="project-subtitle">${p.sub}</div></div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-chip ${af==='all'?'active':''}" onclick="sf('all')">全部</div>
+      ${ts.map(t=>`<div class="filter-chip ${af===t?'active':''}" onclick="sf('${t}')">${t}</div>`).join('')}
+    </div>
+    ${cs.length===0?'<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">没有匹配的组件</div></div>':`
+    <div class="comp-grid" data-project="${p.id}">
+      ${cs.map(c=>`
+      <div class="comp-card" onclick="om(${P.indexOf(p)},${p.comps.indexOf(c)})">
+        <div class="comp-preview" data-preview="${c.preview}"></div>
+        <div class="comp-info">
+          <div class="comp-top">
+            <div class="comp-name">${c.n}</div>
+            <div class="comp-type">${c.t}</div>
+          </div>
+          <div class="comp-desc">${c.d}</div>
+          <div class="comp-path">${c.p}</div>
+          <div class="comp-tags">${c.tags.map(t=>`<span class="comp-tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>`).join('')}
+    </div>`}`;
+  document.querySelectorAll('.comp-preview[data-preview]').forEach(el=>{el.innerHTML=renderPreview(el.dataset.preview);});
+}
+
+function sf(t){af=t;rm();}
+
+function us(){
+  const total=P.reduce((s,p)=>s+p.comps.length,0);
+  const filtered=fc().length;
+  document.getElementById('stats').textContent=af==='all'&&!sq?`${total} 组件 · ${P.length} 项目`:`${filtered} / ${P.find(x=>x.id===ap)?.comps.length||0} 组件`;
+}
+
+function om(pi,ci){
+  const c=P[pi].comps[ci],p=P[pi];
+  document.getElementById('modalTitle').textContent=c.n;
+  document.getElementById('modalBody').innerHTML=`
+    <div class="modal-preview-area" data-preview="${c.preview}"></div>
+    <div class="modal-section">
+      <div class="modal-section-title">基本信息</div>
+      <dl class="modal-kv"><dt>类型</dt><dd>${c.t}</dd><dt>项目</dt><dd style="color:${p.c}">${p.name}</dd><dt>路径</dt><dd style="font-family:var(--mono);font-size:0.72rem">${c.p}</dd></dl>
+    </div>
+    <div class="modal-section"><div class="modal-section-title">描述</div><p style="color:var(--text-1);line-height:1.5;font-size:0.82rem">${c.d}</p></div>
+    <div class="modal-section"><div class="modal-section-title">标签</div><div class="tag-list">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>
+    <div class="modal-section"><div class="modal-section-title">代码预览</div><div class="code-block">${esc(c.code)}</div></div>`;
+  document.querySelectorAll('.modal-preview-area[data-preview]').forEach(el=>{el.innerHTML=renderPreview(el.dataset.preview);});
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function cl(){document.getElementById('modalOverlay').classList.remove('open');}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+document.getElementById('searchInput').addEventListener('input',e=>{sq=e.target.value.trim();rm();us();});
+document.getElementById('modalClose').addEventListener('click',cl);
+document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)cl();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cl();});
+
+// ── Tech Notes: 数据采集实现 ──
+const techNotes=[
+  {title:'CPU · 使用率 / 核心频率 / 温度',
+    apis:[['mach_host_info / processor_load_avg','获取 CPU 核心负载'],['sysctlbyname hw.cpufrequency_max','获取最大 CPU 频率'],['sysctlbyname machdep.cpu.core_count','物理/逻辑核心数'],['top_levinfo (via libproc)','进程级 CPU 时间'],['SMC key TC0P/TC1F/TC2F','CPU 温度（能效/性能核心）']],
+    tips:'iStat 的能效/性能核心分两组 Ring，是通过 Apple Silicon 专用的 SMC key 以及 powermetrics 采样得到 P-core / E-core 的独立数据。AcMind 侧可先用 `host_processor_info` 取得每核的 ticks，再按核心序号归类 Apple Silicon 的 E(低序号 0-5) 和 P(高序号 6-9)。',
+    swift:`// AcMind 示例: 读取 CPU 每核心使用率
+let processorCount: UnsafeMutablePointer<Int32> = ...
+var cpuInfo: processor_info_array_t!
+let ticks = host_processor_info(mach_host_self(),
+  PROCESSOR_CPU_LOAD_INFO, &count, &cpuInfo, &cpuInfoCount)
+// cpuInfo[0..3] 每核心：USER/SYSTEM/IDLE/NICE`},
+
+  {title:'内存 · 压力 / 分类 / 已压缩',
+    apis:[['host_statistics64() · HOST_VM_INFO64','free/active/inactive/wired 分页'],['mach_memory_status()','综合压力值 (pressure_level)'],['task_info · TASK_VM_INFO','App 自身：phys_footprint'],['proc_pid_rusage()','按进程 RSS / phys_footprint']],
+    tips:'`已压缩` = vm_page_count - free - active - inactive - wired（按 OS 版本略有差异）。Ring 中的"内存压力"实际取自 pressure_level 或 compression/segment 的比率。',
+    swift:`var info = mach_task_basic_info()
+var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size/4)
+withUnsafeMutablePointer(to: &info) {
+  task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO),
+    UnsafeMutablePointer($0), &count)
+}`},
+
+  {title:'磁盘 · 卷使用率 / 读写速度 / 进程 IO',
+    apis:[['FileManager.attributesOfFileSystem','availableCapacity / totalCapacity'],['getfsstat()','C 层可批量取所有挂载点'],['IORegistry / IOKit IOBlockStorageDriver','SMART 状态（iStat 独有的 kext 曾用于此）'],['libproc :: proc_pid_rusage with RUSAGE_INFO_V5','每个进程的 ri_diskio_bytesread / byteswritten']],
+    tips:'`DiskSpeedCard` 的曲线通过轮询两次 proc_pid_rusage 做差，然后除以 Δt 得到 KB/s。AcMind 推荐 2s 采样窗口。',
+    swift:`var usage = rusage_info_v5()
+proc_pid_rusage(pid_t(pid), RUSAGE_INFO_V5, &usage)`},
+
+  {title:'网络 · 上传下载 / IP / Ping',
+    apis:[['if_msghdr2 · sysctl (RTM_IFINFO2)','按网络接口收发包和字节'],['getifaddrs()','取 IP 地址 与 MAC'],['struct icmp / SOCK_RAW','自制 Ping（需 root 或 +entitlement）'],['libproc :: PROC_PIDRUSAGE_NETWORK','per-process rbytes / obytes (macOS 13+)']],
+    tips:'`公共 IP 地址` 在 iStat 中通过 GET https://secure2.bjango.com/ip 返回，返回结果在沙盒应用需要 com.apple.security.network.client 权限。Ping 行显示的"ms"来自 ICMP echo 往返时间。',
+    swift:`// 取网卡收/发字节总数 (if_data.ifi_ibytes / obytes)
+var addrs: UnsafeMutablePointer<ifaddrs>?
+getifaddrs(&addrs)`},
+
+  {title:'GPU · 使用率 / 内存 / FPS',
+    apis:[['IOKit · IOGraphicsAccelerator2 服务','GPU util 百分比'],['MTLDevice.currentAllocatedSize','Metal 显存'],['CoreDisplay / kCGSessionCopyCurrentFramerate','实际 FPS（macOS 15+ API 有变化）']],
+    tips:'FPS 在菜单栏显示的通常是 macOS 动态刷新 (ProMotion) 下显示器刷新率的 1/N。某些情况下 iStat 会回退到 Quartz Display Services 的 CGDisplayCopyDisplayMode 报告 nominal 帧率。',
+    swift:`let dev = MTLCreateSystemDefaultDevice()
+print("Metal allocated: \\(dev.currentAllocatedSize)")`},
+
+  {title:'传感器 · 温度 / 风扇 / 功率',
+    apis:[['SMC · AppleSystemMonitor.kext（被 iStat Menus.app 的 helper 使用）','TC0P/TC1F/TG0D/TW0P/TA0P 等温度 key'],['kHWSensor* / IOHWSensor (Apple Silicon)','新版 IOKit 直接返回温度值'],['SMC key F0Ac/F1Ac','Fan 0 / Fan 1 实际转速'],['IOPMPowerSources.kext - IOPMPowerSource','电池循环、设计容量、温度']],
+    tips:'macOS 13+ 中 iStat Menus 使用 helper (iStat Menus Stats.app/Contents/Library/LaunchServices) 通过 XPC 桥接，而 iGlance 开源实现了一个可直接调用 SMC 的类 —— 对 AcMind 而言直接复用 SMC.swift 即可快速落地。',
+    swift:`// SMC 读取温度 key 的示例（来自 iGlance 开源实现）
+let smc = SMC()
+let temp = try smc.readTemperature(for: SMC.Key.TC0P)`},
+
+  {title:'电池 · 水平条 / 健康度 / 剩余时间',
+    apis:[['IOPMPowerSourceCopyInfo()','电压 / 电流 / 设计容量 / 当前容量'],['IOHIDEventSystemClient (部分型号键盘电池)','Apple Magic Keyboard 电池电量'],['ProcessInfo().isLowPowerModeEnabled','低电量模式']],
+    tips:'健康度 100% = 当前容量 / 设计容量。剩余时间 = 当前容量 / 平均放电速率（需 5~10 分钟的平滑窗口）。',
+    swift:`let ps = IOPMPowerSourceCopyInfo(nil)?.takeRetainedValue()
+  as NSDictionary?
+let cur = ps?[kIOPMPSCurrentCapacityKey] as? Int ?? 0`},
+
+  {title:'天气 · 当前天气 / 7 天 / 小时',
+    apis:[['CoreLocation · CLLocationManager','获取当前坐标'],['WeatherKit (Apple)','免第三方 key，返回 currentForecast + hourly + daily'],['OpenWeather / AccuWeather（iStat 使用的外部服务）','iStat 旧版本 API 仍在用 AccuWeather']],
+    tips:'WeatherKit 需要 Apple Developer Program 账号，然后在 App 里配置 com.apple.developer.weatherkit 权限。macOS 13+ 可用。',
+    swift:`let weather = try await WeatherService.shared.weather(for: location)
+let current = weather.currentWeather
+let hourly = weather.hourly.forecast.prefix(12)`},
+
+  {title:'时钟 · 多城市时间 / 日出日落',
+    apis:[['TimeZone.abbreviationDictionary','IANA 时区名映射'],['DateFormatter + NSTimeZone','多城市本地时间'],['Solar / SunCalc 算法 (开源算法)','根据经纬度计算日出日落']],
+    tips:'下拉菜单里带"昨天""今天"小标签的是时区切换后的跨日期判断。',
+    swift:`let tz = TimeZone(identifier: "America/New_York")!
+let fmt = DateFormatter()
+fmt.timeZone = tz
+fmt.dateFormat = "HH:mm"`},
+
+  {title:'组件渲染 · Ring / LineChart / Sparkline / Dropdown',
+    apis:[['SwiftUI Shape + stroke(style:)','环形 Ring (RingView.swift 模板)'],['Bezier Path + CAShapeLayer','sparkline 细线图'],['NSVisualEffectView + rounded popup','下拉菜单（窗口化 popover）']],
+    tips:'iStat 的下拉菜单是 NSWindow(NSPanel) 配 NSVisualEffectView background + 圆角 10px + 0.8 opacity。Ring 组件的关键参数：stroke-linecap=round, thickness≈4-6 px, 双环嵌套时外环绕内径为 RingSize-4*2。',
+    swift:`struct Ring: Shape {
+  func path(in r: CGRect) -> Path {
+    var p = Path()
+    p.addArc(center: CGPoint(x: r.midX, y: r.midY),
+      radius: r.width/2-4, startAngle: .degrees(-90),
+      endAngle: .degrees(270), clockwise: true)
+    return p
+  }
+}`}
+];
+
+// ── Preview Renderers ──
+function sparkSVG(data,color,w,h){
+  const max=Math.max(...data),step=w/(data.length-1);
+  let d=`M0 ${h}`;
+  data.forEach((v,i)=>{d+=` L${i*step} ${h-(v/max*h*0.85)}`;});
+  d+=` L${w} ${h} Z`;
+  return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g_${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.4"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${d}" fill="url(#g_${color.replace('#','')})" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+
+function ringSVG(pct,color,size){
+  const r=(size-6)/2,c=Math.PI*2*r,off=c-(pct/100)*c;
+  return`<div class="pr-ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg><div class="pr-ring-label">${pct}%</div></div>`;
+}
+
+function barSVG(data,color,w,h){
+  const max=Math.max(...data),bw=w/data.length-2;
+  return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${data.map((v,i)=>`<rect x="${i*(bw+2)}" y="${h-(v/max*h*0.9)}" width="${bw}" height="${v/max*h*0.9}" rx="1.5" fill="${color}" opacity="0.7"/>`).join('')}</svg>`;
+}
+
+const previews={
+  // HermesPet
+  chatview:()=>`<div style="width:100%;max-width:260px;font-family:-apple-system,sans-serif">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="align-self:flex-end;background:rgba(108,140,255,0.2);padding:6px 10px;border-radius:10px 10px 2px 10px;font-size:11px;color:rgba(255,255,255,0.85)">帮我写一个 SwiftUI 的登录页面</div>
+      <div style="align-self:flex-start;background:rgba(255,255,255,0.06);padding:6px 10px;border-radius:10px 10px 10px 2px;font-size:11px;color:rgba(255,255,255,0.7);max-width:80%">好的，我来创建一个包含邮箱和密码输入的登录页面...</div>
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:6px 8px;font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.5)">struct LoginView: View { ... }</div>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:6px 8px">
+      <span style="font-size:11px;color:rgba(255,255,255,0.3);flex:1">输入消息...</span>
+      <span style="font-size:10px;color:rgba(108,140,255,0.6)">↑</span>
+    </div>
+  </div>`,
+  chatcomponents:()=>`<div style="display:flex;flex-direction:column;gap:6px;width:100%;max-width:220px">
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;font-family:-apple-system,sans-serif">
+      <div style="width:16px;height:16px;border-radius:50%;background:rgba(108,140,255,0.3)"></div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.7)">MessageBubble</span>
+    </div>
+    <div style="background:rgba(255,108,140,0.08);border:1px solid rgba(255,108,140,0.15);padding:6px 8px;border-radius:6px;font-size:10px;color:rgba(255,255,255,0.7)">ToolCallCard — 执行 Bash 命令</div>
+    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:4px 6px;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.4)">CodeBlockView</div>
+    <div style="display:flex;gap:4px"><span style="padding:3px 8px;background:rgba(108,140,255,0.15);border-radius:4px;font-size:9px;color:rgba(108,140,255,0.8)">Option A</span><span style="padding:3px 8px;background:rgba(255,255,255,0.06);border-radius:4px;font-size:9px;color:rgba(255,255,255,0.5)">Option B</span></div>
+  </div>`,
+  markdown:()=>`<div style="font-family:-apple-system,sans-serif;font-size:11px;color:rgba(255,255,255,0.8);line-height:1.6;max-width:240px">
+    <div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:4px">标题</div>
+    <div>普通文本 <strong style="color:rgba(255,255,255,0.9)">粗体</strong> <em>斜体</em></div>
+    <div style="background:rgba(0,0,0,0.3);padding:4px 6px;border-radius:4px;font-family:var(--mono);font-size:9px;margin:4px 0;color:rgba(255,255,255,0.5)">inline code</div>
+    <div style="margin:4px 0;padding-left:10px;border-left:2px solid rgba(108,140,255,0.4);color:rgba(255,255,255,0.5)">引用</div>
+    <div>• 列表项 1</div><div>• 列表项 2</div>
+  </div>`,
+  settings:()=>`<div class="pr-settings" style="min-width:240px">
+    <div class="pr-settings-title">设置</div>
+    <div class="pr-tab" style="margin-bottom:10px"><div class="pr-tab-item active">通用</div><div class="pr-tab-item">AI</div><div class="pr-tab-item">快捷键</div><div class="pr-tab-item">高级</div></div>
+    <div class="pr-setting-row"><span class="pr-setting-label">开机启动</span><div class="pr-toggle on"></div></div>
+    <div class="pr-setting-row"><span class="pr-setting-label">深色模式</span><div class="pr-toggle on"></div></div>
+    <div class="pr-setting-row"><span class="pr-setting-label">语音输入</span><div class="pr-toggle off"></div></div>
+  </div>`,
+  quickask:()=>`<div style="background:rgba(20,20,28,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;width:260px;font-family:-apple-system,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+    <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;margin-bottom:8px">
+      <span style="font-size:11px;color:rgba(255,255,255,0.3)">⌘K 快速提问...</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span style="padding:4px 10px;background:rgba(108,140,255,0.12);border-radius:6px;font-size:10px;color:rgba(108,140,255,0.8)">Claude</span>
+      <span style="padding:4px 10px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:10px;color:rgba(255,255,255,0.4)">Codex</span>
+      <span style="padding:4px 10px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:10px;color:rgba(255,255,255,0.4)">Ollama</span>
+    </div>
+  </div>`,
+  questioncard:()=>`<div class="pr-card" style="min-width:240px">
+    <div class="pr-card-title">🤔 你想怎么处理这段代码？</div>
+    <div class="pr-card-desc" style="margin-bottom:8px">我注意到你反复修改了同一个函数...</div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div style="padding:5px 10px;background:rgba(108,140,255,0.12);border:1px solid rgba(108,140,255,0.2);border-radius:6px;font-size:10px;color:rgba(108,140,255,0.9)">帮我重构一下</div>
+      <div style="padding:5px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;font-size:10px;color:rgba(255,255,255,0.5)">我自己来</div>
+    </div>
+  </div>`,
+  permissioncard:()=>`<div class="pr-card" style="min-width:240px;border-left:3px solid rgba(255,192,108,0.6)">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <span style="font-size:14px">🔐</span>
+      <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.9)">权限请求</span>
+    </div>
+    <div style="font-size:10px;color:rgba(255,192,108,0.8);font-family:var(--mono);margin-bottom:4px">Bash</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--mono);margin-bottom:8px">rm -rf node_modules/</div>
+    <div class="pr-overlay-btns"><button class="pr-btn pr-btn-primary">批准</button><button class="pr-btn pr-btn-secondary">拒绝</button></div>
+  </div>`,
+  voicetranscript:()=>`<div class="pr-hud"><div class="pr-wave">${[4,8,14,10,16,6,12].map((h,i)=>`<div class="pr-wave-bar" style="height:${h}px;background:rgba(108,140,255,0.6);animation-delay:${i*0.1}s"></div>`).join('')}</div><span style="font-size:11px;color:rgba(255,255,255,0.6)">正在聆听...</span></div>`,
+  dynamicisland:()=>`<div class="pr-island"><div class="pr-island-dot"></div><span>Claude Sonnet 4</span><span style="color:rgba(255,255,255,0.4)">·</span><span style="color:rgba(108,255,160,0.8)">已连接</span></div>`,
+  pincard:()=>`<div class="pr-card" style="min-width:200px;position:relative"><div style="position:absolute;top:8px;right:8px;font-size:10px;color:rgba(108,140,255,0.8)">📌</div><div class="pr-card-title">已固定的笔记</div><div class="pr-card-desc">这段代码需要重构...</div></div>`,
+  headerstrip:()=>`<div style="display:flex;align-items:center;gap:8px;font-family:-apple-system,sans-serif;font-size:11px"><div style="width:8px;height:8px;border-radius:50%;background:#6cffa0"></div><span style="color:rgba(255,255,255,0.7)">Claude Sonnet 4</span><span style="color:rgba(255,255,255,0.3)">·</span><span style="color:rgba(255,255,255,0.4)">Connected</span></div>`,
+  intelligence:()=>`<div class="pr-overlay" style="min-width:240px"><div class="pr-overlay-title">🔍 智能感知</div><div class="pr-overlay-text" style="margin-bottom:8px">检测到屏幕上的错误信息</div><div style="background:rgba(255,108,108,0.08);border:1px solid rgba(255,108,108,0.15);border-radius:6px;padding:6px 8px;font-family:var(--mono);font-size:9px;color:rgba(255,108,108,0.8);margin-bottom:8px">Error: Cannot find module</div><div style="font-size:10px;color:rgba(108,255,160,0.8)">💡 建议: 运行 npm install</div></div>`,
+  choicemenu:()=>`<div class="pr-dropdown" style="min-width:180px"><div class="pr-dd-item">选项 A <span style="font-size:10px;color:rgba(255,255,255,0.3)">Enter</span></div><div class="pr-dd-item">选项 B</div><div class="pr-dd-item">选项 C</div><div class="pr-dd-sep"></div><div class="pr-dd-item" style="color:rgba(255,255,255,0.4)">自定义...</div></div>`,
+  bubble:()=>`<div class="pr-bubble">👋 你好！有什么需要帮忙的吗？</div>`,
+  canvas:()=>`<div style="display:flex;gap:8px;font-family:-apple-system,sans-serif"><div style="width:80px;height:60px;background:rgba(108,140,255,0.08);border:1px solid rgba(108,140,255,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(108,140,255,0.6)">代码</div><div style="width:80px;height:60px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,0.4)">文本</div><div style="width:80px;height:60px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,0.4)">图表</div></div>`,
+  // boring.notch
+  notchshape:()=>`<div style="position:relative;width:200px;height:40px"><svg width="200" height="40" viewBox="0 0 200 40"><path d="M0 0 H60 Q70 0 72 10 Q74 20 80 24 Q90 28 100 28 Q110 28 120 24 Q126 20 128 10 Q130 0 140 0 H200 V40 H0 Z" fill="#1a1a22" stroke="rgba(255,255,255,0.06)" stroke-width="1"/></svg><div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,0.5);font-family:var(--mono)">12:34</div></div>`,
+  notchhome:()=>`<div class="pr-notch"><span style="font-size:13px;font-weight:600">12:34</span><span style="color:rgba(255,255,255,0.3)">|</span><span style="font-size:10px">♫ Now Playing</span></div>`,
+  musicviz:()=>`<div class="pr-wave" style="height:32px;gap:3px">${Array.from({length:20},(_,i)=>`<div class="pr-wave-bar" style="height:${8+Math.random()*20}px;background:linear-gradient(to top,rgba(255,108,140,0.6),rgba(108,140,255,0.6));animation-delay:${i*0.05}s;width:4px"></div>`).join('')}</div>`,
+  shelf:()=>`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-family:-apple-system,sans-serif">${['📄','🔗','📁','📎','🖼','📑'].map(e=>`<div style="width:48px;height:40px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px">${e}</div>`).join('')}</div>`,
+  face:()=>`<div style="font-size:32px;text-align:center">😊</div>`,
+  hoverbtn:()=>`<div style="width:36px;height:36px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all 0.2s">⚙</div>`,
+  progress:()=>`<div style="display:flex;gap:16px;align-items:center">${ringSVG(72,'#ff6c8c',40)}<div style="flex:1"><div class="pr-progress"><div class="pr-progress-fill" style="width:72%;background:linear-gradient(90deg,#ff6c8c,#ff8ca8)"></div></div></div></div>`,
+  tabbtn:()=>`<div class="pr-tab"><div class="pr-tab-item active">🏠 Home</div><div class="pr-tab-item">🎵 Music</div><div class="pr-tab-item">📁 Shelf</div></div>`,
+  hello:()=>`<div style="font-family:-apple-system,sans-serif;text-align:center"><div style="font-size:24px;margin-bottom:4px">👋</div><div style="font-size:12px;color:rgba(255,255,255,0.7)">Hello!</div></div>`,
+  actionbar:()=>`<div style="display:flex;gap:4px;font-family:-apple-system,sans-serif">${['🔍','📎','🎤','⚙'].map(e=>`<div style="width:28px;height:28px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${e}</div>`).join('')}</div>`,
+  empty:()=>`<div style="text-align:center;font-family:-apple-system,sans-serif"><div style="font-size:28px;opacity:0.3;margin-bottom:4px">📭</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">暂无内容</div></div>`,
+  whatsnew:()=>`<div style="font-family:-apple-system,sans-serif;min-width:200px"><div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:8px">🎉 新功能</div><div style="display:flex;flex-direction:column;gap:4px"><div style="padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:10px;color:rgba(255,255,255,0.7)">✨ Shelf 文件拖放</div><div style="padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:10px;color:rgba(255,255,255,0.7)">🎨 新增主题色</div></div></div>`,
+  // cc-statistics
+  dashboard:()=>`<div class="pr-stat-row" style="flex-wrap:wrap"><div class="pr-stat"><div class="pr-stat-label">Sessions</div><div class="pr-stat-value">142</div></div><div class="pr-stat"><div class="pr-stat-label">Tokens</div><div class="pr-stat-value">2.4M</div></div><div class="pr-stat"><div class="pr-stat-label">Cost</div><div class="pr-stat-value">$18.6</div></div></div>`,
+  cccomponents:()=>`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${ringSVG(68,'#6cffa0',36)}<div class="pr-stat" style="padding:8px 10px"><div class="pr-stat-label">Tokens</div><div class="pr-stat-value" style="font-size:14px">1.2M</div></div><div style="padding:3px 8px;background:rgba(108,255,160,0.12);border-radius:10px;font-size:9px;color:rgba(108,255,160,0.8);font-family:var(--mono)">claude-4</div>${sparkSVG([3,7,5,9,4,8,6,10,7],'#6cffa0',60,24)}</div>`,
+  island:()=>`<div class="pr-island"><div class="pr-island-dot"></div><span>Building...</span><span style="color:rgba(255,255,255,0.4)">·</span><span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5)">2m 34s</span></div>`,
+  floatingpanel:()=>`<div style="background:rgba(20,20,28,0.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;min-width:200px;font-family:-apple-system,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4)"><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:8px">Dashboard</div><div class="pr-stat-row"><div class="pr-stat" style="padding:8px"><div class="pr-stat-label">Used</div><div class="pr-stat-value" style="font-size:13px">$12.4</div></div><div class="pr-stat" style="padding:8px"><div class="pr-stat-label">Limit</div><div class="pr-stat-value" style="font-size:13px">$50</div></div></div></div>`,
+  guide:()=>`<div style="background:rgba(0,0,0,0.5);border-radius:12px;padding:16px;text-align:center;font-family:-apple-system,sans-serif"><div style="font-size:24px;margin-bottom:6px">👆</div><div style="font-size:12px;color:rgba(255,255,255,0.8);margin-bottom:4px">点击这里查看统计</div><div style="font-size:10px;color:rgba(255,255,255,0.4)">第 1/3 步</div></div>`,
+  // Hot
+  linegraph:()=>sparkSVG([20,35,28,42,55,48,62,58,70,65,72,68],'#ffc06c',160,48),
+  sensorlist:()=>`<div style="font-family:-apple-system,sans-serif;font-size:10px;min-width:180px">${[['CPU Proximity','62°C','#6cffa0'],['GPU','55°C','#6cffa0'],['NAND','48°C','#ffc06c'],['Ambient','35°C','#6cffa0']].map(([n,v,c])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:rgba(255,255,255,0.6)">${n}</span><span style="color:${c};font-family:var(--mono)">${v}</span></div>`).join('')}</div>`,
+  infoview:()=>`<div style="font-family:-apple-system,sans-serif;font-size:10px;min-width:160px"><div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:rgba(255,255,255,0.5)">CPU Temp</span><span style="color:rgba(255,255,255,0.9);font-family:var(--mono)">72°C</span></div><div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:rgba(255,255,255,0.5)">Battery</span><span style="color:rgba(255,255,255,0.9);font-family:var(--mono)">86%</span></div><div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:rgba(255,255,255,0.5)">Memory</span><span style="color:rgba(255,255,255,0.9);font-family:var(--mono)">12.4GB</span></div></div>`,
+  graphwindow:()=>`<div style="background:rgba(20,20,28,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.4)"><div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-family:-apple-system,sans-serif">Temperature</div>${sparkSVG([45,52,48,55,60,58,65,62,70,68,72],'#ffc06c',180,50)}</div>`,
+  // iGlance
+  bargraph:()=>barSVG([30,50,40,65,55,70,45,80,60],'#c06cff',80,24),
+  linegraphmenu:()=>sparkSVG([10,30,20,45,35,50,40,55],'#c06cff',80,24),
+  menubaritem:()=>`<div class="pr-macmenu"><div class="pr-menuitem"><span style="color:rgba(192,108,255,0.8)">●</span><span>CPU 45%</span></div><div class="pr-menuitem"><span>🌡 72°C</span></div><div class="pr-menuitem">${sparkSVG([30,50,40,65,55,70],'#c06cff',40,16)}</div></div>`,
+  timer:()=>`<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);text-align:center"><div style="font-size:18px;color:rgba(255,255,255,0.8)">⏱</div><div style="margin-top:4px">DispatchSource</div><div style="color:rgba(108,255,160,0.6)">suspend → resume</div></div>`,
+  // TypeNo
+  typeno:()=>`<div style="font-family:-apple-system,sans-serif;text-align:center"><div style="font-size:20px;margin-bottom:4px">⌨️</div><div style="font-size:10px;color:rgba(255,255,255,0.5)">CGEventTap</div><div style="font-size:9px;color:rgba(108,216,255,0.6)">全局键盘拦截</div></div>`,
+  // iStat Menus
+  ism_textitem:()=>`<div class="pr-macmenu"><div class="pr-menuitem"><span>CPU</span><span style="font-weight:600">45%</span></div><div class="pr-menuitem"><span>🌡</span><span style="font-weight:600">72°C</span></div><div class="pr-menuitem"><span>RAM</span><span style="font-weight:600">8.2GB</span></div></div>`,
+  ism_graphitem:()=>`<div class="pr-macmenu"><div class="pr-menuitem">${sparkSVG([20,40,30,55,45,60,50,70,55],'#ff9f43',48,16)}<span style="margin-left:4px">CPU</span></div><div class="pr-menuitem">${barSVG([30,50,40,65,55,70],'#ff9f43',36,16)}<span style="margin-left:4px">NET</span></div></div>`,
+  ism_cpumenu:()=>`<div class="pr-dropdown" style="min-width:220px"><div class="pr-dd-section">CPU</div><div class="pr-dd-item"><span>User</span><span class="pr-dd-value">32%</span></div><div class="pr-dd-bar"><div class="pr-dd-bar-fill" style="width:32%;background:#ff9f43"></div></div><div class="pr-dd-item"><span>System</span><span class="pr-dd-value">12%</span></div><div class="pr-dd-bar"><div class="pr-dd-bar-fill" style="width:12%;background:#ff6c8c"></div></div><div class="pr-dd-item"><span>Idle</span><span class="pr-dd-value">56%</span></div><div class="pr-dd-sep"></div><div class="pr-dd-section">温度</div><div class="pr-dd-item"><span>Proximity</span><span class="pr-dd-value">62°C</span></div><div class="pr-dd-item"><span>P-Cluster</span><span class="pr-dd-value">68°C</span></div></div>`,
+  ism_memmenu:()=>`<div class="pr-dropdown" style="min-width:200px"><div class="pr-dd-section">内存压力</div><div style="margin:4px 8px;height:6px;border-radius:3px;background:linear-gradient(90deg,#6cffa0 0%,#ffc06c 60%,#ff6c8c 100%)"></div><div class="pr-dd-item" style="margin-top:6px"><span>App 内存</span><span class="pr-dd-value">6.2 GB</span></div><div class="pr-dd-bar"><div class="pr-dd-bar-fill" style="width:52%;background:#6cffa0"></div></div><div class="pr-dd-item"><span>压缩</span><span class="pr-dd-value">1.8 GB</span></div><div class="pr-dd-item"><span>缓存</span><span class="pr-dd-value">4.1 GB</span></div></div>`,
+  ism_diskmenu:()=>`<div class="pr-dropdown" style="min-width:200px"><div class="pr-dd-section">Macintosh HD</div><div style="margin:4px 8px;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="width:68%;height:100%;background:linear-gradient(90deg,#6c8cff,#ff6c8c);border-radius:3px"></div></div><div class="pr-dd-item"><span>可用</span><span class="pr-dd-value">148 GB / 460 GB</span></div><div class="pr-dd-sep"></div><div class="pr-dd-item"><span>读取</span><span class="pr-dd-value">24 MB/s</span></div><div class="pr-dd-item"><span>写入</span><span class="pr-dd-value">12 MB/s</span></div></div>`,
+  ism_netmenu:()=>`<div class="pr-dropdown" style="min-width:200px"><div class="pr-dd-section">Wi-Fi</div><div class="pr-dd-item"><span>▲ 上传</span><span class="pr-dd-value" style="color:#6cffa0">1.2 MB/s</span></div><div class="pr-dd-item"><span>▼ 下载</span><span class="pr-dd-value" style="color:#6c8cff">8.4 MB/s</span></div><div class="pr-dd-sep"></div><div class="pr-dd-item"><span>IP</span><span class="pr-dd-value">192.168.1.42</span></div><div class="pr-dd-item"><span>总发送</span><span class="pr-dd-value">2.4 GB</span></div><div class="pr-dd-item"><span>总接收</span><span class="pr-dd-value">18.6 GB</span></div></div>`,
+  ism_battmenu:()=>`<div class="pr-dropdown" style="min-width:180px"><div style="display:flex;align-items:center;gap:10px;padding:6px 8px">${ringSVG(86,'#6cffa0',40)}<div><div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.9)">86%</div><div style="font-size:9px;color:rgba(108,255,160,0.8)">充电中</div></div></div><div class="pr-dd-sep"></div><div class="pr-dd-item"><span>循环次数</span><span class="pr-dd-value">247</span></div><div class="pr-dd-item"><span>健康度</span><span class="pr-dd-value">94%</span></div><div class="pr-dd-item"><span>剩余时间</span><span class="pr-dd-value">3h 24m</span></div></div>`,
+  ism_sensormenu:()=>`<div class="pr-dropdown" style="min-width:200px"><div class="pr-dd-section">温度</div><div class="pr-dd-item"><span>CPU Proximity</span><span class="pr-dd-value">62°C</span></div><div class="pr-dd-item"><span>GPU</span><span class="pr-dd-value">55°C</span></div><div class="pr-dd-item"><span>NAND</span><span class="pr-dd-value">48°C</span></div><div class="pr-dd-sep"></div><div class="pr-dd-section">风扇</div><div class="pr-dd-item"><span>Fan 0</span><span class="pr-dd-value">1200 RPM</span></div><div class="pr-dd-item"><span>Fan 1</span><span class="pr-dd-value">1180 RPM</span></div></div>`,
+  ism_weathermenu:()=>`<div class="pr-dropdown" style="min-width:200px"><div style="display:flex;align-items:center;gap:10px;padding:6px 8px"><span style="font-size:28px">☀️</span><div><div style="font-size:20px;font-weight:700;color:rgba(255,255,255,0.9)">28°C</div><div style="font-size:10px;color:rgba(255,255,255,0.5)">晴 · 体感 30°C</div></div></div><div class="pr-dd-sep"></div>${[['周一','🌤','26°/18°'],['周二','⛅','24°/17°'],['周三','🌧','20°/15°']].map(([d,w,t])=>`<div class="pr-dd-item"><span>${d}</span><span>${w}</span><span class="pr-dd-value">${t}</span></div>`).join('')}</div>`,
+  ism_clockmenu:()=>`<div class="pr-dropdown" style="min-width:200px">${[['🇺🇸 纽约','02:34','昨天'],['🇬🇧 伦敦','07:34','今天'],['🇯🇵 东京','15:34','今天'],['🇨🇳 上海','14:34','今天']].map(([f,t,d])=>`<div class="pr-dd-item"><span>${f}</span><span style="font-family:var(--mono);color:rgba(255,255,255,0.9)">${t}</span><span style="font-size:9px;color:rgba(255,255,255,0.4)">${d}</span></div>`).join('')}</div>`,
+  ism_settings:()=>`<div style="display:flex;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-width:280px;background:rgba(30,30,40,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden"><div style="width:90px;background:rgba(0,0,0,0.2);padding:8px 0;border-right:1px solid rgba(255,255,255,0.04)">${['通用','CPU','内存','磁盘','网络','传感器','电池','天气','时钟'].map((l,i)=>`<div style="padding:4px 10px;font-size:10px;color:${i===1?'rgba(255,159,67,0.9)':'rgba(255,255,255,0.5)'};background:${i===1?'rgba(255,159,67,0.1)':'transparent'};border-radius:4px;margin:1px 4px">${l}</div>`).join('')}</div><div style="flex:1;padding:10px"><div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:8px">CPU 设置</div><div class="pr-setting-row"><span class="pr-setting-label" style="font-size:10px">显示温度</span><div class="pr-toggle on" style="transform:scale(0.8)"></div></div><div class="pr-setting-row"><span class="pr-setting-label" style="font-size:10px">显示使用率</span><div class="pr-toggle on" style="transform:scale(0.8)"></div></div><div class="pr-setting-row"><span class="pr-setting-label" style="font-size:10px">图表类型</span><span style="font-size:9px;color:rgba(255,255,255,0.5)">折线图</span></div></div></div>`,
+  // --- 新增高级组件 ---
+  ism_culinechart:()=>{const d=[];for(let i=0;i<30;i++)d.push(15+Math.random()*25,10+Math.random()*18);const mx=Math.max(...d);return`<div style="min-width:240px;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;padding:4px 0;margin-bottom:4px"><span style="font-size:12px;color:rgba(255,255,255,0.7)"><span style="display:inline-block;width:10px;height:10px;background:#3a9cff;border-radius:2px;margin-right:3px;vertical-align:middle"></span>用户 20%</span><span style="font-size:12px;color:rgba(255,110,140,0.9)"><span style="display:inline-block;width:10px;height:10px;background:#ff6e8c;border-radius:2px;margin-right:3px;vertical-align:middle"></span>系统 22%</span></div><div style="position:relative;height:44px;display:flex;align-items:stretch;gap:1px"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.08)"></div>${d.map((v,i)=>`<div style="position:absolute;left:${i*2.5+2}%;width:2%;background:${i%2?'#ff6e8c':'#3a9cff'};${i%2?'bottom:0;height':`top:50%;height`}:${v/mx*48}px"></div>`).join('')}</div></div>`},
+  ism_coreperf:()=>`<div style="min-width:240px;font-family:-apple-system,sans-serif;padding:6px"><div style="display:flex;gap:8px;margin-bottom:6px;align-items:center"><span style="width:8px;height:8px;background:#ff6e8c;border-radius:50%"></span><span style="font-size:10px;color:rgba(255,255,255,0.5)">能效核心</span><span style="margin-left:auto;font-size:10px;font-family:var(--mono);color:rgba(255,255,255,0.7)">50%</span></div><div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px">${[78,52,65,44].map(v=>ringSVG(v,'#ff6e8c',42)).join('')}</div><div style="display:flex;gap:8px;margin-bottom:6px;margin-top:8px;align-items:center"><span style="width:8px;height:8px;background:#3a9cff;border-radius:50%"></span><span style="font-size:10px;color:rgba(255,255,255,0.5)">性能核心</span><span style="margin-left:auto;font-size:10px;font-family:var(--mono);color:rgba(255,255,255,0.7)">50%</span></div><div style="display:flex;gap:10px;justify-content:center">${[68,48,55,60].map(v=>ringSVG(v,'#3a9cff',42)).join('')}</div></div>`,
+  ism_cpumenu:()=>`<div class="pr-dropdown" style="min-width:260px"><div style="display:flex;justify-content:space-between;padding:6px 10px 4px"><span style="font-size:11px;color:rgba(255,110,140,0.9);font-weight:600">CPU</span><span style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--mono)">3.87 GHz, 91°</span></div>${[['After Effects','7.4%','#ff6e8c','🎬'],['WindowServer','5.4%','#3a9cff','🖥'],['龙猫云_Lite','4.3%','#ff9f43','☁'],['macOS','3%','#3a9cff','⚙'],['TRAE SOLO CN','2.5%','#ff9f43','🔧']].map(([n,v,c,ic])=>`<div style="display:flex;align-items:center;padding:3px 8px"><span style="width:18px;text-align:center;font-size:11px;margin-right:8px">${ic}</span><span style="flex:1;font-size:11px;color:rgba(255,255,255,0.8)">${n}</span><span style="font-size:10px;color:rgba(255,255,255,0.6);font-family:var(--mono)">${v}</span></div>`).join('')}</div>`,
+  ism_memring:()=>`<div style="display:flex;align-items:center;gap:10px">${ringSVG(56,'#3a9cff',90).replace('56%','PRESSURE')}</div>`,
+  ism_memusering:()=>{const html=ringSVG(82,'#3a9cff',90);return html.replace('82%','内存')},
+  ism_memrows:()=>`<div style="min-width:240px;font-family:-apple-system,sans-serif;padding:4px">${[['App内存','#3a9cff','3.7 GB'],['联动内存','#ff6e8c','2.4 GB'],['已压缩','#ffc06c','1.2 GB'],['可用','rgba(255,255,255,0.15)','4.7 GB']].map(([l,c,v])=>`<div style="display:flex;align-items:center;padding:4px 2px;gap:8px"><span style="width:8px;height:8px;background:${c};border-radius:50%"></span><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.6)">${l}</span><span style="font-size:10px;color:rgba(255,255,255,0.8);font-family:var(--mono);min-width:50px;text-align:right">${v}</span><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden"><div style="width:${['40','25','15','50'][['App内存','联动内存','已压缩','可用'].indexOf(l)]+'%'};height:100%;background:${c}"></div></div></div>`).join('')}</div>`,
+  ism_memmenu:()=>`<div class="pr-dropdown" style="min-width:240px"><div style="display:flex;justify-content:space-around;padding:8px 4px">${ringSVG(44,'#3a9cff',54)}${ringSVG(61,'#ff9f43',54)}</div><div style="padding:4px 8px 0">${[['App内存','#3a9cff','3.7 GB'],['联动内存','#ff6e8c','2.4 GB'],['已压缩','#ffc06c','1.2 GB'],['可用','rgba(255,255,255,0.15)','4.7 GB']].map(([l,c,v])=>`<div style="display:flex;align-items:center;padding:2px 0;gap:6px"><span style="width:7px;height:7px;background:${c};border-radius:50%"></span><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.6)">${l}</span><span style="font-size:10px;color:rgba(255,255,255,0.8);font-family:var(--mono)">${v}</span></div>`).join('')}</div></div>`,
+  ism_diskusage:()=>`<div style="display:flex;align-items:center;gap:10px;min-width:220px;background:rgba(30,30,40,0.6);border:1px solid rgba(255,255,255,0.04);border-radius:8px;padding:6px 10px">${ringSVG(68,'#3a9cff',38)}<div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600">Macintosh HD</div><div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--mono)">1.43 TB 可用</div></div></div>`,
+  ism_diskspeed:()=>{const d=[];for(let i=0;i<24;i++)d.push([15+Math.random()*30,10+Math.random()*25]);const mx=Math.max(...d.flat());return `<div style="min-width:240px;padding:4px;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-around;padding:4px 0"><div style="text-align:center"><span style="font-size:10px;color:rgba(255,110,140,0.7)">读</span><div style="font-size:14px;font-weight:700;color:rgba(255,110,140,0.9);font-family:var(--mono)">426 KB/s</div></div><div style="text-align:center"><span style="font-size:10px;color:rgba(58,156,255,0.7)">写</span><div style="font-size:14px;font-weight:700;color:rgba(58,156,255,0.9);font-family:var(--mono)">375 KB/s</div></div></div><div style="position:relative;height:36px;display:flex;align-items:stretch;gap:1px"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.08)"></div>${d.map(([r,w],i)=>`<div style="position:absolute;left:${i*3.5+1}%;width:2.5%;top:0;height:50%"><div style="position:absolute;bottom:0;width:100%;height:${r/mx*48}px;background:#ff6e8c"></div></div><div style="position:absolute;left:${i*3.5+1}%;width:2.5%;top:50%;height:50%"><div style="position:absolute;top:0;width:100%;height:${w/mx*48}px;background:#3a9cff"></div></div>`).join('')}</div><div style="display:flex;justify-content:space-between;padding-top:4px;font-size:9px;color:rgba(255,255,255,0.4);font-family:var(--mono)"><span>读: 493 KB/s</span><span>写: 496 KB/s</span></div></div>`},
+  ism_diskmenu:()=>`<div class="pr-dropdown" style="min-width:260px"><div style="padding:4px 8px">${['Macintosh HD 929.7 GB 可用','White Atlas 448.9 GB 可用'].map((n,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 2px"><span style="font-size:18px">💾</span><div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,0.8)">${n.split(' ')[0]}</div><div style="font-size:9px;color:rgba(255,255,255,0.4);font-family:var(--mono)">${n.split(' ').slice(1).join(' ')}</div></div>${ringSVG(i===0?75:55,'#3a9cff',26)}</div>`).join('')}</div><div style="padding:4px 10px;margin-top:4px;background:rgba(58,156,255,0.08);border-radius:6px;margin-left:6px;margin-right:6px"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:2px">网络磁盤 files</div><div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden"><div style="width:85%;height:100%;background:#3a9cff"></div></div></div><div style="padding:4px 8px">${[['imagent','4.0M','-'],['macOS','-','3.5M'],['siriknowledged','955K','407K']].map(([n,r,w])=>`<div style="display:flex;align-items:center;padding:3px 0"><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.6)">${n}</span><span style="font-size:9px;color:rgba(255,110,140,0.7);font-family:var(--mono);margin-right:10px">R ${r}</span><span style="font-size:9px;color:rgba(58,156,255,0.7);font-family:var(--mono)">W ${w}</span></div>`).join('')}</div></div>`,
+  ism_netspeed:()=>{const d=[];for(let i=0;i<20;i++)d.push([5+Math.random()*20,8+Math.random()*25]);return `<div style="min-width:240px;padding:4px;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-around;padding:2px 0"><div style="text-align:center"><span style="font-size:10px;color:rgba(255,110,140,0.7)">上传</span><div style="font-size:13px;font-weight:700;color:rgba(255,110,140,0.9);font-family:var(--mono)">14 KB/s</div></div><div style="text-align:center"><span style="font-size:10px;color:rgba(58,156,255,0.7)">下载</span><div style="font-size:13px;font-weight:700;color:rgba(58,156,255,0.9);font-family:var(--mono)">54 KB/s</div></div></div><div style="position:relative;height:24px;display:flex;align-items:stretch;gap:1px"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.08)"></div>${d.map(([u,dd],i)=>`<div style="position:absolute;left:${i*4+1}%;width:3%;top:0;height:50%"><div style="position:absolute;bottom:0;width:100%;height:${u/40*48}px;background:#ff6e8c"></div></div><div style="position:absolute;left:${i*4+1}%;width:3%;top:50%;height:50%"><div style="position:absolute;top:0;width:100%;height:${dd/40*48}px;background:#3a9cff"></div></div>`).join('')}</div></div>`},
+  ism_netdetail:()=>`<div style="min-width:240px;font-family:-apple-system,sans-serif;padding:4px"><div style="display:flex;align-items:center;padding:5px 8px;gap:6px"><div style="width:8px;height:8px;background:#6cffa0;border-radius:50%"></div><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.6)">PING · istatmenus.app</span><span style="font-size:10px;color:rgba(255,255,255,0.8);font-family:var(--mono)">22 ms</span></div><div style="display:flex;align-items:center;padding:5px 8px;gap:6px"><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.5)">公共 IP 地址</span><span style="font-size:10px;color:rgba(255,255,255,0.8);font-family:var(--mono)">11.22.33.44</span></div></div>`,
+  ism_bottomrings:()=>`<div style="display:flex;justify-content:space-around;align-items:start;min-width:240px;padding:4px">${[{v:44,label:'CPU',sub:'3.87GHz',c:'#3a9cff',unit:'°'},{v:88,label:'GPU',sub:'0.22GHz',c:'#ff9f43',unit:'°'},{v:22,label:'FANS',sub:'1180RPM',c:'#3a9cff',unit:'%'}].map(r=>{const html=ringSVG(r.v,r.c,48);return html.replace(/>\d+%<\/div>/,`>${r.unit==='°'?r.v+'°':r.v+'%'}</div>`)}).join('')}</div>`,
+  ism_sensordetail:()=>`<div class="pr-dropdown" style="min-width:220px"><div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 8px">气温</div>${[['CPU 能效核心','72°','#ff9f43'],['PSSD T7 Shield','33°','#6cffa0'],['Wi-Fi','38°','#6cffa0'],['内存','65°','#ff9f43'],['图形卡','72°','#ff9f43']].map(([n,v,c])=>`<div style="display:flex;align-items:center;padding:3px 8px;gap:8px"><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.7)">${n}</span>${ringSVG(parseInt(v)/100*70,c,20)}<span style="font-size:10px;color:rgba(255,255,255,0.8);font-family:var(--mono)">${v}</span></div>`).join('')}<div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 8px;margin-top:4px;border-top:1px solid rgba(255,255,255,0.04)">功率</div>${[['CPU','4.2 W','#3a9cff'],['图形卡','2.4 W','#ff9f43'],['总功率','26.7 W','#ff6e8c']].map(([n,v,c])=>`<div style="display:flex;align-items:center;padding:3px 8px"><span style="flex:1;font-size:10px;color:rgba(255,255,255,0.7)">${n}</span><span style="font-size:10px;color:${c};font-family:var(--mono)">${v}</span></div>`).join('')}</div>`,
+  ism_gpu4ring:()=>`<div style="min-width:240px;font-family:-apple-system,sans-serif;padding:4px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:11px;color:rgba(255,110,140,0.9);font-weight:600">GPU</span><span style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--mono)">176 FPS</span></div><div style="display:flex;justify-content:space-around">${[{v:44,label:'GPU',c:'#3a9cff'},{v:22,label:'内存',c:'#ff9f43'},{v:50,label:'温度',c:'#ff6e8c',unit:'°'},{v:22,label:'GHz',c:'#3a9cff',val:'0.22'}].map(r=>{const html=ringSVG(r.v,r.c,38);return html.replace(/>\d+%<\/div>/,`>${r.val||r.v+(r.unit==='°'?'°':'%')}</div>`)}).join('')}</div></div>`,
+  ism_battbar:()=>`<div style="display:flex;align-items:center;gap:8px;min-width:220px;font-family:-apple-system,sans-serif;padding:6px"><span style="font-size:11px;color:rgba(255,255,255,0.6);min-width:30px">电池</span><div style="flex:1;position:relative;height:10px;background:rgba(255,255,255,0.06);border-radius:5px;overflow:hidden"><div style="width:85%;height:100%;background:linear-gradient(90deg,#3a9cff,#6cd8ff);border-radius:5px"></div></div><span style="font-size:10px;color:rgba(255,255,255,0.7);font-family:var(--mono)">剩余 2:22</span></div>`,
+  ism_batthealth:()=>`<div style="display:flex;justify-content:space-around;min-width:240px">${ringSVG(44,'#3a9cff',72)}${ringSVG(100,'#ff6e8c',72)}</div>`,
+  ism_keyboard:()=>`<div style="display:flex;align-items:center;gap:8px;min-width:220px;font-family:-apple-system,sans-serif;padding:6px"><span style="font-size:11px;color:rgba(255,255,255,0.6);min-width:30px">键盘</span><div style="flex:1;height:10px;background:rgba(255,255,255,0.06);border-radius:5px;overflow:hidden"><div style="width:44%;height:100%;background:#3a9cff;border-radius:5px"></div></div><span style="font-size:10px;color:rgba(255,255,255,0.7);font-family:var(--mono)">44%</span></div>`,
+  ism_powerchart:()=>{const d=[];for(let i=0;i<30;i++)d.push(15+Math.random()*45);const mx=Math.max(...d);return `<div style="min-width:240px;font-family:-apple-system,sans-serif;padding:4px"><div style="display:flex;justify-content:space-between;padding:4px 2px;align-items:center"><span style="font-size:11px;color:rgba(255,255,255,0.9);font-weight:700;font-family:var(--mono)">6.7 W</span><span style="font-size:10px;color:rgba(58,156,255,0.7);background:rgba(58,156,255,0.08);padding:2px 8px;border-radius:10px">1小时 ⌄</span></div><div style="position:relative;height:54px;display:flex;align-items:flex-end;gap:2px;margin-top:4px">${d.map((v,i)=>`<div style="flex:1;height:${v/mx*100}%;background:linear-gradient(180deg,#3a9cff 0%,rgba(58,156,255,0.5) 100%);border-radius:1px 1px 0 0"></div>`).join('')}</div></div>`},
+  ism_weathermulti:()=>`<div style="min-width:260px;font-family:-apple-system,sans-serif;padding:4px"><div style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:4px;letter-spacing:-0.02em">22.2°</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:6px 0">${[['5:00','☀','22'],['6:00','☀','22'],['7:00','☀','23'],['8:00','⛅','23'],['9:00','⛅','23'],['10:00','⛅','23'],['11:00','🌤','23']].map(([t,i,tt])=>`<div style="text-align:center"><div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:3px">${t}</div><div style="font-size:14px">${i}</div><div style="font-size:11px;color:rgba(255,255,255,0.7);font-family:var(--mono);margin-top:2px">${tt}°</div><div style="width:20px;height:10px;border:2px solid rgba(255,255,255,0.1);border-bottom:none;border-radius:10px 10px 0 0;margin:4px auto 0"><div style="font-size:7px;text-align:center;color:rgba(255,255,255,0.4);padding-top:1px">88%</div></div></div>`).join('')}</div></div>`,
+  ism_weathertoday:()=>`<div style="min-width:240px;font-family:-apple-system,sans-serif;padding:6px;text-align:center"><div style="font-size:22px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:-0.03em">22°</div><div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">今天第 22 天</div><div style="font-size:14px;margin-top:6px">⛅</div><div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:4px;font-family:var(--mono)">12° ／ 24°</div></div>`
+};
+
+function renderPreview(id){return(previews[id]||(()=>'<div style="font-size:10px;color:rgba(255,255,255,0.2)">预览</div>'))();}
+
+render();
+</script>
+</body>
+</html>

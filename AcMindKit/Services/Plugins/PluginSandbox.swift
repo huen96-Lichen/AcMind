@@ -20,6 +20,32 @@ public enum PluginPermission: String, Codable, Sendable, CaseIterable {
     }
 }
 
+public struct PluginResourceLimits: Codable, Sendable, Equatable {
+    public let memoryMB: Int
+    public let cpuPercent: Int
+
+    public init(memoryMB: Int, cpuPercent: Int) {
+        self.memoryMB = memoryMB
+        self.cpuPercent = cpuPercent
+    }
+}
+
+public struct PluginSandboxPolicySnapshot: Codable, Sendable, Equatable {
+    public let permissions: Set<PluginPermission>
+    public let permissionLabels: [String]
+    public let resourceLimits: PluginResourceLimits
+
+    public init(
+        permissions: Set<PluginPermission>,
+        permissionLabels: [String],
+        resourceLimits: PluginResourceLimits
+    ) {
+        self.permissions = permissions
+        self.permissionLabels = permissionLabels
+        self.resourceLimits = resourceLimits
+    }
+}
+
 // MARK: - Plugin Sandbox
 
 public actor PluginSandbox {
@@ -66,5 +92,14 @@ public actor PluginSandbox {
 
     public func getResourceLimits() -> (memoryMB: Int, cpuPercent: Int) {
         (maxMemoryMB, maxCPUPercent)
+    }
+
+    public func policySnapshot() -> PluginSandboxPolicySnapshot {
+        let orderedPermissions = PluginPermission.allCases.filter { grantedPermissions.contains($0) }
+        return PluginSandboxPolicySnapshot(
+            permissions: grantedPermissions,
+            permissionLabels: orderedPermissions.map(\.displayName),
+            resourceLimits: PluginResourceLimits(memoryMB: maxMemoryMB, cpuPercent: maxCPUPercent)
+        )
     }
 }

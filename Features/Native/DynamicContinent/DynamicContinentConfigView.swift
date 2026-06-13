@@ -155,9 +155,30 @@ struct DynamicContinentConfigView: View {
 
                 AppSurfaceCard(title: "开关状态", subtitle: "只读摘要", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
-                        railRow(title: "启用", value: viewModel.isEnabled ? "已启用" : "已关闭")
-                        railRow(title: "自动展开", value: viewModel.autoExpand ? "开启" : "关闭")
-                        railRow(title: "全屏隐藏", value: viewModel.hideInFullscreen ? "开启" : "关闭")
+                        railRow(
+                            title: "启用",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.isEnabled,
+                                enabledText: "已启用",
+                                disabledText: "已关闭"
+                            )
+                        )
+                        railRow(
+                            title: "自动展开",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.autoExpand,
+                                enabledText: "开启",
+                                disabledText: "关闭"
+                            )
+                        )
+                        railRow(
+                            title: "全屏隐藏",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.hideInFullscreen,
+                                enabledText: "开启",
+                                disabledText: "关闭"
+                            )
+                        )
                     }
                 }
             }
@@ -181,7 +202,14 @@ struct DynamicContinentConfigView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         railRow(title: "热区", value: viewModel.hoverExpandDelay.formatted(.number.precision(.fractionLength(1))))
                         railRow(title: "收起宽度", value: "\(Int(viewModel.nonNotchCollapsedWidth))")
-                        railRow(title: "HUD", value: viewModel.showSystemEventHUD ? "开启" : "关闭")
+                        railRow(
+                            title: "HUD",
+                            value: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.showSystemEventHUD,
+                                enabledText: "开启",
+                                disabledText: "关闭"
+                            )
+                        )
                     }
                 }
             }
@@ -532,7 +560,16 @@ struct DynamicContinentConfigView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 12) {
                     statusCard(title: "当前状态", value: viewModel.currentStateText, icon: "rectangle.expand.vertical", color: viewModel.currentStateColor)
-                    statusCard(title: "热区", value: hotCornerViewModel.settings.isEnabled ? "已启用" : "已关闭", icon: "hand.tap", color: hotCornerViewModel.settings.isEnabled ? .green : .gray)
+                    statusCard(
+                        title: "热区",
+                        value: SettingsStatusLabelFormatter.binaryState(
+                            isEnabled: hotCornerViewModel.settings.isEnabled,
+                            enabledText: "已启用",
+                            disabledText: "已关闭"
+                        ),
+                        icon: "hand.tap",
+                        color: hotCornerViewModel.settings.isEnabled ? .green : .gray
+                    )
                 }
                 .frame(height: 92)
 
@@ -617,8 +654,22 @@ struct DynamicContinentConfigView: View {
 
                 summaryBlock(title: "隐藏条件", icon: "eye.slash", color: .orange) {
                     VStack(alignment: .leading, spacing: 8) {
-                        triggerItem("全屏应用", desc: viewModel.hideInFullscreen ? "已启用" : "已关闭")
-                        triggerItem("屏幕录制", desc: viewModel.hideWhenScreenRecording ? "已启用" : "已关闭")
+                        triggerItem(
+                            "全屏应用",
+                            desc: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.hideInFullscreen,
+                                enabledText: "已启用",
+                                disabledText: "已关闭"
+                            )
+                        )
+                        triggerItem(
+                            "屏幕录制",
+                            desc: SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: viewModel.hideWhenScreenRecording,
+                                enabledText: "已启用",
+                                disabledText: "已关闭"
+                            )
+                        )
                     }
                 }
 
@@ -912,7 +963,13 @@ struct DynamicContinentConfigView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(position)
                     .font(.system(size: LocalTokens.cardTitleSize))
-                Text(binding.isEnabled ? "已启用 · 停留 \(binding.hoverDelay, specifier: "%.1f")s" : "已关闭")
+                        Text(
+                            SettingsStatusLabelFormatter.binaryState(
+                                isEnabled: binding.isEnabled,
+                                enabledText: "已启用 · 停留 \(binding.hoverDelay.formatted(.number.precision(.fractionLength(1))))s",
+                                disabledText: "已关闭"
+                            )
+                        )
                     .font(.system(size: LocalTokens.captionSize))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -1567,7 +1624,11 @@ class DynamicContinentConfigViewModel: ObservableObject {
 
     var currentStateText: String {
         if !isEnabled {
-            return "已关闭"
+            return SettingsStatusLabelFormatter.binaryState(
+                isEnabled: false,
+                enabledText: "已启用",
+                disabledText: "已关闭"
+            )
         }
         if autoExpand {
             return "自动展开"

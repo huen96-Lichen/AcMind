@@ -4,6 +4,17 @@ public enum PluginCapability: String, Codable, Sendable, CaseIterable {
     case customASR
     case customPolish
     case customInjection
+
+    public var displayName: String {
+        switch self {
+        case .customASR:
+            return "自定义 ASR"
+        case .customPolish:
+            return "自定义润色"
+        case .customInjection:
+            return "自定义注入"
+        }
+    }
 }
 
 public protocol Plugin: Sendable {

@@ -90,7 +90,7 @@ struct NotchV2Card<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             if let title {
                 HStack(alignment: .center, spacing: 6) {
                     if let symbol {
@@ -205,12 +205,20 @@ struct NotchV2StatusPill: View {
     let icon: String?
     let title: String
     let accent: Color
+    let isSelected: Bool
     let action: (() -> Void)?
 
-    init(icon: String? = nil, title: String, accent: Color = NotchV2DesignTokens.cardBackgroundStrong, action: (() -> Void)? = nil) {
+    init(
+        icon: String? = nil,
+        title: String,
+        accent: Color = NotchV2DesignTokens.cardBackgroundStrong,
+        isSelected: Bool = false,
+        action: (() -> Void)? = nil
+    ) {
         self.icon = icon
         self.title = title
         self.accent = accent
+        self.isSelected = isSelected
         self.action = action
     }
 
@@ -240,14 +248,16 @@ struct NotchV2StatusPill: View {
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
+        .scaleEffect(isSelected ? 1.02 : 1.0)
         .background(
             Capsule(style: .continuous)
-                .fill(accent.opacity(0.96))
+                .fill(isSelected ? accent.opacity(1.0) : accent.opacity(0.96))
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(isSelected ? Color.white.opacity(0.12) : Color.white.opacity(0.06), lineWidth: 1)
         )
+        .animation(.easeOut(duration: 0.16), value: isSelected)
     }
 }
 

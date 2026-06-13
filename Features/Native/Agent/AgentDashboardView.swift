@@ -101,7 +101,14 @@ struct AgentDashboardView: View {
     private var headerActions: some View {
         HStack {
             HStack(spacing: 12) {
-                StatusPill(label: viewModel.isLoading ? "忙碌" : "待命", color: viewModel.isLoading ? .orange : AppSurfaceTokens.accentGreen)
+                StatusPill(
+                    label: ActivityStateLabelFormatter.activityLabel(
+                        isActive: viewModel.isLoading,
+                        activeLabel: "忙碌",
+                        idleLabel: "待命"
+                    ),
+                    color: viewModel.isLoading ? .orange : AppSurfaceTokens.accentGreen
+                )
 
                 StatusPill(label: viewModel.recordingStatus.displayName, color: recordingColor(for: viewModel.recordingStatus))
 
@@ -173,7 +180,7 @@ struct AgentDashboardView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.8)
-                    Text("正在处理...")
+                    Text(ToolStatusLabelFormatter.processingText)
                         .font(.system(size: 13))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }

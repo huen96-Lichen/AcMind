@@ -11,6 +11,7 @@ enum AgentMode: String, Hashable {
 
 @MainActor
 class AgentViewModel: ObservableObject {
+    private static let logger = AcMindLogger(category: .ai)
     struct ModelOption: Identifiable, Equatable {
         let id = UUID()
         let providerId: String
@@ -98,7 +99,7 @@ class AgentViewModel: ObservableObject {
             let all = try await storage.listSourceItems(filter: nil)
             recentItems = Array(all.prefix(5))
         } catch {
-            print("Failed to load recent items: \(error)")
+            Self.logger.error("Failed to load recent items: \(error)")
         }
     }
 
@@ -126,7 +127,7 @@ class AgentViewModel: ObservableObject {
                 try await loadQuickAskMessages(sessionId: latest.id)
             }
         } catch {
-            print("Failed to load quick ask history: \(error)")
+            Self.logger.error("Failed to load quick ask history: \(error)")
         }
     }
 
@@ -193,7 +194,7 @@ class AgentViewModel: ObservableObject {
             projectContextItems = [
                 SecondarySidebarItem(id: "error", title: "项目加载失败", icon: "exclamationmark.triangle", badge: nil, isDisabled: true)
             ]
-            print("Failed to load workbench projects: \(error)")
+            Self.logger.error("Failed to load workbench projects: \(error)")
         }
     }
 
@@ -218,7 +219,7 @@ class AgentViewModel: ObservableObject {
         } catch {
             errorMessage = "保存失败: \(error.localizedDescription)"
             showError = true
-            print("Failed to save: \(error)")
+            Self.logger.error("Failed to save: \(error)")
         }
     }
 
@@ -287,7 +288,7 @@ class AgentViewModel: ObservableObject {
                 contextPrefix = memoryContext.toPromptString()
             }
         } catch {
-            print("获取记忆上下文失败: \(error)")
+            Self.logger.error("获取记忆上下文失败: \(error)")
         }
 
         let enrichedText: String
@@ -429,7 +430,7 @@ class AgentViewModel: ObservableObject {
         } catch {
             errorMessage = "开始录音失败: \(error.localizedDescription)"
             showError = true
-            print("开始录音失败: \(error)")
+            Self.logger.error("开始录音失败: \(error)")
         }
     }
 
@@ -443,7 +444,7 @@ class AgentViewModel: ObservableObject {
         } catch {
             errorMessage = "停止录音失败: \(error.localizedDescription)"
             showError = true
-            print("停止录音失败: \(error)")
+            Self.logger.error("停止录音失败: \(error)")
             stopRecordingTimer()
         }
     }
@@ -479,19 +480,19 @@ class AgentViewModel: ObservableObject {
                         return
                     }
                     if item.status == .deleted {
-                        print("转写出错")
+                        Self.logger.warning("转写出错")
                         return
                     }
                 }
             } catch {
-                print("获取 SourceItem 失败: \(error)")
+                Self.logger.error("获取 SourceItem 失败: \(error)")
             }
 
             try? await Task.sleep(nanoseconds: 1_000_000_000) // 等待 1 秒
             attempts += 1
         }
 
-        print("等待转写超时")
+        Self.logger.warning("等待转写超时")
     }
 
     // MARK: - Private Helpers
