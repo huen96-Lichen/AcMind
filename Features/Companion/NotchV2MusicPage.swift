@@ -22,9 +22,9 @@ struct NotchV2MusicPage: View {
                     .foregroundStyle(NotchV2DesignTokens.secondaryText)
 
                 VStack(alignment: .leading, spacing: 7) {
-                    compactRow(label: "来源", value: sourceTitle)
-                    compactRow(label: "状态", value: playbackStatusText)
-                    compactRow(label: "专辑", value: albumText)
+                    NotchV2InfoRow(title: "来源", value: sourceTitle, icon: "dot.radiowaves.left.and.right", accent: .blue, compactValue: true)
+                    NotchV2InfoRow(title: "状态", value: playbackStatusText, icon: "waveform", accent: .green, compactValue: true)
+                    NotchV2InfoRow(title: "专辑", value: albumText, icon: "music.note", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
                 }
 
                 Divider()
@@ -158,27 +158,14 @@ struct NotchV2MusicPage: View {
                 Divider()
                     .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
-                Button {
-                    viewModel.musicService.openMusicApp()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.right.square")
-                        Text("打开来源播放器")
+                NotchV2StatusPill(
+                    icon: "arrow.up.right.square",
+                    title: "打开来源播放器",
+                    accent: NotchV2DesignTokens.panelBackground,
+                    action: {
+                        viewModel.musicService.openMusicApp()
                     }
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(NotchV2DesignTokens.accentBlue.opacity(0.16))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(NotchV2DesignTokens.accentBlue.opacity(0.22), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
+                )
             }
         }
     }
@@ -260,9 +247,9 @@ struct NotchV2MusicPage: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule(style: .continuous)
-                        .fill(NotchV2DesignTokens.innerCardBackground)
+                        .fill(NotchV2DesignTokens.panelBackground)
                     Capsule(style: .continuous)
-                        .fill(NotchV2DesignTokens.accentBlue)
+                        .fill(NotchV2DesignTokens.accentBlue.opacity(0.75))
                         .frame(width: proxy.size.width * progressValue)
                 }
             }
@@ -326,34 +313,16 @@ struct NotchV2MusicPage: View {
         return sourceTitle
     }
 
-    private func compactRow(label: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .frame(width: 34, alignment: .leading)
-                .lineLimit(1)
-
-            Text(value)
-                .font(NotchV2DesignTokens.Typography.body)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-
-            Spacer(minLength: 0)
-        }
-    }
-
     private func playbackButton(systemName: String, size: CGFloat, isPrimary: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: size * 0.46, weight: .semibold))
-                .foregroundStyle(isPrimary ? .white : NotchV2DesignTokens.primaryText)
-                .frame(width: size, height: size)
-                .background(
-                    Circle()
-                        .fill(isPrimary ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.cardBackgroundStrong.opacity(0.84))
-                )
+                Image(systemName: systemName)
+                    .font(.system(size: size * 0.46, weight: .semibold))
+                    .foregroundStyle(isPrimary ? .white : NotchV2DesignTokens.primaryText)
+                    .frame(width: size, height: size)
+                    .background(
+                        Circle()
+                            .fill(isPrimary ? NotchV2DesignTokens.accentBlue.opacity(0.82) : NotchV2DesignTokens.panelBackground)
+                    )
                 .overlay(
                     Circle()
                         .stroke(Color.white.opacity(0.05), lineWidth: 1)
@@ -363,29 +332,6 @@ struct NotchV2MusicPage: View {
     }
 
     private func controlRow(icon: String, title: String, value: String, isActive: Bool) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(isActive ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.secondaryText)
-                .frame(width: 16)
-
-            Text(title)
-                .font(NotchV2DesignTokens.Typography.body)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            Text(value)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
-        )
+        NotchV2InfoRow(title: title, value: value, icon: icon, accent: isActive ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.secondaryText, compactValue: true)
     }
 }

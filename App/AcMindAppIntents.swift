@@ -3,7 +3,7 @@ import Foundation
 
 struct OpenAgentIntent: AppIntent {
     static let title: LocalizedStringResource = "打开 Agent"
-    static let description = IntentDescription("打开 AcMind 的 Agent 页面。")
+    static let description = IntentDescription("打开 AcWork 的 Agent 页面。")
     static let openAppWhenRun = true
 
     @MainActor
@@ -15,7 +15,7 @@ struct OpenAgentIntent: AppIntent {
 
 struct OpenInboxIntent: AppIntent {
     static let title: LocalizedStringResource = "打开收集箱"
-    static let description = IntentDescription("打开 AcMind 的收集箱页面。")
+    static let description = IntentDescription("打开 AcWork 的收集箱页面。")
     static let openAppWhenRun = true
 
     @MainActor
@@ -27,7 +27,7 @@ struct OpenInboxIntent: AppIntent {
 
 struct OpenScheduleIntent: AppIntent {
     static let title: LocalizedStringResource = "打开日程"
-    static let description = IntentDescription("打开 AcMind 的日程页面。")
+    static let description = IntentDescription("打开 AcWork 的日程页面。")
     static let openAppWhenRun = true
 
     @MainActor

@@ -9,12 +9,14 @@ struct ShortcutKeycap: View {
             .fontWeight(.medium)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
             .foregroundStyle(AppSurfaceTokens.primaryText)
-            .cornerRadius(6)
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(AppSurfaceTokens.separator, lineWidth: 1)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.9), lineWidth: 1)
             )
     }
 }
@@ -27,6 +29,6 @@ struct ShortcutKeycapView_Previews: PreviewProvider {
             ShortcutKeycap(key: "Shift")
         }
         .padding()
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
     }
 }

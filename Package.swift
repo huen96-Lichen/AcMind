@@ -25,21 +25,43 @@ let package = Package(
             name: "AcMindKit",
             targets: ["AcMindKit"]
         ),
+        .executable(
+            name: "AcMindSystemStatusHelper",
+            targets: ["AcMindSystemStatusHelper"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "0.18.0"),
     ],
     targets: [
+        .target(
+            name: "AcMindHIDBridge",
+            path: "AcMindKit/Services/SystemStatus/HIDBridge",
+            publicHeadersPath: "include",
+            cSettings: [
+                .headerSearchPath("include")
+            ]
+        ),
         // 核心库：Models + Protocols + Services
         .target(
             name: "AcMindKit",
             dependencies: [
+                "AcMindHIDBridge",
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
             ],
             path: "AcMindKit",
+            exclude: [
+                "Services/SystemStatus/HIDBridge",
+                "Services/SystemStatus/HelperTool"
+            ],
             linkerSettings: [
                 .linkedLibrary("sqlite3")
             ]
+        ),
+        .executableTarget(
+            name: "AcMindSystemStatusHelper",
+            dependencies: ["AcMindKit"],
+            path: "AcMindKit/Services/SystemStatus/HelperTool"
         ),
         // 单元测试
         .testTarget(

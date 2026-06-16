@@ -93,12 +93,7 @@ public struct NotchV2RootView: View {
     }
 
     private var backdropLayer: some View {
-        LinearGradient(
-            colors: [NotchV2DesignTokens.backdropGradientTop, NotchV2DesignTokens.backdropGradientBottom],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        AppSurfaceBackdrop()
     }
 
     private func handleHover(_ hovering: Bool) {

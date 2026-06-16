@@ -35,7 +35,7 @@ struct CompanionCapturePanel: View {
             }
         }
         .frame(width: 460, height: 540)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
         .onChange(of: viewModel.openDetailAfterCapture) { _, _ in
             viewModel.saveCapturePreferences()
         }
@@ -144,7 +144,7 @@ struct CompanionCapturePanel: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.12))
-                            .cornerRadius(4)
+                            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
 
                     Text("当前所有捕获结果都会自动写入收集箱，这里仅作为状态说明。")
@@ -159,8 +159,14 @@ struct CompanionCapturePanel: View {
                     .toggleStyle(.switch)
             }
             .padding(16)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(10)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+            )
         }
     }
 }
@@ -177,7 +183,7 @@ struct CaptureTypeCard: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                         .fill(isHovered ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.08))
                         .frame(width: 48, height: 48)
 
@@ -199,11 +205,16 @@ struct CaptureTypeCard: View {
                 Spacer()
             }
             .padding(12)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(10)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isHovered && isEnabled ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(
+                        isHovered && isEnabled ? Color.accentColor.opacity(0.3) : AppSurfaceTokens.separator.opacity(0.75),
+                        lineWidth: 1
+                    )
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -282,8 +293,10 @@ struct RecentCaptureRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
-        .cornerRadius(8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isHovered ? AppSurfaceTokens.separator.opacity(0.08) : Color.clear)
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -803,6 +816,6 @@ private struct CaptureDestinationChoiceView: View {
         )
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
     }
 }

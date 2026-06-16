@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import DiskArbitration
 import IOKit.ps
 import IOKit
 import SystemConfiguration
@@ -7,6 +8,30 @@ import CoreWLAN
 import AppKit
 import UserNotifications
 @preconcurrency import EventKit
+
+#if arch(arm64)
+private typealias IOHIDEventSystemClientRef = OpaquePointer
+private typealias IOHIDServiceClientRef = OpaquePointer
+private typealias IOHIDEventRef = OpaquePointer
+
+@_silgen_name("IOHIDEventSystemClientCreate")
+private func IOHIDEventSystemClientCreate(_ allocator: CFAllocator?) -> IOHIDEventSystemClientRef?
+
+@_silgen_name("IOHIDEventSystemClientSetMatching")
+private func IOHIDEventSystemClientSetMatching(_ client: IOHIDEventSystemClientRef, _ match: CFDictionary) -> Int32
+
+@_silgen_name("IOHIDEventSystemClientCopyServices")
+private func IOHIDEventSystemClientCopyServices(_ client: IOHIDEventSystemClientRef) -> CFArray?
+
+@_silgen_name("IOHIDServiceClientCopyProperty")
+private func IOHIDServiceClientCopyProperty(_ service: IOHIDServiceClientRef, _ property: CFString) -> CFTypeRef?
+
+@_silgen_name("IOHIDServiceClientCopyEvent")
+private func IOHIDServiceClientCopyEvent(_ service: IOHIDServiceClientRef, _ type: Int64, _ field: Int32, _ options: Int64) -> IOHIDEventRef?
+
+@_silgen_name("IOHIDEventGetFloatValue")
+private func IOHIDEventGetFloatValue(_ event: IOHIDEventRef, _ field: Int32) -> Double
+#endif
 
 public struct CPUStatusReader: SystemStatusReader {
     public init() {}
@@ -279,13 +304,47 @@ public struct MemoryStatusReader: SystemStatusReader {
 public struct NetworkStatusReader: SystemStatusReader {
     private static var previousCounters: SystemNetworkCounters?
     private static var previousDate: Date?
+    private let latencyProvider: @Sendable () async -> Double?
+    private let dnsLookupProvider: @Sendable () async -> Double?
+    private let publicIPAddressProvider: @Sendable () async -> String?
 
-    public init() {}
+    public init(
+        latencyProvider: (@Sendable () async -> Double?)? = nil,
+        dnsLookupProvider: (@Sendable () async -> Double?)? = nil,
+        publicIPAddressProvider: (@Sendable () async -> String?)? = nil
+    ) {
+        self.latencyProvider = latencyProvider ?? { await Self.defaultLatencyProvider() }
+        self.dnsLookupProvider = dnsLookupProvider ?? { await Self.defaultDNSLookupProvider() }
+        self.publicIPAddressProvider = publicIPAddressProvider ?? { await Self.defaultPublicIPAddressProvider() }
+    }
 
     public func read() async -> SystemStatusPartialSnapshot {
         var partial = SystemStatusPartialSnapshot()
+        async let latencyResult = latencyProvider()
+        async let dnsLookupResult = dnsLookupProvider()
+        async let publicIPResult = publicIPAddressProvider()
+
+        if let latency = await latencyResult {
+            partial.networkLatencyMs = latency
+        } else {
+            partial.unavailableReasons.append(.init(id: "network-ping-unavailable", category: "network", message: "网络延迟不可用", detail: "ping failed"))
+        }
+
+        if let dnsLookup = await dnsLookupResult {
+            partial.networkDNSLookupMs = dnsLookup
+        } else {
+            partial.unavailableReasons.append(.init(id: "network-dns-unavailable", category: "network", message: "DNS 解析不可用", detail: "DNS lookup failed"))
+        }
+
+        if let publicIPAddress = await publicIPResult {
+            partial.publicIPAddress = publicIPAddress
+        } else {
+            partial.unavailableReasons.append(.init(id: "network-public-ip-unavailable", category: "network", message: "公网 IP 不可用", detail: "public IP lookup failed"))
+        }
+
         guard let current = currentNetworkCounters() else {
             partial.unavailableReasons.append(.init(id: "network-unavailable", category: "network", message: "网络计数读取不可用", detail: "getifaddrs failed"))
+            partial.networkInterfaces = interfaceDetails()
             return partial
         }
 
@@ -316,6 +375,97 @@ public struct NetworkStatusReader: SystemStatusReader {
         partial.networkDownloadMBps = rate.downloadMBps
         partial.networkUploadMBps = rate.uploadMBps
         return partial
+    }
+
+    private static func defaultLatencyProvider() async -> Double? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/sbin/ping")
+                process.arguments = ["-c", "1", "-n", "-W", "1000", "1.1.1.1"]
+
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    continuation.resume(returning: Self.parsePingLatency(output))
+                } catch {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
+    private static func defaultDNSLookupProvider() async -> Double? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                let start = DispatchTime.now()
+                var hints = addrinfo(
+                    ai_flags: 0,
+                    ai_family: AF_UNSPEC,
+                    ai_socktype: SOCK_STREAM,
+                    ai_protocol: 0,
+                    ai_addrlen: 0,
+                    ai_canonname: nil,
+                    ai_addr: nil,
+                    ai_next: nil
+                )
+
+                var result: UnsafeMutablePointer<addrinfo>?
+                let status = getaddrinfo("apple.com", nil, &hints, &result)
+                if let result {
+                    freeaddrinfo(result)
+                }
+
+                guard status == 0 else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                let elapsedNs = DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds
+                continuation.resume(returning: Double(elapsedNs) / 1_000_000.0)
+            }
+        }
+    }
+
+    private static func defaultPublicIPAddressProvider() async -> String? {
+        guard let url = URL(string: "https://api.ipify.org?format=text") else { return nil }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let text = String(data: data, encoding: .utf8)
+            return parsePublicIPAddress(text)
+        } catch {
+            return nil
+        }
+    }
+
+    static func parsePingLatency(_ output: String) -> Double? {
+        let patterns = [
+            #"time[=<]([0-9]+(?:\.[0-9]+)?)\s*ms"#,
+            #"avg[=/]([0-9]+(?:\.[0-9]+)?)"#
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { continue }
+            let range = NSRange(output.startIndex..<output.endIndex, in: output)
+            guard let match = regex.firstMatch(in: output, options: [], range: range), match.numberOfRanges >= 2,
+                  let valueRange = Range(match.range(at: 1), in: output),
+                  let value = Double(output[valueRange]) else { continue }
+            return value
+        }
+
+        return nil
+    }
+
+    static func parsePublicIPAddress(_ text: String?) -> String? {
+        guard let text else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func currentNetworkCounters() -> SystemNetworkCounters? {
@@ -576,6 +726,247 @@ public struct BatteryStatusReader: SystemStatusReader {
     }
 }
 
+public struct BluetoothStatusReader: SystemStatusReader {
+    private let devicesProvider: @Sendable () async -> [SystemBluetoothDeviceSnapshot]?
+
+    public init(devicesProvider: (@Sendable () async -> [SystemBluetoothDeviceSnapshot]?)? = nil) {
+        self.devicesProvider = devicesProvider ?? { await Self.defaultDevicesProvider() }
+    }
+
+    public func read() async -> SystemStatusPartialSnapshot {
+        var partial = SystemStatusPartialSnapshot()
+
+        guard let devices = await devicesProvider() else {
+            partial.unavailableReasons.append(.init(
+                id: "bluetooth-unavailable",
+                category: "bluetooth",
+                message: "蓝牙状态不可用",
+                detail: "system_profiler SPBluetoothDataType failed"
+            ))
+            return partial
+        }
+
+        partial.bluetoothDevices = devices
+        if devices.isEmpty {
+            partial.unavailableReasons.append(.init(
+                id: "bluetooth-empty",
+                category: "bluetooth",
+                message: "没有可用的蓝牙设备",
+                detail: "system_profiler returned no paired or connected devices"
+            ))
+        }
+        return partial
+    }
+
+    public static func parseSystemProfilerBluetoothData(_ output: String) -> [SystemBluetoothDeviceSnapshot]? {
+        guard let data = output.data(using: .utf8) else { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        guard let reports = json["SPBluetoothDataType"] as? [[String: Any]], let report = reports.first else { return [] }
+
+        var devices: [SystemBluetoothDeviceSnapshot] = []
+
+        if let connected = report["device_connected"] as? [[String: [String: Any]]] {
+            devices.append(contentsOf: connected.compactMap { entry in
+                guard let device = entry.first else { return nil }
+                let name = device.key
+                let info = device.value
+                return Self.snapshot(
+                    name: name,
+                    info: info,
+                    isConnected: true,
+                    isPaired: true
+                )
+            })
+        }
+
+        if let paired = report["device_not_connected"] as? [[String: [String: String]]] {
+            devices.append(contentsOf: paired.flatMap { entry in
+                entry.compactMap { deviceEntry in
+                    let name = deviceEntry.key
+                    let info = deviceEntry.value
+                    return Self.snapshot(
+                        name: name,
+                        info: info,
+                        isConnected: false,
+                        isPaired: true
+                    )
+                }
+            })
+        }
+
+        if devices.isEmpty {
+            return []
+        }
+
+        return devices
+    }
+
+    private static func defaultDevicesProvider() async -> [SystemBluetoothDeviceSnapshot]? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
+                process.arguments = ["SPBluetoothDataType", "-json"]
+
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    continuation.resume(returning: Self.parseSystemProfilerBluetoothData(output))
+                } catch {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
+    private static func snapshot(
+        name: String,
+        info: [String: Any],
+        isConnected: Bool,
+        isPaired: Bool
+    ) -> SystemBluetoothDeviceSnapshot {
+        let address = Self.deviceAddress(from: info)
+        let batteryInfo = Self.batteryInfo(from: info)
+        let source = "system_profiler SPBluetoothDataType"
+
+        return SystemBluetoothDeviceSnapshot(
+            id: address.isEmpty ? name : address,
+            name: name.isEmpty ? address : name,
+            address: address.isEmpty ? name : address,
+            isConnected: isConnected,
+            isPaired: isPaired,
+            batteryLevel: batteryInfo.level,
+            batteryDetail: batteryInfo.detail,
+            source: source,
+            isAvailable: true,
+            unavailableReason: nil
+        )
+    }
+
+    private static func snapshot(
+        name: String,
+        info: [String: String],
+        isConnected: Bool,
+        isPaired: Bool
+    ) -> SystemBluetoothDeviceSnapshot {
+        let address = Self.deviceAddress(from: info)
+        let batteryInfo = Self.batteryInfo(from: info)
+        let source = "system_profiler SPBluetoothDataType"
+
+        return SystemBluetoothDeviceSnapshot(
+            id: address.isEmpty ? name : address,
+            name: name.isEmpty ? address : name,
+            address: address.isEmpty ? name : address,
+            isConnected: isConnected,
+            isPaired: isPaired,
+            batteryLevel: batteryInfo.level,
+            batteryDetail: batteryInfo.detail,
+            source: source,
+            isAvailable: true,
+            unavailableReason: nil
+        )
+    }
+
+    private static func deviceAddress(from info: [String: Any]) -> String {
+        for key in ["device_address", "deviceAddress", "BD_ADDR", "Address", "address"] {
+            if let raw = info[key] {
+                if let text = raw as? String, text.isEmpty == false {
+                    return normalizedBluetoothAddress(text)
+                }
+            }
+        }
+        return ""
+    }
+
+    private static func deviceAddress(from info: [String: String]) -> String {
+        for key in ["device_address", "deviceAddress", "BD_ADDR", "Address", "address"] {
+            if let text = info[key], text.isEmpty == false {
+                return normalizedBluetoothAddress(text)
+            }
+        }
+        return ""
+    }
+
+    private static func normalizedBluetoothAddress(_ raw: String) -> String {
+        raw.replacingOccurrences(of: ":", with: "-").lowercased()
+    }
+
+    private static func batteryInfo(from info: [String: Any]) -> (level: Double?, detail: String?) {
+        let keys = [
+            ("Main", "device_batteryLevelMain"),
+            ("Case", "device_batteryLevelCase"),
+            ("Left", "device_batteryLevelLeft"),
+            ("Right", "device_batteryLevelRight"),
+            ("Battery", "device_batteryLevel"),
+            ("Battery", "Left Battery Level"),
+            ("Battery", "Right Battery Level")
+        ]
+
+        var details: [(String, Double)] = []
+
+        for (label, key) in keys {
+            guard let value = Self.percentageValue(info[key]) else { continue }
+            details.append((label, value))
+        }
+
+        let level = details.first?.1
+        let detail = details.isEmpty ? nil : details.map { "\($0.0) \(Int($0.1.rounded()))%" }.joined(separator: " · ")
+        return (level, detail)
+    }
+
+    private static func batteryInfo(from info: [String: String]) -> (level: Double?, detail: String?) {
+        let keys = [
+            ("Main", "device_batteryLevelMain"),
+            ("Case", "device_batteryLevelCase"),
+            ("Left", "device_batteryLevelLeft"),
+            ("Right", "device_batteryLevelRight"),
+            ("Battery", "device_batteryLevel"),
+            ("Battery", "Left Battery Level"),
+            ("Battery", "Right Battery Level")
+        ]
+
+        var details: [(String, Double)] = []
+
+        for (label, key) in keys {
+            guard let value = Self.percentageValue(info[key]) else { continue }
+            details.append((label, value))
+        }
+
+        let level = details.first?.1
+        let detail = details.isEmpty ? nil : details.map { "\($0.0) \(Int($0.1.rounded()))%" }.joined(separator: " · ")
+        return (level, detail)
+    }
+
+    private static func percentageValue(_ value: Any?) -> Double? {
+        guard let value else { return nil }
+        if let number = value as? NSNumber {
+            let raw = number.doubleValue
+            if raw <= 1, raw >= 0 { return raw * 100 }
+            return raw
+        }
+        if let int = value as? Int {
+            return int == 1 ? 100 : Double(int)
+        }
+        if let double = value as? Double {
+            return double <= 1 && double >= 0 ? double * 100 : double
+        }
+        if let string = value as? String {
+            let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "%", with: "")
+            if let double = Double(trimmed) {
+                return double <= 1 && double >= 0 ? double * 100 : double
+            }
+        }
+        return nil
+    }
+
+}
+
 public struct PermissionStatusReader: SystemStatusReader {
     private let permissionManager: PermissionManager
 
@@ -587,16 +978,68 @@ public struct PermissionStatusReader: SystemStatusReader {
     public func read() async -> SystemStatusPartialSnapshot {
         var partial = SystemStatusPartialSnapshot()
         let statuses = await MainActor.run { permissionManager.statuses }
+        let calendarStatus = EKEventStore.authorizationStatus(for: .event)
+        let remindersStatus = EKEventStore.authorizationStatus(for: .reminder)
+        let notificationValue = Self.notificationStatus()
 
         partial.permissions = [
-            .init(id: "microphone", name: "麦克风", category: "permission", value: statuses[.microphone]?.displayName, source: "PermissionManager", isAvailable: true, unavailableReason: nil),
-            .init(id: "accessibility", name: "辅助功能", category: "permission", value: statuses[.accessibility]?.displayName, source: "PermissionManager", isAvailable: true, unavailableReason: nil),
-            .init(id: "screenRecording", name: "屏幕录制", category: "permission", value: statuses[.screenRecording]?.displayName, source: "PermissionManager", isAvailable: true, unavailableReason: nil),
-            .init(id: "calendar", name: "日历", category: "permission", value: Self.authorizationText(EKEventStore.authorizationStatus(for: .event)), source: "EKEventStore", isAvailable: true, unavailableReason: nil),
-            .init(id: "reminders", name: "提醒事项", category: "permission", value: Self.authorizationText(EKEventStore.authorizationStatus(for: .reminder)), source: "EKEventStore", isAvailable: true, unavailableReason: nil),
-            .init(id: "notifications", name: "通知", category: "permission", value: Self.notificationStatus(), source: "UNUserNotificationCenter", isAvailable: true, unavailableReason: nil)
+            Self.permissionSnapshot(kind: .microphone, status: statuses[.microphone] ?? .unknown),
+            Self.permissionSnapshot(kind: .accessibility, status: statuses[.accessibility] ?? .unknown),
+            Self.permissionSnapshot(kind: .screenRecording, status: statuses[.screenRecording] ?? .unknown),
+            Self.eventPermissionSnapshot(id: "calendar", name: "日历", status: calendarStatus),
+            Self.eventPermissionSnapshot(id: "reminders", name: "提醒事项", status: remindersStatus),
+            .init(
+                id: AppPermissionKind.notifications.rawValue,
+                name: AppPermissionKind.notifications.displayName,
+                category: "permission",
+                value: notificationValue,
+                source: "UNUserNotificationCenter",
+                isAvailable: notificationValue == "已授权",
+                unavailableReason: notificationValue == "已授权" ? nil : "通知权限\(notificationValue)"
+            )
         ]
+        partial.unavailableReasons = partial.permissions.compactMap { permission -> SystemStatusUnavailableReason? in
+            guard permission.isAvailable == false else { return nil }
+            return SystemStatusUnavailableReason(
+                id: "permission-\(permission.id)",
+                category: "permission",
+                message: "\(permission.name)：\(permission.unavailableReason ?? permission.value ?? "不可用")",
+                detail: permission.source
+            )
+        }
         return partial
+    }
+
+    nonisolated static func permissionSnapshot(
+        kind: AppPermissionKind,
+        status: AppPermissionStatus
+    ) -> SystemPermissionSnapshot {
+        SystemPermissionSnapshot(
+            id: kind.rawValue,
+            name: kind.displayName,
+            category: "permission",
+            value: status.displayName,
+            source: "PermissionManager",
+            isAvailable: status.isAuthorized,
+            unavailableReason: status.unavailableReason
+        )
+    }
+
+    nonisolated static func eventPermissionSnapshot(
+        id: String,
+        name: String,
+        status: EKAuthorizationStatus
+    ) -> SystemPermissionSnapshot {
+        let value = authorizationText(status)
+        return SystemPermissionSnapshot(
+            id: id,
+            name: name,
+            category: "permission",
+            value: value,
+            source: "EKEventStore",
+            isAvailable: value == "已授权",
+            unavailableReason: value == "已授权" ? nil : "\(name)权限\(value)"
+        )
     }
 
     nonisolated static func notificationStatus(using fetcher: (@escaping (UNAuthorizationStatus) -> Void) -> Void = { completion in
@@ -627,7 +1070,7 @@ public struct PermissionStatusReader: SystemStatusReader {
         }
     }
 
-    private static func authorizationText(_ status: EKAuthorizationStatus) -> String {
+    nonisolated static func authorizationText(_ status: EKAuthorizationStatus) -> String {
         switch status {
         case .authorized: return "已授权"
         case .fullAccess: return "已授权"
@@ -699,7 +1142,7 @@ final class SMCReader {
     init?() {
         var iterator: io_iterator_t = 0
         let matchingDictionary = IOServiceMatching("AppleSMC")
-        let result = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDictionary, &iterator)
+        let result = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDictionary, &iterator)
         guard result == kIOReturnSuccess else {
             return nil
         }
@@ -956,6 +1399,14 @@ public struct SensorStatusReader: SystemStatusReader {
         // 直接 SMC IOKit 读取（非沙盒环境下可直接访问）
         readFromSMC(&partial)
 
+        // Apple Silicon 机型会把温度传感器暴露为 HID event services，
+        // 这条路径和 AppleSMC 的旧 key 不是一回事。
+        #if arch(arm64)
+        if partial.temperatureSensors.isEmpty {
+            readFromAppleSiliconHIDSensors(&partial)
+        }
+        #endif
+
         // 兜底：使用电池温度
         if partial.temperatureSensors.isEmpty {
             let batterySnapshot = await BatteryStatusReader().read()
@@ -974,6 +1425,67 @@ public struct SensorStatusReader: SystemStatusReader {
         }
 
         return partial
+    }
+
+    #if arch(arm64)
+    private func readFromAppleSiliconHIDSensors(_ partial: inout SystemStatusPartialSnapshot) {
+        let sensors = readAppleSiliconTemperatureSensors()
+        for (key, value) in sensors {
+            guard value > -40, value < 160 else { continue }
+
+            let normalizedName = Self.appleSiliconSensorName(for: key)
+            let id = "hid-\(key.lowercased())"
+            if !partial.temperatureSensors.contains(where: { $0.id == id }) {
+                partial.temperatureSensors.append(SystemSensorSnapshot(
+                    id: id,
+                    name: normalizedName,
+                    category: "temperature",
+                    value: value,
+                    unit: "°C",
+                    source: "AppleHIDEventSystem",
+                    isAvailable: true,
+                    unavailableReason: nil
+                ))
+            }
+        }
+    }
+
+    private func readAppleSiliconTemperatureSensors() -> [String: Double] {
+        guard let system = IOHIDEventSystemClientCreate(kCFAllocatorDefault) else { return [:] }
+        let matching: CFDictionary = [
+            "PrimaryUsagePage": 0xff00,
+            "PrimaryUsage": 0x0005
+        ] as CFDictionary
+        _ = IOHIDEventSystemClientSetMatching(system, matching)
+        guard let services = IOHIDEventSystemClientCopyServices(system) as? [AnyObject] else {
+            return [:]
+        }
+
+        var results: [String: Double] = [:]
+        results.reserveCapacity(services.count)
+
+        for service in services {
+            let serviceRef = unsafeBitCast(service, to: IOHIDServiceClientRef.self)
+            let product = IOHIDServiceClientCopyProperty(serviceRef, "Product" as CFString)
+                .flatMap { $0 as? String } ?? ""
+            guard let event = IOHIDServiceClientCopyEvent(serviceRef, 15, 0, 0) else { continue }
+            let value = IOHIDEventGetFloatValue(event, 15 << 16)
+            results[product] = value
+        }
+
+        return results
+    }
+    #else
+    private func readFromAppleSiliconHIDSensors(_ partial: inout SystemStatusPartialSnapshot) {}
+    #endif
+
+    private static func appleSiliconSensorName(for product: String) -> String {
+        let normalized = product.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = normalized.lowercased()
+        if lower.contains("tcal") { return "当前设备温度" }
+        if lower.contains("tdev") { return normalized.replacingOccurrences(of: "PMU ", with: "") }
+        if lower.contains("temp") { return normalized }
+        return normalized.isEmpty ? "Apple Silicon 传感器" : normalized
     }
 
     private func readFromSMC(_ partial: inout SystemStatusPartialSnapshot) {
@@ -1134,65 +1646,41 @@ public struct SensorStatusReader: SystemStatusReader {
 }
 
 public struct FanStatusReader: SystemStatusReader {
-    public init() {}
+    private let transportProvider: @Sendable () -> any SystemHardwareTransport
+
+    public init(transportProvider: @escaping @Sendable () -> any SystemHardwareTransport = { SystemHardwareAccess.shared.makeDefaultTransport() }) {
+        self.transportProvider = transportProvider
+    }
 
     public func read() async -> SystemStatusPartialSnapshot {
         var partial = SystemStatusPartialSnapshot()
 
-        guard let smc = SMCReader() else { return partial }
-
-        // 尝试读取风扇数量
-        var fanCount: Double = 0
-        if let count = smc.getValue("FNum") {
-            fanCount = count
-        } else {
-            // 尝试手动探测风扇
-            fanCount = detectFanCount(smc)
+        let transport = transportProvider()
+        guard transport.isAvailable else {
+            return partial
         }
 
-        guard fanCount > 0 else { return partial }
+        let controlStates = transport.refreshFanControlStates()
+        guard controlStates.isEmpty == false else { return partial }
 
-        let count = max(0, Int(floor(fanCount)))
-        var fans: [SystemFanSnapshot] = []
-
-        for index in 0..<count {
-            let actualSpeed = smc.getValue("F\(index)Ac") ?? smc.getValue("F\(index)Sp")
-            let minSpeed = smc.getValue("F\(index)Mn")
-            let maxSpeed = smc.getValue("F\(index)Mx")
-            let modeValue = smc.getValue("F\(index)Md") ?? smc.getValue("F\(index)md") ?? smc.getValue("F\(index)Mode")
-            let fanName = smc.getStringValue("F\(index)ID") ?? smc.getStringValue("F\(index)Nm") ?? "Fan #\(index + 1)"
-
-            if let speed = actualSpeed, speed > 0 {
-                fans.append(SystemFanSnapshot(
-                    id: "fan-\(index)",
-                    name: fanName,
-                    category: "fan",
-                    value: speed,
-                    unit: "RPM",
-                    source: "AppleSMC",
-                    isAvailable: true,
-                    unavailableReason: nil,
-                    minRPM: minSpeed,
-                    maxRPM: maxSpeed,
-                    isAutomatic: modeValue.map { $0 == 0 || $0 == 3 }
-                ))
-            }
-        }
-
-        if fans.isEmpty == false {
-            partial.fanSensors = fans
+        partial.fanControlStates = controlStates
+        partial.fanSensors = controlStates.compactMap { state in
+            guard let rpm = state.rpm, rpm > 0 else { return nil }
+            return SystemFanSnapshot(
+                id: "fan-\(state.fanIndex)",
+                name: state.name,
+                category: "fan",
+                value: rpm,
+                unit: "RPM",
+                source: state.source,
+                isAvailable: state.isAvailable,
+                unavailableReason: state.unavailableReason,
+                minRPM: state.minRPM,
+                maxRPM: state.maxRPM,
+                isAutomatic: state.isAutomatic
+            )
         }
         return partial
-    }
-
-    private func detectFanCount(_ smc: SMCReader) -> Double {
-        // 尝试手动探测风扇数量（最多 10 个）
-        for i in 0..<10 {
-            if let speed = smc.getValue("F\(i)Ac"), speed > 0 {
-                return Double(i + 1)
-            }
-        }
-        return 0
     }
 }
 
@@ -1232,12 +1720,33 @@ public struct GPUStatusReader: SystemStatusReader {
 
         // 读取 GPU 使用率（通过 IOReport）
         if isAppleSilicon {
-            if let gpuUsage = readAppleSiliconGPUUsage() {
+            let gpuUsage = readAppleSiliconGPUUsage()
+            if let gpuUsage {
                 partial.gpuUsagePercent = gpuUsage
             }
+            if let reason = Self.gpuUsageUnavailableReason(isAppleSilicon: isAppleSilicon, gpuUsage: gpuUsage) {
+                partial.unavailableReasons.append(reason)
+            }
+        } else {
+            partial.unavailableReasons.append(.init(
+                id: "gpu-usage-unsupported",
+                category: "gpu",
+                message: "GPU 使用率不可用",
+                detail: "No stable GPU usage source for this hardware class"
+            ))
         }
 
         return partial
+    }
+
+    static func gpuUsageUnavailableReason(isAppleSilicon: Bool, gpuUsage: Double?) -> SystemStatusUnavailableReason? {
+        guard isAppleSilicon, gpuUsage == nil else { return nil }
+        return .init(
+            id: "gpu-usage-unavailable",
+            category: "gpu",
+            message: "GPU 使用率不可用",
+            detail: "Apple Silicon GPU usage source unavailable"
+        )
     }
 
     private func readGPUModel() -> String? {
@@ -1292,16 +1801,51 @@ public struct GPUStatusReader: SystemStatusReader {
 }
 
 public struct DiskStatusReader: SystemStatusReader {
+    struct DiskIOBytes {
+        var read: UInt64
+        var write: UInt64
+    }
+
+    struct DiskIODeviceBytes {
+        let name: String
+        let read: Double
+        let write: Double
+    }
+
+    struct ParsedDiskIO {
+        let totals: DiskIOBytes
+        let devices: [DiskIODeviceBytes]
+    }
+
+    private static var previousProcessDiskIO: [Int32: DiskIOBytes]?
+    private static var previousProcessDate: Date?
     private static var previousReadBytes: UInt64?
     private static var previousWriteBytes: UInt64?
     private static var previousDate: Date?
+    private static var previousDeviceDiskIO: [String: DiskIOBytes]?
+    private static var previousDeviceDate: Date?
+    private let mountedVolumeURLsProvider: @Sendable () -> [URL]?
 
-    public init() {}
+    public init(mountedVolumeURLsProvider: (@Sendable () -> [URL]?)? = nil) {
+        self.mountedVolumeURLsProvider = mountedVolumeURLsProvider ?? {
+            FileManager.default.mountedVolumeURLs(
+                includingResourceValuesForKeys: [
+                    .volumeNameKey,
+                    .volumeAvailableCapacityForImportantUsageKey,
+                    .volumeTotalCapacityKey,
+                    .volumeIsRemovableKey,
+                    .volumeIsInternalKey
+                ],
+                options: [.skipHiddenVolumes]
+            )
+        }
+    }
 
     public func read() async -> SystemStatusPartialSnapshot {
         var partial = SystemStatusPartialSnapshot()
         do {
-            let values = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
+            let diskMountPoint = "/"
+            let values = try FileManager.default.attributesOfFileSystem(forPath: diskMountPoint)
             let totalBytes = (values[.systemSize] as? NSNumber)?.doubleValue ?? 0
             let freeBytes = (values[.systemFreeSize] as? NSNumber)?.doubleValue ?? 0
             let usedBytes = max(0, totalBytes - freeBytes)
@@ -1316,11 +1860,65 @@ public struct DiskStatusReader: SystemStatusReader {
                 isAvailable: true,
                 unavailableReason: nil
             )
+            partial.diskMountPoint = diskMountPoint
             partial.diskUsedGB = usedBytes / 1_073_741_824.0
             partial.diskTotalGB = totalBytes / 1_073_741_824.0
+            partial.diskVolumes = Self.collectMountedVolumes(from: mountedVolumeURLsProvider() ?? [])
 
-            // 计算磁盘 I/O 速率
-            if let (readBytes, writeBytes) = getDiskIOBytes() {
+            if let currentProcessIO = getProcessDiskIOBytes() {
+                let hasBaseline = Self.previousProcessDiskIO != nil && Self.previousProcessDate != nil
+                if let reason = Self.diskIOSamplingReason(hasBaseline: hasBaseline, didReadIOBytes: true) {
+                    partial.unavailableReasons.append(reason)
+                }
+                let now = Date()
+                if let previousProcessIO = Self.previousProcessDiskIO,
+                   let previousDate = Self.previousProcessDate,
+                   previousDate < now {
+                    let interval = now.timeIntervalSince(previousDate)
+                    if interval > 0 {
+                        let processSnapshots = Self.diskIOProcessSnapshots(
+                            current: currentProcessIO.mapValues { (read: $0.read, write: $0.write) },
+                            previous: previousProcessIO.mapValues { (read: $0.read, write: $0.write) },
+                            interval: interval,
+                            processNameProvider: Self.processName(for:)
+                        )
+                        partial.topDiskIOProcesses = processSnapshots
+                        partial.diskReadMBps = processSnapshots.reduce(0) { $0 + $1.readMBps }
+                        partial.diskWriteMBps = processSnapshots.reduce(0) { $0 + $1.writeMBps }
+                    }
+                }
+                Self.previousProcessDiskIO = currentProcessIO
+                Self.previousProcessDate = now
+            } else if let deviceIO = getNativeDiskIODeviceBytes() {
+                partial.diskIODeviceSource = "IORegistry / IOBlockStorageDriver"
+                let hasBaseline = Self.previousDeviceDiskIO != nil && Self.previousDeviceDate != nil
+                if let reason = Self.diskIOSamplingReason(hasBaseline: hasBaseline, didReadIOBytes: true) {
+                    partial.unavailableReasons.append(reason)
+                }
+                let now = Date()
+                if let previousDeviceIO = Self.previousDeviceDiskIO,
+                   let previousDate = Self.previousDeviceDate,
+                   previousDate < now {
+                    let interval = now.timeIntervalSince(previousDate)
+                    if interval > 0 {
+                        let deviceSnapshots = Self.diskIODeviceSnapshots(
+                            current: deviceIO,
+                            previous: previousDeviceIO,
+                            interval: interval
+                        )
+                        partial.diskIODevices = deviceSnapshots
+                        partial.diskReadMBps = deviceSnapshots.reduce(0) { $0 + $1.readMBps }
+                        partial.diskWriteMBps = deviceSnapshots.reduce(0) { $0 + $1.writeMBps }
+                    }
+                }
+                Self.previousDeviceDiskIO = deviceIO
+                Self.previousDeviceDate = now
+            } else if let diskIO = getDiskIOBytes() {
+                partial.diskIODeviceSource = "iostat -Id -c 2"
+                let hasBaseline = Self.previousReadBytes != nil && Self.previousWriteBytes != nil && Self.previousDate != nil
+                if let reason = Self.diskIOSamplingReason(hasBaseline: hasBaseline, didReadIOBytes: true) {
+                    partial.unavailableReasons.append(reason)
+                }
                 let now = Date()
                 if let prevRead = Self.previousReadBytes,
                    let prevWrite = Self.previousWriteBytes,
@@ -1328,15 +1926,20 @@ public struct DiskStatusReader: SystemStatusReader {
                    prevDate < now {
                     let interval = now.timeIntervalSince(prevDate)
                     if interval > 0 {
-                        let readDiff = Double(readBytes - prevRead)
-                        let writeDiff = Double(writeBytes - prevWrite)
+                        let readDiff = Double(diskIO.totals.read - prevRead)
+                        let writeDiff = Double(diskIO.totals.write - prevWrite)
                         partial.diskReadMBps = readDiff / interval / 1_048_576.0
                         partial.diskWriteMBps = writeDiff / interval / 1_048_576.0
                     }
                 }
-                Self.previousReadBytes = readBytes
-                Self.previousWriteBytes = writeBytes
+                partial.diskIODevices = diskIO.devices.map {
+                    DiskIODeviceSnapshot(name: $0.name, readMBps: $0.read / 1_048_576.0, writeMBps: $0.write / 1_048_576.0)
+                }
+                Self.previousReadBytes = diskIO.totals.read
+                Self.previousWriteBytes = diskIO.totals.write
                 Self.previousDate = now
+            } else if let reason = Self.diskIOSamplingReason(hasBaseline: false, didReadIOBytes: false) {
+                partial.unavailableReasons.append(reason)
             }
         } catch {
             partial.unavailableReasons.append(.init(id: "disk-unavailable", category: "disk", message: "磁盘读取不可用", detail: error.localizedDescription))
@@ -1344,13 +1947,102 @@ public struct DiskStatusReader: SystemStatusReader {
         return partial
     }
 
-    private func getDiskIOBytes() -> (read: UInt64, write: UInt64)? {
-        // 使用 sysctl 获取磁盘 I/O 数据
-        var mib: [Int32] = [CTL_HW, HW_PHYSMEM]
-        var size = 0
-        sysctl(&mib, 2, nil, &size, nil, 0)
+    static func diskIOSamplingReason(hasBaseline: Bool, didReadIOBytes: Bool) -> SystemStatusUnavailableReason? {
+        if didReadIOBytes == false {
+            return .init(
+                id: "disk-io-unavailable",
+                category: "disk",
+                message: "磁盘 I/O 读取不可用",
+                detail: "iostat failed"
+            )
+        }
 
-        // 简单实现：使用 iostat 命令解析
+        guard hasBaseline == false else { return nil }
+        return .init(
+            id: "disk-io-warmup",
+            category: "disk",
+            message: "磁盘 I/O 等待基线",
+            detail: "first sample requires a previous reading"
+        )
+    }
+
+    private func getProcessDiskIOBytes() -> [Int32: DiskIOBytes]? {
+        var pidBuffer = [Int32](repeating: 0, count: 4096)
+        let bytesWritten = proc_listallpids(&pidBuffer, Int32(pidBuffer.count * MemoryLayout<Int32>.size))
+        guard bytesWritten > 0 else { return nil }
+
+        let pidCount = Int(bytesWritten) / MemoryLayout<Int32>.size
+        guard pidCount > 0 else { return nil }
+
+        var samples: [Int32: DiskIOBytes] = [:]
+        samples.reserveCapacity(pidCount)
+        for pid in pidBuffer.prefix(pidCount) where pid > 0 {
+            var usage = rusage_info_v4()
+            let result: Int32 = withUnsafeMutablePointer(to: &usage) { usagePtr in
+                let rawPtr = UnsafeMutableRawPointer(usagePtr)
+                let procPtr = UnsafeMutablePointer<rusage_info_t?>(OpaquePointer(rawPtr))
+                return proc_pid_rusage(pid, RUSAGE_INFO_V4, procPtr)
+            }
+            guard result == 0 else { continue }
+            let read = usage.ri_diskio_bytesread
+            let write = usage.ri_diskio_byteswritten
+            guard read > 0 || write > 0 else { continue }
+            samples[pid] = DiskIOBytes(read: read, write: write)
+        }
+
+        return samples.isEmpty ? nil : samples
+    }
+
+    static func collectMountedVolumes(from urls: [URL], currentMountPoint: String = "/") -> [DiskVolumeSnapshot] {
+        let snapshots = urls.compactMap { url -> DiskVolumeSnapshot? in
+            let keys: Set<URLResourceKey> = [
+                .volumeNameKey,
+                .volumeAvailableCapacityForImportantUsageKey,
+                .volumeAvailableCapacityKey,
+                .volumeTotalCapacityKey,
+                .volumeIsRemovableKey,
+                .volumeIsInternalKey
+            ]
+
+            guard let values = try? url.resourceValues(forKeys: keys),
+                  let volumeName = values.volumeName else {
+                return nil
+            }
+
+            let totalBytes = Double(values.volumeTotalCapacity ?? 0)
+            guard totalBytes > 0 else { return nil }
+
+            let availableBytes: Double
+            if let important = values.volumeAvailableCapacityForImportantUsage {
+                availableBytes = Double(important)
+            } else if let available = values.volumeAvailableCapacity {
+                availableBytes = Double(available)
+            } else {
+                return nil
+            }
+
+            let usedBytes = max(0, totalBytes - availableBytes)
+            return DiskVolumeSnapshot(
+                mountPoint: url.path,
+                name: volumeName,
+                usedGB: usedBytes / 1_073_741_824.0,
+                totalGB: totalBytes / 1_073_741_824.0,
+                isRemovable: values.volumeIsRemovable ?? false,
+                isInternal: values.volumeIsInternal ?? false,
+                isCurrent: url.path == currentMountPoint
+            )
+        }
+
+        return snapshots.sorted {
+            let lhsIsRoot = $0.mountPoint == "/"
+            let rhsIsRoot = $1.mountPoint == "/"
+            if lhsIsRoot != rhsIsRoot { return lhsIsRoot }
+            if $0.isInternal != $1.isInternal { return $0.isInternal && !$1.isInternal }
+            return $0.usedGB > $1.usedGB
+        }
+    }
+
+    private func getDiskIOBytes() -> ParsedDiskIO? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/iostat")
         process.arguments = ["-Id", "-c", "2"]
@@ -1362,22 +2054,161 @@ public struct DiskStatusReader: SystemStatusReader {
             process.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             let output = String(data: data, encoding: .utf8) ?? ""
-
-            // 简单的解析逻辑，实际项目中可能需要更健壮的实现
-            let lines = output.components(separatedBy: "\n")
-            if lines.count >= 3, let lastLine = lines.last, !lastLine.isEmpty {
-                let components = lastLine.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                if components.count >= 3, let read = Double(components[1]), let write = Double(components[2]) {
-                    // iostat 输出的是 KB/s，这里我们需要累计字节，所以这个简化版本仅用于演示
-                    // 实际实现应该使用 IOKit 或 sysctl
-                    return (read: UInt64(read * 1024), write: UInt64(write * 1024))
-                }
-            }
+            return Self.parseDiskIOBytes(from: output)
         } catch {
-            // 简单处理错误
+            return nil
+        }
+    }
+
+    private func getNativeDiskIODeviceBytes() -> [String: DiskIOBytes]? {
+        guard let session = DASessionCreate(kCFAllocatorDefault) else { return nil }
+
+        let urls = mountedVolumeURLsProvider() ?? []
+        var samples: [String: DiskIOBytes] = [:]
+        samples.reserveCapacity(urls.count)
+
+        for url in urls {
+            guard let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, url as CFURL) else {
+                continue
+            }
+
+            guard let bsdName = DADiskGetBSDName(disk) else { continue }
+            let media = DADiskCopyIOMedia(disk)
+            guard media != 0 else { continue }
+            defer { IOObjectRelease(media) }
+
+            guard let stats = IORegistryEntrySearchCFProperty(
+                media,
+                kIOServicePlane,
+                "Statistics" as CFString,
+                kCFAllocatorDefault,
+                IOOptionBits(kIORegistryIterateRecursively | kIORegistryIterateParents)
+            ) as? [String: Any] else {
+                continue
+            }
+
+            guard let read = Self.doubleValue(
+                in: stats,
+                keys: [
+                    "Bytes read from block device",
+                    "Bytes (Read)"
+                ]
+            ),
+                  let write = Self.doubleValue(
+                    in: stats,
+                    keys: [
+                        "Bytes written to block device",
+                        "Bytes (Write)"
+                    ]
+                  ) else {
+                continue
+            }
+
+            samples[String(cString: bsdName)] = DiskIOBytes(
+                read: UInt64(max(0, read)),
+                write: UInt64(max(0, write))
+            )
         }
 
+        return samples.isEmpty ? nil : samples
+    }
+
+    private static func processName(for pid: Int32) -> String? {
+        var buffer = [CChar](repeating: 0, count: 512)
+        let length = proc_name(pid, &buffer, UInt32(buffer.count))
+        guard length > 0 else { return nil }
+        return String(cString: buffer)
+    }
+
+    private static func doubleValue(in dictionary: [String: Any], keys: [String]) -> Double? {
+        for key in keys {
+            if let value = dictionary[key] as? Double { return value }
+            if let value = dictionary[key] as? Int { return Double(value) }
+            if let value = dictionary[key] as? UInt64 { return Double(value) }
+            if let value = dictionary[key] as? NSNumber { return value.doubleValue }
+        }
         return nil
+    }
+
+    static func diskIOProcessSnapshots(
+        current: [Int32: (read: UInt64, write: UInt64)],
+        previous: [Int32: (read: UInt64, write: UInt64)],
+        interval: TimeInterval,
+        processNameProvider: (Int32) -> String?
+    ) -> [DiskIOProcessSnapshot] {
+        guard interval > 0 else { return [] }
+
+        let snapshots = current.compactMap { pid, currentBytes -> DiskIOProcessSnapshot? in
+            let previousBytes = previous[pid] ?? (read: 0, write: 0)
+            let readDelta = currentBytes.read >= previousBytes.read ? currentBytes.read - previousBytes.read : 0
+            let writeDelta = currentBytes.write >= previousBytes.write ? currentBytes.write - previousBytes.write : 0
+            guard readDelta > 0 || writeDelta > 0 else { return nil }
+
+            let readMBps = Double(readDelta) / interval / 1_048_576.0
+            let writeMBps = Double(writeDelta) / interval / 1_048_576.0
+            let name = processNameProvider(pid) ?? "pid \(pid)"
+            return DiskIOProcessSnapshot(pid: pid, name: name, readMBps: readMBps, writeMBps: writeMBps)
+        }
+
+        return snapshots
+            .sorted { ($0.readMBps + $0.writeMBps) > ($1.readMBps + $1.writeMBps) }
+    }
+
+    static func diskIODeviceSnapshots(
+        current: [String: DiskIOBytes],
+        previous: [String: DiskIOBytes],
+        interval: TimeInterval
+    ) -> [DiskIODeviceSnapshot] {
+        guard interval > 0 else { return [] }
+
+        let snapshots = current.compactMap { name, currentBytes -> DiskIODeviceSnapshot? in
+            let previousBytes = previous[name] ?? .init(read: 0, write: 0)
+            let readDelta = currentBytes.read >= previousBytes.read ? currentBytes.read - previousBytes.read : 0
+            let writeDelta = currentBytes.write >= previousBytes.write ? currentBytes.write - previousBytes.write : 0
+            guard readDelta > 0 || writeDelta > 0 else { return nil }
+
+            let readMBps = Double(readDelta) / interval / 1_048_576.0
+            let writeMBps = Double(writeDelta) / interval / 1_048_576.0
+            return DiskIODeviceSnapshot(name: name, readMBps: readMBps, writeMBps: writeMBps)
+        }
+
+        return snapshots.sorted { ($0.readMBps + $0.writeMBps) > ($1.readMBps + $1.writeMBps) }
+    }
+
+    static func parseDiskIOBytes(from output: String) -> ParsedDiskIO? {
+        let lines = output.split(whereSeparator: \.isNewline).reversed()
+        var totalRead: UInt64 = 0
+        var totalWrite: UInt64 = 0
+        var foundDeviceRow = false
+        var devices: [DiskIODeviceBytes] = []
+
+        for lineSubsequence in lines {
+            let line = String(lineSubsequence)
+            let components = line
+                .split(whereSeparator: { $0.isWhitespace || $0 == "," })
+                .map(String.init)
+            guard components.count >= 3 else { continue }
+            guard isDiskDeviceRow(components[0]),
+                  let read = Double(components[1]),
+                  let write = Double(components[2]) else { continue }
+            foundDeviceRow = true
+            let normalizedRead = max(0, read) * 1024
+            let normalizedWrite = max(0, write) * 1024
+            devices.append(DiskIODeviceBytes(name: components[0], read: normalizedRead, write: normalizedWrite))
+            totalRead += UInt64(normalizedRead)
+            totalWrite += UInt64(normalizedWrite)
+        }
+
+        guard foundDeviceRow else { return nil }
+        return ParsedDiskIO(
+            totals: DiskIOBytes(read: totalRead, write: totalWrite),
+            devices: devices.sorted { ($0.read + $0.write) > ($1.read + $1.write) }
+        )
+    }
+
+    private static func isDiskDeviceRow(_ token: String) -> Bool {
+        let prefixes = ["disk", "rdisk", "sd", "md", "nvme"]
+        return prefixes.contains(where: { token.hasPrefix($0) }) || token.contains(where: { $0.isNumber })
     }
 }
 

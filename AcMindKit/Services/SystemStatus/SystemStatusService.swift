@@ -158,6 +158,10 @@ public final class SystemStatusService: ObservableObject {
         self.readers = Self.defaultReaders()
     }
 
+    public init(permissionManager: PermissionManager) {
+        self.readers = Self.defaultReaders(permissionManager: permissionManager)
+    }
+
     public init(readers: [any SystemStatusReader]) {
         self.readers = readers
     }
@@ -224,6 +228,8 @@ public final class SystemStatusService: ObservableObject {
             topMemoryProcesses: merged.topMemoryProcesses,
             temperatureSensors: merged.temperatureSensors,
             fanSensors: merged.fanSensors,
+            fanControlStates: merged.fanControlStates,
+            bluetoothDevices: merged.bluetoothDevices,
             powerSensors: merged.powerSensors,
             voltageSensors: merged.voltageSensors,
             currentSensors: merged.currentSensors,
@@ -232,8 +238,10 @@ public final class SystemStatusService: ObservableObject {
             loadAverage1m: merged.loadAverage1m,
             loadAverage5m: merged.loadAverage5m,
             loadAverage15m: merged.loadAverage15m,
+            diskMountPoint: merged.diskMountPoint,
             diskUsedGB: merged.diskUsedGB,
             diskTotalGB: merged.diskTotalGB,
+            diskVolumes: merged.diskVolumes,
             networkDownloadMBps: merged.networkDownloadMBps,
             networkUploadMBps: merged.networkUploadMBps,
             gpuUsagePercent: merged.gpuUsagePercent,
@@ -242,6 +250,12 @@ public final class SystemStatusService: ObservableObject {
             gpuChipModel: merged.gpuChipModel,
             diskReadMBps: merged.diskReadMBps,
             diskWriteMBps: merged.diskWriteMBps,
+            topDiskIOProcesses: merged.topDiskIOProcesses,
+            diskIODevices: merged.diskIODevices,
+            diskIODeviceSource: merged.diskIODeviceSource,
+            networkLatencyMs: merged.networkLatencyMs,
+            networkDNSLookupMs: merged.networkDNSLookupMs,
+            publicIPAddress: merged.publicIPAddress,
             hardwareInfo: merged.hardwareInfo,
             unavailableReasons: merged.unavailableReasons,
             cpuUsage: merged.cpu?.value ?? 0,
@@ -270,6 +284,8 @@ public final class SystemStatusService: ObservableObject {
         if rhs.topMemoryProcesses.isEmpty == false { result.topMemoryProcesses = rhs.topMemoryProcesses }
         if rhs.temperatureSensors.isEmpty == false { result.temperatureSensors = rhs.temperatureSensors }
         if rhs.fanSensors.isEmpty == false { result.fanSensors = rhs.fanSensors }
+        if rhs.fanControlStates.isEmpty == false { result.fanControlStates = rhs.fanControlStates }
+        if rhs.bluetoothDevices.isEmpty == false { result.bluetoothDevices = rhs.bluetoothDevices }
         if rhs.powerSensors.isEmpty == false { result.powerSensors = rhs.powerSensors }
         if rhs.voltageSensors.isEmpty == false { result.voltageSensors = rhs.voltageSensors }
         if rhs.currentSensors.isEmpty == false { result.currentSensors = rhs.currentSensors }
@@ -280,6 +296,7 @@ public final class SystemStatusService: ObservableObject {
         if let loadAverage15m = rhs.loadAverage15m { result.loadAverage15m = loadAverage15m }
         if let diskUsedGB = rhs.diskUsedGB { result.diskUsedGB = diskUsedGB }
         if let diskTotalGB = rhs.diskTotalGB { result.diskTotalGB = diskTotalGB }
+        if rhs.diskVolumes.isEmpty == false { result.diskVolumes = rhs.diskVolumes }
         if let networkDownloadMBps = rhs.networkDownloadMBps { result.networkDownloadMBps = networkDownloadMBps }
         if let networkUploadMBps = rhs.networkUploadMBps { result.networkUploadMBps = networkUploadMBps }
         if let gpuUsagePercent = rhs.gpuUsagePercent { result.gpuUsagePercent = gpuUsagePercent }
@@ -288,13 +305,19 @@ public final class SystemStatusService: ObservableObject {
         if let gpuChipModel = rhs.gpuChipModel { result.gpuChipModel = gpuChipModel }
         if let diskReadMBps = rhs.diskReadMBps { result.diskReadMBps = diskReadMBps }
         if let diskWriteMBps = rhs.diskWriteMBps { result.diskWriteMBps = diskWriteMBps }
+        if rhs.topDiskIOProcesses.isEmpty == false { result.topDiskIOProcesses = rhs.topDiskIOProcesses }
+        if rhs.diskIODevices.isEmpty == false { result.diskIODevices = rhs.diskIODevices }
+        if let diskIODeviceSource = rhs.diskIODeviceSource { result.diskIODeviceSource = diskIODeviceSource }
+        if let networkLatencyMs = rhs.networkLatencyMs { result.networkLatencyMs = networkLatencyMs }
+        if let networkDNSLookupMs = rhs.networkDNSLookupMs { result.networkDNSLookupMs = networkDNSLookupMs }
+        if let publicIPAddress = rhs.publicIPAddress { result.publicIPAddress = publicIPAddress }
         if let hardwareInfo = rhs.hardwareInfo { result.hardwareInfo = hardwareInfo }
         if rhs.unavailableReasons.isEmpty == false { result.unavailableReasons.append(contentsOf: rhs.unavailableReasons) }
 
         return result
     }
 
-    private static func defaultReaders() -> [any SystemStatusReader] {
+    private static func defaultReaders(permissionManager: PermissionManager? = nil) -> [any SystemStatusReader] {
         [
             CPUStatusReader(),
             ThermalStatusReader(),
@@ -302,7 +325,8 @@ public final class SystemStatusService: ObservableObject {
             DiskStatusReader(),
             NetworkStatusReader(),
             BatteryStatusReader(),
-            PermissionStatusReader(),
+            BluetoothStatusReader(),
+            PermissionStatusReader(permissionManager: permissionManager),
             ProcessStatusReader(),
             SensorStatusReader(),
             FanStatusReader(),

@@ -13,17 +13,22 @@ struct CompanionVoicePanel: View {
             Divider()
 
             VStack(spacing: 18) {
+                stageStrip
                 statusChip
                 transcriptCard
                 actionRow
             }
             .padding(20)
         }
-        .frame(width: 500, height: 280)
+        .frame(width: 560, height: 360)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(AppSurfaceTokens.background)
-                .shadow(color: .black.opacity(0.18), radius: 24, y: 10)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                )
+                .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 12, x: 0, y: 6)
         )
         .padding(12)
         .onAppear {
@@ -53,12 +58,12 @@ struct CompanionVoicePanel: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(viewModel.isProcessing ? Color.blue.opacity(0.14) : Color.red.opacity(0.14))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .frame(width: 34, height: 34)
 
                 Image(systemName: viewModel.isRecording ? "waveform" : "mic.fill")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(viewModel.isProcessing ? .blue : .red)
+                    .foregroundStyle(viewModel.isProcessing ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.accentOrange)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -107,9 +112,35 @@ struct CompanionVoicePanel: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
+    }
+
+    private var stageStrip: some View {
+        HStack(spacing: 8) {
+            stageChip(title: "监听", isActive: viewModel.isRecording)
+            stageChip(title: "转写", isActive: viewModel.isProcessing)
+            stageChip(title: "修正", isActive: viewModel.hasResult)
+            stageChip(title: "发送", isActive: viewModel.hasResult)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func stageChip(title: String, isActive: Bool) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(isActive ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(isActive ? AppSurfaceTokens.accentBlue.opacity(0.16) : AppSurfaceTokens.separator.opacity(0.35), lineWidth: 1)
+            )
     }
 
     private var transcriptCard: some View {
@@ -122,6 +153,13 @@ struct CompanionVoicePanel: View {
                 Spacer()
 
                 if viewModel.hasResult {
+                    Button("恢复原文") {
+                        viewModel.revertEditedText()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+
                     Button("复制") {
                         viewModel.copyResultToClipboard()
                     }
@@ -132,57 +170,139 @@ struct CompanionVoicePanel: View {
             }
 
             ScrollView {
-                if viewModel.isRealtimeMode && !viewModel.realtimeText.isEmpty {
-                    Text(viewModel.realtimeText)
-                        .font(.system(size: 13))
-                        .foregroundStyle(AppSurfaceTokens.primaryText.opacity(0.6))
-                        .lineLimit(3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .animation(.easeInOut(duration: 0.15), value: viewModel.realtimeText)
+                if viewModel.hasResult {
+                    AppSurfaceTextEditorShell(text: $viewModel.editableText, minHeight: 188, font: .system(size: 14))
+                } else if viewModel.isRealtimeMode && !viewModel.realtimeText.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("实时转写")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                        Text(viewModel.realtimeText)
+                            .font(.system(size: 13))
+                            .foregroundStyle(AppSurfaceTokens.primaryText.opacity(0.75))
+                            .lineSpacing(3)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .animation(.easeInOut(duration: 0.15), value: viewModel.realtimeText)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                            .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                            .stroke(AppSurfaceTokens.separator.opacity(0.35), lineWidth: 1)
+                    )
                 } else {
-                    Text(viewModel.displayText.isEmpty ? "说完后，这里会显示清洗后的文稿。" : viewModel.displayText)
-                        .font(.body)
-                        .foregroundStyle(viewModel.displayText.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
+                    if viewModel.displayText.isEmpty {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "waveform.badge.mic")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.accentColor)
+
+                                Text("准备就绪")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                            }
+
+                            Text("按住 Fn 开始说话，松开后会自动整理成可直接使用的修正版。")
+                                .font(.system(size: 13))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                .lineSpacing(3)
+
+                            HStack(spacing: 8) {
+                                helperPill("实时转写")
+                                helperPill("自动润色")
+                                helperPill("可编辑修正")
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+                    } else {
+                        Text(viewModel.displayText)
+                            .font(.body)
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 124, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 180, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
-    private var actionRow: some View {
-        HStack(spacing: 12) {
-            Button {
-                Task { await cancelAndDismiss() }
-            } label: {
-                Text(viewModel.isRecording ? "取消" : "关闭")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
+    private func helperPill(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.35), lineWidth: 1)
+            )
+    }
 
-            Button {
-                Task { await finishOrDismiss() }
-            } label: {
-                Text(primaryActionTitle)
-                    .frame(maxWidth: .infinity)
+    @ViewBuilder
+    private var actionRow: some View {
+        if viewModel.hasResult {
+            HStack(spacing: 12) {
+                Button {
+                    Task { await cancelAndDismiss() }
+                } label: {
+                    Text("关闭")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    viewModel.copyResultToClipboard()
+                } label: {
+                    Text("复制修正版")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.accentColor)
+                .disabled(viewModel.editableText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(primaryActionTint)
-            .disabled(viewModel.isBusy)
+        } else {
+            HStack(spacing: 12) {
+                Button {
+                    Task { await cancelAndDismiss() }
+                } label: {
+                    Text(viewModel.isRecording ? "取消" : "关闭")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    Task { await finishOrDismiss() }
+                } label: {
+                    Text(primaryActionTitle)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(primaryActionTint)
+                .disabled(viewModel.isBusy)
+            }
         }
     }
 
     private var primaryActionTitle: String {
-        if viewModel.isRecording { return "完成" }
-        if viewModel.hasResult { return "完成" }
-        return "开始"
+        if viewModel.isRecording { return "完成整理" }
+        return "开始说话"
     }
 
     private var primaryActionTint: Color {
@@ -212,6 +332,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
     @Published var isBusy = false
     @Published var statusText = SayInputPresentationLabelFormatter.preparingText
     @Published var displayText = ""
+    @Published var editableText = ""
     @Published var resultTitle = "转写结果"
     @Published var hasResult = false
     @Published var errorMessage: String?
@@ -279,6 +400,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
         errorMessage = nil
         hasResult = false
         displayText = ""
+        editableText = ""
         resultTitle = "转写结果"
         statusText = SayInputPresentationLabelFormatter.recordingText
 
@@ -336,6 +458,7 @@ final class CompanionVoicePanelViewModel: ObservableObject {
             isRecording = false
             isProcessing = false
             displayText = outcome.polishedText
+            editableText = outcome.polishedText
 
             switch outcome.deliveryState {
             case .insertedIntoFocusedField:
@@ -422,9 +545,13 @@ final class CompanionVoicePanelViewModel: ObservableObject {
     }
 
     func copyResultToClipboard() {
-        guard displayText.isEmpty == false else { return }
+        guard editableText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(displayText, forType: .string)
+        NSPasteboard.general.setString(editableText, forType: .string)
         statusText = SayInputPresentationLabelFormatter.clipboardCopiedText
+    }
+
+    func revertEditedText() {
+        editableText = displayText
     }
 }

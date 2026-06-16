@@ -42,8 +42,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 
 fileprivate func usageBurnColor(for severity: UsageBurnSeverity) -> Color {
     switch severity {
-    case .none: return AppSurfaceTokens.accentGreen
-    case .info: return AppSurfaceTokens.accentBlue
+    case .none: return AppSurfaceTokens.secondaryText
+    case .info: return AppSurfaceTokens.secondaryText
     case .warning: return AppSurfaceTokens.accentOrange
     case .critical: return .red
     }
@@ -52,23 +52,39 @@ fileprivate func usageBurnColor(for severity: UsageBurnSeverity) -> Color {
 // MARK: - Settings View
 
 struct SettingsView: View {
-    @StateObject private var viewModel = SettingsViewModel()
-    @State private var selectedCategory: SettingsCategory = .general
-    @State private var searchQuery = ""
+    @StateObject private var viewModel: SettingsViewModel
+    @State private var selectedCategory: SettingsCategory
+    @State private var searchQuery: String
     @State private var recordingShortcutTarget: ShortcutRecordingTarget?
     @State private var pluginSummaries: [PluginManagementSummary] = []
     @State private var isLoadingPluginSummaries = false
-    @State private var pluginSummaryError: String?
+    @FocusState private var searchFieldFocused: Bool
     private let cloudSyncService: CloudSyncServiceProtocol
 
-    init(cloudSyncService: CloudSyncServiceProtocol = CloudSyncService(storage: StorageService())) {
+    init(
+        viewModel: SettingsViewModel = SettingsViewModel(),
+        cloudSyncService: CloudSyncServiceProtocol = CloudSyncService(storage: StorageService()),
+        initialCategory: SettingsCategory = .general,
+        initialSearchQuery: String = ""
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+        _selectedCategory = State(initialValue: initialCategory)
+        _searchQuery = State(initialValue: initialSearchQuery)
         self.cloudSyncService = cloudSyncService
     }
 
     var body: some View {
-        WorkspacePageShell(
+        AcWorkShell(
             title: "设置",
             subtitle: "管理应用偏好",
+            searchContent: AnyView(
+                AcSearchField(
+                    text: $searchQuery,
+                    placeholder: "搜索设置...",
+                    width: 260,
+                    focusBinding: $searchFieldFocused
+                )
+            ),
             leadingRailWidth: 208,
             trailingRailWidth: 224,
             leadingRail: {
@@ -77,6 +93,11 @@ struct SettingsView: View {
             content: {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        if settingsSearchQuery.isEmpty == false {
+                            settingsSearchResultsPanel
+                                .padding(.bottom, 20)
+                        }
+
                         settingsHeader
 
                         switch selectedCategory {
@@ -103,6 +124,7 @@ struct SettingsView: View {
                 settingsSummaryRail
             }
         )
+        .frame(minWidth: 1500, minHeight: 860)
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -118,39 +140,48 @@ struct SettingsView: View {
         .task {
             await loadPluginSummaries()
         }
+        .background(searchKeyboardShortcut)
+        .onChange(of: settingsSearchQuery) { _, newValue in
+            if let matchedCategory = SettingsSearchCatalog.bestCategory(for: newValue) {
+                selectedCategory = matchedCategory
+            }
+        }
+    }
+
+    private var settingsSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var searchKeyboardShortcut: some View {
+        Button("搜索设置") {
+            searchFieldFocused = true
+        }
+        .keyboardShortcut("f", modifiers: .command)
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
     }
 
     private var settingsSidebar: some View {
         VStack(spacing: 0) {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                TextField("搜索设置...", text: $searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.caption)
-            }
-            .padding(8)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
-            .padding(12)
-
-            Divider()
-
-            List(selection: $selectedCategory) {
-                ForEach(SettingsCategory.allCases) { category in
-                    HStack(spacing: 12) {
-                        Image(systemName: category.icon)
-                            .foregroundStyle(AppSurfaceTokens.accentBlue)
-                        Text(category.displayName)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(SettingsCategory.allCases) { category in
+                        AcListRow(
+                            title: category.displayName,
+                            subtitle: category.description,
+                            icon: category.icon,
+                            isSelected: selectedCategory == category,
+                            showsChevron: true
+                        ) {
+                            selectedCategory = category
+                        }
                     }
-                    .tag(category)
-                    .padding(.vertical, 6)
                 }
+                .padding(12)
             }
-            .listStyle(.sidebar)
-            .scrollDisabled(true)
         }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .background(AppSurfaceTokens.secondarySidebarBackground)
     }
 
     private var settingsSummaryRail: some View {
@@ -165,6 +196,18 @@ struct SettingsView: View {
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
+
+                settingsLivePreviewPanel
+
+                SectionHeader(
+                    title: "视图状态",
+                    description: "真实可见内容",
+                    status: SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: recordingShortcutTarget != nil,
+                        enabledText: "录制中",
+                        disabledText: "空闲"
+                    )
+                )
 
                 AppSurfaceCard(title: "视图状态", subtitle: "真实可见内容", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -183,38 +226,63 @@ struct SettingsView: View {
                     }
                 }
 
-                AppSurfaceCard(title: "插件扩展", subtitle: "ASR / 润色 / 注入扩展概览", padding: 14) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text(pluginSummaryHeadline)
-                                .font(.system(size: 12))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            Spacer()
-                            Button(isLoadingPluginSummaries ? "刷新中..." : "刷新") {
-                                Task {
-                                    await loadPluginSummaries()
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .disabled(isLoadingPluginSummaries)
+                SectionHeader(
+                    title: "插件扩展",
+                    description: "ASR / 润色 / 注入扩展概览",
+                    status: pluginSummaryStatusText,
+                    actions: [
+                        SectionHeaderAction(title: isLoadingPluginSummaries ? "刷新中" : "刷新", icon: "arrow.clockwise") {
+                            Task { await loadPluginSummaries() }
                         }
+                    ]
+                )
 
-                        if let pluginSummaryError {
-                            Text(pluginSummaryError)
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppSurfaceTokens.accentOrange)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } else if pluginSummaries.isEmpty {
-                            Text("尚未发现插件，放入插件目录后会在这里显示状态。")
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } else {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(pluginSummaries.prefix(4)) { summary in
-                                    pluginSummaryRow(summary)
-                                }
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    AcMetric(
+                        label: "插件总数",
+                        primaryValue: "\(pluginSummaries.count)",
+                        trend: "当前已发现的管理摘要",
+                        state: isLoadingPluginSummaries ? "刷新中" : "就绪",
+                        lastUpdated: pluginSummaries.isEmpty ? "等待扫描" : "已加载",
+                        tint: AppSurfaceTokens.secondaryText
+                    ) {
+                        Image(systemName: "puzzlepiece.extension")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+
+                    AcMetric(
+                        label: "运行中",
+                        primaryValue: "\(pluginSummaries.filter { $0.status == .active }.count)",
+                        trend: "已激活并提供能力",
+                        state: pluginSummaries.isEmpty ? "无数据" : "正常",
+                        lastUpdated: pluginSummaries.isEmpty ? "等待扫描" : "实时",
+                        tint: AppSurfaceTokens.secondaryText
+                    ) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+
+                    AcMetric(
+                        label: "错误",
+                        primaryValue: "\(pluginSummaries.filter { $0.status == .error }.count)",
+                        trend: "需要人工处理的扩展",
+                        state: pluginSummaries.contains(where: { $0.status == .error }) ? "注意" : "稳定",
+                        lastUpdated: pluginSummaries.isEmpty ? "等待扫描" : "已统计",
+                        tint: AppSurfaceTokens.accentOrange
+                    ) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
+                    }
+                }
+
+                AppSurfaceCard(title: "插件扩展", subtitle: "真实管理摘要", padding: 14) {
+                    StateContainer(phase: pluginState) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(pluginSummaries.prefix(4)) { summary in
+                                pluginSummaryRow(summary)
                             }
 
                             if pluginSummaries.count > 4 {
@@ -228,20 +296,208 @@ struct SettingsView: View {
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
-    private var pluginSummaryHeadline: String {
+    private var settingsSearchResultsPanel: some View {
+        let results = SettingsSearchCatalog.results(for: settingsSearchQuery)
+
+        return AppSurfaceCard(
+            title: "搜索结果",
+            subtitle: results.isEmpty ? "没有匹配项" : "定位到 \(results.count) 个设置项",
+            padding: 14
+        ) {
+            VStack(alignment: .leading, spacing: 8) {
+                if results.isEmpty {
+                    Text("没有找到匹配的设置项。可以试试“主题”、“快捷键”、“权限”或“备份”。")
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(results.prefix(6)) { result in
+                        Button {
+                            selectedCategory = result.category
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(result.title)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                                    Spacer()
+                                    Text(result.category.displayName)
+                                        .font(.caption2)
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+
+                                Text(result.summary)
+                                    .font(.caption2)
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .lineLimit(2)
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var settingsLivePreviewPanel: some View {
+        switch selectedCategory {
+        case .general:
+            LivePreviewPanel(
+                title: "即时预览",
+                subtitle: "外观和启动偏好会立即反映在主窗口与胶囊语法中",
+                tone: .info
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewMetric(title: "主题", value: viewModel.theme.displayName)
+                    previewMetric(title: "语言", value: viewModel.language)
+                    previewMetric(title: "启动胶囊", value: viewModel.companionCapsuleShowOnLaunch ? "开启" : "关闭")
+                    Text("界面变化立即可见；如果你只是在调整偏好，这里不需要重启。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        case .companion:
+            LivePreviewPanel(
+                title: "随身能力预览",
+                subtitle: "这组设置会影响胶囊、语音和全局快捷键",
+                tone: .success
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewMetric(title: "胶囊位置", value: viewModel.companionCapsulePosition.displayName)
+                    previewMetric(title: "语音快捷键", value: viewModel.companionVoiceShortcut)
+                    previewMetric(title: "截图快捷键", value: viewModel.companionScreenshotShortcut)
+                    Text("快捷键类设置立即生效，但需要系统辅助功能/麦克风权限时会在下方单独解释。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        case .aiModels:
+            LivePreviewPanel(
+                title: "模型与用量预览",
+                subtitle: "展示默认路由、提供商和用量风险",
+                tone: .warning
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewMetric(title: "路由策略", value: viewModel.modelRoutingStrategy.displayName)
+                    previewMetric(title: "提供商", value: "\(viewModel.providers.count)")
+                    previewMetric(title: "用量风险", value: AIUsageBurnLabelFormatter.statusText(for: viewModel.usageBurnSnapshot))
+                    Text("提供商的增删会立即影响默认选择；若模型 ID 变更失败，建议先在这里检查路由。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        case .dataKnowledge:
+            LivePreviewPanel(
+                title: "数据与知识库预览",
+                subtitle: "显示库路径、默认文件夹和备份状态",
+                tone: .info
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewMetric(title: "库路径", value: viewModel.validateVaultPath() ? "有效" : "待选择")
+                    previewMetric(title: "默认文件夹", value: viewModel.vaultDefaultFolder)
+                    previewMetric(title: "自动备份", value: viewModel.autoBackupEnabled ? "开启" : "关闭")
+                    Text("库路径修改后会立即校验；若路径无效，右侧会明确提示。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        case .captureInput:
+            LivePreviewPanel(
+                title: "捕获与输入预览",
+                subtitle: "显示截图、云同步和说入法的真实联动",
+                tone: .warning
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewMetric(title: "自动采集", value: viewModel.autoCaptureClipboard ? "开启" : "关闭")
+                    previewMetric(title: "截图捕获", value: viewModel.captureScreenshotEnabled ? "开启" : "关闭")
+                    previewMetric(title: "截图权限", value: viewModel.screenRecordingStatus.displayName)
+                    previewMetric(title: "说入法", value: viewModel.voiceInputEnabled ? "开启" : "关闭")
+                    Text("系统权限和捕获开关会即时解释状态变化，不会只给一个空开关。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        case .security:
+            LivePreviewPanel(
+                title: "权限与安全预览",
+                subtitle: "把需要系统授权的项目与普通开关分开",
+                tone: .danger
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    previewMetric(title: "麦克风", value: viewModel.microphoneStatus.displayName)
+                    previewMetric(title: "屏幕录制", value: viewModel.screenRecordingStatus.displayName)
+                    previewMetric(title: "辅助功能", value: viewModel.accessibilityStatus.displayName)
+                    Text("需要前往系统设置的项会在这里清晰标明，不会伪装成普通偏好。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        case .about:
+            AppSurfaceCard(title: "预览不可用", subtitle: "这个分组更适合直接提供跳转，而不是模拟预览", padding: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("版本 \(viewModel.diagnosticAppVersionString)")
+                        .font(.caption)
+                    Text("帮助、许可和状态入口都已经放在当前页内。")
+                        .font(.caption2)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+            }
+        }
+    }
+
+    private func previewMetric(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+        }
+    }
+
+    private var pluginSummaryStatusText: String {
         if isLoadingPluginSummaries {
-            return "正在读取插件状态"
+            return "正在读取"
         }
         if pluginSummaries.isEmpty {
-            return "暂无插件摘要"
+            return "暂无数据"
         }
 
         let activeCount = pluginSummaries.filter { $0.status == .active }.count
         let errorCount = pluginSummaries.filter { $0.status == .error }.count
-        return "已发现 \(pluginSummaries.count) 个插件 · \(activeCount) 个运行中 · \(errorCount) 个错误"
+        return "\(activeCount) 运行中 · \(errorCount) 错误"
+    }
+
+    private var pluginState: StateContainerPhase {
+        if isLoadingPluginSummaries && pluginSummaries.isEmpty {
+            return .loading(message: "正在读取插件状态")
+        }
+        if pluginSummaries.isEmpty {
+            return .empty(
+                title: "暂无插件摘要",
+                message: "放入插件目录后会在这里显示状态。"
+            )
+        }
+        if isLoadingPluginSummaries {
+            return .stale(
+                title: "插件摘要正在刷新",
+                message: "保留当前列表，完成后会自动更新。"
+            )
+        }
+        return .ready
     }
 
     private func pluginSummaryRow(_ summary: PluginManagementSummary) -> some View {
@@ -250,13 +506,7 @@ struct SettingsView: View {
                 Text(summary.name)
                     .font(.system(size: 12, weight: .semibold))
                 Spacer(minLength: 0)
-                Text(summary.status.displayName)
-                    .font(.system(size: 10, weight: .medium))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(pluginStatusColor(summary.status).opacity(0.12))
-                    .foregroundStyle(pluginStatusColor(summary.status))
-                    .cornerRadius(6)
+                StatusBadge(text: summary.status.displayName, tone: pluginStatusTone(summary.status))
             }
 
             HStack(spacing: 6) {
@@ -281,22 +531,22 @@ struct SettingsView: View {
             }
         }
         .padding(8)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
     }
 
-    private func pluginStatusColor(_ status: PluginStatus) -> Color {
+    private func pluginStatusTone(_ status: PluginStatus) -> StatusBadgeTone {
         switch status {
         case .active:
-            return AppSurfaceTokens.accentGreen
+            return .success
         case .loading:
-            return AppSurfaceTokens.accentBlue
+            return .info
         case .discovered:
-            return AppSurfaceTokens.accentOrange
+            return .warning
         case .inactive:
-            return AppSurfaceTokens.secondaryText
+            return .neutral
         case .error:
-            return .red
+            return .danger
         }
     }
 
@@ -309,25 +559,104 @@ struct SettingsView: View {
         isLoadingPluginSummaries = true
         defer { isLoadingPluginSummaries = false }
 
-        do {
-            pluginSummaries = await PluginManager.shared.getManagementSummaries()
-            pluginSummaryError = nil
-        } catch {
-            pluginSummaries = []
-            pluginSummaryError = "读取插件状态失败: \(error.localizedDescription)"
-        }
+        pluginSummaries = await PluginManager.shared.getManagementSummaries()
     }
 
     private var settingsHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(selectedCategory.displayName)
-                .font(.title)
-                .fontWeight(.semibold)
-            Text(selectedCategory.description)
-                .font(.caption)
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-        }
+        SectionHeader(
+            title: selectedCategory.displayName,
+            description: selectedCategory.description,
+            status: settingsSearchQuery.isEmpty ? "类别 · \(selectedCategory.icon)" : "搜索 · \(settingsSearchQuery)"
+        )
         .padding(.bottom, 20)
+    }
+
+}
+
+struct SettingsSearchResult: Identifiable {
+    let id = UUID()
+    let category: SettingsCategory
+    let title: String
+    let summary: String
+    let keywords: [String]
+}
+
+enum SettingsSearchCatalog {
+    private static let resultsCatalog: [SettingsSearchResult] = [
+        .init(category: .general, title: "外观", summary: "主题、语言和启动时的视觉偏好。", keywords: ["外观", "主题", "语言", "启动"]),
+        .init(category: .general, title: "启动行为", summary: "开机显示、窗口恢复和首屏行为。", keywords: ["启动", "窗口", "恢复"]),
+        .init(category: .general, title: "通知", summary: "任务完成、更新提醒和通知开关。", keywords: ["通知", "提醒", "消息"]),
+        .init(category: .general, title: "快捷键摘要", summary: "最常用入口的快速概览。", keywords: ["快捷键", "摘要"]),
+        .init(category: .companion, title: "随身胶囊", summary: "胶囊位置、展开状态和启动显示。", keywords: ["胶囊", "随身", "位置"]),
+        .init(category: .companion, title: "说入法入口", summary: "语音入口、输出方式和收集行为。", keywords: ["说入法", "语音", "输入", "输出"]),
+        .init(category: .companion, title: "随身快捷键", summary: "录制说入法、收集、截图和日程快捷键。", keywords: ["快捷键", "录制", "截图", "日程"]),
+        .init(category: .companion, title: "随身捕获", summary: "剪贴板、文本和链接的快速收集。", keywords: ["捕获", "剪贴板", "链接", "文本"]),
+        .init(category: .aiModels, title: "模型路由策略", summary: "自动、本地优先、云端优先和成本/质量策略。", keywords: ["模型", "路由", "策略", "本地", "云端"]),
+        .init(category: .aiModels, title: "可用模型提供商", summary: "启用、添加和删除当前提供商。", keywords: ["提供商", "模型", "添加", "删除"]),
+        .init(category: .aiModels, title: "使用概览", summary: "本地统计、当前快照和用量风险。", keywords: ["使用", "概览", "风险", "用量"]),
+        .init(category: .dataKnowledge, title: "数据存储", summary: "数据库和附件目录。", keywords: ["数据", "存储", "数据库", "附件"]),
+        .init(category: .dataKnowledge, title: "Obsidian 库", summary: "库路径、默认文件夹和路径校验。", keywords: ["obsidian", "库", "路径", "文件夹"]),
+        .init(category: .dataKnowledge, title: "输出规则", summary: "文件命名、冲突策略和前置元数据。", keywords: ["输出", "规则", "命名", "冲突", "模板"]),
+        .init(category: .dataKnowledge, title: "备份与恢复", summary: "创建、恢复和自动备份状态。", keywords: ["备份", "恢复", "自动"]),
+        .init(category: .captureInput, title: "剪贴板捕获", summary: "自动采集和激活应用限制。", keywords: ["剪贴板", "捕获", "自动"]),
+        .init(category: .captureInput, title: "云端同步", summary: "同步状态、启用开关和重试。", keywords: ["云", "同步", "icloud"]),
+        .init(category: .captureInput, title: "截图捕获", summary: "自动打码、尺寸和圆角。", keywords: ["截图", "打码", "圆角"]),
+        .init(category: .captureInput, title: "说入法结果", summary: "润色模式和提示词风格。", keywords: ["说入法", "润色", "提示词"]),
+        .init(category: .captureInput, title: "ASR 引擎", summary: "语音识别引擎选择。", keywords: ["asr", "引擎", "识别"]),
+        .init(category: .security, title: "系统权限", summary: "麦克风、屏幕录制、辅助功能和通知。", keywords: ["权限", "麦克风", "录屏", "辅助功能", "通知"]),
+        .init(category: .security, title: "隐私安全", summary: "本地优先、敏感内容不上传和钥匙串。", keywords: ["隐私", "安全", "本地", "上传", "钥匙串"]),
+        .init(category: .security, title: "日志", summary: "AI 调用和错误日志开关。", keywords: ["日志", "错误", "调用"]),
+        .init(category: .about, title: "关于 AcWork", summary: "版本、更新、许可和支持入口。", keywords: ["关于", "版本", "支持", "许可", "帮助"])
+    ]
+
+    static func results(for query: String) -> [SettingsSearchResult] {
+        let normalizedQuery = query.lowercased()
+        guard normalizedQuery.isEmpty == false else { return [] }
+
+        return resultsCatalog.filter { result in
+            result.title.lowercased().contains(normalizedQuery)
+            || result.summary.lowercased().contains(normalizedQuery)
+            || result.keywords.contains(where: { $0.lowercased().contains(normalizedQuery) })
+        }
+    }
+
+    static func bestCategory(for query: String) -> SettingsCategory? {
+        let normalizedQuery = query.lowercased()
+        guard normalizedQuery.isEmpty == false else { return nil }
+
+        let scored = resultsCatalog.reduce(into: [SettingsCategory: Int]()) { scores, result in
+            var score = 0
+            if result.title.lowercased().contains(normalizedQuery) { score += 3 }
+            if result.summary.lowercased().contains(normalizedQuery) { score += 1 }
+            score += result.keywords.filter { $0.lowercased().contains(normalizedQuery) }.count * 2
+            scores[result.category, default: 0] += score
+        }
+
+        return scored.max { lhs, rhs in lhs.value < rhs.value }?.key
+    }
+}
+
+struct LivePreviewPanel<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let tone: StatusBadgeTone
+    @ViewBuilder let content: Content
+
+    init(title: String, subtitle: String, tone: StatusBadgeTone, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.tone = tone
+        self.content = content()
+    }
+
+    var body: some View {
+        AppSurfaceCard(title: title, subtitle: subtitle, padding: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                StatusBadge(text: subtitle, tone: tone, compact: true)
+                content
+            }
+        }
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 }
 
@@ -393,7 +722,7 @@ struct ShortcutRecorderSheet: View {
                 .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                 .overlay(
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.92), lineWidth: 1)
                 )
 
             HStack {
@@ -497,7 +826,7 @@ final class ShortcutCaptureNSView: NSView {
 extension SettingsCategory {
     var description: String {
         switch self {
-        case .general: return "配置 AcMind 的基础偏好"
+        case .general: return "配置 AcWork 的基础偏好"
         case .companion: return "设置随身胶囊、语音和快捷键"
         case .aiModels: return "管理提供商、模型选择和使用统计"
         case .dataKnowledge: return "配置数据存储、库和知识库"
@@ -537,7 +866,6 @@ struct SettingsCard<Content: View>: View {
         .padding(16)
         .background(AppSurfaceTokens.cardBackgroundSoft)
         .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
-        .shadow(color: AppSurfaceTokens.primaryText.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -548,20 +876,23 @@ struct GeneralSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SettingsCard(title: "外观", description: "调整 AcMind 的视觉风格") {
+            SettingsCard(title: "外观", description: "调整 AcWork 的视觉风格") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Picker("主题", selection: $viewModel.theme) {
-                        ForEach(AppTheme.allCases, id: \.self) { theme in
-                            Text(theme.displayName).tag(theme)
-                        }
+                    AcSettingRow(title: "主题", description: "调整 AcWork 的视觉风格") {
+                        AcSegmentedControl(
+                            options: AppTheme.allCases,
+                            selection: $viewModel.theme
+                        ) { $0.displayName }
+                        .frame(maxWidth: 240)
                     }
-                    .pickerStyle(.segmented)
 
-                    Picker("语言", selection: $viewModel.language) {
-                        Text("简体中文").tag("zh-CN")
-                        Text("英文").tag("en")
+                    AcSettingRow(title: "语言", description: "界面显示语言") {
+                        AcSegmentedControl(
+                            options: ["zh-CN", "en"],
+                            selection: $viewModel.language
+                        ) { $0 == "zh-CN" ? "简体中文" : "英文" }
+                        .frame(maxWidth: 240)
                     }
-                    .pickerStyle(.segmented)
                 }
             }
 
@@ -599,13 +930,11 @@ struct GeneralSettingsPage: View {
     private var saveButton: some View {
         HStack {
             Spacer()
-            Button("保存") {
+            AcActionButton(title: "保存", icon: "checkmark", isLoading: viewModel.isLoading) {
                 Task {
                     await viewModel.saveSettings()
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.isLoading)
         }
         .padding(.top, 16)
     }
@@ -714,7 +1043,7 @@ struct CompanionSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "随身捕获", description: "把内容快速收集到 AcMind") {
+            SettingsCard(title: "随身捕获", description: "把内容快速收集到 AcWork") {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("自动剪贴板采集", isOn: $viewModel.autoCaptureClipboard)
                     Toggle("文本快速收集", isOn: $viewModel.companionCaptureTextEnabled)
@@ -903,7 +1232,7 @@ struct AIModelsSettingsPage: View {
                         }
                     }
                     .padding(12)
-                    .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.72))
+                    .background(AppSurfaceTokens.cardBackgroundSoft)
                     .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                 }
             }
@@ -983,10 +1312,10 @@ struct DataKnowledgeSettingsPage: View {
                         if !viewModel.vaultPath.isEmpty {
                             HStack {
                                 Image(systemName: viewModel.validateVaultPath() ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundStyle(viewModel.validateVaultPath() ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
+                                    .foregroundStyle(viewModel.validateVaultPath() ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
                                 Text(viewModel.validateVaultPath() ? "路径有效" : "路径无效")
                                     .font(.caption)
-                                    .foregroundStyle(viewModel.validateVaultPath() ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange)
+                                    .foregroundStyle(viewModel.validateVaultPath() ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
                             }
                         }
                     }
@@ -998,28 +1327,18 @@ struct DataKnowledgeSettingsPage: View {
 
             SettingsCard(title: "输出规则", description: "配置 Markdown 输出格式和规则") {
                 VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("文件命名规则")
-                            .font(.subheadline)
-
-                        Picker("", selection: $viewModel.vaultPathRule) {
-                            ForEach(VaultConfig.VaultPathRule.allCases, id: \.self) { rule in
-                                Text(rule.displayName).tag(rule)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                    AcSettingRow(title: "文件命名规则", description: "决定导出文件的命名方式", isStacked: true) {
+                        AcSegmentedControl(
+                            options: VaultConfig.VaultPathRule.allCases,
+                            selection: $viewModel.vaultPathRule
+                        ) { $0.displayName }
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("冲突策略")
-                            .font(.subheadline)
-
-                        Picker("", selection: $viewModel.vaultConflictStrategy) {
-                            ForEach(ConflictStrategy.allCases, id: \.self) { strategy in
-                                Text(strategy.displayName).tag(strategy)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                    AcSettingRow(title: "冲突策略", description: "同名文件存在时如何处理", isStacked: true) {
+                        AcSegmentedControl(
+                            options: ConflictStrategy.allCases,
+                            selection: $viewModel.vaultConflictStrategy
+                        ) { $0.displayName }
                     }
 
                     Toggle("自动添加元数据", isOn: $viewModel.autoFrontmatter)
@@ -1028,12 +1347,7 @@ struct DataKnowledgeSettingsPage: View {
                         Text("元数据模板（JSON）")
                             .font(.subheadline)
 
-                        TextEditor(text: $viewModel.vaultFrontmatterTemplateText)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(minHeight: 120)
-                            .padding(8)
-                            .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+                        AppSurfaceTextEditorShell(text: $viewModel.vaultFrontmatterTemplateText, minHeight: 120)
                     }
                 }
             }
@@ -1279,7 +1593,7 @@ struct CaptureInputSettingsPage: View {
                                 viewModel.captureScreenshotMaxHeight = 0
                             }
                             .buttonStyle(.borderless)
-                            .foregroundStyle(AppSurfaceTokens.accentBlue)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             Spacer()
                         }
@@ -1430,9 +1744,9 @@ struct SecuritySettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SettingsCard(title: "系统权限", description: "管理 AcMind 需要的系统权限") {
+            SettingsCard(title: "系统权限", description: "管理 AcWork 需要的系统权限") {
                 VStack(spacing: 12) {
-                    PermissionRow(
+                    AcPermissionRow(
                         title: "麦克风",
                         description: "用于说入法输入",
                         status: viewModel.microphoneStatus,
@@ -1448,7 +1762,7 @@ struct SecuritySettingsPage: View {
                         }
                     )
 
-                    PermissionRow(
+                    AcPermissionRow(
                         title: "屏幕录制",
                         description: "用于截图功能",
                         status: viewModel.screenRecordingStatus,
@@ -1464,7 +1778,7 @@ struct SecuritySettingsPage: View {
                         }
                     )
 
-                    PermissionRow(
+                    AcPermissionRow(
                         title: "辅助功能",
                         description: "用于全局快捷键",
                         status: viewModel.accessibilityStatus,
@@ -1480,7 +1794,7 @@ struct SecuritySettingsPage: View {
                         }
                     )
 
-                    PermissionRow(
+                    AcPermissionRow(
                         title: "完全磁盘访问",
                         description: "用于访问库文件夹",
                         status: viewModel.fullDiskAccessStatus,
@@ -1496,7 +1810,7 @@ struct SecuritySettingsPage: View {
                         }
                     )
 
-                    PermissionRow(
+                    AcPermissionRow(
                         title: "通知",
                         description: "用于任务完成提醒",
                         status: viewModel.notificationsStatus,
@@ -1568,18 +1882,18 @@ struct AboutSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SettingsCard(title: "关于 AcMind", description: "AcMind - AI 驱动的知识助手") {
+            SettingsCard(title: "关于 AcWork", description: "AcWork - 本地优先个人 AI 工作台") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .center, spacing: 16) {
                         Image(systemName: "brain.head.profile")
                             .resizable()
                             .frame(width: 64, height: 64)
-                            .foregroundStyle(AppSurfaceTokens.accentBlue)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("AcMind")
+                            Text(AcWorkBrand.displayName)
                                 .font(.title)
                                 .fontWeight(.bold)
-                            Text("AI 驱动的知识助手")
+                            Text("本地优先个人 AI 工作台")
                                 .font(.caption)
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Text("版本 \(viewModel.diagnosticAppVersionString)")
@@ -1591,21 +1905,22 @@ struct AboutSettingsPage: View {
                     Divider()
 
                     HStack(spacing: 16) {
-                        Button(viewModel.isCheckingForUpdates ? "检查中..." : "检查更新") {
+                        AcActionButton(
+                            title: viewModel.isCheckingForUpdates ? "检查中..." : "检查更新",
+                            icon: "arrow.clockwise",
+                            isProminent: false,
+                            isLoading: viewModel.isCheckingForUpdates
+                        ) {
                             Task {
                                 await viewModel.checkForUpdates()
                             }
                         }
-                            .buttonStyle(.bordered)
-                            .disabled(viewModel.isCheckingForUpdates)
-                        Button("帮助与反馈") {
+                        AcActionButton(title: "帮助与反馈", icon: "questionmark.circle", isProminent: false) {
                             viewModel.openFeedbackPage()
                         }
-                            .buttonStyle(.bordered)
-                        Button("开源许可") {
+                        AcActionButton(title: "开源许可", icon: "doc.text", isProminent: false) {
                             viewModel.openLicensePage()
                         }
-                            .buttonStyle(.bordered)
                     }
                 }
             }
@@ -1649,8 +1964,10 @@ struct SettingsShortcutRow: View {
                 .font(.system(.body, design: .monospaced))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(4)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
         }
         .padding(.vertical, 4)
     }
@@ -1671,8 +1988,10 @@ struct ShortcutConfigRow: View {
                     .font(.system(.body, design: .monospaced))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AppSurfaceTokens.cardBackgroundSoft)
-                    .cornerRadius(4)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    )
                 Button("录制", action: onRecord)
                     .controlSize(.small)
                     .buttonStyle(.borderless)
@@ -1691,9 +2010,13 @@ struct PositionButton: View {
         Button(title, action: action)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.cardBackgroundSoft)
-            .foregroundStyle(isSelected ? .white : AppSurfaceTokens.primaryText)
-            .cornerRadius(6)
+            .background(isSelected ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft)
+            .foregroundStyle(isSelected ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(isSelected ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
+            )
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             .font(.caption)
             .fontWeight(isSelected ? .semibold : .regular)
     }
@@ -1719,8 +2042,12 @@ struct StrategyButton: View {
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             .padding(12)
-            .background(selected ? AppSurfaceTokens.accentBlue.opacity(0.1) : AppSurfaceTokens.cardBackgroundSoft)
-            .foregroundStyle(selected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.primaryText)
+            .background(selected ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft)
+            .foregroundStyle(selected ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(selected ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
+            )
             .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             .frame(width: 90)
         }
@@ -1741,7 +2068,7 @@ struct ProviderCard: View {
                         .fontWeight(.medium)
                     if provider.enabled {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(AppSurfaceTokens.accentGreen)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
                     } else {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -1773,9 +2100,9 @@ struct ProviderCard: View {
                 Button("删除") {
                     onDelete()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
                 .controlSize(.small)
-                .foregroundStyle(AppSurfaceTokens.accentOrange)
             }
         }
         .padding(12)
@@ -1799,7 +2126,7 @@ struct StatBox: View {
                 .fontWeight(.semibold)
             Text(change)
                 .font(.caption)
-                .foregroundStyle(AppSurfaceTokens.accentGreen)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .padding(12)
         .background(AppSurfaceTokens.cardBackgroundSoft)
@@ -1908,7 +2235,7 @@ struct PermissionRow: View {
 
                 case .authorized:
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(AppSurfaceTokens.accentGreen)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
         }
@@ -1923,39 +2250,6 @@ private func copyToPasteboard(_ value: String) {
 private func revealPathInFinder(_ path: String) {
     let url = URL(fileURLWithPath: path)
     NSWorkspace.shared.activateFileViewerSelecting([url])
-}
-
-struct StatusBadge: View {
-    let status: AppPermissionStatus
-
-    var body: some View {
-        Text(status.displayName)
-            .font(.caption)
-            .fontWeight(.medium)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(backgroundColor)
-            .foregroundColor(foregroundColor)
-            .cornerRadius(4)
-    }
-
-    private var backgroundColor: Color {
-        switch status {
-        case .unknown: return AppSurfaceTokens.secondaryText.opacity(0.16)
-        case .notDetermined, .requesting: return AppSurfaceTokens.accentOrange.opacity(0.18)
-        case .denied, .restricted, .needsSystemSettings, .failed: return AppSurfaceTokens.accentOrange.opacity(0.22)
-        case .authorized: return AppSurfaceTokens.accentGreen.opacity(0.18)
-        }
-    }
-
-    private var foregroundColor: Color {
-        switch status {
-        case .unknown: return AppSurfaceTokens.secondaryText
-        case .notDetermined, .requesting: return AppSurfaceTokens.accentOrange
-        case .denied, .restricted, .needsSystemSettings, .failed: return AppSurfaceTokens.accentOrange
-        case .authorized: return AppSurfaceTokens.accentGreen
-        }
-    }
 }
 
 // MARK: - Add Provider Sheet

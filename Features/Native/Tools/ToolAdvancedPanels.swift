@@ -111,22 +111,33 @@ struct DocumentConverterPanel: View {
     @StateObject private var viewModel = DocumentConverterViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    sourceCard
-                    outputCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "转换说明", subtitle: "先给出解析策略，再进入文件与结果", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "源文件", subtitle: "选择文档并触发转换", padding: 16) {
+                            sourceCard
+                        }
+
+                        AppSurfaceCard(title: "Markdown 输出", subtitle: "可复制、可保存、可回看", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 900, height: 760)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -162,11 +173,6 @@ struct DocumentConverterPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var sourceCard: some View {
@@ -226,15 +232,10 @@ struct DocumentConverterPanel: View {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var outputCard: some View {
@@ -270,19 +271,8 @@ struct DocumentConverterPanel: View {
                 .disabled(viewModel.lastSavedURL == nil)
             }
 
-            TextEditor(text: $viewModel.outputMarkdown)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 360)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.outputMarkdown, minHeight: 360)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -523,22 +513,33 @@ struct OCRPanel: View {
     @StateObject private var viewModel = OCRViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    sourceCard
-                    outputCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "识别说明", subtitle: "支持文件和剪贴板输入", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "图片来源", subtitle: "从文件或剪贴板读取", padding: 16) {
+                            sourceCard
+                        }
+
+                        AppSurfaceCard(title: "识别结果", subtitle: "可编辑、可复制、可保存", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 900, height: 760)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -574,11 +575,6 @@ struct OCRPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var sourceCard: some View {
@@ -634,15 +630,10 @@ struct OCRPanel: View {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var outputCard: some View {
@@ -678,19 +669,8 @@ struct OCRPanel: View {
                 .disabled(viewModel.lastSavedURL == nil)
             }
 
-            TextEditor(text: $viewModel.outputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 380)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.outputText, minHeight: 380)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -835,23 +815,37 @@ struct ImageProcessingPanel: View {
     @StateObject private var viewModel = ImageProcessingViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    sourceCard
-                    optionsCard
-                    outputCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "处理说明", subtitle: "先确认输入，再选择输出形式", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "源图片", subtitle: "选择本地图片或导入剪贴板", padding: 16) {
+                            sourceCard
+                        }
+
+                        AppSurfaceCard(title: "转换参数", subtitle: "控制尺寸、质量与格式", padding: 16) {
+                            optionsCard
+                        }
+
+                        AppSurfaceCard(title: "输出预览", subtitle: "结果可直接查看和打开", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 920, height: 820)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -887,11 +881,6 @@ struct ImageProcessingPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var sourceCard: some View {
@@ -943,15 +932,10 @@ struct ImageProcessingPanel: View {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var optionsCard: some View {
@@ -1013,11 +997,6 @@ struct ImageProcessingPanel: View {
                 Spacer()
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var outputCard: some View {
@@ -1059,11 +1038,6 @@ struct ImageProcessingPanel: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -1354,23 +1328,37 @@ struct BatchRenamePanel: View {
     @StateObject private var viewModel = BatchRenameViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    folderCard
-                    rulesCard
-                    previewCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "重命名说明", subtitle: "先预览，再执行", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "目标文件夹", subtitle: "选择后同步读取一级条目", padding: 16) {
+                            folderCard
+                        }
+
+                        AppSurfaceCard(title: "重命名规则", subtitle: "前缀、后缀与替换", padding: 16) {
+                            rulesCard
+                        }
+
+                        AppSurfaceCard(title: "预览", subtitle: "确认改名结果后再执行", padding: 16) {
+                            previewCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 980, height: 860)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -1406,11 +1394,6 @@ struct BatchRenamePanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var folderCard: some View {
@@ -1475,15 +1458,10 @@ struct BatchRenamePanel: View {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var rulesCard: some View {
@@ -1539,11 +1517,6 @@ struct BatchRenamePanel: View {
                 Spacer()
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var previewCard: some View {
@@ -1573,11 +1546,6 @@ struct BatchRenamePanel: View {
                     .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
             )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -1747,7 +1715,7 @@ struct RenamePreviewRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: item.isDirectory ? "folder" : "doc")
-                .foregroundStyle(item.isDirectory ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentBlue)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.originalURL.lastPathComponent)
@@ -1792,74 +1760,68 @@ struct SRTToFCPXMLPanel: View {
     @State private var showCopied = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("SRT → FCPXML 转换器")
-                .font(.title2)
-                .fontWeight(.semibold)
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Text("将 SRT 字幕文件转换为 Final Cut Pro 可用的 FCPXML 格式")
-                .font(.caption)
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("SRT 内容")
-                        .font(.headline)
-                    TextEditor(text: $srtContent)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 200)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.3), lineWidth: 1)
-                        )
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("FCPXML 输出")
-                        .font(.headline)
-                    TextEditor(text: .constant(convertedXML))
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 200)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.3), lineWidth: 1)
-                        )
-                        .disabled(true)
-                }
-            }
-
-            HStack {
-                Button("转换") {
-                    convertSRTToFCPXML()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("复制 XML") {
-                    #if os(macOS)
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(convertedXML, forType: .string)
-                    showCopied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        showCopied = false
-                    }
-                    #endif
-                }
-                .buttonStyle(.bordered)
-                .disabled(convertedXML.isEmpty)
-
-                if showCopied {
-                    Text(ToolStatusLabelFormatter.copiedText())
+            VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "SRT → FCPXML 转换器", subtitle: "把字幕稿转换成可直接导入剪辑的软件格式", padding: 16) {
+                    Text("将 SRT 字幕文件转换为 Final Cut Pro 可用的 FCPXML 格式")
                         .font(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+
+                AppSurfaceCard(title: "内容转换", subtitle: "左右对照输入与输出", padding: 16, fillHeight: true) {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("SRT 内容")
+                                .font(.headline)
+                            AppSurfaceTextEditorShell(text: $srtContent, minHeight: 200)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("FCPXML 输出")
+                                .font(.headline)
+                            AppSurfaceTextEditorShell(text: .constant(convertedXML), minHeight: 200)
+                                .disabled(true)
+                        }
+                    }
+                }
+
+                AppSurfaceCard(title: "操作", subtitle: "转换并复制结果", padding: 16) {
+                    HStack {
+                        Button("转换") {
+                            convertSRTToFCPXML()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button("复制 XML") {
+                            #if os(macOS)
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(convertedXML, forType: .string)
+                            showCopied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                showCopied = false
+                            }
+                            #endif
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(convertedXML.isEmpty)
+
+                        if showCopied {
+                            Text(ToolStatusLabelFormatter.copiedText())
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
+
+                        Spacer()
+                    }
                 }
 
                 Spacer()
             }
-
-            Spacer()
+            .padding(20)
+            .frame(minWidth: 700, minHeight: 500)
         }
-        .padding(20)
-        .frame(minWidth: 700, minHeight: 500)
     }
 
     private func convertSRTToFCPXML() {

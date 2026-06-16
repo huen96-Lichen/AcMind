@@ -5,13 +5,25 @@ import AcMindKit
 // 工具 - 具体小工具集合
 
 struct ToolsView: View {
-    @StateObject private var viewModel = ToolsViewModel()
+    @StateObject private var viewModel: ToolsViewModel
+    @FocusState private var searchFieldFocused: Bool
+
+    init(viewModel: ToolsViewModel = ToolsViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
-        WorkspacePageShell(
+        AcWorkShell(
             title: "工具台",
-            subtitle: "Markdown、OCR、文档转换和批量处理",
-            headerActions: AnyView(toolsSearchField),
+            subtitle: "先选工具，再配置运行，最后查看结果",
+            searchContent: AnyView(
+                AcSearchField(
+                    text: $viewModel.searchQuery,
+                    placeholder: "搜索工具...",
+                    width: 248,
+                    focusBinding: $searchFieldFocused
+                )
+            ),
             leadingRailWidth: 208,
             trailingRailWidth: 224,
             leadingRail: {
@@ -21,7 +33,7 @@ struct ToolsView: View {
                 toolsGrid
             },
             trailingRail: {
-                toolsRecentRail
+                toolDetailRail
             }
         )
         .sheet(item: $viewModel.activeToolRoute, onDismiss: {
@@ -29,38 +41,21 @@ struct ToolsView: View {
         }) { route in
             toolSheet(for: route)
         }
-        .background(AppVisualBackdrop())
-    }
-
-    private var toolsSearchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .font(.caption)
-
-            TextField("搜索工具...", text: $viewModel.searchQuery)
-                .textFieldStyle(.plain)
-                .font(.caption)
-                .frame(width: 188)
-
-            Text("⌘K")
-                .font(.caption2)
-                .foregroundStyle(AppSurfaceTokens.tertiaryText)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(AppSurfaceTokens.separator, lineWidth: 1)
-        )
+        .background(AppSurfaceBackdrop())
+        .background(searchKeyboardShortcut)
     }
 
     private var toolsFilterRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "工具概览", subtitle: "固定外壳下的轻量摘要", padding: 14) {
+                ToolWorkspaceStageRail(
+                    activeStage: ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute),
+                    selectionSummary: ToolWorkspaceFlow.selectionSummary(filteredCount: viewModel.filteredTools.count),
+                    configurationSummary: ToolWorkspaceFlow.configurationSummary(activeToolRoute: viewModel.activeToolRoute),
+                    reviewSummary: viewModel.recentTools.isEmpty ? "暂无结果" : ToolWorkspaceFlow.reviewSummary(recentCount: viewModel.recentTools.count)
+                )
+
+                AcSection(title: "工具概览", subtitle: "固定外壳下的轻量摘要", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         railSummaryRow(title: "工具总数", value: "\(viewModel.filteredTools.count)")
                         railSummaryRow(title: "最近使用", value: "\(viewModel.recentTools.count)")
@@ -68,7 +63,7 @@ struct ToolsView: View {
                     }
                 }
 
-                AppSurfaceCard(title: "分类筛选", subtitle: "竖排快捷入口", padding: 14) {
+                AcSection(title: "分类筛选", subtitle: "竖排快捷入口", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(ToolCategory.allCases) { category in
                             Button {
@@ -83,9 +78,9 @@ struct ToolsView: View {
                                 .font(.caption)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 7)
-                                .background(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
-                                .foregroundStyle(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue : .primary)
-                                .cornerRadius(10)
+                                .background(viewModel.selectedCategory == category ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft)
+                                .foregroundStyle(viewModel.selectedCategory == category ? AppSurfaceTokens.primaryText : .primary)
+                                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                             }
                             .buttonStyle(.plain)
                         }
@@ -94,56 +89,74 @@ struct ToolsView: View {
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
-    private var toolsRecentRail: some View {
+    private var toolDetailRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "最近使用", subtitle: viewModel.canRestoreRecentTools ? "可恢复" : "已同步", padding: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.recentTools.prefix(6), id: \.route) { tool in
-                            Button {
-                                viewModel.openTool(Tool(
-                                    name: tool.name,
-                                    description: tool.description,
-                                    icon: tool.icon,
-                                    category: tool.category,
-                                    tags: [],
-                                    route: tool.route
-                                ))
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: tool.icon)
-                                    Text(tool.name)
-                                    Spacer()
+                if let selectedTool {
+                    AppSurfaceCard(title: "工具详情", subtitle: "当前选中的具体工具", padding: 14) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .top, spacing: 10) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                        .fill(AppSurfaceTokens.accentBlue.opacity(0.12))
+                                    Image(systemName: selectedTool.icon)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(AppSurfaceTokens.accentBlue)
                                 }
-                                .font(.system(size: 12))
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(AppSurfaceTokens.cardBackgroundSoft)
-                                .cornerRadius(10)
+                                .frame(width: 40, height: 40)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(selectedTool.name)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                                        .lineLimit(2)
+                                    Text(selectedTool.description)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
-                            .buttonStyle(.plain)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                railSummaryRow(title: "分类", value: selectedTool.category.displayName)
+                                railSummaryRow(title: "路由", value: selectedTool.route.displayName)
+                                railSummaryRow(title: "标签", value: selectedTool.tags.map(\.displayName).joined(separator: " · "))
+                            }
+
+                            HStack(spacing: 8) {
+                                Button("重新打开") {
+                                    viewModel.openTool(selectedTool)
+                                }
+                                .buttonStyle(.borderedProminent)
+
+                                Button("清空最近") {
+                                    viewModel.clearRecentTools()
+                                }
+                                .buttonStyle(.bordered)
+                            }
                         }
                     }
-                }
-
-                AppSurfaceCard(title: "最近控制", subtitle: "保留真实动作", padding: 14) {
-                    VStack(spacing: 8) {
-                        Button("清空最近") { viewModel.clearRecentTools() }
-                            .buttonStyle(.bordered)
-                            .frame(maxWidth: .infinity)
-                        Button("恢复最近") { viewModel.restoreRecentTools() }
-                            .buttonStyle(.borderedProminent)
-                            .frame(maxWidth: .infinity)
+                } else {
+                    AppSurfaceCard(title: "工具详情", subtitle: "选择一个工具后显示具体信息", padding: 14) {
+                        AcEmptyState(
+                            icon: "wrench.and.screwdriver",
+                            title: "尚未选择工具",
+                            message: "从中间列表里打开一个工具，右侧会只显示这个工具的具体信息。"
+                        )
                     }
                 }
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+    }
+
+    private var selectedTool: Tool? {
+        guard let activeToolRoute = viewModel.activeToolRoute else { return nil }
+        return viewModel.tools.first { $0.route == activeToolRoute }
     }
 
     private func railSummaryRow(title: String, value: String) -> some View {
@@ -176,11 +189,11 @@ struct ToolsView: View {
                         .font(.caption)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.12) : Color.clear)
+                        .background(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft)
                         .foregroundStyle(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-                        .cornerRadius(999)
+                        .clipShape(Capsule(style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 999)
+                            Capsule(style: .continuous)
                                 .stroke(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.28) : AppSurfaceTokens.separator, lineWidth: 1)
                         )
                     }
@@ -190,7 +203,7 @@ struct ToolsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground.opacity(0.88))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     // MARK: - Tools Grid
@@ -235,7 +248,7 @@ struct ToolsView: View {
             }
             .padding(20)
         }
-        .background(AppSurfaceTokens.background)
+        .background(Color.clear)
     }
 
     private var toolsCategoryStrip: some View {
@@ -255,7 +268,7 @@ struct ToolsView: View {
                         .padding(.vertical, 7)
                         .background(
                             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                                .fill(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
+                                .fill(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 999, style: .continuous)
@@ -283,7 +296,7 @@ struct ToolsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
@@ -319,6 +332,16 @@ struct ToolsView: View {
             APITestPanel()
         }
     }
+
+    private var searchKeyboardShortcut: some View {
+        Button("搜索工具") {
+            searchFieldFocused = true
+        }
+        .keyboardShortcut("f", modifiers: .command)
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
+    }
 }
 
 // MARK: - Tool Card
@@ -334,8 +357,8 @@ struct ToolCard: View {
             HStack(spacing: 14) {
                 // 图标
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(AppSurfaceTokens.accentBlue.opacity(0.10))
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 48, height: 48)
 
                     Image(systemName: tool.icon)
@@ -357,7 +380,11 @@ struct ToolCard: View {
                                 .fontWeight(.bold)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
-                                .background(AppSurfaceTokens.accentGreen.opacity(0.14))
+                                .background(AppSurfaceTokens.cardBackgroundSoft)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                        .stroke(AppSurfaceTokens.accentGreen.opacity(0.28), lineWidth: 1)
+                                )
                                 .foregroundStyle(AppSurfaceTokens.accentGreen)
                                 .cornerRadius(3)
                         }
@@ -375,9 +402,13 @@ struct ToolCard: View {
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 1.5)
-                                .background(tag.color.opacity(0.12))
+                                .background(AppSurfaceTokens.cardBackgroundSoft)
+                                .overlay(
+                                    Capsule(style: .continuous)
+                                        .stroke(tag.color.opacity(0.22), lineWidth: 1)
+                                )
                                 .foregroundStyle(tag.color)
-                                .cornerRadius(4)
+                                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                         }
                     }
                 }
@@ -399,18 +430,12 @@ struct ToolCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                             .stroke(
-                                isPressed ? AppSurfaceTokens.accentBlue.opacity(0.32) :
-                                isHovered ? AppSurfaceTokens.accentBlue.opacity(0.18) :
+                                isPressed ? AppSurfaceTokens.separator.opacity(0.85) :
+                                isHovered ? AppSurfaceTokens.separator.opacity(0.65) :
                                 AppSurfaceTokens.separator,
                                 lineWidth: 1
                             )
                     )
-            )
-            .shadow(
-                color: isHovered ? AppSurfaceTokens.primaryText.opacity(0.06) : Color.clear,
-                radius: isHovered ? 8 : 0,
-                x: 0,
-                y: isHovered ? 2 : 0
             )
             .scaleEffect(isPressed ? 0.985 : 1)
             .animation(.easeInOut(duration: 0.1), value: isPressed)
@@ -523,7 +548,7 @@ struct RecentToolCard: View {
                 // 图标
                 ZStack {
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
-                        .fill(tool.category.color.opacity(0.1))
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 40, height: 40)
 
                     Image(systemName: tool.icon)
@@ -546,17 +571,11 @@ struct RecentToolCard: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    .fill(AppSurfaceTokens.cardBackground)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                             .stroke(isHovered ? AppSurfaceTokens.accentBlue.opacity(0.22) : AppSurfaceTokens.separator, lineWidth: 1)
                     )
-            )
-            .shadow(
-                color: isHovered ? AppSurfaceTokens.primaryText.opacity(0.05) : Color.clear,
-                radius: isHovered ? 6 : 0,
-                x: 0,
-                y: isHovered ? 2 : 0
             )
             .frame(width: 92)
         }

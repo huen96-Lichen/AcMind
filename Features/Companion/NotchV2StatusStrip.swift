@@ -25,7 +25,7 @@ struct NotchV2LightStatusStrip: View {
         .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(NotchV2DesignTokens.cardBackgroundDeep.opacity(0.80))
+                .fill(NotchV2DesignTokens.panelBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -61,14 +61,14 @@ struct NotchV2LightStatusStrip: View {
         .padding(.vertical, 3)
         .scaleEffect(item.highlighted ? 1.02 : 1.0)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(item.highlighted ? item.accent.opacity(0.16) : NotchV2DesignTokens.innerCardBackground.opacity(0.82))
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                .fill(item.highlighted ? NotchV2DesignTokens.panelBackground : NotchV2DesignTokens.panelBackground)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(item.highlighted ? item.accent.opacity(0.24) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                .stroke(item.highlighted ? item.accent.opacity(0.18) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
         )
-        .shadow(color: item.highlighted ? item.accent.opacity(0.10) : .clear, radius: 5, x: 0, y: 2)
+        .shadow(color: item.highlighted ? item.accent.opacity(0.05) : .clear, radius: 4, x: 0, y: 2)
         .animation(.easeOut(duration: 0.16), value: item.highlighted)
     }
 }
@@ -93,7 +93,7 @@ extension NotchV2ViewModel {
                 icon: batteryInfo.isCharging || batteryInfo.isPluggedIn ? "powerplug.fill" : "powerplug",
                 title: batteryInfo.isCharging ? "充电中" : batteryInfo.isPluggedIn ? "接电" : "电源",
                 detail: batteryInfo.isAvailable == false ? "无电池" : batteryInfo.powerSourceState.isEmpty ? "电池供电" : batteryInfo.powerSourceState,
-                accent: batteryInfo.isAvailable == false ? NotchV2DesignTokens.secondaryText : batteryInfo.isCharging ? .green : batteryInfo.isPluggedIn ? .blue : NotchV2DesignTokens.secondaryText,
+                accent: NotchV2DesignTokens.secondaryText,
                 highlighted: batteryInfo.isCharging,
                 priority: 1
             )
@@ -161,7 +161,7 @@ extension NotchV2ViewModel {
                     icon: "speaker.wave.2.fill",
                     title: "音量",
                     detail: "\(Int(volume.rounded()))%",
-                    accent: .blue,
+                    accent: NotchV2DesignTokens.secondaryText,
                     highlighted: volume < 30,
                     priority: 5
                 )
@@ -174,7 +174,7 @@ extension NotchV2ViewModel {
                     icon: "sun.max.fill",
                     title: "亮度",
                     detail: "\(Int(brightness.rounded()))%",
-                    accent: .orange,
+                    accent: NotchV2DesignTokens.secondaryText,
                     highlighted: brightness < 30,
                     priority: 6
                 )
@@ -187,7 +187,7 @@ extension NotchV2ViewModel {
                     icon: "shield.checkerboard",
                     title: "权限",
                     detail: "已接入",
-                    accent: NotchV2DesignTokens.accentGreen,
+                    accent: NotchV2DesignTokens.secondaryText,
                     highlighted: false,
                     priority: 99
                 )
@@ -286,7 +286,7 @@ struct NotchV2SystemRail: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.94))
         )
     }
 

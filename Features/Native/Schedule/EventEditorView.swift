@@ -43,8 +43,12 @@ struct EventEditorView: View {
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 5)
-                .background(AppSurfaceTokens.accentBlue)
-                .cornerRadius(6)
+                .background(AppSurfaceTokens.cardBackgroundSoft)
+                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                )
                 .disabled(!canCreate)
             }
             .padding(.horizontal, 20)
@@ -58,17 +62,17 @@ struct EventEditorView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                    TextField("输入日程标题", text: $title)
-                        .font(.system(size: 14))
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(AppSurfaceTokens.cardBackgroundSoft)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
-                        )
+                        TextField("输入日程标题", text: $title)
+                            .font(.system(size: 14))
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
+                            .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                                    .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
+                            )
                         .onAppear {
                             DispatchQueue.main.async {
                                 NSTextView.currentFirstResponder()?.becomeFirstResponder()
@@ -95,16 +99,17 @@ struct EventEditorView: View {
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(selectedCategoryId == category.id
-                                    ? category.color.opacity(0.15)
-                                    : AppSurfaceTokens.cardBackgroundSoft)
-                                .cornerRadius(6)
+                                .background(AppSurfaceTokens.cardBackgroundSoft)
+                                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
+                                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                                         .stroke(selectedCategoryId == category.id
-                                            ? category.color.opacity(0.3)
+                                            ? AppSurfaceTokens.separator.opacity(0.95)
                                             : AppSurfaceTokens.separator, lineWidth: 0.5)
                                 )
+                                .foregroundStyle(selectedCategoryId == category.id
+                                    ? AppSurfaceTokens.primaryText
+                                    : AppSurfaceTokens.secondaryText)
                             }
                             .buttonStyle(.plain)
                         }
@@ -147,9 +152,9 @@ struct EventEditorView: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(8)
+                            .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
                                     .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                             )
                         }
@@ -170,9 +175,9 @@ struct EventEditorView: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(8)
+                            .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
                                     .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                             )
                         }
@@ -188,7 +193,7 @@ struct EventEditorView: View {
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(AppSurfaceTokens.cardBackgroundSoft)
-                                .cornerRadius(8)
+                                .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                         }
                     }
                 }
@@ -215,7 +220,7 @@ struct EventEditorView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
                     .background(AppSurfaceTokens.accentOrange.opacity(0.08))
-                    .cornerRadius(8)
+                    .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                 }
             }
             .padding(.horizontal, 20)
@@ -224,6 +229,7 @@ struct EventEditorView: View {
             Spacer()
         }
         .frame(width: 420)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .onAppear {
             if let editingEvent = viewModel.editingEvent {
                 title = editingEvent.title

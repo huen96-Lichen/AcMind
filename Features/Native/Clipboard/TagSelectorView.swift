@@ -38,8 +38,12 @@ struct TagSelectorView: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.15) : AppSurfaceTokens.cardBackgroundSoft)
-                        .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.primaryText)
+                        .background(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.22) : AppSurfaceTokens.separator.opacity(0.55), lineWidth: 1)
+                        )
+                        .foregroundStyle(isSelected ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)

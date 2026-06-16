@@ -154,7 +154,7 @@ public struct AgentToolInfo: Codable, Sendable, Identifiable, Hashable {
         AgentToolInfo(
             type: .tools,
             name: "工具集",
-            description: "调用 AcMind 工具",
+            description: "调用 AcWork 工具",
             availableActions: ["webDigest", "ocr", "markdown", "export", "compare"]
         ),
         AgentToolInfo(

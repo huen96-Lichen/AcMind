@@ -17,7 +17,7 @@ struct VoiceEntryView: View {
     }
 
     var body: some View {
-        WorkspacePageShell(
+        AcWorkShell(
             title: "说入法设置",
             subtitle: "真实控制语音输入链路：入口、识别、润色、输出、静音检测和连续输入。",
             leadingRailWidth: 208,
@@ -52,13 +52,14 @@ struct VoiceEntryView: View {
     private var voiceContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: UI.sectionSpacing) {
+                workflowCard
                 summaryGrid
                 controlSections
             }
             .padding(UI.pagePadding)
             .frame(maxWidth: UI.maxWidth, alignment: .leading)
         }
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
     }
 
     private var voiceSummaryRail: some View {
@@ -104,7 +105,7 @@ struct VoiceEntryView: View {
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     private var voiceDetailRail: some View {
@@ -116,7 +117,7 @@ struct VoiceEntryView: View {
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     private func railSummaryRow(title: String, value: String) -> some View {
@@ -132,89 +133,139 @@ struct VoiceEntryView: View {
         }
     }
 
-    private var summaryGrid: some View {
-        HStack(spacing: 12) {
-            summaryCard(
-                title: "入口",
-                icon: "keyboard",
-                rows: [
-                    ("启用状态", SettingsStatusLabelFormatter.binaryState(
-                        isEnabled: viewModel.companionVoiceEnabled,
-                        enabledText: "已启用",
-                        disabledText: "已关闭"
-                    )),
-                    ("快捷键", viewModel.companionVoiceShortcut),
-                    ("触发模式", viewModel.voiceTriggerMode.displayName)
-                ]
-            )
+    private var workflowCard: some View {
+        AppSurfaceCard(title: "当前工作流", subtitle: "监听 → 转写 → 修正 → 发送", padding: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        statePill(
+                            title: viewModel.companionVoiceEnabled ? "已启用" : "已关闭",
+                            accent: viewModel.companionVoiceEnabled ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentSecondary
+                        )
+                        statePill(
+                            title: viewModel.voiceTriggerMode.displayName,
+                            accent: AppSurfaceTokens.accentBlue
+                        )
+                        statePill(
+                            title: viewModel.companionVoiceOutputMode.displayName,
+                            accent: AppSurfaceTokens.accentOrange
+                        )
+                        statePill(
+                            title: viewModel.voiceAutoPolish ? viewModel.voicePolishMode.displayName : "关闭润色",
+                            accent: viewModel.voiceAutoPolish ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentSecondary
+                        )
+                    }
 
-            summaryCard(
-                title: "识别与润色",
-                icon: "waveform",
-                rows: [
-                    ("ASR 引擎", providerDisplayName(viewModel.voiceDefaultProvider)),
-                    ("首选语言", languageDisplayName(viewModel.preferredLanguage)),
-                    ("润色模式", SettingsStatusLabelFormatter.binaryState(
-                        isEnabled: viewModel.voiceAutoPolish,
-                        enabledText: viewModel.voicePolishMode.displayName,
-                        disabledText: "关闭"
-                    ))
-                ]
-            )
+                    Text("语音链路说明")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
 
-            summaryCard(
-                title: "输出",
-                icon: "arrow.up.doc",
-                rows: [
-                    ("输出方式", viewModel.voiceOutputMode.displayName),
-                    ("翻译目标", translationLanguageDisplayName(viewModel.translationLanguage)),
-                    ("收集箱", SettingsStatusLabelFormatter.binaryState(
-                        isEnabled: viewModel.voiceSaveToInbox,
-                        enabledText: "写入",
-                        disabledText: "不写入"
-                    )),
-                    ("连续输入", SettingsStatusLabelFormatter.binaryState(
-                        isEnabled: viewModel.voiceAllowContinuation,
-                        enabledText: continuationText,
-                        disabledText: "关闭"
-                    ))
-                ]
-            )
+                    Text(workflowDetailText)
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("入口、识别、润色、输出和连续输入都在这里配置。")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    workflowFactRow(title: "麦克风", value: viewModel.microphonePermissionStatus.displayName)
+                    workflowFactRow(title: "输出方式", value: viewModel.voiceOutputMode.displayName)
+                    workflowFactRow(title: "连续输入", value: continuationText)
+
+                    Button("查看状态") {
+                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.top, 2)
+                }
+                .frame(width: 196, alignment: .leading)
+            }
         }
     }
 
-    private func summaryCard(title: String, icon: String, rows: [(String, String)]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppSurfaceTokens.accentBlue)
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-            }
+    private var summaryGrid: some View {
+        AppSurfaceCard(title: "关键摘要", subtitle: "入口、识别与输出", padding: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(
+                    title: "摘要概览",
+                    description: "这些卡片对应说入法真正控制的链路。",
+                    status: viewModel.companionVoiceEnabled ? "已启用" : "已关闭"
+                )
 
-            ForEach(rows, id: \.0) { row in
-                HStack {
-                    Text(row.0)
-                        .font(.system(size: 12))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    Spacer()
-                    Text(row.1)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(AppSurfaceTokens.primaryText)
-                        .lineLimit(1)
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ],
+                    spacing: 12
+                ) {
+                    MetricCard(
+                        label: "入口",
+                        primaryValue: viewModel.companionVoiceShortcut,
+                        trend: viewModel.voiceTriggerMode.displayName,
+                        state: SettingsStatusLabelFormatter.binaryState(
+                            isEnabled: viewModel.companionVoiceEnabled,
+                            enabledText: "已启用",
+                            disabledText: "已关闭"
+                        ),
+                        tint: AppSurfaceTokens.accentBlue
+                    ) {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.accentBlue)
+                            .frame(width: 34, height: 34)
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+
+                    MetricCard(
+                        label: "识别",
+                        primaryValue: providerDisplayName(viewModel.voiceDefaultProvider),
+                        trend: languageDisplayName(viewModel.preferredLanguage),
+                        state: viewModel.voiceAutoPolish ? viewModel.voicePolishMode.displayName : "关闭润色",
+                        tint: AppSurfaceTokens.accentGreen
+                    ) {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.accentGreen)
+                            .frame(width: 34, height: 34)
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
                 }
+
+                MetricCard(
+                    label: "输出",
+                    primaryValue: viewModel.voiceOutputMode.displayName,
+                    trend: translationLanguageDisplayName(viewModel.translationLanguage),
+                    state: SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.voiceAllowContinuation,
+                        enabledText: continuationText,
+                        disabledText: "关闭"
+                    ),
+                    lastUpdated: SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: viewModel.voiceSaveToInbox,
+                        enabledText: "写入收集箱",
+                        disabledText: "不写入收集箱"
+                    ),
+                    tint: AppSurfaceTokens.accentOrange
+                    ) {
+                        Image(systemName: "arrow.up.doc")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
+                            .frame(width: 34, height: 34)
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(UI.cardRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: UI.cardRadius)
-                .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-        )
     }
 
     private var controlSections: some View {
@@ -376,25 +427,9 @@ struct VoiceEntryView: View {
     }
 
     private func settingCard<Content: View>(title: String, description: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                Text(description)
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        AppSurfaceCard(title: title, subtitle: description, padding: 14) {
             content()
         }
-        .padding(14)
-        .background(AppSurfaceTokens.cardBackground)
-        .cornerRadius(UI.cardRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: UI.cardRadius)
-                .stroke(AppSurfaceTokens.separator.opacity(0.6), lineWidth: 1)
-        )
     }
 
     private func toggleRow(title: String, description: String, isOn: Binding<Bool>) -> some View {
@@ -498,6 +533,39 @@ struct VoiceEntryView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(permissionColor(status))
         }
+    }
+
+    private func workflowFactRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+    }
+
+    private func statePill(title: String, accent: Color) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(accent.opacity(0.10))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(accent.opacity(0.22), lineWidth: 1)
+            )
+    }
+
+    private var workflowDetailText: String {
+        "录音中的实时反馈会出现在浮窗里，这个页面只负责配置和解释说入法链路。"
     }
 
     private var divider: some View {

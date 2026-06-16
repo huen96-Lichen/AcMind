@@ -369,7 +369,7 @@ public struct ToolCall: Codable, Sendable, Equatable {
     public var durationMs: Int?
 
     public enum ToolType: String, Codable, Sendable {
-        case internalTool   // AcMind 内部工具
+        case internalTool   // AcWork 内部工具
         case externalTool   // 外部 API
         case aiCall         // AI 模型调用
         case fileOperation  // 文件操作
@@ -377,7 +377,7 @@ public struct ToolCall: Codable, Sendable, Equatable {
 
         public var displayName: String {
             switch self {
-            case .internalTool: return "AcMind 工具"
+            case .internalTool: return "AcWork 工具"
             case .externalTool: return "外部 API"
             case .aiCall: return "AI 调用"
             case .fileOperation: return "文件操作"

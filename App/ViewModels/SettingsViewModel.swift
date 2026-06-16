@@ -619,7 +619,7 @@ public final class SettingsViewModel: ObservableObject {
 
     public func copyDiagnosticsToPasteboard() {
         let diagnostics = """
-        AcMind Diagnostics
+        AcWork Diagnostics
         Time: \(ISO8601DateFormatter().string(from: Date()))
         App Version: \(diagnosticAppVersionString)
         macOS: \(diagnosticMacOSVersionString)
@@ -800,7 +800,7 @@ public final class SettingsViewModel: ObservableObject {
 
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyyMMdd-HHmmss"
-            let fileURL = folder.appendingPathComponent("AcMind-backup-\(formatter.string(from: Date())).json")
+            let fileURL = folder.appendingPathComponent("AcWork-backup-\(formatter.string(from: Date())).json")
             try data.write(to: fileURL, options: [.atomic])
             let now = Date()
             lastAutoBackupAt = now
@@ -819,7 +819,7 @@ public final class SettingsViewModel: ObservableObject {
             panel.allowsMultipleSelection = false
             panel.allowedContentTypes = [.json]
             panel.prompt = "恢复备份"
-            panel.message = "选择 AcMind 备份 JSON 文件"
+            panel.message = "选择 AcWork 备份 JSON 文件"
 
             guard panel.runModal() == .OK, let url = panel.url else { return }
 

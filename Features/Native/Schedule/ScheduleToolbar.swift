@@ -33,9 +33,9 @@ struct ScheduleToolbar: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
                         .background(AppSurfaceTokens.cardBackgroundSoft)
-                        .cornerRadius(6)
+                        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                                 .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                         )
                 }
@@ -62,9 +62,9 @@ struct ScheduleToolbar: View {
                 .padding(.horizontal, 2)
                 .padding(.vertical, 2)
                 .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(6)
+                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                         .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                 )
 
@@ -86,9 +86,9 @@ struct ScheduleToolbar: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(AppSurfaceTokens.cardBackgroundSoft)
-                        .cornerRadius(6)
+                        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                                 .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                         )
 
@@ -136,7 +136,13 @@ struct ScheduleToolbar: View {
         }
         .padding(.horizontal, 20)
         .frame(height: ScheduleLayout.toolbarHeight)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .overlay(
+            Rectangle()
+                .fill(AppSurfaceTokens.separator.opacity(0.35))
+                .frame(height: 1),
+            alignment: .bottom
+        )
         .onAppear {
             isSearching = !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
@@ -165,17 +171,15 @@ struct ScheduleSegmentedControl: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
                         .background(
-                            selection == mode
-                                ? AppSurfaceTokens.cardBackground
-                                : Color.clear
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .fill(selection == mode ? AppSurfaceTokens.cardBackgroundSoft : Color.clear)
                         )
-                        .cornerRadius(5)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(2)
-        .background(AppSurfaceTokens.secondarySidebarBackground)
-        .cornerRadius(7)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
     }
 }

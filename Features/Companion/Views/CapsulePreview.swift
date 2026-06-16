@@ -13,11 +13,7 @@ struct CapsulePreview: View {
             ZStack(alignment: position.alignment) {
                 // 菜单栏背景
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: [AppSurfaceTokens.cardBackgroundSoft, AppSurfaceTokens.background]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .frame(height: 32)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
@@ -46,11 +42,13 @@ struct CapsulePreview: View {
                         )
                 }
                 .padding(4)
-                .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
                 )
             }
             .opacity(isEnabled ? 1.0 : 0.5)

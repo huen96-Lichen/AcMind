@@ -51,7 +51,7 @@ struct DynamicContinentSchedulePage: View {
 
     private var centerColumn: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "当前焦点", symbol: "scope", padding: 12, cardAccent: currentEvent == nil ? .clear : NotchV2DesignTokens.accentPurple) {
+            NotchV2Card(title: "当前焦点", symbol: "scope", padding: 12, cardAccent: nil) {
                 focusCard
             }
 
@@ -125,7 +125,7 @@ struct DynamicContinentSchedulePage: View {
                     if isCurrentEvent(event) {
                         Text("进行中")
                             .font(NotchV2DesignTokens.Typography.caption)
-                            .foregroundStyle(NotchV2DesignTokens.accentPurple)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
                             .lineLimit(1)
                     }
                 }
@@ -231,7 +231,7 @@ struct DynamicContinentSchedulePage: View {
                     .lineLimit(1)
                 Text(scheduleVm.todayWorkloadLevel.displayName)
                     .font(NotchV2DesignTokens.Typography.caption)
-                    .foregroundStyle(scheduleVm.todayWorkloadLevel.color)
+                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
@@ -243,11 +243,11 @@ struct DynamicContinentSchedulePage: View {
                 .truncationMode(.tail)
 
             ProgressView(value: Double(scheduleVm.todayWorkloadPercent) / 100.0)
-                .tint(scheduleVm.todayWorkloadLevel.color)
+                .tint(NotchV2DesignTokens.secondaryText)
 
             HStack(spacing: 8) {
-                legendItem(color: NotchV2DesignTokens.accentPurple, title: "专注", value: Double(scheduleVm.todayFocusMinutes) / 60.0)
-                legendItem(color: NotchV2DesignTokens.accentBlue, title: "事件", value: Double(scheduleVm.todayEventCount))
+                legendItem(color: NotchV2DesignTokens.secondaryText, title: "专注", value: Double(scheduleVm.todayFocusMinutes) / 60.0)
+                legendItem(color: NotchV2DesignTokens.secondaryText.opacity(0.8), title: "事件", value: Double(scheduleVm.todayEventCount))
             }
         }
     }
@@ -271,7 +271,7 @@ struct DynamicContinentSchedulePage: View {
                     GeometryReader { proxy in
                         let ratio = CGFloat(dayData?.eventCount ?? 0) / CGFloat(maxCount)
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(NotchV2DesignTokens.accentPurple.opacity(0.5 + 0.5 * Double(ratio)))
+                            .fill(NotchV2DesignTokens.secondaryText.opacity(0.25 + 0.25 * Double(ratio)))
                             .frame(width: max(3, proxy.size.width * ratio))
                     }
                     .frame(height: 6)
@@ -311,7 +311,7 @@ struct DynamicContinentSchedulePage: View {
                 .padding(.vertical, 5)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+                        .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.94))
                 )
             }
 
@@ -323,7 +323,7 @@ struct DynamicContinentSchedulePage: View {
             }
             .buttonStyle(.plain)
             .font(NotchV2DesignTokens.Typography.caption)
-            .foregroundStyle(NotchV2DesignTokens.accentBlue)
+            .foregroundStyle(NotchV2DesignTokens.secondaryText)
         }
     }
 
@@ -376,8 +376,8 @@ struct DynamicContinentSchedulePage: View {
 
     private func statusColor(for status: ScheduleEvent.EventStatus) -> Color {
         switch status {
-        case .todo: return NotchV2DesignTokens.accentBlue
-        case .done: return NotchV2DesignTokens.accentGreen
+        case .todo: return NotchV2DesignTokens.secondaryText.opacity(0.7)
+        case .done: return NotchV2DesignTokens.secondaryText.opacity(0.45)
         case .cancelled: return NotchV2DesignTokens.secondaryText
         }
     }
@@ -400,9 +400,9 @@ struct DynamicContinentSystemStatusPage: View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
             NotchV2Card(title: "运行摘要", symbol: "desktopcomputer", fillHeight: true, cornerRadius: NotchV2DesignTokens.cardRadius) {
                 VStack(alignment: .leading, spacing: 6) {
-                    infoRow(label: "主机", value: Host.current().localizedName ?? "Mac")
-                    infoRow(label: "系统", value: ProcessInfo.processInfo.operatingSystemVersionString)
-                    infoRow(label: "CPU 核心", value: "\(ProcessInfo.processInfo.processorCount)")
+                    NotchV2InfoRow(title: "主机", value: Host.current().localizedName ?? "Mac", icon: "desktopcomputer", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
+                    NotchV2InfoRow(title: "系统", value: ProcessInfo.processInfo.operatingSystemVersionString, icon: "cpu", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
+                    NotchV2InfoRow(title: "CPU 核心", value: "\(ProcessInfo.processInfo.processorCount)", icon: "cpu.fill", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
 
                     Divider()
                         .overlay(NotchV2DesignTokens.separator.opacity(0.45))
@@ -412,15 +412,15 @@ struct DynamicContinentSystemStatusPage: View {
                         .foregroundStyle(NotchV2DesignTokens.secondaryText)
                         .lineLimit(1)
 
-                    infoRow(label: "电池", value: viewModel.batteryStateText)
-                    infoRow(label: "电量", value: viewModel.batteryDisplayText)
+                    NotchV2InfoRow(title: "电池", value: viewModel.batteryStateText, icon: "battery.100", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
+                    NotchV2InfoRow(title: "电量", value: viewModel.batteryDisplayText, icon: "battery.75", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
                 }
             }
         }
     }
 
     private var centerColumn: some View {
-        NotchV2Card(title: "核心摘要", symbol: "cpu", fillHeight: true, cardAccent: .orange) {
+        NotchV2Card(title: "核心摘要", symbol: "cpu", fillHeight: true, cardAccent: nil) {
             let columns = [
                 GridItem(.flexible(), spacing: 8),
                 GridItem(.flexible(), spacing: 8),
@@ -432,21 +432,21 @@ struct DynamicContinentSystemStatusPage: View {
                     title: "电池电量",
                     value: viewModel.systemBatterySummary,
                     detail: viewModel.batteryStateText,
-                    color: .cyan
+                    color: NotchV2DesignTokens.primaryText
                 )
 
                 statusMetricTile(
                     title: "网速（上传下载量）",
                     value: viewModel.systemNetworkDownloadSummary,
                     detail: "↑ \(viewModel.systemNetworkUploadSummary)",
-                    color: .green
+                    color: NotchV2DesignTokens.primaryText
                 )
 
                 statusMetricTile(
                     title: "当前设备温度",
                     value: viewModel.systemTemperatureSummary,
                     detail: viewModel.systemTemperatureDetail,
-                    color: .orange
+                    color: NotchV2DesignTokens.primaryText
                 )
 
                 fanControlTile
@@ -455,14 +455,14 @@ struct DynamicContinentSystemStatusPage: View {
                     title: "CPU 负载率",
                     value: viewModel.systemCPUUsageSummary,
                     detail: "当前使用率",
-                    color: .blue
+                    color: NotchV2DesignTokens.primaryText
                 )
 
                 statusMetricTile(
                     title: "内存负载率",
                     value: viewModel.systemMemoryUsageSummary,
                     detail: "当前占用率",
-                    color: .purple
+                    color: NotchV2DesignTokens.primaryText
                 )
             }
         }
@@ -475,27 +475,7 @@ struct DynamicContinentSystemStatusPage: View {
     }
 
     private func miniMetricRow(icon: String, title: String, value: String, accent: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(accent)
-                .frame(width: 16)
-            Text(title)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Text(value)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
-        )
+        NotchV2InfoRow(title: title, value: value, icon: icon, accent: accent, compactValue: true)
     }
 
     private func statusMetricTile(title: String, value: String, detail: String, color: Color) -> some View {
@@ -533,7 +513,7 @@ struct DynamicContinentSystemStatusPage: View {
 
             Text(viewModel.systemFanSummary)
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.mint)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
 
             HStack(spacing: 6) {
@@ -560,18 +540,4 @@ struct DynamicContinentSystemStatusPage: View {
         )
     }
 
-    private func infoRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Text(value)
-                .font(NotchV2DesignTokens.Typography.body)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-    }
 }

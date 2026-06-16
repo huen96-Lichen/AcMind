@@ -19,7 +19,7 @@ struct ScheduleNativeView: View {
             // 右侧主日历区域
             ScheduleMain(viewModel: viewModel)
         }
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
         .sheet(isPresented: $viewModel.isCreatingEvent) {
             ScheduleEventEditorView(viewModel: viewModel)
         }
@@ -42,7 +42,7 @@ struct ScheduleMain: View {
             ScheduleViewSurface(viewModel: viewModel)
         }
         .frame(minWidth: ScheduleLayout.mainMinWidth)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
     }
 }
 

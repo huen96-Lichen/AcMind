@@ -23,7 +23,7 @@ struct SystemGaugeRing: View {
                 Text("\(Int(value * 100))%")
                     .font(NotchV2DesignTokens.Typography.footnote)
                     .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
             }
         }
         .frame(width: size, height: size)
@@ -84,8 +84,8 @@ struct SystemMetricTile: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
         )
     }
 
@@ -130,15 +130,15 @@ struct SystemProcessRow: View {
                     .foregroundStyle(NotchV2DesignTokens.secondaryText)
             }
             HStack(spacing: 6) {
-                progressBar(value: cpuPercent / 100, color: .blue)
-                progressBar(value: memoryPercent / 100, color: .purple)
+                progressBar(value: cpuPercent / 100, color: NotchV2DesignTokens.secondaryText)
+                progressBar(value: memoryPercent / 100, color: NotchV2DesignTokens.secondaryText)
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
         )
     }
 
@@ -184,7 +184,7 @@ struct SystemPermissionIndicator: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(isAuthorized ? NotchV2DesignTokens.accentGreen : .orange)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .frame(width: 14)
             Text(label)
                 .font(NotchV2DesignTokens.Typography.caption)
@@ -192,14 +192,14 @@ struct SystemPermissionIndicator: View {
                 .lineLimit(1)
             Spacer(minLength: 0)
             Circle()
-                .fill(isAuthorized ? NotchV2DesignTokens.accentGreen : .orange)
+                .fill(NotchV2DesignTokens.secondaryText)
                 .frame(width: 6, height: 6)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
         )
     }
 }
@@ -219,7 +219,7 @@ struct SystemNetworkRate: View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(color)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
                     .font(NotchV2DesignTokens.Typography.footnote)

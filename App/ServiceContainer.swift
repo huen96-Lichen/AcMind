@@ -139,13 +139,10 @@ public final class ServiceContainer: ObservableObject, Sendable {
     public let agentSkillService: AgentSkillServiceProtocol
     public let agentTaskBoardService: AgentTaskBoardServiceProtocol
     public let systemStatusService: SystemStatusService
+    public let systemFanControlService: SystemFanControlService
     public let batteryService: BatteryService
     public let musicService: MusicService
     let systemEventCenter: SystemEventCenter
-
-    public var hotCornerSettingsStore: HotCornerSettingsStore? {
-        settingsService as? HotCornerSettingsStore
-    }
 
     // MARK: - State
 
@@ -219,7 +216,8 @@ public final class ServiceContainer: ObservableObject, Sendable {
         self.agentMemoryService = configuration.agentMemoryService ?? AgentMemoryService(storage: storageService)
         self.agentSkillService = configuration.agentSkillService ?? AgentSkillService(storage: storageService)
         self.agentTaskBoardService = configuration.agentTaskBoardService ?? AgentTaskBoardService(storage: storageService)
-        self.systemStatusService = configuration.systemStatusService ?? SystemStatusService()
+        self.systemStatusService = configuration.systemStatusService ?? SystemStatusService(permissionManager: permissionManager)
+        self.systemFanControlService = SystemFanControlService()
         self.batteryService = BatteryService()
         self.musicService = MusicService()
         self.systemEventCenter = SystemEventCenter()

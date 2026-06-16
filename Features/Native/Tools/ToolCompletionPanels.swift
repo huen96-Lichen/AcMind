@@ -78,20 +78,31 @@ struct BatchDownloadPanel: View {
     @StateObject private var viewModel = BatchDownloadViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    resultsCard
+        ZStack {
+            AppSurfaceBackdrop()
+
+            VStack(spacing: 0) {
+                header
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "批量下载说明", subtitle: "先确认资源类型，再进入下载和结果", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "输入", subtitle: "网页地址、保存目录与启动动作", padding: 16) {
+                            inputCard
+                        }
+
+                        AppSurfaceCard(title: "结果", subtitle: "批量资源保存与回看", padding: 16) {
+                            resultsCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 860, height: 760)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -127,8 +138,6 @@ struct BatchDownloadPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var inputCard: some View {
@@ -191,8 +200,6 @@ struct BatchDownloadPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var resultsCard: some View {
@@ -246,15 +253,13 @@ struct BatchDownloadPanel: View {
                                 .disabled(item.isDownloaded == false)
                             }
                             .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+                            .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous).fill(AppSurfaceTokens.cardBackground))
                         }
                     }
                 }
                 .frame(minHeight: 260)
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 }
 
@@ -475,20 +480,31 @@ struct VideoDownloadPanel: View {
     @StateObject private var viewModel = VideoDownloadViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    outputCard
+        ZStack {
+            AppSurfaceBackdrop()
+
+            VStack(spacing: 0) {
+                header
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "视频下载说明", subtitle: "确认格式、地址和保存目录", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "输入", subtitle: "地址、格式与下载动作", padding: 16) {
+                            inputCard
+                        }
+
+                        AppSurfaceCard(title: "输出", subtitle: "下载结果和文件路径", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 860, height: 760)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -523,8 +539,6 @@ struct VideoDownloadPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var inputCard: some View {
@@ -594,8 +608,6 @@ struct VideoDownloadPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var outputCard: some View {
@@ -647,15 +659,13 @@ struct VideoDownloadPanel: View {
                                 .buttonStyle(.borderless)
                             }
                             .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
+                            .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous).fill(AppSurfaceTokens.cardBackground))
                         }
                     }
                 }
                 .frame(minHeight: 260)
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 }
 
@@ -845,36 +855,39 @@ struct ModelManagementPanel: View {
     @StateObject private var viewModel = ModelManagementViewModel()
 
     var body: some View {
-        WorkspacePageShell(
-            title: "模型管理",
-            subtitle: "管理应用里真实可用的模型。",
-            headerActions: AnyView(
-                HStack(spacing: 12) {
-                    Text(viewModel.statusText)
-                        .font(.caption)
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+        ZStack {
+            AppSurfaceBackdrop()
 
-                    Button {
-                        Task { await viewModel.refresh() }
-                    } label: {
-                        Label("刷新", systemImage: "arrow.clockwise")
+            AcWorkShell(
+                title: "模型管理",
+                subtitle: "管理应用里真实可用的模型。",
+                headerActions: AnyView(
+                    HStack(spacing: 12) {
+                        Text(viewModel.statusText)
+                            .font(.caption)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                        Button {
+                            Task { await viewModel.refresh() }
+                        } label: {
+                            Label("刷新", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
+                ),
+                leadingRailWidth: 0,
+                trailingRailWidth: 300,
+                leadingRail: {
+                    EmptyView()
+                },
+                content: {
+                    leftPane
+                },
+                trailingRail: {
+                    detailPane
                 }
-            ),
-            leadingRailWidth: 216,
-            trailingRailWidth: 0,
-            leadingRail: {
-                leftPane
-            },
-            content: {
-                detailPane
-            },
-            trailingRail: {
-                EmptyView()
-            }
-        )
-        .background(AppSurfaceTokens.background)
+            )
+        }
         .task {
             await viewModel.refresh()
         }
@@ -1000,7 +1013,6 @@ struct ModelManagementPanel: View {
             }
             .padding(20)
         }
-        .background(AppSurfaceTokens.background)
     }
 
     private var detailPane: some View {
@@ -1039,27 +1051,26 @@ struct ModelManagementPanel: View {
                 }
 
                 if let item = viewModel.selectedItem {
-                    detailHeader(item)
-                    detailFacts(item)
-                    detailActions(item)
-                    detailNotes(item)
+                    AppSurfaceCard(title: "条目信息", subtitle: "当前模型的主识别信息", padding: 12) {
+                        detailHeader(item)
+                    }
+                    AppSurfaceCard(title: "详细字段", subtitle: "域、形态、可用性与标签", padding: 12) {
+                        detailFacts(item)
+                    }
+                    AppSurfaceCard(title: "可用操作", subtitle: "默认项、启用和设置入口", padding: 12) {
+                        detailActions(item)
+                    }
+                    AppSurfaceCard(title: "简介", subtitle: "更长的状态说明", padding: 12) {
+                        detailNotes(item)
+                    }
                 } else {
-                    detailEmptyState
+                    AppSurfaceCard(title: "暂无选中项", subtitle: "先从左侧选择一个条目", padding: 12) {
+                        detailEmptyState
+                    }
                 }
             }
             .padding(18)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    AppSurfaceTokens.background,
-                    AppSurfaceTokens.cardBackgroundSoft.opacity(0.88)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-        )
     }
 
     private var filterBar: some View {
@@ -1073,8 +1084,10 @@ struct ModelManagementPanel: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(12)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
 
                 Button("清除") {
                     viewModel.clearFilters()
@@ -1132,7 +1145,11 @@ struct ModelManagementPanel: View {
             .fontWeight(.medium)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(tint.opacity(0.12))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(tint.opacity(0.22), lineWidth: 1)
+            )
             .foregroundStyle(tint)
             .clipShape(Capsule(style: .continuous))
     }
@@ -1144,8 +1161,12 @@ struct ModelManagementPanel: View {
                 .fontWeight(.medium)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .background(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.14) : AppSurfaceTokens.cardBackgroundSoft)
-                .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : .primary)
+                .background(isSelected ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft)
+                .foregroundStyle(isSelected ? AppSurfaceTokens.primaryText : .primary)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .stroke(isSelected ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
+                )
                 .cornerRadius(999)
         }
         .buttonStyle(.plain)
@@ -1175,7 +1196,10 @@ struct ModelManagementPanel: View {
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 999).fill(AppSurfaceTokens.primaryText.opacity(0.05)))
+                .background(RoundedRectangle(cornerRadius: 999).fill(AppSurfaceTokens.cardBackgroundSoft))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 999).stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
+                )
             }
 
             content()
@@ -1188,7 +1212,7 @@ struct ModelManagementPanel: View {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 18)
-                        .fill(iconTint(for: item).opacity(0.15))
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 56, height: 56)
                     Image(systemName: iconName(for: item))
                         .font(.system(size: 22, weight: .semibold))
@@ -1221,8 +1245,6 @@ struct ModelManagementPanel: View {
                 Spacer()
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 20).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private func detailFacts(_ item: ModelManagementItem) -> some View {
@@ -1253,7 +1275,6 @@ struct ModelManagementPanel: View {
                     infoRow(label: "标签", value: item.tags.joined(separator: " · "))
                 }
             }
-            .background(RoundedRectangle(cornerRadius: 18).fill(AppSurfaceTokens.cardBackgroundSoft))
         }
     }
 
@@ -1346,8 +1367,6 @@ struct ModelManagementPanel: View {
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(RoundedRectangle(cornerRadius: 18).fill(AppSurfaceTokens.cardBackgroundSoft))
         }
     }
 
@@ -1361,8 +1380,6 @@ struct ModelManagementPanel: View {
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
-        .padding(20)
-        .background(RoundedRectangle(cornerRadius: 20).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private func infoRow(label: String, value: String) -> some View {
@@ -1467,7 +1484,11 @@ struct ModelManagementPanel: View {
             Spacer()
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(AppSurfaceTokens.accentOrange.opacity(0.08)))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+        )
     }
 
     private func shouldShowSection(_ domain: ModelManagementDomain) -> Bool {
@@ -1490,7 +1511,7 @@ private struct ModelManagementListRow: View {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(iconTint.opacity(0.12))
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 44, height: 44)
                     Image(systemName: iconName)
                         .foregroundStyle(iconTint)
@@ -1531,11 +1552,11 @@ private struct ModelManagementListRow: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft)
+                    .fill(isSelected ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.25) : AppSurfaceTokens.separator.opacity(0.65), lineWidth: 1)
+                    .stroke(isSelected ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.separator.opacity(0.65), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -1547,7 +1568,7 @@ private struct ModelManagementListRow: View {
             .fontWeight(.medium)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(tint.opacity(0.12))
+            .background(AppSurfaceTokens.cardBackgroundSoft)
             .foregroundStyle(tint)
             .clipShape(Capsule(style: .continuous))
     }
@@ -1901,7 +1922,7 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     func openSettings() {
-        AppState.shared.selectSidebarItem(.settings)
+        AppState.shared.navigate(to: .settings)
     }
 
     private func buildItems() -> [ModelManagementItem] {
@@ -2215,21 +2236,35 @@ struct APITestPanel: View {
     @StateObject private var viewModel = APITestViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    providerCard
-                    testCard
-                    outputCard
+        ZStack {
+            AppSurfaceBackdrop()
+
+            VStack(spacing: 0) {
+                header
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "接口测试说明", subtitle: "先选择提供商，再运行检查", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "提供商", subtitle: "当前连通性和模型上下文", padding: 16) {
+                            providerCard
+                        }
+
+                        AppSurfaceCard(title: "检查", subtitle: "连通检查、获取模型与对话验证", padding: 16) {
+                            testCard
+                        }
+
+                        AppSurfaceCard(title: "结果", subtitle: "复制、保存或继续查看", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 940, height: 820)
-        .background(AppSurfaceTokens.background)
         .task {
             await viewModel.refreshProviders()
         }
@@ -2267,8 +2302,6 @@ struct APITestPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var providerCard: some View {
@@ -2306,8 +2339,6 @@ struct APITestPanel: View {
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var testCard: some View {
@@ -2350,8 +2381,6 @@ struct APITestPanel: View {
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var outputCard: some View {
@@ -2385,13 +2414,8 @@ struct APITestPanel: View {
                 .disabled(viewModel.lastSavedURL == nil)
             }
 
-            TextEditor(text: $viewModel.outputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 260)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1))
+            AppSurfaceTextEditorShell(text: $viewModel.outputText, minHeight: 260)
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 }
 
@@ -2401,7 +2425,7 @@ final class APITestViewModel: ObservableObject {
 
     @Published var providers: [ProviderConfig] = []
     @Published var selectedProviderId: String?
-    @Published var testPrompt = "请用一句话回答：AcMind 的连通检查成功了吗？"
+    @Published var testPrompt = "请用一句话回答：AcWork 的连通检查成功了吗？"
     @Published var outputText = ""
     @Published var statusText = ToolStatusLabelFormatter.waitingToLoad("提供商")
     @Published var isRunning = false

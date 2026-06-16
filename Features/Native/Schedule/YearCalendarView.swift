@@ -119,13 +119,15 @@ private struct MiniMonthCard: View {
         }
         .padding(8)
         .background(
-            isCurrentMonth
-                ? AppSurfaceTokens.accentBlue.opacity(0.05)
-                : AppSurfaceTokens.cardBackgroundSoft
+            RoundedRectangle(cornerRadius: AcMindDesignTokens.Layout.inlineBlockRadius, style: .continuous)
+                .fill(
+                    isCurrentMonth
+                        ? AppSurfaceTokens.accentBlue.opacity(0.05)
+                        : AppSurfaceTokens.cardBackgroundSoft
+                )
         )
-        .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
         .overlay(
-            RoundedRectangle(cornerRadius: AcMindDesignTokens.Layout.inlineBlockRadius)
+            RoundedRectangle(cornerRadius: AcMindDesignTokens.Layout.inlineBlockRadius, style: .continuous)
                 .stroke(isCurrentMonth ? AppSurfaceTokens.accentBlue.opacity(0.2) : AppSurfaceTokens.separator.opacity(0.5), lineWidth: 0.5)
         )
     }
@@ -239,16 +241,18 @@ private struct WorkloadHeatmap: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("饱和度 \(day.workloadPercent)%")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(day.workloadLevel.color == AppSurfaceTokens.cardBackgroundSoft ? .secondary : .primary)
+                        .foregroundStyle(day.workloadLevel.color == AppSurfaceTokens.cardBackground ? .secondary : .primary)
                     Text("状态：\(day.statusText)")
                         .font(.system(size: 11))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .padding(10)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(8)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                         .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
                 )
                 .transition(.opacity)

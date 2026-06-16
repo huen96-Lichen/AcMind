@@ -32,45 +32,69 @@ struct NotchV2TopBar: View {
                         .fixedSize(horizontal: true, vertical: false)
                         .layoutPriority(1)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
             }
         }
         .frame(width: NotchV2DesignTokens.expandedWidth, height: NotchV2DesignTokens.topBarHeight)
+        .overlay(
+            Rectangle()
+                .fill(NotchV2DesignTokens.separator.opacity(0.45))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        )
     }
 
     private var leftTabs: some View {
         HStack(spacing: 6) {
-            topNavButton(title: "本机", icon: "desktopcomputer", selected: viewModel.effectiveSelectedPage == .overview) {
+            topNavPill(title: "本机", icon: "desktopcomputer", selected: viewModel.effectiveSelectedPage == .overview) {
                 viewModel.select(.overview)
             }
 
             if viewModel.isModuleEnabled(.music) {
-                topNavButton(title: "音乐", icon: "music.note", selected: viewModel.effectiveSelectedPage == .music) {
+                topNavPill(title: "音乐", icon: "music.note", selected: viewModel.effectiveSelectedPage == .music) {
                     viewModel.select(.music)
                 }
             }
 
             if viewModel.isModuleEnabled(.agent) {
-                topNavButton(title: "AI", icon: "sparkles", selected: viewModel.effectiveSelectedPage == .agent) {
+                topNavPill(title: "AI", icon: "sparkles", selected: viewModel.effectiveSelectedPage == .agent) {
                     viewModel.select(.agent)
                 }
             }
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.28), lineWidth: 1)
+        )
     }
 
     private var rightStatus: some View {
-        HStack(spacing: 5) {
+        ViewThatFits(in: .horizontal) {
+            expandedRightStatus
+            compactRightStatus
+        }
+    }
+
+    private var expandedRightStatus: some View {
+        HStack(spacing: 6) {
             statusPill(
                 icon: batteryIconName,
                 title: batteryText,
-                accent: batteryAccent
+                accent: batteryAccent,
+                isSelected: false
             )
 
             NotchV2StatusPill(
                 icon: "desktopcomputer",
                 title: "状态",
-                accent: NotchV2DesignTokens.cardBackgroundStrong,
+                accent: NotchV2DesignTokens.panelBackground.opacity(0.90),
                 isSelected: viewModel.effectiveSelectedPage == .systemStatus,
                 action: {
                     viewModel.openSystemStatusPage()
@@ -84,14 +108,78 @@ struct NotchV2TopBar: View {
             NotchV2StatusPill(
                 icon: "gearshape",
                 title: "设置",
-                accent: NotchV2DesignTokens.cardBackgroundStrong,
+                accent: NotchV2DesignTokens.panelBackground.opacity(0.90),
                 action: {
-                    (NSApp.delegate as? NSObject)?.perform(Selector(("showSettings")))
+                    (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
                 }
             )
 
-            collapseButton
+            NotchV2StatusPill(
+                icon: "chevron.up",
+                title: "收起",
+                accent: NotchV2DesignTokens.panelBackground.opacity(0.90),
+                action: {
+                    viewModel.collapse()
+                }
+            )
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.28), lineWidth: 1)
+        )
+    }
+
+    private var compactRightStatus: some View {
+        HStack(spacing: 6) {
+            statusPill(
+                icon: batteryIconName,
+                title: batteryText,
+                accent: batteryAccent,
+                isSelected: false
+            )
+
+            if viewModel.hasVoiceOverride {
+                voiceStatusPill
+            }
+
+            Menu {
+                Button("进入状态页") {
+                    viewModel.openSystemStatusPage()
+                }
+
+                Button("打开设置") {
+                    (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
+                }
+
+                Button("收起") {
+                    viewModel.collapse()
+                }
+            } label: {
+                NotchV2StatusPill(
+                    icon: "ellipsis",
+                    title: "更多",
+                    accent: NotchV2DesignTokens.panelBackground.opacity(0.90)
+                )
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.28), lineWidth: 1)
+        )
     }
 
     private var voiceStatusPill: some View {
@@ -129,45 +217,23 @@ struct NotchV2TopBar: View {
         )
     }
 
-    private func statusPill(icon: String, title: String, accent: Color) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(accent)
-
-            Text(title)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(
-            Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.84))
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
+    private func topNavPill(title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        NotchV2StatusPill(
+            icon: icon,
+            title: title,
+            accent: selected ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.panelBackground.opacity(0.90),
+            isSelected: selected,
+            action: action
         )
     }
 
-    private var collapseButton: some View {
-        Button(action: { viewModel.collapse() }) {
-            Image(systemName: "chevron.up")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .frame(width: 16, height: 16)
-                .background(
-                    Circle()
-                        .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.84))
-                )
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.04), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
+    private func statusPill(icon: String, title: String, accent: Color, isSelected: Bool) -> some View {
+        NotchV2StatusPill(
+            icon: icon,
+            title: title,
+            accent: accent,
+            isSelected: isSelected
+        )
     }
 
     private var batteryText: String {
@@ -192,32 +258,6 @@ struct NotchV2TopBar: View {
 
     private var batteryIconName: String {
         viewModel.batteryIconName
-    }
-
-    private func topNavButton(title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 9, weight: .semibold))
-                Text(title)
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .lineLimit(1)
-            }
-            .foregroundStyle(selected ? NotchV2DesignTokens.primaryText : NotchV2DesignTokens.secondaryText)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .frame(height: 24)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(selected ? NotchV2DesignTokens.accentPurple.opacity(0.94) : NotchV2DesignTokens.cardBackgroundStrong.opacity(0.46))
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(selected ? Color.white.opacity(0.06) : Color.white.opacity(0.02), lineWidth: 1)
-            )
-            .shadow(color: selected ? NotchV2DesignTokens.accentPurple.opacity(0.10) : .clear, radius: 5, x: 0, y: 2)
-        }
-        .buttonStyle(.plain)
     }
 }
 

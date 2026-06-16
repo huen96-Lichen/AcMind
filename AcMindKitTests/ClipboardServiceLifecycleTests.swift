@@ -8,18 +8,22 @@ final class ClipboardServiceLifecycleTests: XCTestCase {
         let service = ClipboardService(storage: storage, assetStore: AssetStore(), settingsDefaults: UserDefaults(suiteName: "ClipboardServiceLifecycleTests.\(UUID().uuidString)")!)
 
         await service.startWatching()
+        XCTAssertEqual(service.monitoringState(), .active)
         XCTAssertTrue(service.isWatchingActiveForTesting)
         XCTAssertFalse(service.isWatchingPausedForTesting)
 
         await service.pauseWatching()
+        XCTAssertEqual(service.monitoringState(), .paused)
         XCTAssertTrue(service.isWatchingActiveForTesting)
         XCTAssertTrue(service.isWatchingPausedForTesting)
 
         await service.resumeWatching()
+        XCTAssertEqual(service.monitoringState(), .active)
         XCTAssertTrue(service.isWatchingActiveForTesting)
         XCTAssertFalse(service.isWatchingPausedForTesting)
 
         await service.stopWatching()
+        XCTAssertEqual(service.monitoringState(), .stopped)
         XCTAssertFalse(service.isWatchingActiveForTesting)
         XCTAssertFalse(service.isWatchingPausedForTesting)
     }

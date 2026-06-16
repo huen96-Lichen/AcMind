@@ -43,49 +43,13 @@ struct NotchV2Card<Content: View>: View {
     private var backgroundFill: AnyShapeStyle {
         switch style {
         case .default:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        NotchV2DesignTokens.panelBackground,
-                        NotchV2DesignTokens.innerCardBackground.opacity(0.96)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        case .music(let accent):
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        accent.opacity(0.2),
-                        NotchV2DesignTokens.innerCardBackground.opacity(0.9)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            return AnyShapeStyle(NotchV2DesignTokens.panelBackground)
+        case .music(_):
+            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
         case .agent:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        NotchV2DesignTokens.accentBlue.opacity(0.15),
-                        NotchV2DesignTokens.innerCardBackground.opacity(0.9)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
         case .timeline:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        Color.orange.opacity(0.1),
-                        NotchV2DesignTokens.innerCardBackground.opacity(0.9)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
         }
     }
 
@@ -129,18 +93,11 @@ struct NotchV2Card<Content: View>: View {
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .stroke(
-                    LinearGradient(
-                        colors: [
-                            cardAccent?.opacity(0.3) ?? NotchV2DesignTokens.panelBorder,
-                            cardAccent?.opacity(0.1) ?? Color.white.opacity(0.03)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
+                    cardAccent?.opacity(0.22) ?? NotchV2DesignTokens.panelBorder,
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: cardAccent?.opacity(0.08) ?? .black.opacity(0.15), radius: 14, x: 0, y: 8)
+        .shadow(color: cardAccent?.opacity(0.03) ?? .black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -159,13 +116,13 @@ struct NotchV2TopTab: View {
                 .padding(.horizontal, 9)
                 .background(
                     RoundedRectangle(cornerRadius: NotchV2DesignTokens.pillRadius, style: .continuous)
-                        .fill(isSelected ? AnyShapeStyle(NotchV2DesignTokens.accentPurple.opacity(0.95)) : AnyShapeStyle(Color.clear))
+                        .fill(isSelected ? AnyShapeStyle(NotchV2DesignTokens.accentBlue.opacity(0.10)) : AnyShapeStyle(Color.clear))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: NotchV2DesignTokens.pillRadius, style: .continuous)
                         .stroke(isSelected ? Color.white.opacity(0.06) : Color.clear, lineWidth: 1)
                 )
-                .shadow(color: isSelected ? NotchV2DesignTokens.accentPurple.opacity(0.14) : .clear, radius: 6, x: 0, y: 3)
+                .shadow(color: isSelected ? NotchV2DesignTokens.accentBlue.opacity(0.10) : .clear, radius: 6, x: 0, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -175,27 +132,56 @@ struct NotchV2ActionButton: View {
     let icon: String
     let title: String
     let isSelected: Bool
+    let accent: Color
     let action: () -> Void
+
+    init(
+        icon: String,
+        title: String,
+        isSelected: Bool,
+        accent: Color = NotchV2DesignTokens.accentBlue,
+        action: @escaping () -> Void
+    ) {
+        self.icon = icon
+        self.title = title
+        self.isSelected = isSelected
+        self.accent = accent
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 3) {
+            HStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(NotchV2DesignTokens.innerCardBackground)
-                        .frame(height: 26)
+                    RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                        .fill(isSelected ? accent.opacity(0.14) : NotchV2DesignTokens.innerCardBackground.opacity(0.95))
+                        .frame(width: 24, height: 24)
 
                     Image(systemName: icon)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(NotchV2DesignTokens.accentPurple)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(isSelected ? accent : NotchV2DesignTokens.secondaryText)
                 }
 
                 Text(title)
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(minHeight: 36)
+            .background(
+                RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                    .fill(isSelected ? NotchV2DesignTokens.panelBackground : NotchV2DesignTokens.panelBackground.opacity(0.90))
+            )
+                .overlay(
+                    RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                        .stroke(isSelected ? NotchV2DesignTokens.separator.opacity(0.50) : NotchV2DesignTokens.separator.opacity(0.22), lineWidth: 1)
+                )
+                .shadow(color: isSelected ? .black.opacity(0.05) : .clear, radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -251,7 +237,7 @@ struct NotchV2StatusPill: View {
         .scaleEffect(isSelected ? 1.02 : 1.0)
         .background(
             Capsule(style: .continuous)
-                .fill(isSelected ? accent.opacity(1.0) : accent.opacity(0.96))
+                .fill(isSelected ? accent.opacity(0.92) : accent.opacity(0.92))
         )
         .overlay(
             Capsule(style: .continuous)
@@ -276,11 +262,11 @@ struct NotchV2SegmentedPill: View {
                 .padding(.vertical, 4)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? AnyShapeStyle(NotchV2DesignTokens.accentPurple.opacity(0.95)) : AnyShapeStyle(Color.clear))
+                        .fill(isSelected ? AnyShapeStyle(NotchV2DesignTokens.panelBackground) : AnyShapeStyle(Color.clear))
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .stroke(isSelected ? Color.white.opacity(0.06) : Color.white.opacity(0.02), lineWidth: 1)
+                        .stroke(isSelected ? NotchV2DesignTokens.separator.opacity(0.55) : Color.white.opacity(0.02), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -296,5 +282,61 @@ struct NotchV2SourceRow: View {
             .foregroundStyle(NotchV2DesignTokens.primaryText)
             .lineLimit(1)
             .truncationMode(.tail)
+    }
+}
+
+struct NotchV2InfoRow: View {
+    let title: String
+    let value: String
+    let icon: String?
+    let accent: Color
+    let compactValue: Bool
+
+    init(
+        title: String,
+        value: String,
+        icon: String? = nil,
+        accent: Color = NotchV2DesignTokens.secondaryText,
+        compactValue: Bool = false
+    ) {
+        self.title = title
+        self.value = value
+        self.icon = icon
+        self.accent = accent
+        self.compactValue = compactValue
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 14)
+            }
+
+            Text(title)
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            Text(value)
+                .font(compactValue ? NotchV2DesignTokens.Typography.caption : NotchV2DesignTokens.Typography.body)
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(accent.opacity(0.10), lineWidth: 1)
+        )
     }
 }

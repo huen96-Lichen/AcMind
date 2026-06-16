@@ -1,0 +1,77 @@
+{
+  "canvas": {
+    "width": 1500,
+    "height": 920
+  },
+  "window": {
+    "minWidth": 1180,
+    "minHeight": 720,
+    "cornerRadius": 18
+  },
+  "layout": {
+    "sidebarWidth": 216,
+    "toolbarHeight": 60,
+    "pagePadding": 20,
+    "sectionGap": 16,
+    "inspectorWidth": 304,
+    "filterRailWidth": 220,
+    "compactInspectorThreshold": 1320
+  },
+  "radius": {
+    "mainContainer": 16,
+    "card": 12,
+    "input": 10,
+    "button": 9,
+    "popover": 18,
+    "pill": 999
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    32
+  ],
+  "typography": {
+    "pageTitle": {
+      "size": 24,
+      "weight": "semibold"
+    },
+    "heroTitle": {
+      "size": 28,
+      "weight": "semibold"
+    },
+    "sectionTitle": {
+      "size": 15,
+      "weight": "semibold"
+    },
+    "body": {
+      "size": 13,
+      "weight": "regular"
+    },
+    "caption": {
+      "size": 11,
+      "weight": "regular"
+    },
+    "metric": {
+      "size": 22,
+      "weight": "semibold"
+    }
+  },
+  "colors": {
+    "windowBackground": "#F3F4F6",
+    "sidebarBackground": "#EAECF0",
+    "surface": "#FFFFFF",
+    "surfaceSecondary": "#F7F8FA",
+    "border": "#DDE0E6",
+    "textPrimary": "#181A1F",
+    "textSecondary": "#686E78",
+    "textTertiary": "#979CA5",
+    "accent": "#0A84FF",
+    "success": "#34C759",
+    "warning": "#FF9F0A",
+    "danger": "#FF453A"
+  }
+}

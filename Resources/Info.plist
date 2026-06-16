@@ -3,31 +3,39 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
+    <string>AcWork</string>
+    <key>CFBundleExecutable</key>
     <string>AcMind</string>
     <key>CFBundleIdentifier</key>
     <string>com.acore.acmind</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>AcWork</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.0.6</string>
+    <string>0.0.7</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2024 AcMind. All rights reserved.</string>
+    <string>Copyright © 2024 AcWork. All rights reserved.</string>
     
     <!-- 语音识别权限 -->
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>AcMind 需要使用语音识别功能来进行语音转文字，以便您可以通过语音输入快速记录想法和笔记。</string>
+    <string>AcWork 需要使用语音识别功能来进行语音转文字，以便您可以通过语音输入快速记录想法和笔记。</string>
     
     <!-- 麦克风权限 -->
     <key>NSMicrophoneUsageDescription</key>
-    <string>AcMind 需要访问麦克风来录制语音，以便进行语音转文字。</string>
+    <string>AcWork 需要访问麦克风来录制语音，以便进行语音转文字。</string>
     
     <!-- 辅助功能权限 -->
     <key>NSAccessibilityUsageDescription</key>
-    <string>AcMind 需要辅助功能权限来提供全局快捷键、控制音乐播放和系统级交互功能。</string>
+    <string>AcWork 需要辅助功能权限来提供全局快捷键、控制音乐播放和系统级交互功能。</string>
     
     <!-- 屏幕录制权限 -->
     <key>NSScreenCaptureUsageDescription</key>
-    <string>AcMind 需要屏幕录制权限来进行截图和区域选择，以便捕获屏幕内容。</string>
+    <string>AcWork 需要屏幕录制权限来进行截图和区域选择，以便捕获屏幕内容。</string>
     
     <!-- 网络访问 -->
     <key>NSAppTransportSecurity</key>

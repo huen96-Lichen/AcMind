@@ -115,7 +115,7 @@ struct InboxItemCard: View {
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .opacity(isHovered ? 1 : 0)
                     .frame(width: 20, height: 20)
-                    .background(Circle().fill(AppSurfaceTokens.cardBackgroundSoft.opacity(isHovered ? 0.8 : 0.65)))
+                    .background(Circle().fill(AppSurfaceTokens.cardBackground.opacity(isHovered ? 0.82 : 0.68)))
             }
             .buttonStyle(.plain)
         }
@@ -152,7 +152,7 @@ struct InboxItemCard: View {
         .frame(maxWidth: .infinity, minHeight: previewHeight, maxHeight: previewHeight, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.55))
+                .fill(AppSurfaceTokens.cardBackground.opacity(0.56))
         )
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
@@ -207,7 +207,7 @@ struct InboxItemCard: View {
 
     private var linkPreview: some View {
         RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-            .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.60))
+            .fill(AppSurfaceTokens.cardBackground.opacity(0.62))
             .overlay(alignment: .topLeading) {
                 VStack(alignment: .leading, spacing: 6) {
                     if let url = item.originalUrl {
@@ -234,7 +234,7 @@ struct InboxItemCard: View {
 
     private var filePreview: some View {
         RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-            .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.60))
+            .fill(AppSurfaceTokens.cardBackground.opacity(0.62))
             .overlay(alignment: .topLeading) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(previewText.prefix(96).description)
@@ -278,7 +278,7 @@ struct InboxItemCard: View {
         .frame(maxWidth: .infinity, minHeight: previewHeight, maxHeight: previewHeight, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.55))
+                .fill(AppSurfaceTokens.cardBackground.opacity(0.56))
         )
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
@@ -291,7 +291,7 @@ struct InboxItemCard: View {
     private var contextMenuItems: some View {
         Button("AI 整理") {
             copySummary()
-            AppState.shared.selectSidebarItem(.agent)
+            AppState.shared.navigate(to: .agent)
         }
 
         Button("复制内容") {
@@ -301,7 +301,7 @@ struct InboxItemCard: View {
         Divider()
 
         Button("移动到工作台") {
-            AppState.shared.selectSidebarItem(.workbench)
+            AppState.shared.navigate(to: .workbench)
         }
 
         Button("删除") {

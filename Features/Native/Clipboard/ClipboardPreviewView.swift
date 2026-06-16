@@ -36,7 +36,7 @@ struct ClipboardPreviewView: View {
             }
         }
         .background(Color(NSColor.textBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
         .task(id: item.id) {
             await loadHTMLContent()
         }
@@ -65,7 +65,7 @@ struct ClipboardPreviewView: View {
             }
         }
         .background(AppSurfaceTokens.primaryText.opacity(0.03))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
 
     private var imagePreview: some View {
@@ -86,7 +86,7 @@ struct ClipboardPreviewView: View {
                 .padding(12)
         }
         .background(Color(NSColor.textBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
     }
 
     private func loadHTMLContent() async {

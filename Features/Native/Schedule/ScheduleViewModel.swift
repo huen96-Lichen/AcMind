@@ -98,6 +98,40 @@ class ScheduleViewModel: ObservableObject {
         WorkloadLevel.from(percent: todayWorkloadPercent)
     }
 
+    func planningSnapshot(
+        for date: Date = Date(),
+        referenceDate now: Date = Date(),
+        minimumFreeWindowMinutes: Int = 30
+    ) -> SchedulePlanningSnapshot {
+        let visibleEvents = events(for: date)
+        let activeEvents = visibleEvents.filter { $0.status != .cancelled }
+        let selectedDateLabel = selectedDateLabel(for: date)
+        let currentTimeLabel = timeLabel(for: now)
+        let currentEvent = currentEvent(on: date, referenceDate: now)
+        let nextEvent = nextEvent(after: date, referenceDate: now)
+        let conflict = eventConflict(on: date)
+        let freeWindow = freeWindow(on: date, referenceDate: now, minimumMinutes: minimumFreeWindowMinutes)
+        let completedCount = activeEvents.filter { $0.status == .done }.count
+        let allDayCount = activeEvents.filter(\.isAllDay).count
+        let overdueCount = activeEvents.filter { $0.timingState(referenceDate: now) == .overdue }.count
+
+        return SchedulePlanningSnapshot(
+            referenceDate: now,
+            selectedDate: date,
+            totalEventCount: visibleEvents.count,
+            activeEventCount: activeEvents.count,
+            completedEventCount: completedCount,
+            allDayEventCount: allDayCount,
+            overdueEventCount: overdueCount,
+            currentEvent: currentEvent,
+            nextEvent: nextEvent,
+            conflict: conflict,
+            freeWindow: freeWindow,
+            selectedDateLabel: selectedDateLabel,
+            currentTimeLabel: currentTimeLabel
+        )
+    }
+
     /// 本周每天饱和度（周一到周五）
     var weekWorkloadDays: [WorkloadDay] {
         let cal = Calendar.current
@@ -223,6 +257,75 @@ class ScheduleViewModel: ObservableObject {
         currentWeekEvents.filter { $0.categoryId == categoryId }.count
     }
 
+    func currentEvent(on date: Date = Date(), referenceDate now: Date = Date()) -> ScheduleEvent? {
+        let cal = Calendar.current
+        guard cal.isDate(date, inSameDayAs: now) else { return nil }
+        return events(for: date).first {
+            $0.status != .cancelled && $0.startAt <= now && now < $0.endAt
+        }
+    }
+
+    func nextEvent(after date: Date = Date(), referenceDate now: Date = Date()) -> ScheduleEvent? {
+        let cal = Calendar.current
+        let sorted = events(for: date).filter { $0.status != .cancelled }
+
+        if cal.isDate(date, inSameDayAs: now) {
+            return sorted.first { $0.startAt > now }
+        }
+
+        let startOfDay = cal.startOfDay(for: date)
+        return sorted.first { $0.endAt > startOfDay }
+    }
+
+    func eventConflict(on date: Date = Date()) -> ScheduleEventConflict? {
+        let activeEvents = events(for: date).filter { $0.status != .cancelled }
+        guard activeEvents.count > 1 else { return nil }
+
+        for index in 0..<(activeEvents.count - 1) {
+            let current = activeEvents[index]
+            let rest = activeEvents[(index + 1)...]
+            if let overlap = rest.first(where: { current.startAt < $0.endAt && current.endAt > $0.startAt }) {
+                return ScheduleEventConflict(first: current, second: overlap)
+            }
+        }
+
+        return nil
+    }
+
+    func freeWindow(on date: Date = Date(), referenceDate now: Date = Date(), minimumMinutes: Int = 30) -> ScheduleFreeWindow? {
+        let cal = Calendar.current
+        let startOfDay = cal.startOfDay(for: date)
+        let endOfDay = cal.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay.addingTimeInterval(86400)
+        let anchor = cal.isDate(date, inSameDayAs: now) ? max(now, startOfDay) : startOfDay
+        let activeEvents = events(for: date).filter { $0.status != .cancelled }.sorted { $0.startAt < $1.startAt }
+        var cursor = anchor
+
+        for event in activeEvents {
+            if event.endAt <= cursor {
+                cursor = max(cursor, event.endAt)
+                continue
+            }
+
+            if event.startAt > cursor {
+                let gap = ScheduleFreeWindow(start: cursor, end: event.startAt)
+                if gap.durationMinutes >= minimumMinutes {
+                    return gap
+                }
+            }
+
+            cursor = max(cursor, event.endAt)
+        }
+
+        if endOfDay > cursor {
+            let tailGap = ScheduleFreeWindow(start: cursor, end: endOfDay)
+            if tailGap.durationMinutes >= minimumMinutes {
+                return tailGap
+            }
+        }
+
+        return nil
+    }
+
     /// 获取指定日期的事件
     func events(for date: Date) -> [ScheduleEvent] {
         let cal = Calendar.current
@@ -279,6 +382,21 @@ class ScheduleViewModel: ObservableObject {
 
     func selectDate(_ date: Date) {
         selectedDate = date
+    }
+
+    private func selectedDateLabel(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "M月d日 EEEE"
+        return formatter.string(from: date)
+    }
+
+    private func timeLabel(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return formatter.string(from: date)
     }
 
     func toggleCategoryVisibility(_ categoryId: String) {

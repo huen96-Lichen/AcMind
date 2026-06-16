@@ -90,7 +90,10 @@ struct ScreenshotPreviewContentView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
             
             // 预览区域
             if let image = image {
@@ -115,9 +118,10 @@ struct ScreenshotPreviewContentView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(minWidth: 560, maxWidth: .infinity, minHeight: 360, maxHeight: .infinity)
-                .background(AppSurfaceTokens.background)
+                .background(AppSurfaceBackdrop())
             }
         }
+        .background(AppSurfaceBackdrop())
     }
     
     private var imageSizeString: String? {
@@ -158,14 +162,8 @@ struct ScreenshotQuickNotePanel: View {
                 .keyboardShortcut(.escape)
             }
             
-            TextEditor(text: $noteText)
-                .font(.body)
+            AppSurfaceTextEditorShell(text: $noteText, minHeight: 200, font: .body)
                 .focused($isFocused)
-                .frame(minHeight: 200)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
             
             HStack {
                 Spacer()
@@ -179,6 +177,7 @@ struct ScreenshotQuickNotePanel: View {
         }
         .padding()
         .frame(width: 500, height: 350)
+        .background(AppSurfaceBackdrop())
         .onAppear {
             isFocused = true
         }

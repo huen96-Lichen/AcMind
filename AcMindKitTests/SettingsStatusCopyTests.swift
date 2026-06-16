@@ -14,7 +14,7 @@ final class SettingsStatusCopyTests: XCTestCase {
         XCTAssertTrue(settingsView.contains("SettingsStatusLabelFormatter.createBackupText"))
         XCTAssertTrue(settingsView.contains("SettingsStatusLabelFormatter.restoreBackupText"))
         XCTAssertTrue(settingsView.contains("SettingsStatusLabelFormatter.autoBackupText"))
-        XCTAssertTrue(settingsView.contains("SettingsStatusLabelFormatter.backupLastRunText"))
+        XCTAssertTrue(settingsView.contains("lastBackupAtText"))
         XCTAssertTrue(settingsView.contains("SettingsStatusLabelFormatter.backupTriggerText"))
         XCTAssertTrue(settingsView.contains("AIUsageBurnLabelFormatter.thresholdHintText"))
         XCTAssertTrue(settingsView.contains("AIUsageBurnLabelFormatter.detailText"))

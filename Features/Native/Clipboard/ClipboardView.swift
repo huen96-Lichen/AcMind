@@ -55,7 +55,7 @@ struct ClipboardView: View {
     }
 
     var body: some View {
-        WorkspacePageShell(
+        AcWorkShell(
             title: "剪贴板 & 手机同步",
             subtitle: "\(viewModel.items.count) 条内容",
             headerActions: AnyView(headerActions),
@@ -78,7 +78,7 @@ struct ClipboardView: View {
                 clipboardSummaryRail
             }
         )
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
         .onAppear {
             refreshPinWindowCount()
         }
@@ -172,8 +172,10 @@ struct ClipboardView: View {
                     }
                 }
                 .padding(12)
-                .background(AppSurfaceTokens.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Pin 管理")
@@ -193,29 +195,37 @@ struct ClipboardView: View {
                     }
                 }
                 .padding(12)
-                .background(AppSurfaceTokens.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
 
                 PasteQueuePanel(viewModel: viewModel)
             }
             .padding(12)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     private func statBadge(count: Int, label: String, color: Color) -> some View {
         VStack(spacing: 2) {
             Text("\(count)")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
+                .foregroundStyle(AppSurfaceTokens.primaryText)
             Text(label)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(color.opacity(0.14), lineWidth: 1)
+        )
     }
 
     private func pinQuickAction(icon: String, title: String, action: @escaping () -> Void) -> some View {
@@ -229,7 +239,7 @@ struct ClipboardView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -245,8 +255,12 @@ struct ClipboardView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(pinWindowCount > 0 ? AppSurfaceTokens.accentOrange.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(pinWindowCount > 0 ? AppSurfaceTokens.accentOrange.opacity(0.22) : AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
         )
         .foregroundStyle(pinWindowCount > 0 ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText)
     }
@@ -268,7 +282,14 @@ struct ClipboardView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+        )
     }
 
     private var viewModePicker: some View {
@@ -277,9 +298,9 @@ struct ClipboardView: View {
                 Image(systemName: "list.bullet")
                     .font(.system(size: 12))
                     .padding(6)
-                    .background(viewMode == .list ? AppSurfaceTokens.accentBlue.opacity(0.1) : Color.clear)
-                    .foregroundStyle(viewMode == .list ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-                    .cornerRadius(4)
+                    .background(viewMode == .list ? AppSurfaceTokens.cardBackgroundSoft : Color.clear)
+                    .foregroundStyle(viewMode == .list ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
+                    .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             }
             .buttonStyle(PlainButtonStyle())
             .keyboardShortcut("l", modifiers: .command)
@@ -289,16 +310,22 @@ struct ClipboardView: View {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 12))
                     .padding(6)
-                    .background(viewMode == .grid ? AppSurfaceTokens.accentBlue.opacity(0.1) : Color.clear)
-                    .foregroundStyle(viewMode == .grid ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-                    .cornerRadius(4)
+                    .background(viewMode == .grid ? AppSurfaceTokens.cardBackgroundSoft : Color.clear)
+                    .foregroundStyle(viewMode == .grid ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
+                    .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             }
             .buttonStyle(PlainButtonStyle())
             .keyboardShortcut("g", modifiers: .command)
             .help("网格视图")
         }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(6)
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+        )
     }
 
     private var filterBar: some View {
@@ -319,12 +346,14 @@ struct ClipboardView: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(isActive ? AppSurfaceTokens.accentBlue : Color.clear)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .fill(isActive ? AppSurfaceTokens.cardBackgroundSoft : Color.clear)
+                        )
                         .foregroundStyle(isActive ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(isActive ? Color.clear : AppSurfaceTokens.secondaryText.opacity(0.2), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .stroke(isActive ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.secondaryText.opacity(0.2), lineWidth: 1)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -348,9 +377,15 @@ struct ClipboardView: View {
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
-                        .background(isActive ? tag.swiftColor : AppSurfaceTokens.cardBackgroundSoft)
-                        .foregroundStyle(isActive ? AppSurfaceTokens.background : AppSurfaceTokens.primaryText)
-                            .cornerRadius(6)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                            )
+                            .foregroundStyle(isActive ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                    .stroke(isActive ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -359,7 +394,10 @@ struct ClipboardView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
     }
 
     private var emptyState: some View {
@@ -392,10 +430,13 @@ struct ClipboardView: View {
                 }
                 .buttonStyle(.plain)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(AppSurfaceTokens.accentBlue)
+                .foregroundStyle(AppSurfaceTokens.primaryText)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(Capsule().fill(AppSurfaceTokens.accentBlue.opacity(0.1)))
+                .background(Capsule().fill(AppSurfaceTokens.cardBackgroundSoft))
+                .overlay(
+                    Capsule().stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -559,7 +600,10 @@ struct ClipboardItemCard: View {
                     .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(AppSurfaceTokens.accentOrange.opacity(0.10)))
+                    .background(Capsule().fill(AppSurfaceTokens.cardBackgroundSoft))
+                    .overlay(
+                        Capsule().stroke(AppSurfaceTokens.accentOrange.opacity(0.22), lineWidth: 1)
+                    )
             }
 
             if !item.tags.isEmpty {
@@ -569,7 +613,10 @@ struct ClipboardItemCard: View {
                         .foregroundStyle(AppSurfaceTokens.accentBlue)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(AppSurfaceTokens.accentBlue.opacity(0.10)))
+                        .background(Capsule().fill(AppSurfaceTokens.cardBackgroundSoft))
+                        .overlay(
+                            Capsule().stroke(AppSurfaceTokens.accentBlue.opacity(0.22), lineWidth: 1)
+                        )
                 }
             }
 
@@ -585,7 +632,10 @@ struct ClipboardItemCard: View {
                     .foregroundStyle(AppSurfaceTokens.accentCyan)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
-                    .background(Capsule().fill(AppSurfaceTokens.accentCyan.opacity(0.10)))
+                    .background(Capsule().fill(AppSurfaceTokens.cardBackgroundSoft))
+                    .overlay(
+                        Capsule().stroke(AppSurfaceTokens.accentCyan.opacity(0.22), lineWidth: 1)
+                    )
             }
 
             Spacer(minLength: 0)
@@ -595,11 +645,11 @@ struct ClipboardItemCard: View {
     private var actionBar: some View {
         HStack(spacing: 8) {
             Button(action: onPin) {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(AppSurfaceTokens.cardBackground.opacity(0.92)))
-            }
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(AppSurfaceTokens.cardBackgroundSoft))
+                }
             .buttonStyle(.borderless)
             .foregroundStyle(AppSurfaceTokens.accentOrange)
             .contentShape(Circle())
@@ -608,11 +658,11 @@ struct ClipboardItemCard: View {
             .accessibilityHint(Text("将这条剪贴板内容固定为最前端的小窗口"))
 
             Button(action: onCopy) {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(AppSurfaceTokens.cardBackground.opacity(0.92)))
-            }
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(AppSurfaceTokens.cardBackgroundSoft))
+                }
             .buttonStyle(.borderless)
             .foregroundStyle(AppSurfaceTokens.secondaryText)
             .contentShape(Circle())
@@ -664,7 +714,7 @@ struct ClipboardItemCard: View {
         } else if item.type == .code {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                    .fill(AppSurfaceTokens.primaryText.opacity(0.04))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
 
                 VStack(alignment: .leading, spacing: 6) {
                     if let lang = item.codeLanguage {
@@ -685,22 +735,22 @@ struct ClipboardItemCard: View {
             .frame(maxWidth: .infinity)
             .overlay(
                 RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                    .stroke(Color.cyan.opacity(0.18), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.accentCyan.opacity(0.18), lineWidth: 1)
             )
             .clipped()
         } else if item.type == .richText {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                    .fill(Color.pink.opacity(0.05))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 4) {
                         Image(systemName: "doc.richtext")
                             .font(.system(size: 10))
-                            .foregroundStyle(.pink)
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
                         Text("富文本")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.pink)
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
                     }
 
                     Text(item.textContent ?? "")
@@ -715,13 +765,13 @@ struct ClipboardItemCard: View {
             .frame(maxWidth: .infinity)
             .overlay(
                 RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                    .stroke(Color.pink.opacity(0.18), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.accentOrange.opacity(0.18), lineWidth: 1)
             )
             .clipped()
         } else {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: ContentCardPresentation.previewRadius, style: .continuous)
-                    .fill(item.type.color.opacity(0.10))
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(ClipboardCardPresentation.previewText(for: item))
@@ -780,10 +830,10 @@ struct ClipboardItemThumbnailView: View {
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
-            } else {
+                } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(item.type.color.opacity(0.12))
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
 
                     Image(systemName: item.type.icon)
                         .font(.system(size: expandToWidth ? 26 : 16, weight: .medium))

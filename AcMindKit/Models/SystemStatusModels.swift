@@ -53,6 +53,66 @@ public struct SystemProcessSnapshot: Identifiable, Equatable, Sendable {
     public var id: Int32 { pid }
 }
 
+public struct DiskIOProcessSnapshot: Identifiable, Equatable, Sendable {
+    public let pid: Int32
+    public let name: String
+    public let readMBps: Double
+    public let writeMBps: Double
+
+    public init(pid: Int32, name: String, readMBps: Double, writeMBps: Double) {
+        self.pid = pid
+        self.name = name
+        self.readMBps = readMBps
+        self.writeMBps = writeMBps
+    }
+
+    public var id: Int32 { pid }
+}
+
+public struct DiskIODeviceSnapshot: Identifiable, Equatable, Sendable {
+    public let name: String
+    public let readMBps: Double
+    public let writeMBps: Double
+
+    public init(name: String, readMBps: Double, writeMBps: Double) {
+        self.name = name
+        self.readMBps = readMBps
+        self.writeMBps = writeMBps
+    }
+
+    public var id: String { name }
+}
+
+public struct DiskVolumeSnapshot: Identifiable, Equatable, Sendable {
+    public let mountPoint: String
+    public let name: String
+    public let usedGB: Double
+    public let totalGB: Double
+    public let isRemovable: Bool
+    public let isInternal: Bool
+    public let isCurrent: Bool
+
+    public init(
+        mountPoint: String,
+        name: String,
+        usedGB: Double,
+        totalGB: Double,
+        isRemovable: Bool,
+        isInternal: Bool,
+        isCurrent: Bool
+    ) {
+        self.mountPoint = mountPoint
+        self.name = name
+        self.usedGB = usedGB
+        self.totalGB = totalGB
+        self.isRemovable = isRemovable
+        self.isInternal = isInternal
+        self.isCurrent = isCurrent
+    }
+
+    public var id: String { mountPoint }
+}
+
 public struct SystemMetricValue: Equatable, Sendable {
     public var id: String
     public var name: String
@@ -152,6 +212,91 @@ public struct SystemFanSnapshot: Identifiable, Equatable, Sendable {
         self.minRPM = minRPM
         self.maxRPM = maxRPM
         self.isAutomatic = isAutomatic
+    }
+}
+
+public struct SystemFanControlState: Identifiable, Equatable, Sendable, Codable {
+    public var id: Int
+    public var fanIndex: Int
+    public var name: String
+    public var rpm: Double?
+    public var minRPM: Double?
+    public var maxRPM: Double?
+    public var isAutomatic: Bool
+    public var controlPercent: Double?
+    public var source: String
+    public var isAvailable: Bool
+    public var unavailableReason: String?
+
+    public init(
+        id: Int,
+        fanIndex: Int,
+        name: String,
+        rpm: Double?,
+        minRPM: Double?,
+        maxRPM: Double?,
+        isAutomatic: Bool,
+        controlPercent: Double?,
+        source: String,
+        isAvailable: Bool,
+        unavailableReason: String?
+    ) {
+        self.id = id
+        self.fanIndex = fanIndex
+        self.name = name
+        self.rpm = rpm
+        self.minRPM = minRPM
+        self.maxRPM = maxRPM
+        self.isAutomatic = isAutomatic
+        self.controlPercent = controlPercent
+        self.source = source
+        self.isAvailable = isAvailable
+        self.unavailableReason = unavailableReason
+    }
+
+    public var displayPercent: Double? {
+        controlPercent
+    }
+
+    public var displayRPM: Double? {
+        rpm
+    }
+}
+
+public struct SystemBluetoothDeviceSnapshot: Identifiable, Equatable, Sendable {
+    public var id: String
+    public var name: String
+    public var address: String
+    public var isConnected: Bool
+    public var isPaired: Bool
+    public var batteryLevel: Double?
+    public var batteryDetail: String?
+    public var source: String
+    public var isAvailable: Bool
+    public var unavailableReason: String?
+
+    public init(
+        id: String,
+        name: String,
+        address: String,
+        isConnected: Bool,
+        isPaired: Bool,
+        batteryLevel: Double?,
+        batteryDetail: String? = nil,
+        source: String,
+        isAvailable: Bool,
+        unavailableReason: String?
+    ) {
+        self.id = id
+        self.name = name
+        self.address = address
+        self.isConnected = isConnected
+        self.isPaired = isPaired
+        self.batteryLevel = batteryLevel
+        self.batteryDetail = batteryDetail
+        self.source = source
+        self.isAvailable = isAvailable
+        self.unavailableReason = unavailableReason
     }
 }
 
@@ -319,6 +464,10 @@ public struct SystemPermissionSnapshot: Identifiable, Equatable, Sendable {
         self.isAvailable = isAvailable
         self.unavailableReason = unavailableReason
     }
+
+    public var appPermissionKind: AppPermissionKind? {
+        AppPermissionKind(rawValue: id)
+    }
 }
 
 public struct SystemStatusUnavailableReason: Identifiable, Equatable, Sendable {
@@ -347,6 +496,8 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
     public var topMemoryProcesses: [SystemProcessSnapshot]
     public var temperatureSensors: [SystemSensorSnapshot]
     public var fanSensors: [SystemFanSnapshot]
+    public var fanControlStates: [SystemFanControlState]
+    public var bluetoothDevices: [SystemBluetoothDeviceSnapshot]
     public var powerSensors: [SystemSensorSnapshot]
     public var voltageSensors: [SystemSensorSnapshot]
     public var currentSensors: [SystemSensorSnapshot]
@@ -355,8 +506,10 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
     public var loadAverage1m: Double?
     public var loadAverage5m: Double?
     public var loadAverage15m: Double?
+    public var diskMountPoint: String?
     public var diskUsedGB: Double?
     public var diskTotalGB: Double?
+    public var diskVolumes: [DiskVolumeSnapshot]
     public var networkDownloadMBps: Double?
     public var networkUploadMBps: Double?
     public var gpuUsagePercent: Double?
@@ -365,6 +518,12 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
     public var gpuChipModel: String?
     public var diskReadMBps: Double?
     public var diskWriteMBps: Double?
+    public var topDiskIOProcesses: [DiskIOProcessSnapshot]
+    public var diskIODevices: [DiskIODeviceSnapshot]
+    public var diskIODeviceSource: String?
+    public var networkLatencyMs: Double?
+    public var networkDNSLookupMs: Double?
+    public var publicIPAddress: String?
     public var hardwareInfo: SystemHardwareInfo?
     public var unavailableReasons: [SystemStatusUnavailableReason]
 
@@ -380,6 +539,8 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         topMemoryProcesses: [SystemProcessSnapshot] = [],
         temperatureSensors: [SystemSensorSnapshot] = [],
         fanSensors: [SystemFanSnapshot] = [],
+        fanControlStates: [SystemFanControlState] = [],
+        bluetoothDevices: [SystemBluetoothDeviceSnapshot] = [],
         powerSensors: [SystemSensorSnapshot] = [],
         voltageSensors: [SystemSensorSnapshot] = [],
         currentSensors: [SystemSensorSnapshot] = [],
@@ -388,8 +549,10 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         loadAverage1m: Double? = nil,
         loadAverage5m: Double? = nil,
         loadAverage15m: Double? = nil,
+        diskMountPoint: String? = nil,
         diskUsedGB: Double? = nil,
         diskTotalGB: Double? = nil,
+        diskVolumes: [DiskVolumeSnapshot] = [],
         networkDownloadMBps: Double? = nil,
         networkUploadMBps: Double? = nil,
         gpuUsagePercent: Double? = nil,
@@ -398,6 +561,12 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         gpuChipModel: String? = nil,
         diskReadMBps: Double? = nil,
         diskWriteMBps: Double? = nil,
+        topDiskIOProcesses: [DiskIOProcessSnapshot] = [],
+        diskIODevices: [DiskIODeviceSnapshot] = [],
+        diskIODeviceSource: String? = nil,
+        networkLatencyMs: Double? = nil,
+        networkDNSLookupMs: Double? = nil,
+        publicIPAddress: String? = nil,
         hardwareInfo: SystemHardwareInfo? = nil,
         unavailableReasons: [SystemStatusUnavailableReason] = []
     ) {
@@ -412,6 +581,8 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         self.topMemoryProcesses = topMemoryProcesses
         self.temperatureSensors = temperatureSensors
         self.fanSensors = fanSensors
+        self.fanControlStates = fanControlStates
+        self.bluetoothDevices = bluetoothDevices
         self.powerSensors = powerSensors
         self.voltageSensors = voltageSensors
         self.currentSensors = currentSensors
@@ -420,8 +591,10 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         self.loadAverage1m = loadAverage1m
         self.loadAverage5m = loadAverage5m
         self.loadAverage15m = loadAverage15m
+        self.diskMountPoint = diskMountPoint
         self.diskUsedGB = diskUsedGB
         self.diskTotalGB = diskTotalGB
+        self.diskVolumes = diskVolumes
         self.networkDownloadMBps = networkDownloadMBps
         self.networkUploadMBps = networkUploadMBps
         self.gpuUsagePercent = gpuUsagePercent
@@ -430,6 +603,12 @@ public struct SystemStatusPartialSnapshot: Equatable, Sendable {
         self.gpuChipModel = gpuChipModel
         self.diskReadMBps = diskReadMBps
         self.diskWriteMBps = diskWriteMBps
+        self.topDiskIOProcesses = topDiskIOProcesses
+        self.diskIODevices = diskIODevices
+        self.diskIODeviceSource = diskIODeviceSource
+        self.networkLatencyMs = networkLatencyMs
+        self.networkDNSLookupMs = networkDNSLookupMs
+        self.publicIPAddress = publicIPAddress
         self.hardwareInfo = hardwareInfo
         self.unavailableReasons = unavailableReasons
     }
@@ -500,6 +679,8 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
     public var topMemoryProcesses: [SystemProcessSnapshot]
     public var temperatureSensors: [SystemSensorSnapshot]
     public var fanSensors: [SystemFanSnapshot]
+    public var fanControlStates: [SystemFanControlState]
+    public var bluetoothDevices: [SystemBluetoothDeviceSnapshot]
     public var powerSensors: [SystemSensorSnapshot]
     public var voltageSensors: [SystemSensorSnapshot]
     public var currentSensors: [SystemSensorSnapshot]
@@ -508,8 +689,10 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
     public var loadAverage1m: Double?
     public var loadAverage5m: Double?
     public var loadAverage15m: Double?
+    public var diskMountPoint: String?
     public var diskUsedGB: Double?
     public var diskTotalGB: Double?
+    public var diskVolumes: [DiskVolumeSnapshot]
     public var networkDownloadMBps: Double?
     public var networkUploadMBps: Double?
     public var gpuUsagePercent: Double?
@@ -518,6 +701,12 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
     public var gpuChipModel: String?
     public var diskReadMBps: Double?
     public var diskWriteMBps: Double?
+    public var topDiskIOProcesses: [DiskIOProcessSnapshot]
+    public var diskIODevices: [DiskIODeviceSnapshot]
+    public var diskIODeviceSource: String?
+    public var networkLatencyMs: Double?
+    public var networkDNSLookupMs: Double?
+    public var publicIPAddress: String?
     public var hardwareInfo: SystemHardwareInfo?
     public var unavailableReasons: [SystemStatusUnavailableReason]
 
@@ -543,6 +732,8 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         topMemoryProcesses: [SystemProcessSnapshot] = [],
         temperatureSensors: [SystemSensorSnapshot] = [],
         fanSensors: [SystemFanSnapshot] = [],
+        fanControlStates: [SystemFanControlState] = [],
+        bluetoothDevices: [SystemBluetoothDeviceSnapshot] = [],
         powerSensors: [SystemSensorSnapshot] = [],
         voltageSensors: [SystemSensorSnapshot] = [],
         currentSensors: [SystemSensorSnapshot] = [],
@@ -551,8 +742,10 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         loadAverage1m: Double? = nil,
         loadAverage5m: Double? = nil,
         loadAverage15m: Double? = nil,
+        diskMountPoint: String? = nil,
         diskUsedGB: Double? = nil,
         diskTotalGB: Double? = nil,
+        diskVolumes: [DiskVolumeSnapshot] = [],
         networkDownloadMBps: Double? = nil,
         networkUploadMBps: Double? = nil,
         gpuUsagePercent: Double? = nil,
@@ -561,6 +754,12 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         gpuChipModel: String? = nil,
         diskReadMBps: Double? = nil,
         diskWriteMBps: Double? = nil,
+        topDiskIOProcesses: [DiskIOProcessSnapshot] = [],
+        diskIODevices: [DiskIODeviceSnapshot] = [],
+        diskIODeviceSource: String? = nil,
+        networkLatencyMs: Double? = nil,
+        networkDNSLookupMs: Double? = nil,
+        publicIPAddress: String? = nil,
         hardwareInfo: SystemHardwareInfo? = nil,
         unavailableReasons: [SystemStatusUnavailableReason] = [],
         cpuUsage: Double = 0,
@@ -584,6 +783,8 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         self.topMemoryProcesses = topMemoryProcesses
         self.temperatureSensors = temperatureSensors
         self.fanSensors = fanSensors
+        self.fanControlStates = fanControlStates
+        self.bluetoothDevices = bluetoothDevices
         self.powerSensors = powerSensors
         self.voltageSensors = voltageSensors
         self.currentSensors = currentSensors
@@ -592,8 +793,10 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         self.loadAverage1m = loadAverage1m
         self.loadAverage5m = loadAverage5m
         self.loadAverage15m = loadAverage15m
+        self.diskMountPoint = diskMountPoint
         self.diskUsedGB = diskUsedGB
         self.diskTotalGB = diskTotalGB
+        self.diskVolumes = diskVolumes
         self.networkDownloadMBps = networkDownloadMBps
         self.networkUploadMBps = networkUploadMBps
         self.gpuUsagePercent = gpuUsagePercent
@@ -602,6 +805,12 @@ public struct SystemStatusSnapshot: Equatable, Sendable {
         self.gpuChipModel = gpuChipModel
         self.diskReadMBps = diskReadMBps
         self.diskWriteMBps = diskWriteMBps
+        self.topDiskIOProcesses = topDiskIOProcesses
+        self.diskIODevices = diskIODevices
+        self.diskIODeviceSource = diskIODeviceSource
+        self.networkLatencyMs = networkLatencyMs
+        self.networkDNSLookupMs = networkDNSLookupMs
+        self.publicIPAddress = publicIPAddress
         self.hardwareInfo = hardwareInfo
         self.unavailableReasons = unavailableReasons
         self.cpuUsage = cpuUsage

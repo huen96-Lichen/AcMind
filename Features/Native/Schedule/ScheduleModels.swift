@@ -49,6 +49,44 @@ struct ScheduleEvent: Codable, Identifiable, Equatable, Hashable {
         Calendar.current.dateComponents([.minute], from: startAt, to: endAt).minute ?? 0
     }
 
+    func displayTimeRange(using calendar: Calendar = .current) -> String {
+        guard isAllDay == false else {
+            return "全天"
+        }
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale.current
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return "\(formatter.string(from: startAt)) - \(formatter.string(from: endAt))"
+    }
+
+    func timingState(referenceDate: Date = Date()) -> ScheduleEventTimingState {
+        switch status {
+        case .done:
+            return .done
+        case .cancelled:
+            return .cancelled
+        case .todo:
+            break
+        }
+
+        if isAllDay {
+            return .allDay
+        }
+
+        if referenceDate >= endAt {
+            return .overdue
+        }
+
+        if referenceDate >= startAt && referenceDate < endAt {
+            return .ongoing
+        }
+
+        return .upcoming
+    }
+
     /// 是否在指定日期
     func isOn(date: Date) -> Bool {
         Calendar.current.isDate(startAt, inSameDayAs: date)
@@ -97,7 +135,7 @@ struct ScheduleCategory: Identifiable, Equatable {
     static let defaultCategories: [ScheduleCategory] = [
         ScheduleCategory(id: "personal", name: "个人", color: Color(red: 0.55, green: 0.55, blue: 0.58), visible: true),
         ScheduleCategory(id: "work", name: "工作", color: Color(red: 0.36, green: 0.49, blue: 0.85), visible: true),
-        ScheduleCategory(id: "acmind", name: "AcMind", color: Color(red: 0.11, green: 0.49, blue: 0.84), visible: true),
+        ScheduleCategory(id: "acmind", name: "AcWork", color: Color(red: 0.11, green: 0.49, blue: 0.84), visible: true),
         ScheduleCategory(id: "study", name: "学习", color: Color(red: 0.55, green: 0.34, blue: 0.78), visible: true),
         ScheduleCategory(id: "fitness", name: "健身", color: Color(red: 0.30, green: 0.69, blue: 0.31), visible: true),
         ScheduleCategory(id: "life", name: "生活", color: Color(red: 0.95, green: 0.59, blue: 0.38), visible: true),
@@ -191,6 +229,56 @@ enum ScheduleViewMode: String, CaseIterable {
         case .year: return "calendar.circle"
         }
     }
+}
+
+enum ScheduleEventTimingState: String, Equatable {
+    case upcoming
+    case ongoing
+    case overdue
+    case allDay
+    case done
+    case cancelled
+
+    var displayName: String {
+        switch self {
+        case .upcoming: return "待开始"
+        case .ongoing: return "进行中"
+        case .overdue: return "逾期"
+        case .allDay: return "全天"
+        case .done: return "已完成"
+        case .cancelled: return "已取消"
+        }
+    }
+}
+
+struct ScheduleEventConflict: Equatable {
+    let first: ScheduleEvent
+    let second: ScheduleEvent
+}
+
+struct ScheduleFreeWindow: Equatable {
+    let start: Date
+    let end: Date
+
+    var durationMinutes: Int {
+        max(0, Calendar.current.dateComponents([.minute], from: start, to: end).minute ?? 0)
+    }
+}
+
+struct SchedulePlanningSnapshot: Equatable {
+    let referenceDate: Date
+    let selectedDate: Date
+    let totalEventCount: Int
+    let activeEventCount: Int
+    let completedEventCount: Int
+    let allDayEventCount: Int
+    let overdueEventCount: Int
+    let currentEvent: ScheduleEvent?
+    let nextEvent: ScheduleEvent?
+    let conflict: ScheduleEventConflict?
+    let freeWindow: ScheduleFreeWindow?
+    let selectedDateLabel: String
+    let currentTimeLabel: String
 }
 
 // MARK: - Layout Constants

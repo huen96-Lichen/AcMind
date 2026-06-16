@@ -127,11 +127,12 @@ final class NotchV2ViewModel: ObservableObject {
                         }
                     }
 
-                    Button("查看状态") {
-                        openStatusAction()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    NotchV2StatusPill(
+                        icon: "arrow.up.right.square",
+                        title: "查看状态",
+                        accent: NotchV2DesignTokens.innerCardBackground.opacity(0.92),
+                        action: openStatusAction
+                    )
                 }
             }
         }

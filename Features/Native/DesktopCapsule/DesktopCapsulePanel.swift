@@ -204,8 +204,12 @@ struct DesktopCapsuleView: View {
         Button(action: { viewModel.toggleExpand() }) {
             ZStack {
                 Circle()
-                    .fill(AppSurfaceTokens.background)
-                    .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    .overlay(
+                        Circle()
+                            .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.10), radius: 7, x: 0, y: 3)
 
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 18, weight: .medium))
@@ -277,8 +281,12 @@ struct DesktopCapsuleView: View {
         .frame(height: 42)
         .background(
             Capsule()
-                .fill(AppSurfaceTokens.background)
-                .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    Capsule()
+                        .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 7, x: 0, y: 3)
         )
         .onHover { hovering in
             viewModel.isHoveringPanel = hovering
@@ -306,7 +314,7 @@ struct CapsuleActionButtonView: View {
         Button(action: actionHandler) {
             ZStack {
                 Circle()
-                    .fill(isHovered ? action.type.defaultColor.opacity(0.15) : Color.clear)
+                    .fill(isHovered ? AppSurfaceTokens.separator.opacity(0.18) : Color.clear)
                     .frame(width: 30, height: 30)
 
                 if isExecuting {

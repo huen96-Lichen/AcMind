@@ -20,7 +20,7 @@ struct ScheduleSidebar: View {
             }
         }
         .frame(width: ScheduleLayout.sidebarWidth)
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackground.opacity(0.94))
     }
 }
 
@@ -49,8 +49,10 @@ struct CalendarCategoryList: View {
                 }
             }
             .padding(8)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
+            )
         }
     }
 }
@@ -77,17 +79,17 @@ private struct CategoryRow: View {
 
                 Spacer()
 
-                Text("\(todayCount)")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(isVisible ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.secondaryText.opacity(0.4))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    Text("\(todayCount)")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(isVisible ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.secondaryText.opacity(0.4))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
                     .background(
                         (todayCount > 0 && isVisible)
                             ? category.color.opacity(0.12)
                             : AppSurfaceTokens.secondaryText.opacity(0.06)
                     )
-                    .cornerRadius(4)
+                    .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             }
             .padding(.vertical, 4)
             .padding(.horizontal, 4)
@@ -127,7 +129,7 @@ struct TodayOverview: View {
                         Spacer()
                         Text("\(viewModel.todayWorkloadPercent)%")
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(viewModel.todayWorkloadLevel.color == AppSurfaceTokens.cardBackgroundSoft ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
+                            .foregroundStyle(viewModel.todayWorkloadLevel == .empty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.primaryText)
                     }
 
                     GeometryReader { geo in
@@ -147,8 +149,10 @@ struct TodayOverview: View {
                 }
             }
             .padding(12)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
+            )
         }
     }
 }
@@ -194,7 +198,7 @@ struct TodayTodoList: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppSurfaceTokens.secondaryText.opacity(0.08))
-                    .cornerRadius(4)
+                    .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
             }
             .padding(.horizontal, 4)
 
@@ -236,8 +240,10 @@ struct TodayTodoList: View {
                 }
             }
             .padding(8)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
         }
     }
 }
@@ -421,7 +427,7 @@ struct MiniMonthCalendar: View {
             }
             .padding(6)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
         }
     }
 
@@ -472,7 +478,7 @@ private struct MiniDayCell: View {
             // 选中背景
             if isSelected {
                 Circle()
-                    .fill(AppSurfaceTokens.accentBlue.opacity(0.15))
+                    .fill(AppSurfaceTokens.accentBlue.opacity(0.10))
             }
 
             // 今天指示器
@@ -545,7 +551,7 @@ struct WorkloadSummary: View {
             }
             .padding(12)
             .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(AcMindDesignTokens.Layout.inlineBlockRadius)
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
         }
     }
 }

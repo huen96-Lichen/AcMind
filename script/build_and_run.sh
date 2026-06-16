@@ -7,6 +7,7 @@ APP_NAME="AcMind"
 SCHEME="AcMind"
 PROJECT="AcMind.xcodeproj"
 BUNDLE_ID="com.acmind.app"
+HELPER_NAME="com.acmind.systemstatus.helper"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_ROOT="$ROOT_DIR/build/run"
@@ -39,6 +40,25 @@ build_app() {
     build
 }
 
+build_helper() {
+  swift build -c Debug --product AcMindSystemStatusHelper
+}
+
+stage_helper() {
+  local helper_source="$ROOT_DIR/.build/debug/AcMindSystemStatusHelper"
+  local helper_dest_dir="$APP_BUNDLE/Contents/Library/LaunchServices"
+  local helper_dest="$helper_dest_dir/$HELPER_NAME"
+
+  if [[ ! -f "$helper_source" ]]; then
+    echo "helper binary not found: $helper_source" >&2
+    exit 1
+  fi
+
+  mkdir -p "$helper_dest_dir"
+  cp -f "$helper_source" "$helper_dest"
+  chmod 755 "$helper_dest"
+}
+
 launch_binary() {
   nohup "$APP_BINARY" >/dev/null 2>&1 &
 }
@@ -62,7 +82,9 @@ stream_logs() {
 }
 
 stop_existing_app
+build_helper
 build_app
+stage_helper
 
 case "$MODE" in
   run)

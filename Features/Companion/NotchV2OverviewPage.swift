@@ -20,12 +20,12 @@ struct NotchV2OverviewPage: View {
             symbol: "target",
             padding: 12,
             fillHeight: true,
-            cardAccent: viewModel.activeRuntimeSurface.accentColor
+            cardAccent: nil
         ) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(viewModel.activeRuntimeSurface.accentColor)
+                        .fill(NotchV2DesignTokens.secondaryText)
                         .frame(width: 7, height: 7)
                     Text(viewModel.activeRuntimeSurface.title)
                         .font(NotchV2DesignTokens.Typography.title)
@@ -41,7 +41,7 @@ struct NotchV2OverviewPage: View {
                     .truncationMode(.tail)
 
                 HStack(spacing: 6) {
-                    NotchV2StatusPill(title: currentTaskSource, accent: viewModel.activeRuntimeSurface.accentColor.opacity(0.18))
+                    NotchV2StatusPill(title: currentTaskSource, accent: NotchV2DesignTokens.cardBackgroundStrong)
                     NotchV2StatusPill(title: currentTaskPriority, accent: priorityAccent)
                 }
 
@@ -49,8 +49,8 @@ struct NotchV2OverviewPage: View {
                     .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
                 VStack(alignment: .leading, spacing: 6) {
-                    compactRow(label: "焦点", value: currentFocusText)
-                    compactRow(label: "最近输入", value: lastTaskText)
+                    NotchV2InfoRow(title: "焦点", value: currentFocusText, icon: "scope", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
+                    NotchV2InfoRow(title: "最近输入", value: lastTaskText, icon: "clock.arrow.circlepath", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
                 }
 
                 Divider()
@@ -72,16 +72,11 @@ struct NotchV2OverviewPage: View {
 
     private var centerColumn: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "便捷动作", symbol: "bolt.fill", padding: 12, cardAccent: NotchV2DesignTokens.accentBlue) {
+            NotchV2Card(title: "便捷动作", symbol: "bolt.fill", padding: 12, cardAccent: nil) {
                 VStack(alignment: .leading, spacing: 10) {
                     LazyVGrid(
                         columns: [
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8)
+                            GridItem(.adaptive(minimum: 92, maximum: 132), spacing: 8)
                         ],
                         spacing: 8
                     ) {
@@ -107,7 +102,7 @@ struct NotchV2OverviewPage: View {
                             title: "设置",
                             isSelected: false
                         ) {
-                            (NSApp.delegate as? NSObject)?.perform(Selector(("showSettings")))
+                            (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
                         }
                     }
                 }
@@ -118,12 +113,12 @@ struct NotchV2OverviewPage: View {
                 symbol: "sparkles",
                 padding: 12,
                 fillHeight: true,
-                cardAccent: viewModel.activeRuntimeSurface.accentColor
+                cardAccent: nil
             ) {
                 HStack(spacing: 8) {
                     Image(systemName: viewModel.activeRuntimeSurface.symbol)
                         .font(NotchV2DesignTokens.Typography.caption)
-                        .foregroundStyle(viewModel.activeRuntimeSurface.accentColor)
+                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(viewModel.activeRuntimeSurface.title)
@@ -158,58 +153,22 @@ struct NotchV2OverviewPage: View {
 
             NotchV2Card(title: "系统快览", symbol: "cpu", fillHeight: true, cornerRadius: NotchV2DesignTokens.rightCardRadius) {
                 VStack(alignment: .leading, spacing: 6) {
-                    systemStatusRow(
-                        icon: batteryIconName,
-                        title: "电池",
-                        value: viewModel.batteryStateText,
-                        accent: viewModel.batteryAccent
-                    )
-
-                    systemStatusRow(
-                        icon: "mic.fill",
-                        title: "麦克风",
-                        value: viewModel.microphonePermissionStatus.displayName,
-                        accent: viewModel.microphonePermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange
-                    )
-
-                    systemStatusRow(
-                        icon: "display",
-                        title: "录屏",
-                        value: viewModel.screenRecordingPermissionStatus.displayName,
-                        accent: viewModel.screenRecordingPermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange
-                    )
-
-                    systemStatusRow(
-                        icon: "accessibility",
-                        title: "辅助功能",
-                        value: viewModel.accessibilityPermissionStatus.displayName,
-                        accent: viewModel.accessibilityPermissionStatus == .authorized ? NotchV2DesignTokens.accentGreen : .orange
-                    )
+                    NotchV2InfoRow(title: "电池", value: viewModel.batteryStateText, icon: batteryIconName, accent: viewModel.batteryAccent, compactValue: true)
+                    NotchV2InfoRow(title: "麦克风", value: viewModel.microphonePermissionStatus.displayName, icon: "mic.fill", accent: permissionAccent(for: viewModel.microphonePermissionStatus), compactValue: true)
+                    NotchV2InfoRow(title: "录屏", value: viewModel.screenRecordingPermissionStatus.displayName, icon: "display", accent: permissionAccent(for: viewModel.screenRecordingPermissionStatus), compactValue: true)
+                    NotchV2InfoRow(title: "辅助功能", value: viewModel.accessibilityPermissionStatus.displayName, icon: "accessibility", accent: permissionAccent(for: viewModel.accessibilityPermissionStatus), compactValue: true)
 
                     Divider()
                         .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 
-                    Button {
-                        viewModel.openSystemStatusPage()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.up.right.square")
-                            Text("进入状态页")
+                    NotchV2StatusPill(
+                        icon: "arrow.up.right.square",
+                        title: "进入状态页",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.openSystemStatusPage()
                         }
-                        .font(NotchV2DesignTokens.Typography.caption)
-                        .foregroundStyle(NotchV2DesignTokens.primaryText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(NotchV2DesignTokens.accentBlue.opacity(0.18))
-                        )
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(NotchV2DesignTokens.accentBlue.opacity(0.22), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    )
                 }
             }
         }
@@ -247,9 +206,9 @@ struct NotchV2OverviewPage: View {
     private var priorityAccent: Color {
         switch viewModel.activeRuntimeSurface.priority {
         case .voiceRecording, .voiceProcessing, .screenshot, .systemEventHUD:
-            return .orange.opacity(0.18)
+            return NotchV2DesignTokens.cardBackgroundStrong
         case .music:
-            return NotchV2DesignTokens.accentGreen.opacity(0.18)
+            return NotchV2DesignTokens.cardBackgroundStrong
         case .defaultState:
             return NotchV2DesignTokens.cardBackgroundStrong
         }
@@ -273,28 +232,10 @@ struct NotchV2OverviewPage: View {
         viewModel.batteryIconName
     }
 
-    private func compactRow(label: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .frame(width: 42, alignment: .leading)
-                .lineLimit(1)
-
-            Text(value)
-                .font(NotchV2DesignTokens.Typography.body)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-
-            Spacer(minLength: 0)
-        }
-    }
-
     private func moduleStatusDot(title: String, enabled: Bool, active: Bool) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(active ? NotchV2DesignTokens.accentGreen : (enabled ? NotchV2DesignTokens.secondaryText : NotchV2DesignTokens.weakText))
+                .fill(active ? NotchV2DesignTokens.secondaryText : (enabled ? NotchV2DesignTokens.secondaryText.opacity(0.75) : NotchV2DesignTokens.weakText))
                 .frame(width: 5, height: 5)
             Text(title)
                 .font(NotchV2DesignTokens.Typography.caption)
@@ -303,32 +244,8 @@ struct NotchV2OverviewPage: View {
         }
     }
 
-    private func systemStatusRow(icon: String, title: String, value: String, accent: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(accent)
-                .frame(width: 16)
-
-            Text(title)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            Text(value)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
-        )
+    private func permissionAccent(for status: AppPermissionStatus) -> Color {
+        status == .authorized ? NotchV2DesignTokens.secondaryText : NotchV2DesignTokens.weakText
     }
 
 }

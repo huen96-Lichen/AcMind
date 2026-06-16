@@ -55,12 +55,12 @@ struct MaterialCardShell<Header: View, Preview: View, Footer: View, Actions: Vie
         .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: ContentCardPresentation.cornerRadius, style: .continuous)
-                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.08) : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackground))
+                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.05) : AppSurfaceTokens.cardBackgroundSoft)
         )
         .clipShape(RoundedRectangle(cornerRadius: ContentCardPresentation.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ContentCardPresentation.cornerRadius, style: .continuous)
-                .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.30) : AppSurfaceTokens.separator, lineWidth: 1)
+                .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.22) : AppSurfaceTokens.separator.opacity(isHovered ? 0.9 : 0.8), lineWidth: 1)
         )
     }
 }

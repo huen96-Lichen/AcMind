@@ -80,7 +80,7 @@ private struct MonthDayCell: View {
                     .background(
                         isToday ? AnyShapeStyle(AppSurfaceTokens.accentBlue) : AnyShapeStyle(Color.clear)
                     )
-                    .cornerRadius(isToday ? 12 : 0)
+                    .cornerRadius(isToday ? AppSurfaceTokens.inlineBlockRadius + 2 : 0)
 
                 Spacer()
             }
@@ -122,7 +122,7 @@ private struct MonthDayCell: View {
                 ? AppSurfaceTokens.accentBlue.opacity(0.06)
                 : Color.clear
         )
-        .cornerRadius(4)
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
     }
 }
 

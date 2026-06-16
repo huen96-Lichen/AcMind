@@ -33,7 +33,7 @@ struct CaptureSettingsCard: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Color.secondary.opacity(0.12))
-                                .cornerRadius(4)
+                                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                         }
 
                         Text("选择捕获完成后的默认处理方式，支持收集箱、剪贴板或每次询问。")
@@ -75,11 +75,11 @@ struct CaptureSettingsCard: View {
                         .font(.headline)
                     
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                             .fill(Color(NSColor.textBackgroundColor))
                             .frame(width: 180, height: 80)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                                     .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                             )
                         

@@ -2,22 +2,19 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
-// MARK: - AcMind App
+// MARK: - AcWork App
 
 @main
 struct AcMindApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        // 使用空 WindowGroup，实际窗口由 AppDelegate 管理
-        // 这样可以完全控制窗口生命周期
-        WindowGroup {
-            EmptyView()
-                .frame(width: 0, height: 0)
-                .hidden()
+        // 提供真实 Settings 内容，避免用户看到空白的系统设置窗口。
+        Settings {
+            SettingsView(initialCategory: .general)
+                .background(AppSurfaceBackdrop())
         }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 0, height: 0)
+        .defaultSize(width: 1500, height: 920)
         .commands {
             AcMindCommands()
         }
@@ -33,7 +30,7 @@ struct AcMindCommands: Commands {
     var body: some Commands {
         // 替换标准菜单
         CommandGroup(replacing: .appInfo) {
-            Button("关于 AcMind") {
+            Button("关于 \(AcWorkBrand.displayName)") {
                 appDelegate?.showAboutPanel()
             }
         }
@@ -60,15 +57,12 @@ struct AcMindCommands: Commands {
                 appDelegate?.showDesktopCapsule()
             }
             .keyboardShortcut(KeyEquivalent(" "), modifiers: [.command, .shift])
+        }
 
-            Divider()
-
+        CommandMenu("导航") {
             ForEach(SidebarItem.shortcutItems) { item in
                 if let shortcut = item.shortcut {
-                    Button(item.displayName) {
-                        appState.selectSidebarItem(item)
-                        appDelegate?.showMainWindow()
-                    }
+                    Button(item.commandTitle) { navigate(to: item) }
                     .keyboardShortcut(
                         KeyEquivalent(shortcut.key.first!),
                         modifiers: shortcut.modifiers.toEventModifiers()
@@ -111,6 +105,11 @@ struct AcMindCommands: Commands {
             .keyboardShortcut("f", modifiers: [.command, .control])
         }
     }
+
+    private func navigate(to item: SidebarItem) {
+        appState.navigate(to: item)
+        appDelegate?.showMainWindow()
+    }
 }
 
 // MARK: - Helper Extensions
@@ -147,7 +146,7 @@ struct LaunchView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(Color.primary)
 
-            Text("AcMind")
+            Text(AcWorkBrand.displayName)
                 .font(.largeTitle)
                 .fontWeight(.semibold)
 
@@ -181,12 +180,15 @@ struct LaunchView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .padding()
-                .background(AppSurfaceTokens.accentOrange.opacity(0.1))
-                .cornerRadius(8)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.accentOrange.opacity(0.08))
+                )
             }
         }
         .frame(width: 400, height: 300)
         .padding()
+        .background(AppSurfaceBackdrop())
     }
 }
 

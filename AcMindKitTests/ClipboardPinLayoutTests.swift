@@ -120,6 +120,11 @@ final class ClipboardPinLayoutTests: XCTestCase {
             MaterialCardGridLayout.columnCount(availableWidth: 1280, minimumColumnWidth: 320),
             3
         )
+        XCTAssertEqual(
+            MaterialCardGridLayout.columnCount(availableWidth: 720, minimumColumnWidth: 240),
+            2,
+            "Inbox detail width at the 1180 pt window breakpoint must retain two columns"
+        )
     }
 
     func testMaterialGridColumnMinimumFitsNarrowContainers() {

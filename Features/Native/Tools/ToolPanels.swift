@@ -9,22 +9,33 @@ struct JSONFormatterPanel: View {
     @StateObject private var viewModel = JSONFormatterViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    outputCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "格式说明", subtitle: "先说明能力，再进入输入与输出", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "输入", subtitle: "粘贴 JSON 并执行处理", padding: 16) {
+                            inputCard
+                        }
+
+                        AppSurfaceCard(title: "输出", subtitle: "查看、美化、压缩或保存", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 860, height: 720)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -60,11 +71,6 @@ struct JSONFormatterPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var inputCard: some View {
@@ -83,13 +89,7 @@ struct JSONFormatterPanel: View {
                 .buttonStyle(.bordered)
             }
 
-            TextEditor(text: $viewModel.inputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.inputText, minHeight: 220)
 
             HStack(spacing: 10) {
                 Button {
@@ -122,11 +122,6 @@ struct JSONFormatterPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var outputCard: some View {
@@ -162,19 +157,8 @@ struct JSONFormatterPanel: View {
                 .disabled(viewModel.lastSavedURL == nil)
             }
 
-            TextEditor(text: $viewModel.outputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.outputText, minHeight: 220)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -304,22 +288,33 @@ struct Base64CodecPanel: View {
     @StateObject private var viewModel = Base64CodecViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    outputCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "编解码说明", subtitle: "文本和 Base64 之间来回转换", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "输入", subtitle: "切换模式后执行", padding: 16) {
+                            inputCard
+                        }
+
+                        AppSurfaceCard(title: "输出", subtitle: "复制或保存结果", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 860, height: 720)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -355,11 +350,6 @@ struct Base64CodecPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var inputCard: some View {
@@ -379,13 +369,7 @@ struct Base64CodecPanel: View {
                 .frame(width: 200)
             }
 
-            TextEditor(text: $viewModel.inputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.inputText, minHeight: 220)
 
             HStack(spacing: 10) {
                 Button {
@@ -417,11 +401,6 @@ struct Base64CodecPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var outputCard: some View {
@@ -457,19 +436,8 @@ struct Base64CodecPanel: View {
                 .disabled(viewModel.lastSavedURL == nil)
             }
 
-            TextEditor(text: $viewModel.outputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.outputText, minHeight: 220)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -614,22 +582,33 @@ struct MarkdownCleanerPanel: View {
     @StateObject private var viewModel = MarkdownCleanerViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    outputCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "整理说明", subtitle: "先收拢草稿，再输出干净文本", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "输入", subtitle: "从剪贴板读入 Markdown", padding: 16) {
+                            inputCard
+                        }
+
+                        AppSurfaceCard(title: "输出", subtitle: "整理后的结果可继续复制", padding: 16) {
+                            outputCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 860, height: 740)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -665,11 +644,6 @@ struct MarkdownCleanerPanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var inputCard: some View {
@@ -688,13 +662,7 @@ struct MarkdownCleanerPanel: View {
                 .buttonStyle(.bordered)
             }
 
-            TextEditor(text: $viewModel.inputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.inputText, minHeight: 220)
 
             HStack(spacing: 10) {
                 Button {
@@ -719,11 +687,6 @@ struct MarkdownCleanerPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var outputCard: some View {
@@ -743,19 +706,8 @@ struct MarkdownCleanerPanel: View {
                 .disabled(viewModel.outputText.isEmpty)
             }
 
-            TextEditor(text: $viewModel.outputText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 240)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.outputText, minHeight: 240)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -945,22 +897,33 @@ struct TextComparePanel: View {
     @StateObject private var viewModel = TextCompareViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    resultCard
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        AppSurfaceCard(title: "对比说明", subtitle: "逐行比较两段文本", padding: 16) {
+                            introCard
+                        }
+
+                        AppSurfaceCard(title: "输入", subtitle: "左右文本同时编辑", padding: 16) {
+                            inputCard
+                        }
+
+                        AppSurfaceCard(title: "比较结果", subtitle: "摘要与差异分开看", padding: 16) {
+                            resultCard
+                        }
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
         }
         .frame(width: 940, height: 760)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -996,11 +959,6 @@ struct TextComparePanel: View {
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var inputCard: some View {
@@ -1026,13 +984,7 @@ struct TextComparePanel: View {
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                    TextEditor(text: $viewModel.leftText)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 210)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                        )
+                    AppSurfaceTextEditorShell(text: $viewModel.leftText, minHeight: 210)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -1040,13 +992,7 @@ struct TextComparePanel: View {
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                    TextEditor(text: $viewModel.rightText)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 210)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
-                        )
+                    AppSurfaceTextEditorShell(text: $viewModel.rightText, minHeight: 210)
                 }
             }
 
@@ -1061,11 +1007,6 @@ struct TextComparePanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var resultCard: some View {
@@ -1127,11 +1068,6 @@ struct TextComparePanel: View {
                     .stroke(AppSurfaceTokens.secondaryText.opacity(0.18), lineWidth: 1)
             )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 
@@ -1399,9 +1335,9 @@ struct DiffLineRow: View {
         case .same:
             return Color.clear
         case .insert:
-            return AppSurfaceTokens.accentGreen.opacity(0.08)
+            return AppSurfaceTokens.cardBackgroundSoft
         case .delete:
-            return AppSurfaceTokens.accentOrange.opacity(0.08)
+            return AppSurfaceTokens.cardBackgroundSoft
         }
     }
 
@@ -1823,29 +1759,36 @@ struct SRTTFCPXMLPanel: View {
     @StateObject private var viewModel = SRTTFCPXMLViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        ZStack {
+            AppSurfaceBackdrop()
 
-            Divider()
-
-            HStack(alignment: .top, spacing: 16) {
-                leftPanel
-                    .frame(maxWidth: .infinity)
+            VStack(spacing: 0) {
+                header
 
                 Divider()
-                    .frame(height: 600)
 
-                rightPanel
+                HStack(alignment: .top, spacing: 16) {
+                    AppSurfaceCard(title: "字幕列表", subtitle: "输入与解析结果", padding: 14) {
+                        leftPanel
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    Divider()
+                        .frame(height: 600)
+
+                    AppSurfaceCard(title: "导出操作", subtitle: "保存和复制结果", padding: 14) {
+                        rightPanel
+                    }
                     .frame(width: 240)
+                }
+                .padding(20)
+
+                Divider()
+
+                bottomBar
             }
-            .padding(20)
-
-            Divider()
-
-            bottomBar
         }
         .frame(width: 1040, height: 700)
-        .background(AppSurfaceTokens.background)
     }
 
     private var header: some View {
@@ -1951,8 +1894,8 @@ struct SRTTFCPXMLPanel: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackground)
         )
     }
 
@@ -1961,7 +1904,7 @@ struct SRTTFCPXMLPanel: View {
             Text("合成设置")
                 .font(.headline)
 
-            GroupBox("时间轴") {
+            AppSurfaceCard(title: "时间轴", subtitle: "帧率与合成节奏", padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("FPS")
@@ -1978,7 +1921,7 @@ struct SRTTFCPXMLPanel: View {
                 }
             }
 
-            GroupBox("分辨率") {
+            AppSurfaceCard(title: "分辨率", subtitle: "输出尺寸与预设", padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     Picker("预设", selection: Binding(
                         get: { "\(viewModel.width)x\(viewModel.height)" },
@@ -2008,7 +1951,7 @@ struct SRTTFCPXMLPanel: View {
                 .font(.headline)
                 .padding(.top, 8)
 
-            GroupBox("文本样式") {
+            AppSurfaceCard(title: "文本样式", subtitle: "字体、字号和对齐方式", padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("字体")
@@ -2048,7 +1991,7 @@ struct SRTTFCPXMLPanel: View {
                 }
             }
 
-            GroupBox("位置") {
+            AppSurfaceCard(title: "位置", subtitle: "标题坐标", padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("X")
@@ -2158,8 +2101,8 @@ struct SubtitleRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackground)
         )
     }
 }

@@ -19,22 +19,19 @@ struct QuickNotePanel: View {
 
             // 输入区
             VStack(spacing: 12) {
-                TextEditor(text: $viewModel.noteText)
-                    .font(.system(size: 15))
-                    .focused($isFocused)
-                    .scrollContentBackground(.hidden)
-                    .background(AppSurfaceTokens.cardBackgroundSoft)
-                    .cornerRadius(10)
-                    .overlay(alignment: .topLeading) {
-                        if viewModel.noteText.isEmpty {
-                            Text("输入快速记录内容...")
-                                .font(.system(size: 15))
-                                .foregroundStyle(.tertiary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 12)
-                                .allowsHitTesting(false)
-                        }
+                ZStack(alignment: .topLeading) {
+                    AppSurfaceTextEditorShell(text: $viewModel.noteText, minHeight: 170, font: .system(size: 15))
+                        .focused($isFocused)
+
+                    if viewModel.noteText.isEmpty {
+                        Text("输入快速记录内容...")
+                            .font(.system(size: 15))
+                            .foregroundStyle(AppSurfaceTokens.tertiaryText)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 22)
+                            .allowsHitTesting(false)
                     }
+                }
 
                 // 底部操作栏
                 HStack {
@@ -68,8 +65,15 @@ struct QuickNotePanel: View {
             }
             .padding(20)
         }
-        .frame(width: 400, height: 300)
-        .background(AppSurfaceTokens.background)
+        .frame(width: 400, height: 320)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                )
+        )
         .onAppear {
             isFocused = true
         }
@@ -105,6 +109,9 @@ struct QuickNotePanel: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+        .background(
+            AppSurfaceTokens.cardBackgroundSoft
+        )
     }
 }
 

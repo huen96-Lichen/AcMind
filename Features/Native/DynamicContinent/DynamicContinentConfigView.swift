@@ -6,7 +6,7 @@ import AcMindKit
 
 struct DynamicContinentConfigView: View {
     @StateObject private var viewModel = DynamicContinentConfigViewModel()
-    @StateObject private var hotCornerViewModel = HotCornerConfigViewModel()
+    @StateObject private var hotCornerViewModel: HotCornerConfigViewModel
     @StateObject private var permissionManager = PermissionManager()
     @State private var selectedSection: ConfigSection
     @State private var editingHotCorner: HotCornerPosition?
@@ -14,6 +14,12 @@ struct DynamicContinentConfigView: View {
 
     init(initialSection: ConfigSection = .overviewAppearance) {
         _selectedSection = State(initialValue: initialSection)
+        let settingsStore: SettingsServiceProtocol = ServiceContainer.isInitialized()
+            ? ServiceContainer.shared.settingsService
+            : SettingsService()
+        _hotCornerViewModel = StateObject(
+            wrappedValue: HotCornerConfigViewModel(settingsService: settingsStore)
+        )
     }
 
     enum ConfigSection: String, CaseIterable, Identifiable {
@@ -41,6 +47,7 @@ struct DynamicContinentConfigView: View {
         static let pagePadding: CGFloat = 20
         static let sectionSpacing: CGFloat = 12
         static let cardSpacing: CGFloat = 10
+        static let previewCardGap: CGFloat = 12
         static let mainCardRadius: CGFloat = T.mainCardRadius
         static let secondaryCardRadius: CGFloat = T.secondaryCardRadius
         static let inlineBlockRadius: CGFloat = T.inlineBlockRadius
@@ -65,6 +72,8 @@ struct DynamicContinentConfigView: View {
         static let permissionRowHeight: CGFloat = 48
         static let summaryWidth: CGFloat = 224
         static let summaryBlockGap: CGFloat = 10
+        static let previewSurfaceMinHeight: CGFloat = 116
+        static let previewStripeHeight: CGFloat = 74
         static let moduleListRowHeight: CGFloat = 42
         static let inlineButtonHeight: CGFloat = 32
         static let toggleRowHeight: CGFloat = 44
@@ -76,7 +85,7 @@ struct DynamicContinentConfigView: View {
     }
 
     var body: some View {
-        WorkspacePageShell(
+        AcWorkShell(
             title: "灵动大陆 & 配置",
             subtitle: "伴随能力的配置中心。",
             leadingRailWidth: 208,
@@ -95,7 +104,7 @@ struct DynamicContinentConfigView: View {
                     .padding(LocalTokens.pagePadding)
                     .frame(maxWidth: LocalTokens.pageMaxWidth, alignment: .leading)
                 }
-                .background(AppSurfaceTokens.background)
+                .background(AppSurfaceTokens.contentBackground)
             },
             trailingRail: {
                 dynamicContinentStatusRail
@@ -184,7 +193,7 @@ struct DynamicContinentConfigView: View {
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     private var dynamicContinentStatusRail: some View {
@@ -215,7 +224,7 @@ struct DynamicContinentConfigView: View {
             }
             .padding(16)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     private func railRow(title: String, value: String) -> some View {
@@ -260,11 +269,11 @@ struct DynamicContinentConfigView: View {
                         .frame(minWidth: LocalTokens.tabMinWidth, alignment: .leading)
                         .background(
                             RoundedRectangle(cornerRadius: LocalTokens.tabCornerRadius, style: .continuous)
-                                .fill(selectedSection == section ? AppSurfaceTokens.cardBackground : AppSurfaceTokens.cardBackgroundSoft.opacity(0.5))
+                                .fill(selectedSection == section ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: LocalTokens.tabCornerRadius, style: .continuous)
-                                .stroke(selectedSection == section ? AppSurfaceTokens.separator : Color.clear, lineWidth: 1)
+                                .stroke(selectedSection == section ? AppSurfaceTokens.separator.opacity(0.7) : Color.clear, lineWidth: 1)
                         )
                         .foregroundStyle(selectedSection == section ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
                     }
@@ -288,10 +297,52 @@ struct DynamicContinentConfigView: View {
     }
 
     private var overviewAppearancePage: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 14) {
-                NotchPreviewCard()
-                    .frame(height: 150)
+        VStack(alignment: .leading, spacing: 16) {
+            AppSurfaceCard(title: "灵动大陆", subtitle: "当前配置与预览概览", padding: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("灵动大陆正在作为伴随能力的主配置中心运行。")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                        Text("这里集中管理启用、展开、HUD、模块可见性和调试入口。")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(spacing: 8) {
+                        infoStatChip(title: "启用", value: viewModel.isEnabled ? "已启用" : "已关闭", tint: viewModel.isEnabled ? .green : .gray)
+                        infoStatChip(title: "模块", value: "\(viewModel.activeModuleCount)", tint: .blue)
+                        infoStatChip(title: "展示", value: "\(viewModel.overviewVisibleModules.count)/\(viewModel.modules.count)", tint: .orange)
+                    }
+                }
+            }
+
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
+                AppSurfaceCard(title: "配置到预览", subtitle: "每次修改都会同步刷新这里的示意区", padding: 14) {
+                    VStack(alignment: .leading, spacing: LocalTokens.previewCardGap) {
+                        HStack(spacing: LocalTokens.previewCardGap) {
+                            previewSurfaceCard(
+                                title: "收起态",
+                                subtitle: collapsedPreviewSubtitle,
+                                accent: .blue,
+                                contentIDs: previewContentIDs(for: .collapsed)
+                            )
+
+                            previewSurfaceCard(
+                                title: "展开态",
+                                subtitle: primaryPreviewSubtitle,
+                                accent: .green,
+                                contentIDs: previewContentIDs(for: .primary)
+                            )
+                        }
+
+                        previewStatusStrip
+                    }
+                }
 
                 HStack(spacing: 12) {
                     statusCard(title: "状态", value: viewModel.currentStateText, icon: "power", color: viewModel.currentStateColor)
@@ -303,20 +354,14 @@ struct DynamicContinentConfigView: View {
                 moduleManagementSection
                 runtimeContentSection
 
-                VStack(alignment: .leading, spacing: 0) {
-                    infoRow(icon: "checkmark.seal", title: "视觉原则", desc: "展开时只保留一层信息密度。")
-                    Divider()
-                    infoRow(icon: "rectangle.expand.vertical", title: "展开态", desc: "状态条 + 主模块 + HUD。")
-                    Divider()
-                    infoRow(icon: "arrow.up.left.and.arrow.down.right", title: "收起态", desc: "只保留最低存在感。")
+                AppSurfaceCard(title: "视觉原则", subtitle: "展开时只保留一层信息密度。", padding: 12) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        infoRow(icon: "rectangle.expand.vertical", title: "展开态", desc: "状态条 + 主模块 + HUD。")
+                        Divider()
+                        infoRow(icon: "arrow.up.left.and.arrow.down.right", title: "收起态", desc: "只保留最低存在感。")
+                    }
                 }
-                .padding(.vertical, 4)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
+                }
             }
             .frame(maxWidth: .infinity)
 
@@ -354,8 +399,172 @@ struct DynamicContinentConfigView: View {
                         .controlSize(.small)
                     }
                 }
+
+                summaryBlock(title: "硬件提示", icon: "cpu", color: .gray) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        infoPair(
+                            title: "刘海机型",
+                            value: viewModel.nonNotchCollapsedWidth > 0 ? "已适配" : "未配置"
+                        )
+                        infoPair(
+                            title: "录屏权限",
+                            value: permissionManager.statuses[.screenRecording]?.displayName ?? "未知"
+                        )
+                        infoPair(
+                            title: "麦克风权限",
+                            value: permissionManager.statuses[.microphone]?.displayName ?? "未知"
+                        )
+                    }
+                }
             }
             .frame(width: 240)
+        }
+    }
+
+    private func infoStatChip(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 10))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .fill(tint.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .stroke(tint.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    private var collapsedPreviewSubtitle: String {
+        let text = [
+            viewModel.showCollapsedSubtitle ? "副标题" : nil,
+            viewModel.showCollapsedStatusDots ? "状态点" : nil
+        ]
+        .compactMap { $0 }
+        .joined(separator: " · ")
+        return text.isEmpty ? "最小呈现" : text
+    }
+
+    private var primaryPreviewSubtitle: String {
+        [
+            viewModel.isEnabled ? "启用" : "关闭",
+            viewModel.autoExpand ? "自动展开" : "手动切换",
+            viewModel.showSystemEventHUD ? "HUD 开启" : "HUD 关闭"
+        ]
+        .joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var previewStatusStrip: some View {
+        HStack(spacing: 8) {
+            previewBadge(title: "启用", value: viewModel.isEnabled ? "开" : "关", tint: viewModel.isEnabled ? .green : .gray)
+            previewBadge(title: "自动", value: viewModel.autoExpand ? "开" : "关", tint: viewModel.autoExpand ? .blue : .gray)
+            previewBadge(title: "HUD", value: viewModel.showSystemEventHUD ? "开" : "关", tint: viewModel.showSystemEventHUD ? .orange : .gray)
+            previewBadge(title: "录屏", value: permissionManager.statuses[.screenRecording]?.displayName ?? "未知", tint: permissionManager.statuses[.screenRecording] == .authorized ? .green : .orange)
+        }
+    }
+
+    private func previewContentIDs(for scope: NotchRuntimeSurfaceScope) -> [CompanionRuntimeContentID] {
+        let allowedSet = switch scope {
+        case .collapsed:
+            viewModel.collapsedVisibleContents
+        case .primary:
+            viewModel.primarySurfaceContents
+        }
+        return CompanionRuntimeContentID.allCases.filter { allowedSet.contains($0) }
+    }
+
+    private func previewSurfaceCard(
+        title: String,
+        subtitle: String,
+        accent: Color,
+        contentIDs: [CompanionRuntimeContentID]
+    ) -> some View {
+        AppSurfaceCard(title: title, subtitle: subtitle, padding: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                    .fill(accent.opacity(0.08))
+                    .frame(height: LocalTokens.previewSurfaceMinHeight)
+                    .overlay(
+                        VStack(spacing: 8) {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(AppSurfaceTokens.primaryText.opacity(0.25))
+                                    .frame(width: 7, height: 7)
+                                Spacer()
+                                Text("灵动大陆")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(AppSurfaceTokens.primaryText.opacity(0.7))
+                                Spacer()
+                                Circle()
+                                    .fill(accent)
+                                    .frame(width: 7, height: 7)
+                            }
+
+                            HStack(spacing: 6) {
+                                ForEach(Array(contentIDs.prefix(3)), id: \.self) { content in
+                                    Text(content.displayName)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(accent)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(accent.opacity(0.12))
+                                        )
+                                }
+                                if contentIDs.count > 3 {
+                                    Text("+\(contentIDs.count - 3)")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .padding(12)
+                    )
+            }
+        }
+    }
+
+    private func previewBadge(title: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 10))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(tint.opacity(0.12))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func infoPair(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 11))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
         }
     }
 
@@ -382,133 +591,97 @@ struct DynamicContinentConfigView: View {
     }
 
     private func statusCard(title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 11))
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.system(size: LocalTokens.captionSize))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+        AppSurfaceCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(color)
+                    Text(title)
+                        .font(.system(size: LocalTokens.captionSize, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+                Text(value)
+                    .font(.system(size: LocalTokens.sectionTitleSize, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
             }
-            Text(value)
-                .font(.system(size: LocalTokens.sectionTitleSize, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(LocalTokens.secondaryCardRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: LocalTokens.secondaryCardRadius)
-                .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-        )
     }
 
     private var moduleManagementSection: some View {
-        VStack(alignment: .leading, spacing: LocalTokens.contentRowGap) {
-            Text("展示模块")
-                .font(.system(size: LocalTokens.sectionTitleSize, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+        AppSurfaceCard(title: "展示模块", subtitle: "固定外壳下的模块开关", padding: 14) {
+            VStack(alignment: .leading, spacing: LocalTokens.contentRowGap) {
+                ForEach(viewModel.modules) { module in
+                    AppSurfaceCard(padding: 12) {
+                        VStack(spacing: 8) {
+                            HStack(spacing: 12) {
+                                Image(systemName: module.id.icon)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(AppSurfaceTokens.accentBlue)
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(module.id.displayName)
+                                        .font(.system(size: LocalTokens.cardTitleSize, weight: .medium))
+                                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                                    Text(moduleSummary(for: module.id.displayName))
+                                        .font(.system(size: LocalTokens.captionSize))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { viewModel.isModuleEnabled(module.id) },
+                                    set: { viewModel.setModuleEnabled(module.id, isEnabled: $0) }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                            }
 
-            ForEach(viewModel.modules) { module in
-                VStack(spacing: 8) {
-                    HStack(spacing: 12) {
-                        Image(systemName: module.id.icon)
-                            .font(.system(size: 13))
-                            .foregroundStyle(AppSurfaceTokens.accentBlue)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(module.id.displayName)
-                                .font(.system(size: LocalTokens.cardTitleSize, weight: .medium))
-                                .foregroundStyle(AppSurfaceTokens.primaryText)
-                            Text(moduleSummary(for: module.id.displayName))
-                                .font(.system(size: LocalTokens.captionSize))
-                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            HStack(spacing: 12) {
+                                Text("参与总览")
+                                    .font(.system(size: LocalTokens.captionSize))
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { viewModel.isOverviewModuleVisible(module.id) },
+                                    set: { viewModel.setOverviewModuleVisible(module.id, isVisible: $0) }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .disabled(viewModel.isModuleEnabled(module.id) == false)
+                            }
+                            .padding(.leading, 36)
                         }
-                        Spacer()
-                        Toggle("", isOn: Binding(
-                            get: { viewModel.isModuleEnabled(module.id) },
-                            set: { viewModel.setModuleEnabled(module.id, isEnabled: $0) }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
                     }
-
-                    HStack(spacing: 12) {
-                        Text("参与总览")
-                            .font(.system(size: LocalTokens.captionSize))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        Spacer()
-                        Toggle("", isOn: Binding(
-                            get: { viewModel.isOverviewModuleVisible(module.id) },
-                            set: { viewModel.setOverviewModuleVisible(module.id, isVisible: $0) }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .disabled(viewModel.isModuleEnabled(module.id) == false)
-                    }
-                    .padding(.leading, 36)
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(AppSurfaceTokens.cardBackground)
-                .cornerRadius(LocalTokens.inlineBlockRadius)
-                .overlay(
-                    RoundedRectangle(cornerRadius: LocalTokens.inlineBlockRadius)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.5), lineWidth: 1)
-                )
             }
         }
-        .padding(14)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(LocalTokens.secondaryCardRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: LocalTokens.secondaryCardRadius)
-                .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-        )
     }
 
     private var runtimeContentSection: some View {
-        VStack(alignment: .leading, spacing: LocalTokens.contentRowGap) {
-            Text("运行时编排")
-                .font(.system(size: LocalTokens.sectionTitleSize, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+        AppSurfaceCard(title: "运行时编排", subtitle: "把收起态与主内容分开看", padding: 14) {
+            VStack(alignment: .leading, spacing: LocalTokens.contentRowGap) {
+                ForEach(CompanionRuntimeContentID.allCases) { content in
+                    let iconName = runtimeContentIcon(for: content)
+                    let summary = runtimeContentSummary(for: content)
 
-            ForEach(CompanionRuntimeContentID.allCases) { content in
-                let iconName = runtimeContentIcon(for: content)
-                let summary = runtimeContentSummary(for: content)
-
-                RuntimeContentRow(
-                    iconName: iconName,
-                    title: content.displayName,
-                    summary: summary,
-                    collapsedIsOn: Binding(
-                        get: { viewModel.isRuntimeContentVisible(content, scope: .collapsed) },
-                        set: { viewModel.setRuntimeContentVisible(content, scope: .collapsed, isVisible: $0) }
-                    ),
-                    primaryIsOn: Binding(
-                        get: { viewModel.isRuntimeContentVisible(content, scope: .primary) },
-                        set: { viewModel.setRuntimeContentVisible(content, scope: .primary, isVisible: $0) }
-                    )
-                )
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(AppSurfaceTokens.cardBackground)
-                .cornerRadius(LocalTokens.inlineBlockRadius)
-                .overlay(
-                    RoundedRectangle(cornerRadius: LocalTokens.inlineBlockRadius)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.5), lineWidth: 1)
-                )
+                    AppSurfaceCard(padding: 12) {
+                        RuntimeContentRow(
+                            iconName: iconName,
+                            title: content.displayName,
+                            summary: summary,
+                            collapsedIsOn: Binding(
+                                get: { viewModel.isRuntimeContentVisible(content, scope: .collapsed) },
+                                set: { viewModel.setRuntimeContentVisible(content, scope: .collapsed, isVisible: $0) }
+                            ),
+                            primaryIsOn: Binding(
+                                get: { viewModel.isRuntimeContentVisible(content, scope: .primary) },
+                                set: { viewModel.setRuntimeContentVisible(content, scope: .primary, isVisible: $0) }
+                            )
+                        )
+                    }
+                }
             }
         }
-        .padding(14)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(LocalTokens.secondaryCardRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: LocalTokens.secondaryCardRadius)
-                .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-        )
     }
 
     private struct RuntimeContentRow: View {
@@ -558,89 +731,78 @@ struct DynamicContinentConfigView: View {
     private var behaviorPage: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 12) {
-                    statusCard(title: "当前状态", value: viewModel.currentStateText, icon: "rectangle.expand.vertical", color: viewModel.currentStateColor)
-                    statusCard(
-                        title: "热区",
-                        value: SettingsStatusLabelFormatter.binaryState(
-                            isEnabled: hotCornerViewModel.settings.isEnabled,
-                            enabledText: "已启用",
-                            disabledText: "已关闭"
-                        ),
-                        icon: "hand.tap",
-                        color: hotCornerViewModel.settings.isEnabled ? .green : .gray
-                    )
-                }
-                .frame(height: 92)
+                AppSurfaceCard(padding: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 12) {
+                            statusCard(title: "当前状态", value: viewModel.currentStateText, icon: "rectangle.expand.vertical", color: viewModel.currentStateColor)
+                            statusCard(
+                                title: "热区",
+                                value: SettingsStatusLabelFormatter.binaryState(
+                                    isEnabled: hotCornerViewModel.settings.isEnabled,
+                                    enabledText: "已启用",
+                                    disabledText: "已关闭"
+                                ),
+                                icon: "hand.tap",
+                                color: hotCornerViewModel.settings.isEnabled ? .green : .gray
+                            )
+                        }
+                        .frame(height: 92)
 
-                VStack(alignment: .leading, spacing: 0) {
-                    compactToggleRow("启用灵动大陆", isOn: $viewModel.isEnabled)
-                    Divider()
-                    compactToggleRow("自动展开", isOn: $viewModel.autoExpand)
-                    Divider()
-                    compactToggleRow("所有显示器显示", isOn: $viewModel.showOnAllDisplays)
-                    Divider()
-                    compactToggleRow("自动切换显示器", isOn: $viewModel.autoSwitchDisplays)
-                    Divider()
-                    compactToggleRow("全屏时隐藏", isOn: $viewModel.hideInFullscreen)
-                    Divider()
-                    compactToggleRow("屏幕录制时隐藏", isOn: $viewModel.hideWhenScreenRecording)
-                }
-                .padding(.vertical, 4)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
+                        AppSurfaceCard(padding: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
+                            compactToggleRow("启用灵动大陆", isOn: $viewModel.isEnabled)
+                            Divider()
+                            compactToggleRow("自动展开", isOn: $viewModel.autoExpand)
+                            Divider()
+                            compactToggleRow("所有显示器显示", isOn: $viewModel.showOnAllDisplays)
+                            Divider()
+                            compactToggleRow("自动切换显示器", isOn: $viewModel.autoSwitchDisplays)
+                            Divider()
+                            compactToggleRow("全屏时隐藏", isOn: $viewModel.hideInFullscreen)
+                            Divider()
+                            compactToggleRow("屏幕录制时隐藏", isOn: $viewModel.hideWhenScreenRecording)
+                            }
+                        }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("悬停展开延迟")
-                            .font(.system(size: 14))
-                        Spacer()
-                        Text("\(viewModel.hoverExpandDelay, specifier: "%.1f") 秒")
-                            .font(.system(size: 14))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        AppSurfaceCard(padding: 14) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("悬停展开延迟")
+                                        .font(.system(size: 14))
+                                    Spacer()
+                                    Text("\(viewModel.hoverExpandDelay, specifier: "%.1f") 秒")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+                                Slider(value: $viewModel.hoverExpandDelay, in: 0.5...3.0, step: 0.1)
+                                    .frame(height: 24)
+                            }
+                        }
+
+                        AppSurfaceCard(padding: 14) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("非刘海屏收起宽度")
+                                        .font(.system(size: 14))
+                                    Spacer()
+                                    Text("\(Int(viewModel.nonNotchCollapsedWidth.rounded())) pt")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                }
+                                Slider(value: $viewModel.nonNotchCollapsedWidth, in: 185...240, step: 1)
+                                    .frame(height: 24)
+
+                                Divider()
+
+                                compactToggleRow("显示收起副标题", isOn: $viewModel.showCollapsedSubtitle)
+                                Divider()
+                                compactToggleRow("显示状态小点", isOn: $viewModel.showCollapsedStatusDots)
+                            }
+                        }
+
+                        hotZoneSection
                     }
-                    Slider(value: $viewModel.hoverExpandDelay, in: 0.5...3.0, step: 0.1)
-                        .frame(height: 24)
                 }
-                .padding(14)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("非刘海屏收起宽度")
-                            .font(.system(size: 14))
-                        Spacer()
-                        Text("\(Int(viewModel.nonNotchCollapsedWidth.rounded())) pt")
-                            .font(.system(size: 14))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    }
-                    Slider(value: $viewModel.nonNotchCollapsedWidth, in: 185...240, step: 1)
-                        .frame(height: 24)
-
-                    Divider()
-
-                    compactToggleRow("显示收起副标题", isOn: $viewModel.showCollapsedSubtitle)
-                    Divider()
-                    compactToggleRow("显示状态小点", isOn: $viewModel.showCollapsedStatusDots)
-                }
-                .padding(14)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
-
-                hotZoneSection
             }
             .frame(maxWidth: .infinity)
 
@@ -761,59 +923,52 @@ struct DynamicContinentConfigView: View {
     private var permissionsDebugPage: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 14) {
-                VStack(spacing: 0) {
-                    permissionRow(.accessibility)
-                    Divider()
-                    permissionRow(.microphone)
-                    Divider()
-                    permissionRow(.screenRecording)
-                    Divider()
-                    permissionTextRow(
-                        title: "日历",
-                        detail: calendarPermissionText,
-                        accent: .blue
-                    )
-                    Divider()
-                    permissionTextRow(
-                        title: "提醒事项",
-                        detail: remindersPermissionText,
-                        accent: .green
-                    )
-                }
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
-
-                HStack {
-                    Button("打开系统设置") {
-                        permissionManager.openPrivacySettings()
+                AppSurfaceCard(padding: 12) {
+                    VStack(spacing: 0) {
+                        permissionRow(.accessibility)
+                        Divider()
+                        permissionRow(.microphone)
+                        Divider()
+                        permissionRow(.screenRecording)
+                        Divider()
+                        permissionTextRow(
+                            title: "日历",
+                            detail: calendarPermissionText,
+                            accent: .blue
+                        )
+                        Divider()
+                        permissionTextRow(
+                            title: "提醒事项",
+                            detail: remindersPermissionText,
+                            accent: .green
+                        )
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-
-                    Spacer()
-
-                    Text("权限异常时查看这里。")
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
-                VStack(alignment: .leading, spacing: 0) {
-                    compactToggleRow("调试模式", isOn: $viewModel.debugMode)
-                    Divider()
-                    compactToggleRow("显示性能指标", isOn: $viewModel.showPerformanceMetrics)
+                AppSurfaceCard(padding: 12) {
+                    HStack {
+                        Button("打开系统设置") {
+                            permissionManager.openPrivacySettings()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+
+                        Spacer()
+
+                        Text("权限异常时查看这里。")
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
                 }
-                .padding(.vertical, 4)
-                .frame(maxWidth: 520)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
+
+                AppSurfaceCard(padding: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        compactToggleRow("调试模式", isOn: $viewModel.debugMode)
+                        Divider()
+                        compactToggleRow("显示性能指标", isOn: $viewModel.showPerformanceMetrics)
+                    }
+                    .frame(maxWidth: 520)
+                }
 
                 Text("修改可能影响稳定性。")
                     .font(.system(size: 11))
@@ -855,12 +1010,10 @@ struct DynamicContinentConfigView: View {
     }
 
     private var hotZoneSection: some View {
-        VStack(alignment: .leading, spacing: LocalTokens.contentRowGap) {
-            Text("热区配置")
-                .font(.system(size: LocalTokens.sectionTitleSize, weight: .semibold))
-
+        AppSurfaceCard(title: "热区配置", subtitle: "桌面四角与收起语义", padding: 0) {
             if hotCornerViewModel.isLoading {
                 ProgressView("正在加载热区设置")
+                    .padding(14)
             } else {
                 VStack(spacing: 0) {
                     compactToggleRow("启用桌面四角热区", isOn: $hotCornerViewModel.settings.isEnabled)
@@ -926,12 +1079,6 @@ struct DynamicContinentConfigView: View {
                         .padding(.vertical, 10)
                     }
                 }
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(LocalTokens.secondaryCardRadius)
-                .overlay(
-                    RoundedRectangle(cornerRadius: LocalTokens.secondaryCardRadius)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
-                )
             }
         }
         .sheet(item: $editingHotCorner) { position in
@@ -963,15 +1110,15 @@ struct DynamicContinentConfigView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(position)
                     .font(.system(size: LocalTokens.cardTitleSize))
-                        Text(
-                            SettingsStatusLabelFormatter.binaryState(
-                                isEnabled: binding.isEnabled,
-                                enabledText: "已启用 · 停留 \(binding.hoverDelay.formatted(.number.precision(.fractionLength(1))))s",
-                                disabledText: "已关闭"
-                            )
+                Text(
+                    SettingsStatusLabelFormatter.binaryState(
+                        isEnabled: binding.isEnabled,
+                        enabledText: "已启用 · 停留 \(binding.hoverDelay.formatted(.number.precision(.fractionLength(1))))s",
+                            disabledText: "已关闭"
                         )
-                    .font(.system(size: LocalTokens.captionSize))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                )
+                .font(.system(size: LocalTokens.captionSize))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
@@ -1150,25 +1297,19 @@ struct DynamicContinentConfigView: View {
         color: Color,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.system(size: LocalTokens.cardTitleSize, weight: .semibold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
+        AppSurfaceCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(color)
+                    Text(title)
+                        .font(.system(size: LocalTokens.cardTitleSize, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                }
+                content()
             }
-            content()
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(LocalTokens.inlineBlockRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: LocalTokens.inlineBlockRadius)
-                .stroke(AppSurfaceTokens.separator.opacity(0.6), lineWidth: 1)
-        )
     }
 
     private func samplingItem(_ title: String, value: String, color: Color) -> some View {
@@ -1208,57 +1349,6 @@ struct DynamicContinentConfigView: View {
     }
 }
 
-struct NotchPreviewCard: View {
-    private enum LocalTokens {
-        static let previewHeight: CGFloat = 120
-        static let cardRadius: CGFloat = 14
-        static let contentPadding: CGFloat = 14
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Notch 预览")
-                .font(.system(size: 14, weight: .semibold))
-
-            ZStack {
-                RoundedRectangle(cornerRadius: LocalTokens.cardRadius)
-                    .fill(AppSurfaceTokens.primaryText.opacity(0.96))
-                    .frame(height: LocalTokens.previewHeight)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: LocalTokens.cardRadius)
-                            .stroke(AppSurfaceTokens.background.opacity(0.08), lineWidth: 1)
-                    )
-
-                HStack {
-                    Circle()
-                        .fill(AppSurfaceTokens.secondaryText.opacity(0.3))
-                        .frame(width: 8, height: 8)
-
-                    Spacer()
-
-                    Text("灵动大陆")
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppSurfaceTokens.background.opacity(0.7))
-
-                    Spacer()
-
-                    Circle()
-                        .fill(AppSurfaceTokens.accentGreen)
-                        .frame(width: 8, height: 8)
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-        .padding(LocalTokens.contentPadding)
-        .background(AppSurfaceTokens.cardBackground)
-        .cornerRadius(LocalTokens.cardRadius)
-        .overlay(
-            RoundedRectangle(cornerRadius: LocalTokens.cardRadius)
-                .stroke(AppSurfaceTokens.separator, lineWidth: 1)
-        )
-    }
-}
-
 @MainActor
 final class HotCornerConfigViewModel: ObservableObject {
     @Published var settings: HotCornerSettings = .defaultSettings
@@ -1267,9 +1357,9 @@ final class HotCornerConfigViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
 
-    private let settingsService: HotCornerSettingsStore
+    private let settingsService: SettingsServiceProtocol
 
-    init(settingsService: HotCornerSettingsStore = SettingsService()) {
+    init(settingsService: SettingsServiceProtocol) {
         self.settingsService = settingsService
 
         Task {
@@ -1396,7 +1486,11 @@ enum HotCornerFeaturePreset: String, CaseIterable, Identifiable {
 
 enum HotCornerRoutePreset {
     static func displayName(for identifier: String) -> String {
-        SidebarItem(rawValue: identifier)?.displayName ?? identifier
+        guard let item = SidebarItem(rawValue: identifier) else {
+            return SidebarItem.home.displayName
+        }
+
+        return item == .clipboard ? SidebarItem.inbox.displayName : item.displayName
     }
 }
 

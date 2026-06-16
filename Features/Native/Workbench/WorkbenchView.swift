@@ -6,21 +6,59 @@ import AcMindKit
 // 工作台 - Obsidian / 项目 / 知识沉淀空间
 
 struct WorkbenchView: View {
-    @StateObject private var viewModel = WorkbenchViewModel()
+    @StateObject private var viewModel: WorkbenchViewModel
+
+    init(viewModel: WorkbenchViewModel = WorkbenchViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // 左侧导航
+        AcWorkShell(
+            title: "工作台",
+            subtitle: "Obsidian / 项目 / 知识沉淀空间",
+            headerActions: AnyView(
+                HStack(spacing: 8) {
+                    Button(action: { viewModel.presentNewProjectEditor() }) {
+                        Label("新建项目", systemImage: "plus")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(action: { viewModel.presentNewNoteEditor() }) {
+                        Label("新建笔记", systemImage: "square.and.pencil")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            ),
+            searchContent: AnyView(
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .font(.caption)
+
+                    TextField("搜索笔记...", text: $viewModel.searchQuery)
+                        .textFieldStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(width: 260)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+                )
+            ),
+            leadingRailWidth: 184,
+            trailingRailWidth: 0,
+            usesResponsiveInspector: false,
+            windowWidthOffset: 0
+        ) {
             sidebar
-                .frame(width: 184)
-                .background(AppSurfaceTokens.secondarySidebarBackground)
-
-            Divider()
-
-            // 右侧内容
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(AppSurfaceTokens.cardBackground.opacity(0.96))
+        } content: {
             content
+        } trailingRail: {
+            EmptyView()
         }
-        .background(AppSurfaceTokens.background)
         .sheet(item: $viewModel.projectEditorDraft) { draft in
             WorkbenchProjectEditorSheet(
                 draft: draft,
@@ -57,111 +95,90 @@ struct WorkbenchView: View {
     private var sidebar: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // 今日整理
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("今日整理")
-                            .font(.headline)
-
-                        Spacer()
-
-                        Text("\(viewModel.todayItems.count)")
-                            .font(.caption)
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(4)
-                    }
-
-                    if viewModel.todayItems.isEmpty {
-                        Text("今日暂无待整理内容")
-                            .font(.caption)
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    } else {
-                        ForEach(viewModel.todayItems) { item in
-                            WorkbenchSidebarItemRow(item: item)
-                        }
+                AppSurfaceCard(title: "工作流", subtitle: "项目、笔记、归档分开看", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        workbenchStageRow(title: "项目", detail: "\(viewModel.projects.count) 个项目")
+                        workbenchStageRow(title: "笔记", detail: "\(viewModel.filteredNotes.count) 条可见")
+                        workbenchStageRow(title: "归档", detail: "\(viewModel.pendingArchiveCount) 条待归档")
                     }
                 }
 
-                Divider()
-
-                // 项目笔记
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("项目笔记")
-                            .font(.headline)
-
-                        Spacer()
-
-                        Button(action: { viewModel.presentNewProjectEditor() }) {
-                            Image(systemName: "plus")
+                AppSurfaceCard(title: "今日整理", subtitle: "\(viewModel.todayItems.count) 项", padding: 14) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if viewModel.todayItems.isEmpty {
+                            Text("今日暂无待整理内容")
                                 .font(.caption)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        } else {
+                            ForEach(viewModel.todayItems) { item in
+                                WorkbenchSidebarItemRow(item: item)
+                            }
+                        }
+                    }
+                }
+
+                AppSurfaceCard(
+                    title: "项目笔记",
+                    subtitle: "当前 \(viewModel.projects.count) 个项目",
+                    padding: 14
+                ) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Spacer()
+                            Button(action: { viewModel.presentNewProjectEditor() }) {
+                                Image(systemName: "plus")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        VStack(spacing: 8) {
+                            ForEach(viewModel.projects) { project in
+                                ProjectRow(project: project, isSelected: viewModel.selectedProject?.id == project.id, onEdit: {
+                                    viewModel.editProject(project)
+                                }, onDelete: {
+                                    viewModel.deleteProject(project)
+                                }) {
+                                    viewModel.selectProject(project)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                AppSurfaceCard(title: "Obsidian", subtitle: "外部知识库入口", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button(action: { viewModel.openObsidian() }) {
+                            HStack {
+                                Image(systemName: "book.closed")
+                                Text("打开 Obsidian")
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: { viewModel.syncWithObsidian() }) {
+                            HStack {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("同步")
+                            }
                         }
                         .buttonStyle(.plain)
                     }
-
-                    ForEach(viewModel.projects) { project in
-                        ProjectRow(project: project, isSelected: viewModel.selectedProject?.id == project.id, onEdit: {
-                            viewModel.editProject(project)
-                        }, onDelete: {
-                            viewModel.deleteProject(project)
-                        }) {
-                            viewModel.selectProject(project)
-                        }
-                    }
                 }
 
-                Divider()
-
-                // Obsidian 入口
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Obsidian")
-                        .font(.headline)
-
-                    Button(action: { viewModel.openObsidian() }) {
-                        HStack {
-                            Image(systemName: "book.closed")
-                            Text("打开 Obsidian")
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: { viewModel.syncWithObsidian() }) {
-                        HStack {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                            Text("同步")
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Divider()
-
-                // 待归档
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("待归档")
-                            .font(.headline)
-
-                        Spacer()
-
-                        Text("\(viewModel.pendingArchiveCount)")
+                AppSurfaceCard(title: "待归档", subtitle: "\(viewModel.pendingArchiveCount) 条", padding: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if viewModel.pendingArchiveCount > 0 {
+                            Button("查看全部") {
+                                viewModel.presentPendingArchive()
+                            }
+                            .buttonStyle(.plain)
                             .font(.caption)
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(4)
-                    }
-
-                    if viewModel.pendingArchiveCount > 0 {
-                        Button("查看全部") {
-                            viewModel.presentPendingArchive()
+                        } else {
+                            Text("当前收集箱里没有待归档内容。")
+                                .font(.caption)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
-                        .buttonStyle(.plain)
-                        .font(.caption)
                     }
                 }
             }
@@ -173,46 +190,45 @@ struct WorkbenchView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            // 头部
-            HStack {
-                if let project = viewModel.selectedProject {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(project.name)
-                            .font(.title2)
-                            .fontWeight(.semibold)
-
-                        Text("\(project.noteCount) 笔记 • 最后更新 \(formatTime(project.lastUpdated))")
-                            .font(.caption)
+            AppSurfaceCard(
+                title: viewModel.selectedProject?.name ?? "工作台",
+                subtitle: viewModel.selectedProject.map { "\($0.noteCount) 笔记 • 最后更新 \(formatTime($0.lastUpdated))" } ?? "项目、笔记和归档拆层",
+                padding: 14
+            ) {
+                HStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .font(.caption)
+
+                        TextField("搜索笔记...", text: $viewModel.searchQuery)
+                            .textFieldStyle(.plain)
+                            .frame(width: 160)
                     }
-                } else {
-                    Text("工作台")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                    .padding(6)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                            .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+                    )
+
+                    Spacer()
+
+                    Button(action: { viewModel.presentNewNoteEditor() }) {
+                        Label("新建笔记", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-
-                Spacer()
-
-                // 搜索
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .font(.caption)
-
-                    TextField("搜索笔记...", text: $viewModel.searchQuery)
-                        .textFieldStyle(.plain)
-                        .frame(width: 160)
-                }
-                .padding(6)
-                .background(AppSurfaceTokens.cardBackgroundSoft)
-                .cornerRadius(6)
-
-                Button(action: { viewModel.presentNewNoteEditor() }) {
-                    Label("新建笔记", systemImage: "plus")
-                }
-                .buttonStyle(.borderedProminent)
             }
             .padding()
+
+            AppSurfaceCard(title: "工作台摘要", subtitle: "按项目、笔记和归档拆层", padding: 14) {
+                HStack(spacing: 10) {
+                    workbenchSummaryMetric(title: "当前项目", value: viewModel.selectedProject?.name ?? "未选择")
+                    workbenchSummaryMetric(title: "可见笔记", value: "\(viewModel.filteredNotes.count)")
+                    workbenchSummaryMetric(title: "待归档", value: "\(viewModel.pendingArchiveCount)")
+                }
+            }
+            .padding(.horizontal)
 
             Divider()
 
@@ -257,6 +273,42 @@ struct WorkbenchView: View {
             return "还没有项目"
         }
         return viewModel.searchQuery.isEmpty ? "暂无笔记" : "未找到匹配内容"
+    }
+
+    private func workbenchStageRow(title: String, detail: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+            Spacer()
+            Text(detail)
+                .font(.system(size: 11))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+        )
+    }
+
+    private func workbenchSummaryMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 11))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+        )
     }
 
     // MARK: - Note List
@@ -317,7 +369,7 @@ struct ProjectRow: View {
             HStack(spacing: 8) {
                 Image(systemName: "folder")
                     .font(.system(size: 14))
-                    .foregroundStyle(isSelected ? AppSurfaceTokens.background : AppSurfaceTokens.secondaryText)
+                    .foregroundStyle(isSelected ? Color.white : AppSurfaceTokens.secondaryText)
 
                 Text(project.name)
                     .font(.body)
@@ -327,12 +379,14 @@ struct ProjectRow: View {
 
                 Text("\(project.noteCount)")
                     .font(.caption)
-                    .foregroundStyle(isSelected ? AppSurfaceTokens.background.opacity(0.7) : AppSurfaceTokens.secondaryText)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.82) : AppSurfaceTokens.secondaryText)
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
-                .background(isSelected ? AppSurfaceTokens.accentBlue : (isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear))
-            .cornerRadius(6)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? AppSurfaceTokens.accentBlue : (isHovered ? AppSurfaceTokens.cardBackground.opacity(0.96) : Color.clear))
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .onHover { hovering in
@@ -361,7 +415,7 @@ struct NoteRow: View {
         HStack(spacing: 12) {
             // 类型图标
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(AppSurfaceTokens.accentPrimary.opacity(0.12))
                     .frame(width: 40, height: 40)
 
@@ -385,8 +439,10 @@ struct NoteRow: View {
                                     .font(.caption2)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 1)
-                                    .background(AppSurfaceTokens.cardBackgroundSoft)
-                                    .cornerRadius(3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
+                                    )
                             }
                         }
                     }
@@ -425,7 +481,10 @@ struct NoteRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(isHovered ? AppSurfaceTokens.cardBackgroundSoft : Color.clear)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isHovered ? AppSurfaceTokens.cardBackground.opacity(0.94) : Color.clear)
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -568,9 +627,11 @@ class WorkbenchViewModel: ObservableObject {
         }
     }
 
-    init(storage: StorageServiceProtocol = StorageService()) {
+    init(storage: StorageServiceProtocol = StorageService(), shouldLoadData: Bool = true) {
         self.storage = storage
-        loadData()
+        if shouldLoadData {
+            loadData()
+        }
     }
 
     private func loadData() {
@@ -946,12 +1007,7 @@ struct WorkbenchNoteEditorSheet: View {
             TextField("标题", text: $title)
                 .textFieldStyle(.roundedBorder)
 
-            TextEditor(text: $content)
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.2), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $content, minHeight: 220)
 
             TextField("标签，使用逗号分隔", text: $tags)
                 .textFieldStyle(.roundedBorder)
@@ -1015,8 +1071,14 @@ struct WorkbenchArchiveSheet: View {
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
                         .padding(12)
-                        .background(AppSurfaceTokens.cardBackgroundSoft)
-                        .cornerRadius(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                                .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
+                        )
                     }
 
                     if items.isEmpty {
@@ -1030,6 +1092,6 @@ struct WorkbenchArchiveSheet: View {
         }
         .padding(20)
         .frame(width: 560, height: 420)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
     }
 }

@@ -195,8 +195,16 @@ public struct ScreenshotCapturePreviewView: View {
                 }
                 .keyboardShortcut(.return)
             }
-            .padding()
-            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+            )
             
             // 预览区域
             ScrollView([.horizontal, .vertical]) {
@@ -272,6 +280,10 @@ public struct ScreenshotToolbarView: View {
         .background(
             Capsule()
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    Capsule()
+                        .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+                )
                 .shadow(radius: 8)
         )
     }
@@ -307,8 +319,12 @@ private struct ToolbarButton: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())

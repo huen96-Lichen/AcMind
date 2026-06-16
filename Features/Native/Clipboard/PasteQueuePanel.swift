@@ -71,8 +71,14 @@ struct PasteQueuePanel: View {
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
-                        .background(AppSurfaceTokens.cardBackgroundSoft)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .background(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
+                        )
                     }
                 }
 
@@ -93,7 +99,7 @@ struct PasteQueuePanel: View {
                         .padding(.vertical, 6)
                         .background(AppSurfaceTokens.accentBlue)
                         .foregroundStyle(AppSurfaceTokens.primaryText)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -101,8 +107,14 @@ struct PasteQueuePanel: View {
             }
         }
         .padding(12)
-        .background(AppSurfaceTokens.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+        )
         .onAppear {
             queueItems = viewModel.getQueueItems()
         }

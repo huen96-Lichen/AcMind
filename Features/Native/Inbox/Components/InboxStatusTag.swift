@@ -12,6 +12,6 @@ struct InboxStatusTag: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(status.tagBgColor)
-            .cornerRadius(4)
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
     }
 }

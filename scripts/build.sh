@@ -36,6 +36,7 @@ APP_NAME="AcMind"
 SCHEME="AcMind"
 PROJECT="AcMind.xcodeproj"
 BUNDLE_ID="com.acore.acmind"
+HELPER_NAME="com.acmind.systemstatus.helper"
 
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -125,6 +126,11 @@ echo -e "${BLUE}📦 解析 Swift 依赖...${NC}"
 swift package resolve
 echo -e "${GREEN}✅ 依赖解析完成${NC}"
 
+echo -e "${BLUE}🧩 构建 system status helper...${NC}"
+HELPER_SWIFT_CONFIGURATION="$(printf '%s' "$CONFIGURATION" | tr '[:upper:]' '[:lower:]')"
+swift build -c "$HELPER_SWIFT_CONFIGURATION" --product AcMindSystemStatusHelper
+echo -e "${GREEN}✅ helper 构建完成${NC}"
+
 # =============================================================================
 # 构建
 # =============================================================================
@@ -152,6 +158,25 @@ if [ ! -d "$APP_PATH" ]; then
 fi
 
 echo -e "${GREEN}✅ 构建完成: $APP_PATH${NC}"
+
+# =============================================================================
+# 注入 helper 二进制
+# =============================================================================
+echo -e "${BLUE}🧷 注入 helper 到 App Bundle...${NC}"
+HELPER_BUILD_DIR="$PROJECT_DIR/.build/$([[ "$CONFIGURATION" == "Release" ]] && echo "release" || echo "debug")"
+HELPER_BINARY="$HELPER_BUILD_DIR/AcMindSystemStatusHelper"
+HELPER_DEST_DIR="$APP_PATH/Contents/Library/LaunchServices"
+HELPER_DEST="$HELPER_DEST_DIR/$HELPER_NAME"
+
+if [ ! -f "$HELPER_BINARY" ]; then
+    echo -e "${RED}❌ helper 二进制未找到: $HELPER_BINARY${NC}"
+    exit 1
+fi
+
+mkdir -p "$HELPER_DEST_DIR"
+cp -f "$HELPER_BINARY" "$HELPER_DEST"
+chmod 755 "$HELPER_DEST"
+echo -e "${GREEN}✅ helper 已注入: $HELPER_DEST${NC}"
 
 # =============================================================================
 # 复制 Info.plist

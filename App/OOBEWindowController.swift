@@ -80,8 +80,10 @@ final class OOBEWindowController: NSObject {
             backing: .buffered,
             defer: false
         )
-        w.title = "AcMind 设置向导"
+        w.title = "\(AcWorkBrand.displayName) 设置向导"
         w.isReleasedWhenClosed = false
+        w.isOpaque = false
+        w.backgroundColor = .clear
         w.delegate = self
         
         guard let cv = w.contentView else { return }
@@ -233,7 +235,7 @@ final class OOBEWindowController: NSObject {
         icon.widthAnchor.constraint(equalToConstant: 96).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 96).isActive = true
         
-        let title = NSTextField(labelWithString: "欢迎使用 AcMind")
+        let title = NSTextField(labelWithString: "欢迎使用 \(AcWorkBrand.displayName)")
         title.font = .systemFont(ofSize: 26, weight: .semibold)
         title.alignment = .center
         
@@ -242,7 +244,7 @@ final class OOBEWindowController: NSObject {
         tagline.textColor = .labelColor
         tagline.alignment = .center
         
-        let subtitle = NSTextField(labelWithString: "接下来我们将引导您完成基本设置，让 AcMind 更好地为您服务。")
+        let subtitle = NSTextField(labelWithString: "接下来我们将引导您完成基本设置，让 \(AcWorkBrand.displayName) 更好地为您服务。")
         subtitle.font = .systemFont(ofSize: 13)
         subtitle.textColor = .secondaryLabelColor
         subtitle.alignment = .center
@@ -287,7 +289,7 @@ final class OOBEWindowController: NSObject {
         v.addArrangedSubview(heading)
         v.setCustomSpacing(6, after: heading)
         
-        let sub = NSTextField(labelWithString: "AcMind 需要以下权限才能正常工作，请依次授予：")
+        let sub = NSTextField(labelWithString: "\(AcWorkBrand.displayName) 需要以下权限才能正常工作，请依次授予：")
         sub.font = .systemFont(ofSize: 12.5)
         sub.textColor = .secondaryLabelColor
         sub.lineBreakMode = .byWordWrapping
@@ -507,7 +509,7 @@ final class OOBEWindowController: NSObject {
         title.font = .systemFont(ofSize: 24, weight: .semibold)
         title.alignment = .center
         
-        let body = NSTextField(labelWithString: "AcMind 已准备就绪。按住 Fn 键开始语音输入。")
+        let body = NSTextField(labelWithString: "\(AcWorkBrand.displayName) 已准备就绪。按住 Fn 键开始语音输入。")
         body.font = .systemFont(ofSize: 13)
         body.textColor = .secondaryLabelColor
         body.alignment = .center

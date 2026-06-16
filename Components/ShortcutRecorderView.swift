@@ -34,11 +34,11 @@ struct ShortcutRecorderView: View {
             .padding(.vertical, 6)
             .frame(minWidth: 120)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isRecording ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(isRecording ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackground.opacity(0.94))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                     .stroke(isRecording ? AppSurfaceTokens.accentBlue.opacity(0.5) : AppSurfaceTokens.separator.opacity(0.6), lineWidth: 1)
             )
         }

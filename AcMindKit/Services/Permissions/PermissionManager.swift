@@ -88,6 +88,31 @@ public enum AppPermissionStatus: Sendable, Hashable {
         if case .requesting = self { return false }
         return true
     }
+
+    public var isAuthorized: Bool {
+        self == .authorized
+    }
+
+    public var unavailableReason: String? {
+        switch self {
+        case .authorized:
+            return nil
+        case .unknown:
+            return "权限状态尚未检查"
+        case .notDetermined:
+            return "尚未授予权限"
+        case .requesting:
+            return "正在等待系统授权"
+        case .denied:
+            return "权限已被拒绝，请前往系统设置开启"
+        case .restricted:
+            return "权限受到系统限制"
+        case .needsSystemSettings:
+            return "需要在系统设置中手动开启"
+        case .failed(let message):
+            return "权限检查失败：\(message)"
+        }
+    }
 }
 
 // MARK: - Permission Manager

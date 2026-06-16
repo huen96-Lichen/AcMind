@@ -152,7 +152,7 @@ public enum AppNotificationStrategy {
     }
 
     public static var strategySummary: String {
-        "AcMind 前台优先内联提示；终端 / 编辑器前台默认静默；系统通知不可用时回退 AppleScript；重要通知可强制发送。"
+        "AcWork 前台优先内联提示；终端 / 编辑器前台默认静默；系统通知不可用时回退 AppleScript；重要通知可强制发送。"
     }
 }
 

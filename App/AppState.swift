@@ -109,8 +109,20 @@ public final class AppState: ObservableObject, Sendable {
 
     // MARK: - Navigation
 
-    public func selectSidebarItem(_ item: SidebarItem) {
+    public func navigate(to item: SidebarItem) {
+        if item == .clipboard {
+            selectInboxWorkspace("all")
+            return
+        }
         sidebarSelection = canonicalSidebarItem(for: item)
+    }
+
+    public func navigateToInbox(workspace selection: String? = "all") {
+        selectInboxWorkspace(selection)
+    }
+
+    public func selectSidebarItem(_ item: SidebarItem) {
+        navigate(to: item)
     }
 
     public func selectInboxWorkspace(_ selection: String?) {
@@ -119,7 +131,7 @@ public final class AppState: ObservableObject, Sendable {
     }
 
     public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {
-        item == .inbox ? .clipboard : item
+        item == .clipboard ? .inbox : item
     }
 
     public func toggleSidebar() {

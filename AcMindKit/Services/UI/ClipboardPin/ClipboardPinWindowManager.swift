@@ -146,7 +146,7 @@ public final class ClipboardPinWindowManager {
             }
             .map { "\($0.key)=\($0.value)" }
         let summary = [
-            "AcMind Clipboard Pin Diagnostics",
+            "AcWork Clipboard Pin Diagnostics",
             "Window Count: \(snapshots.count)",
             "Visible Count: \(visibleCount)",
             "Always-On-Top Count: \(alwaysOnTopCount)",
@@ -927,13 +927,13 @@ private struct ClipboardPinWindowView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: PinCardToken.cardRadius, style: .continuous)
-                .fill(Color.white.opacity(0.95))
-                .shadow(color: Color(white: 0, opacity: 0.10), radius: 24, x: 0, y: 12)
+                .fill(Color(red: 0.984, green: 0.986, blue: 0.991).opacity(0.98))
+                .shadow(color: Color(white: 0, opacity: 0.08), radius: 24, x: 0, y: 12)
         )
         .clipShape(RoundedRectangle(cornerRadius: PinCardToken.cardRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: PinCardToken.cardRadius, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.7), lineWidth: 1)
         )
         .frame(minWidth: 280, minHeight: 160)
     }
@@ -1088,11 +1088,11 @@ private struct ClipboardPinWindowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous)
-                .fill(Color(red: 247 / 255, green: 245 / 255, blue: 1.0))
+                .fill(Color(red: 0.976, green: 0.979, blue: 0.987).opacity(0.96))
         )
         .overlay(
             RoundedRectangle(cornerRadius: PinCardToken.contentRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
         )
     }
 

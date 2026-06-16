@@ -11,7 +11,7 @@ struct CompanionSettingsHeader: View {
                     .font(.title)
                     .fontWeight(.bold)
                 
-                Text("AcMind 跨页面、跨应用、可随时调用的系统能力域。")
+                Text("AcWork 跨页面、跨应用、可随时调用的系统能力域。")
                     .font(.body)
                     .foregroundStyle(Color.secondary)
             }

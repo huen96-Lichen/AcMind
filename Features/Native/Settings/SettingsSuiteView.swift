@@ -63,7 +63,7 @@ struct SettingsSuiteView: View {
             .padding(24)
             .frame(maxWidth: 960, alignment: .leading)
         }
-        .background(AppVisualBackdrop())
+        .background(AppSurfaceBackdrop())
         .alert("设置错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
         } message: {
@@ -102,7 +102,7 @@ struct SettingsSuiteView: View {
                     value: viewModel.theme.displayName,
                     subtitle: "全局视觉基线",
                     icon: "paintbrush",
-                    tint: AppSurfaceTokens.accentBlue
+                    tint: AppSurfaceTokens.secondaryText
                 )
                 AppSurfaceMetricTile(
                     title: "Agent 状态",
@@ -113,7 +113,7 @@ struct SettingsSuiteView: View {
                     ),
                     subtitle: "说入法入口",
                     icon: "sparkles",
-                    tint: viewModel.companionVoiceEnabled ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
+                    tint: AppSurfaceTokens.secondaryText
                 )
                 AppSurfaceMetricTile(
                     title: "权限概况",
@@ -144,12 +144,12 @@ struct SettingsSuiteView: View {
                         .padding(.vertical, 9)
                         .frame(minWidth: 120, alignment: .leading)
                         .background(
-                            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                .fill(selectedSection == section ? AppSurfaceTokens.cardBackground : AppSurfaceTokens.cardBackgroundSoft.opacity(0.55))
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackgroundSoft)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                .stroke(selectedSection == section ? AppSurfaceTokens.separator : Color.clear, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .stroke(selectedSection == section ? AppSurfaceTokens.separator.opacity(0.85) : AppSurfaceTokens.separator.opacity(0.4), lineWidth: 1)
                         )
                         .foregroundStyle(selectedSection == section ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
                     }
@@ -160,11 +160,11 @@ struct SettingsSuiteView: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
         )
     }
@@ -207,7 +207,7 @@ struct SettingsSuiteView: View {
             HStack(spacing: 10) {
                 Image(systemName: selectedSection.icon)
                     .font(.title2)
-                    .foregroundStyle(AppSurfaceTokens.accentBlue)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 Text(selectedSection.title)
                     .font(.title2)
                     .fontWeight(.semibold)
@@ -339,12 +339,7 @@ struct SettingsSuiteView: View {
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                        TextEditor(text: $viewModel.vaultFrontmatterTemplateText)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(minHeight: 110)
-                            .padding(8)
-                            .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(10)
+                        AppSurfaceTextEditorShell(text: $viewModel.vaultFrontmatterTemplateText, minHeight: 110)
                     }
                 }
             }
@@ -493,19 +488,26 @@ struct SettingsSuiteView: View {
                 .font(.caption)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(color.opacity(0.1))
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .foregroundStyle(color)
-                .cornerRadius(6)
+                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+        )
     }
 
     private func permissionBadgeColor(for status: CompanionPermissionStatus) -> Color {
         switch status {
-        case .notDetermined: return AppSurfaceTokens.accentOrange
-        case .authorized: return AppSurfaceTokens.accentGreen
-        case .denied, .restricted: return AppSurfaceTokens.accentOrange
+        case .notDetermined: return AppSurfaceTokens.secondaryText
+        case .authorized: return AppSurfaceTokens.secondaryText
+        case .denied, .restricted: return AppSurfaceTokens.secondaryText
         }
     }
 
@@ -530,12 +532,7 @@ struct SettingsSuiteView: View {
     }
 
     private var permissionTint: Color {
-        let statuses = [
-            viewModel.microphonePermissionStatus,
-            viewModel.accessibilityPermissionStatus,
-            viewModel.screenRecordingPermissionStatus
-        ]
-        return statuses.allSatisfy { $0 == .authorized } ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
+        return AppSurfaceTokens.secondaryText
     }
 
 }

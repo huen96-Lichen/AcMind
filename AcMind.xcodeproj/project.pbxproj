@@ -181,8 +181,10 @@
 		A1000000000000000000030E /* AgentDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030B /* AgentDashboardView.swift */; };
 		A1000000000000000000030F /* SettingsSuiteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030C /* SettingsSuiteView.swift */; };
 		A10000000000000000000310 /* ScheduleDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030D /* ScheduleDashboardView.swift */; };
+		A10000000000000000000321 /* SchedulePlanningComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000320 /* SchedulePlanningComponents.swift */; };
 		A10000000000000000000312 /* AppSurfaceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000311 /* AppSurfaceStyle.swift */; };
 		A10000000000000000000314 /* MaterialCardShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000315 /* MaterialCardShell.swift */; };
+		A10000000000000000000672 /* CaptureWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000673 /* CaptureWorkspaceView.swift */; };
 		A1000000000000000000031C /* AcMindAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000031B /* AcMindAppIntents.swift */; };
 		A10000000000000000000413 /* DynamicContinentTemplateV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000411 /* DynamicContinentTemplateV2.swift */; };
 		A10000000000000000000414 /* DynamicContinentPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* DynamicContinentPages.swift */; };
@@ -192,10 +194,24 @@
 		A1000000000000000000041B /* NotchV2StatusStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000041C /* NotchV2StatusStrip.swift */; };
 		A1000000000000000000041D /* SystemEventHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000041E /* SystemEventHUD.swift */; };
 		A10000000000000000000420 /* ToolCompletionPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000421 /* ToolCompletionPanels.swift */; };
+		A10000000000000000000674 /* ToolWorkspaceComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000677 /* ToolWorkspaceComponents.swift */; };
+		A10000000000000000000675 /* ToolWorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000678 /* ToolWorkspaceState.swift */; };
+		A10000000000000000000676 /* ToolWorkspaceStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000679 /* ToolWorkspaceStateTests.swift */; };
+		A10000000000000000000680 /* ToolWorkspacePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000681 /* ToolWorkspacePreview.swift */; };
 		A10000000000000000000423 /* WorkspaceHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000422 /* WorkspaceHomeView.swift */; };
 		A10000000000000000000430 /* HotCornerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000431 /* HotCornerConfig.swift */; };
 		A10000000000000000000432 /* HotCornerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000433 /* HotCornerManager.swift */; };
 		A10000000000000000000434 /* SayInputCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000435 /* SayInputCoordinator.swift */; };
+		A10000000000000000000644 /* SystemFanControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000643 /* SystemFanControlService.swift */; };
+		A10000000000000000000645 /* SystemHardwareBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000641 /* SystemHardwareBridge.swift */; };
+		A10000000000000000000646 /* SystemSMCBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000642 /* SystemSMCBridge.swift */; };
+		A10000000000000000000647 /* SystemFanControlServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000640 /* SystemFanControlServiceProtocol.swift */; };
+		A10000000000000000000648 /* SystemHardwareTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000649 /* SystemHardwareTransport.swift */; };
+		A1000000000000000000064A /* SystemHardwareAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000064B /* SystemHardwareAccess.swift */; };
+		A1000000000000000000068A /* SystemHardwareHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000064E /* SystemHardwareHelperProtocol.swift */; };
+		A1000000000000000000068B /* SystemHardwareXPCTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000064F /* SystemHardwareXPCTransport.swift */; };
+		A10000000000000000000690 /* SystemHardwareHelperInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000691 /* SystemHardwareHelperInstaller.swift */; };
+		A1000000000000000000064C /* SystemHardwareAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000064D /* SystemHardwareAccessTests.swift */; };
 		A10000000000000000000436 /* SystemStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000437 /* SystemStatusService.swift */; };
 		A1000000000000000000043A /* SystemStatusReaders.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000043B /* SystemStatusReaders.swift */; };
 		A10000000000000000000440 /* SystemStatusModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000439 /* SystemStatusModels.swift */; };
@@ -218,6 +234,7 @@
 		A1000000000000000000047C /* InjectionMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000473 /* InjectionMetrics.swift */; };
 		A1000000000000000000047D /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000474 /* CloudSyncService.swift */; };
 		A1000000000000000000047E /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000475 /* PluginProtocol.swift */; };
+		A10000000000000000000650 /* WorkspaceSharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000651 /* WorkspaceSharedComponents.swift */; };
 		A1000000000000000000047F /* PluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000476 /* PluginManager.swift */; };
 		A10000000000000000000480 /* PluginSandbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000477 /* PluginSandbox.swift */; };
 		A10000000000000000000481 /* PersonalDictionaryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000478 /* PersonalDictionaryServiceTests.swift */; };
@@ -251,6 +268,7 @@
 		A10000000000000000000511 /* AgentQuickAskService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000510 /* AgentQuickAskService.swift */; };
 		A10000000000000000000513 /* AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000512 /* AgentTool.swift */; };
 		A10000000000000000000514 /* AgentToolRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000515 /* AgentToolRouter.swift */; };
+		A10000000000000000000671 /* AgentTraceRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000670 /* AgentTraceRenderer.swift */; };
 		A10000000000000000000517 /* CaptureServiceScreenshotPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000516 /* CaptureServiceScreenshotPolicyTests.swift */; };
 		A10000000000000000000519 /* DesktopCapsuleConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */; };
 		A1000000000000000000051A /* ScrollCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000051B /* ScrollCaptureService.swift */; };
@@ -348,6 +366,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		B20000000000000000000001 /* Stage System Status Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Stage System Status Helper";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\ncd \"$SRCROOT\"\nHELPER_CONFIG=\"$(printf '%s' \"$CONFIGURATION\" | tr '[:upper:]' '[:lower:]')\"\nswift build -c \"$HELPER_CONFIG\" --product AcMindSystemStatusHelper\nHELPER_SOURCE=\"$SRCROOT/.build/$HELPER_CONFIG/AcMindSystemStatusHelper\"\nHELPER_DEST_DIR=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Library/LaunchServices\"\nHELPER_DEST=\"$HELPER_DEST_DIR/com.acmind.systemstatus.helper\"\nmkdir -p \"$HELPER_DEST_DIR\"\ncp -f \"$HELPER_SOURCE\" \"$HELPER_DEST\"\nchmod 755 \"$HELPER_DEST\"\ncodesign --force --sign - \"$HELPER_DEST\" >/dev/null 2>&1 || true\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXFileReference section */
 		01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StreamingKeyboardWriterTests.swift; path = AcMindKitTests/StreamingKeyboardWriterTests.swift; sourceTree = SOURCE_ROOT; };
@@ -457,6 +492,7 @@
 		A1000000000000000000011F /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/MonthCalendarView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000120 /* YearCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/YearCalendarView.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000012D /* EventEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/EventEditorView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000320 /* SchedulePlanningComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/SchedulePlanningComponents.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000130 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Hotkeys/HotkeyManager.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000132 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Permissions/PermissionManager.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000134 /* DataMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Storage/DataMigrationService.swift; sourceTree = SOURCE_ROOT; };
@@ -526,6 +562,8 @@
 		A1000000000000000000030D /* ScheduleDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000311 /* AppSurfaceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/AppSurfaceStyle.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000315 /* MaterialCardShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/MaterialCardShell.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000673 /* CaptureWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/CaptureWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000651 /* WorkspaceSharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/WorkspaceSharedComponents.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000031B /* AcMindAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindAppIntents.swift; sourceTree = "<group>"; };
 		A10000000000000000000411 /* DynamicContinentTemplateV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000412 /* DynamicContinentPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentPages.swift; sourceTree = SOURCE_ROOT; };
@@ -535,10 +573,24 @@
 		A1000000000000000000041C /* NotchV2StatusStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2StatusStrip.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000041E /* SystemEventHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/SystemEventHUD.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000421 /* ToolCompletionPanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolCompletionPanels.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000677 /* ToolWorkspaceComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspaceComponents.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000678 /* ToolWorkspaceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspaceState.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000679 /* ToolWorkspaceStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ToolWorkspaceStateTests.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000681 /* ToolWorkspacePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspacePreview.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000422 /* WorkspaceHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Home/WorkspaceHomeView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000431 /* HotCornerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/HotCornerConfig.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000433 /* HotCornerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/HotCornerManager.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000435 /* SayInputCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/SayInput/SayInputCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000640 /* SystemFanControlServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Protocols/SystemFanControlServiceProtocol.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000641 /* SystemHardwareBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemHardwareBridge.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000642 /* SystemSMCBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemSMCBridge.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000643 /* SystemFanControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemFanControlService.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000649 /* SystemHardwareTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemHardwareTransport.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000064B /* SystemHardwareAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemHardwareAccess.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000064D /* SystemHardwareAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/SystemHardwareAccessTests.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000064E /* SystemHardwareHelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Protocols/SystemHardwareHelperProtocol.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000064F /* SystemHardwareXPCTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemHardwareXPCTransport.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000691 /* SystemHardwareHelperInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemHardwareHelperInstaller.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000437 /* SystemStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemStatusService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000439 /* SystemStatusModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/SystemStatusModels.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000043B /* SystemStatusReaders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/SystemStatus/SystemStatusReaders.swift; sourceTree = SOURCE_ROOT; };
@@ -599,6 +651,7 @@
 		A10000000000000000000510 /* AgentQuickAskService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentQuickAskService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000512 /* AgentTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AgentTool.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000515 /* AgentToolRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentToolRouter.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000670 /* AgentTraceRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentTraceRenderer.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000516 /* CaptureServiceScreenshotPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/CaptureServiceScreenshotPolicyTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/DesktopCapsuleConfigTests.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000051B /* ScrollCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/ScrollCaptureService.swift; sourceTree = SOURCE_ROOT; };
@@ -808,6 +861,8 @@
 		A1000000000000000000002E /* Protocols */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000640 /* SystemFanControlServiceProtocol.swift */,
+				A1000000000000000000064E /* SystemHardwareHelperProtocol.swift */,
 				A1000000000000000000006D /* SettingsServiceProtocol.swift */,
 				A1000000000000000000001F /* StorageServiceProtocol.swift */,
 				A1000000000000000000005A /* VoiceServiceProtocol.swift */,
@@ -945,6 +1000,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000000000000030D /* ScheduleDashboardView.swift */,
+				A10000000000000000000320 /* SchedulePlanningComponents.swift */,
 				A1000000000000000000006E /* ScheduleNativeView.swift */,
 				A1000000000000000000011A /* ScheduleModels.swift */,
 				A1000000000000000000011B /* ScheduleViewModel.swift */,
@@ -1017,6 +1073,7 @@
 				A10000000000000000000089 /* AIRuntimeService.swift */,
 				A10000000000000000000510 /* AgentQuickAskService.swift */,
 				A10000000000000000000515 /* AgentToolRouter.swift */,
+				A10000000000000000000670 /* AgentTraceRenderer.swift */,
 				A10000000000000000000619 /* AgentMemoryService.swift */,
 				A1000000000000000000061B /* AgentSkillService.swift */,
 				A1000000000000000000061D /* AgentTaskBoardService.swift */,
@@ -1191,6 +1248,9 @@
 				A100000000000000000002B2 /* ToolPanels.swift */,
 				A100000000000000000002B4 /* ToolAdvancedPanels.swift */,
 				A10000000000000000000421 /* ToolCompletionPanels.swift */,
+				A10000000000000000000677 /* ToolWorkspaceComponents.swift */,
+				A10000000000000000000678 /* ToolWorkspaceState.swift */,
+				A10000000000000000000681 /* ToolWorkspacePreview.swift */,
 			);
 			path = Tools;
 			sourceTree = "<group>";
@@ -1235,6 +1295,7 @@
 				A10000000000000000000516 /* CaptureServiceScreenshotPolicyTests.swift */,
 				A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */,
 				A1000000000000000000051D /* SourceItemTests.swift */,
+				A10000000000000000000679 /* ToolWorkspaceStateTests.swift */,
 				C10000000000000000000011 /* ClipboardPipelineTests.swift */,
 				473B603795DD420662D83F33 /* AIRuntimeServiceLoggingTests.swift */,
 				E79D8188A908184C1622F543 /* AgentMemoryServiceTests.swift */,
@@ -1297,6 +1358,8 @@
 			children = (
 				A10000000000000000000311 /* AppSurfaceStyle.swift */,
 				A10000000000000000000315 /* MaterialCardShell.swift */,
+				A10000000000000000000673 /* CaptureWorkspaceView.swift */,
+				A10000000000000000000651 /* WorkspaceSharedComponents.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -1312,6 +1375,13 @@
 		A10000000000000000000438 /* SystemStatus */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000643 /* SystemFanControlService.swift */,
+				A1000000000000000000064B /* SystemHardwareAccess.swift */,
+				A10000000000000000000691 /* SystemHardwareHelperInstaller.swift */,
+				A10000000000000000000641 /* SystemHardwareBridge.swift */,
+				A10000000000000000000649 /* SystemHardwareTransport.swift */,
+				A1000000000000000000064F /* SystemHardwareXPCTransport.swift */,
+				A10000000000000000000642 /* SystemSMCBridge.swift */,
 				A10000000000000000000437 /* SystemStatusService.swift */,
 				A1000000000000000000043B /* SystemStatusReaders.swift */,
 			);
@@ -1426,6 +1496,7 @@
 				A1000000000000000000003A /* Resources */,
 				A10000000000000000000024 /* Frameworks */,
 				A10000000000000000000022 /* Embed Frameworks */,
+				B20000000000000000000001 /* Stage System Status Helper */,
 			);
 			buildRules = (
 			);
@@ -1545,6 +1616,7 @@
 				A100000000000000000002F6 /* InboxWaveformPreview.swift in Sources */,
 				A1000000000000000000006F /* ScheduleNativeView.swift in Sources */,
 				A10000000000000000000310 /* ScheduleDashboardView.swift in Sources */,
+				A10000000000000000000321 /* SchedulePlanningComponents.swift in Sources */,
 				A10000000000000000000121 /* ScheduleModels.swift in Sources */,
 				A10000000000000000000122 /* ScheduleViewModel.swift in Sources */,
 				A10000000000000000000124 /* ScheduleSidebar.swift in Sources */,
@@ -1601,6 +1673,8 @@
 				A1000000000000000000030F /* SettingsSuiteView.swift in Sources */,
 				A10000000000000000000312 /* AppSurfaceStyle.swift in Sources */,
 				A10000000000000000000314 /* MaterialCardShell.swift in Sources */,
+				A10000000000000000000672 /* CaptureWorkspaceView.swift in Sources */,
+				A10000000000000000000650 /* WorkspaceSharedComponents.swift in Sources */,
 				A1000000000000000000010C /* AgentViewModel.swift in Sources */,
 				A1000000000000000000010E /* SettingsViewModel.swift in Sources */,
 				A10000000000000000000154 /* ClipboardView.swift in Sources */,
@@ -1612,6 +1686,9 @@
 				A100000000000000000002B3 /* ToolPanels.swift in Sources */,
 				A100000000000000000002B5 /* ToolAdvancedPanels.swift in Sources */,
 				A10000000000000000000420 /* ToolCompletionPanels.swift in Sources */,
+				A10000000000000000000674 /* ToolWorkspaceComponents.swift in Sources */,
+				A10000000000000000000675 /* ToolWorkspaceState.swift in Sources */,
+				A10000000000000000000680 /* ToolWorkspacePreview.swift in Sources */,
 				B00000000000000000000301 /* SecondarySidebar.swift in Sources */,
 				B00000000000000000000311 /* DynamicContinentConfigView.swift in Sources */,
 				B00000000000000000000313 /* SystemStatusView.swift in Sources */,
@@ -1655,6 +1732,7 @@
 				A10000000000000000000079 /* AIRuntimeService.swift in Sources */,
 				A10000000000000000000511 /* AgentQuickAskService.swift in Sources */,
 				A10000000000000000000514 /* AgentToolRouter.swift in Sources */,
+				A10000000000000000000671 /* AgentTraceRenderer.swift in Sources */,
 				A100000000000000000004A3 /* AgentModelRouter.swift in Sources */,
 				A1000000000000000000007A /* SecretStore.swift in Sources */,
 				A1000000000000000000007B /* TaskQueue.swift in Sources */,
@@ -1719,6 +1797,15 @@
 				A10000000000000000000418 /* CompanionDockingRules.swift in Sources */,
 				A10000000000000000000432 /* HotCornerManager.swift in Sources */,
 				A10000000000000000000434 /* SayInputCoordinator.swift in Sources */,
+				A10000000000000000000647 /* SystemFanControlServiceProtocol.swift in Sources */,
+				A10000000000000000000648 /* SystemHardwareTransport.swift in Sources */,
+				A1000000000000000000064A /* SystemHardwareAccess.swift in Sources */,
+				A1000000000000000000068A /* SystemHardwareHelperProtocol.swift in Sources */,
+				A1000000000000000000068B /* SystemHardwareXPCTransport.swift in Sources */,
+				A10000000000000000000690 /* SystemHardwareHelperInstaller.swift in Sources */,
+				A10000000000000000000645 /* SystemHardwareBridge.swift in Sources */,
+				A10000000000000000000646 /* SystemSMCBridge.swift in Sources */,
+				A10000000000000000000644 /* SystemFanControlService.swift in Sources */,
 				A10000000000000000000436 /* SystemStatusService.swift in Sources */,
 				A1000000000000000000043A /* SystemStatusReaders.swift in Sources */,
 				A10000000000000000000163 /* STTRouter.swift in Sources */,
@@ -1797,6 +1884,8 @@
 				A1000000000000000000048B /* SettingsServiceVaultConfigTests.swift in Sources */,
 				A1000000000000000000048E /* WorkbenchProjectStoreTests.swift in Sources */,
 				A100000000000000000004AA /* RecentToolsStoreTests.swift in Sources */,
+				A1000000000000000000064C /* SystemHardwareAccessTests.swift in Sources */,
+				A10000000000000000000676 /* ToolWorkspaceStateTests.swift in Sources */,
 				A100000000000000000004AC /* DataMigrationServiceTests.swift in Sources */,
 				A100000000000000000004AE /* CompanionDisplaySettingsStoreTests.swift in Sources */,
 				A10000000000000000000493 /* SettingsBackupPolicyTests.swift in Sources */,
@@ -1907,7 +1996,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1972,7 +2061,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -2000,7 +2089,7 @@
 				CODE_SIGN_ENTITLEMENTS = AcMind.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_APP_INTENTS_METADATA_GENERATION = YES;
@@ -2021,7 +2110,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.0.6;
+				MARKETING_VERSION = 0.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_CONST_VALUE_PROTOCOLS = "AppIntent, AppShortcutsProvider";
@@ -2040,7 +2129,7 @@
 				CODE_SIGN_ENTITLEMENTS = AcMind.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_APP_INTENTS_METADATA_GENERATION = YES;
@@ -2061,7 +2150,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.0.6;
+				MARKETING_VERSION = 0.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_CONST_VALUE_PROTOCOLS = "AppIntent, AppShortcutsProvider";
@@ -2076,7 +2165,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -2093,7 +2182,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0.6;
+				MARKETING_VERSION = 0.0.7;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -2111,7 +2200,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -2128,7 +2217,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0.6;
+				MARKETING_VERSION = 0.0.7;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = com.acmind.AcmindKit;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";

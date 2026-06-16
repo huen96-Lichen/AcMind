@@ -68,7 +68,7 @@ private struct WeekHeader: View {
             }
         }
         .padding(.vertical, 8)
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackground)
     }
 }
 
@@ -98,7 +98,7 @@ private struct AllDayEventRow: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(viewModel.categoryColor(for: event.categoryId).opacity(0.15))
-                            .cornerRadius(4)
+                            .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
                             .lineLimit(1)
                     }
                 }
@@ -106,7 +106,7 @@ private struct AllDayEventRow: View {
             }
         }
         .padding(.vertical, 4)
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 }
 

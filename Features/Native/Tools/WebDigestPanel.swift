@@ -16,16 +16,22 @@ struct WebDigestPanel: View {
             Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    introCard
-                    inputCard
-                    resultCard
+                VStack(alignment: .leading, spacing: 12) {
+                    AppSurfaceCard(title: "轻量网页精读", subtitle: "解析正文并生成 Markdown 草稿", padding: 16) {
+                        introCard
+                    }
+                    AppSurfaceCard(title: "URL 输入", subtitle: "输入网页地址后直接生成", padding: 16) {
+                        inputCard
+                    }
+                    AppSurfaceCard(title: "Markdown 输出", subtitle: "可编辑、可复制、可保存", padding: 16) {
+                        resultCard
+                    }
                 }
                 .padding(20)
             }
         }
         .frame(width: 760, height: 640)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
     }
 
     private var header: some View {
@@ -54,26 +60,6 @@ struct WebDigestPanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(AppSurfaceTokens.accentGreen.opacity(0.12))
-                        .frame(width: 44, height: 44)
-
-                    Image(systemName: "globe")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(AppSurfaceTokens.accentGreen)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("轻量网页精读")
-                        .font(.headline)
-                    Text("适合把一篇网页文章快速转换为可编辑的 Markdown 草稿。")
-                        .font(.caption)
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                }
-            }
-
             Text("如果本机还没装 `defuddle`，请先运行 `npm install -g defuddle`。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -86,18 +72,10 @@ struct WebDigestPanel: View {
             .font(.caption2)
             .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var inputCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("URL 输入")
-                .font(.headline)
-
             HStack(spacing: 10) {
                 TextField("https://example.com/article", text: $viewModel.urlString)
                     .textFieldStyle(.roundedBorder)
@@ -139,19 +117,11 @@ struct WebDigestPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     private var resultCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Markdown 输出")
-                    .font(.headline)
-
                 Spacer()
 
                 Button {
@@ -171,19 +141,8 @@ struct WebDigestPanel: View {
                 .disabled(viewModel.markdown.isEmpty)
             }
 
-            TextEditor(text: $viewModel.markdown)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 260)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
-                )
+            AppSurfaceTextEditorShell(text: $viewModel.markdown, minHeight: 260)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 }
 

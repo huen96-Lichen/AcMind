@@ -10,11 +10,11 @@ struct WaveformPreview: View {
             
             ZStack {
                 // Background
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                     .fill(Color(NSColor.textBackgroundColor))
                     .frame(height: 80)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                             .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                     )
                 

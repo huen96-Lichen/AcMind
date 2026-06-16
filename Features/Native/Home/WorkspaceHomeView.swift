@@ -2,11 +2,11 @@ import SwiftUI
 import AcMindKit
 
 private enum DashboardRadius {
-    static let hero: CGFloat = 30
-    static let card: CGFloat = 30
-    static let block: CGFloat = 22
-    static let icon: CGFloat = 18
-    static let control: CGFloat = 22
+    static let hero: CGFloat = AppSurfaceTokens.mainCardRadius
+    static let card: CGFloat = AppSurfaceTokens.cardRadius
+    static let block: CGFloat = AppSurfaceTokens.secondaryCardRadius
+    static let icon: CGFloat = AppSurfaceTokens.inlineBlockRadius
+    static let control: CGFloat = AppSurfaceTokens.inlineBlockRadius
 }
 
 private enum DashboardCardStyle {
@@ -26,18 +26,7 @@ private struct DashboardTrendChart: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                AppSurfaceTokens.accentBlue.opacity(0.06),
-                                AppSurfaceTokens.accentGreen.opacity(0.015),
-                                Color.clear,
-                                AppSurfaceTokens.accentPrimary.opacity(0.035)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
 
                 VStack(spacing: 0) {
                     ForEach(0..<4, id: \.self) { _ in
@@ -49,17 +38,7 @@ private struct DashboardTrendChart: View {
                 }
 
                 fillPath(values: cpu, in: size)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                AppSurfaceTokens.accentBlue.opacity(0.14),
-                                AppSurfaceTokens.accentBlue.opacity(0.03),
-                                Color.clear
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .fill(AppSurfaceTokens.accentBlue.opacity(0.08))
 
                 trendPath(values: cpu, in: size)
                     .stroke(AppSurfaceTokens.accentBlue, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
@@ -79,21 +58,11 @@ private struct DashboardTrendChart: View {
         .padding(.horizontal, 2)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.58))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            AppSurfaceTokens.accentBlue.opacity(0.11),
-                            AppSurfaceTokens.accentPrimary.opacity(0.05)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
     }
@@ -156,51 +125,110 @@ private struct DashboardTrendChart: View {
 
 struct WorkspaceHomeView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @StateObject private var viewModel: SystemStatusViewModel
+    @StateObject private var dashboardViewModel: WorkspaceDashboardViewModel
+    private let permissionManager: PermissionManager
 
-    init(systemStatusService: SystemStatusService) {
+    init(
+        systemStatusService: SystemStatusService,
+        permissionManager: PermissionManager = PermissionManager(),
+        dashboardRepository: (any WorkspaceDashboardRepositoryProtocol)? = nil
+    ) {
+        self.permissionManager = permissionManager
         _viewModel = StateObject(wrappedValue: SystemStatusViewModel(service: systemStatusService))
+        let resolvedRepository = dashboardRepository ?? LiveWorkspaceDashboardRepository(
+            appState: AppState.shared,
+            systemStatusService: systemStatusService
+        )
+        _dashboardViewModel = StateObject(wrappedValue: WorkspaceDashboardViewModel(repository: resolvedRepository))
     }
 
     private var quickActions: [HomeAction] {
         [
-            HomeAction(title: "说入法", icon: "mic.fill", tint: AppSurfaceTokens.accentBlue, kind: .voice),
-            HomeAction(title: "采集", icon: "camera.viewfinder", tint: AppSurfaceTokens.accentOrange, kind: .capture),
-            HomeAction(title: "收集箱", icon: "tray.full", tint: AppSurfaceTokens.accentGreen, kind: .inbox),
-            HomeAction(title: "设置", icon: "gearshape.fill", tint: AppSurfaceTokens.accentPrimary, kind: .settings)
+            HomeAction(title: "说入法", icon: "mic.fill", tint: AppSurfaceTokens.secondaryText, kind: .voice),
+            HomeAction(title: "采集", icon: "camera.viewfinder", tint: AppSurfaceTokens.secondaryText, kind: .capture),
+            HomeAction(title: "收集箱", icon: "tray.full", tint: AppSurfaceTokens.secondaryText, kind: .inbox),
+            HomeAction(title: "设置", icon: "gearshape.fill", tint: AppSurfaceTokens.secondaryText, kind: .settings)
+        ]
+    }
+
+    private var navigationActions: [HomeAction] {
+        [
+            HomeAction(title: SidebarItem.agent.displayName, icon: SidebarItem.agent.icon, tint: AppSurfaceTokens.secondaryText, kind: .agent),
+            HomeAction(title: SidebarItem.inbox.displayName, icon: SidebarItem.inbox.icon, tint: AppSurfaceTokens.secondaryText, kind: .inbox),
+            HomeAction(title: SidebarItem.schedule.displayName, icon: SidebarItem.schedule.icon, tint: AppSurfaceTokens.secondaryText, kind: .schedule),
+            HomeAction(title: SidebarItem.systemStatus.displayName, icon: SidebarItem.systemStatus.icon, tint: AppSurfaceTokens.secondaryText, kind: .systemStatus)
         ]
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 1.5) {
-                greetingHeader
-                kpiRow
-                overviewRow
-                infoRow
-                sensorRow
-                summaryFooter
+        GeometryReader { proxy in
+            Group {
+                switch dashboardViewModel.snapshot.phase {
+                case .loaded:
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            greetingHeader
+                            homePrimaryDeck
+                            overviewRow
+                            kpiRow
+                            infoRow
+                            sensorRow
+                            summaryFooter
+                            workspaceClosingBoard
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, minHeight: proxy.size.height, alignment: .topLeading)
+                    }
+
+                case .loading:
+                    StateContainer(
+                        phase: .loading(message: "正在读取工作台摘要、日程、待处理内容和系统状态。")
+                    ) {
+                        EmptyView()
+                    }
+                    .padding(14)
+
+                case .empty:
+                    StateContainer(
+                        phase: .empty(
+                            title: "暂无工作内容",
+                            message: "当前没有待处理内容，创建第一条记录后会回到这里。"
+                        )
+                    ) {
+                        EmptyView()
+                    }
+                    .padding(14)
+
+                case .error(let message):
+                    StateContainer(
+                        phase: .failed(
+                            title: "工作台加载失败",
+                            message: message,
+                            actionTitle: "重试"
+                        ) {
+                            dashboardViewModel.refresh()
+                        }
+                    ) {
+                        EmptyView()
+                    }
+                    .padding(14)
+                }
             }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 6)
-            .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, alignment: .leading)
+            .background(AppSurfaceBackdrop())
         }
-        .background(background)
-        .onAppear { viewModel.startMonitoring() }
+        .onAppear {
+            viewModel.startMonitoring()
+            dashboardViewModel.refresh()
+        }
         .onDisappear { viewModel.stopMonitoring() }
     }
 
-    private var background: some View {
-        LinearGradient(
-            colors: [
-                AppSurfaceTokens.background,
-                Color(NSColor.windowBackgroundColor).opacity(0.95),
-                Color(NSColor.controlBackgroundColor).opacity(0.78)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+    private var homePalette: ProductPanelTokens.Palette {
+        ProductPanelTokens.palette(for: colorScheme, contrast: colorSchemeContrast)
     }
 
     private var greetingHeader: some View {
@@ -230,6 +258,117 @@ struct WorkspaceHomeView: View {
                 topSearchField
             }
         }
+#if DEBUG
+        .layoutDebugRegion("TopToolbar")
+#endif
+    }
+
+    private var homePrimaryDeck: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ProductPanelCard(
+                variant: .prominent,
+                title: "工作台总览",
+                icon: "rectangle.grid.2x2",
+                status: appState.isAppReady ? "已就绪" : "初始化中",
+                statusTone: appState.isAppReady ? .success : .warning,
+                footer: "最后刷新 \(viewModel.lastUpdatedText)"
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("当前重点")
+                            .font(ProductPanelTokens.Typography.cardCaption)
+                            .foregroundStyle(homePalette.textSecondary)
+                            .textCase(.uppercase)
+
+                        Text(homePrimaryHeadline)
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(homePalette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(homePrimarySummary)
+                            .font(ProductPanelTokens.Typography.cardBody)
+                            .foregroundStyle(homePalette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("下一步")
+                            .font(ProductPanelTokens.Typography.cardCaption)
+                            .foregroundStyle(homePalette.textSecondary)
+                            .textCase(.uppercase)
+
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                            ForEach(navigationActions) { action in
+                                Button {
+                                    action.perform(using: appState)
+                                } label: {
+                                    homeActionChip(action)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 10) {
+                        homeSummaryPill(title: "当前页面", value: appState.sidebarSelection.displayName, tint: homePalette.accent)
+                        homeSummaryPill(title: "窗口", value: windowStateText(appState.mainWindowState), tint: homePalette.info)
+                        homeSummaryPill(title: "采样", value: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor)
+                    }
+                }
+            }
+            .layoutPriority(2)
+#if DEBUG
+            .layoutDebugRegion("WorkOverviewCard")
+#endif
+
+            VStack(alignment: .leading, spacing: 12) {
+                ProductPanelCard(
+                    variant: .standard,
+                    title: "系统健康",
+                    icon: "heart.text.square",
+                    status: viewModel.samplingStatusText,
+                    statusTone: viewModel.snapshot.unavailableReasons.isEmpty ? .success : .warning,
+                    footer: viewModel.refreshHint
+                ) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        homeHealthRow(label: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText)
+                        homeHealthRow(label: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.secondaryText)
+                        homeHealthRow(label: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.secondaryText)
+                        homeHealthRow(label: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.secondaryText)
+                    }
+                }
+
+                ProductPanelCard(
+                    variant: .warning,
+                    title: "风险栏",
+                    icon: "exclamationmark.triangle.fill",
+                    status: permissionFooterText,
+                    statusTone: .warning,
+                    footer: dashboardViewModel.snapshot.unavailableReasons.isEmpty ? "没有额外的不可用项" : "采样、权限或硬件状态需要解释"
+                ) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let firstReason = dashboardViewModel.snapshot.unavailableReasons.first {
+                            Text(firstReason.message)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(homePalette.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text([firstReason.category, firstReason.detail].compactMap { $0 }.joined(separator: " · "))
+                                .font(ProductPanelTokens.Typography.cardCaption)
+                                .foregroundStyle(homePalette.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text("当前没有明确的硬件或权限风险。")
+                                .font(ProductPanelTokens.Typography.cardBody)
+                                .foregroundStyle(homePalette.textPrimary)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: 332)
+#if DEBUG
+            .layoutDebugRegion("RightStatusRail")
+#endif
+        }
     }
 
     private var topSearchField: some View {
@@ -246,16 +385,7 @@ struct WorkspaceHomeView: View {
         .padding(.horizontal, 6)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            AppSurfaceTokens.background.opacity(0.94),
-                            AppSurfaceTokens.cardBackground.opacity(0.84)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
@@ -298,26 +428,138 @@ struct WorkspaceHomeView: View {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
         case 5..<12:
-            return "上午好，AcMind"
+            return "上午好，AcWork"
         case 12..<18:
-            return "下午好，AcMind"
+            return "下午好，AcWork"
         default:
-            return "晚上好，AcMind"
+            return "晚上好，AcWork"
         }
+    }
+
+    private func homeActionChip(_ action: HomeAction) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                Image(systemName: action.icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(action.tint)
+            }
+            .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(action.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(homePalette.textPrimary)
+                    .lineLimit(1)
+                Text(actionSubtitle(for: action.kind))
+                    .font(ProductPanelTokens.Typography.cardCaption)
+                    .foregroundStyle(homePalette.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                .stroke(action.tint.opacity(0.22), lineWidth: 1)
+        )
+    }
+
+    private func actionSubtitle(for kind: HomeAction.Kind) -> String {
+        switch kind {
+        case .voice:
+            return "打开说入法"
+        case .capture:
+            return "快速采集内容"
+        case .inbox:
+            return "进入收集箱"
+        case .settings:
+            return "打开设置"
+        case .agent:
+            return "进入协作"
+        case .schedule:
+            return "查看日程"
+        case .systemStatus:
+            return "查看监控台"
+        }
+    }
+
+    private func homeSummaryPill(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(homePalette.textSecondary)
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(homePalette.textPrimary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+        )
+    }
+
+    private func homeHealthRow(label: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 10) {
+            Capsule(style: .continuous)
+                .fill(tint)
+                .frame(width: 10, height: 10)
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(homePalette.textSecondary)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundStyle(homePalette.textPrimary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+        )
+    }
+
+    private var homePrimaryHeadline: String {
+        if appState.isAppReady {
+            return dashboardViewModel.snapshot.currentFocus
+        }
+        return "正在初始化系统，先看实时采样与权限状态。"
+    }
+
+    private var homePrimarySummary: String {
+        let snapshot = dashboardViewModel.snapshot
+        return "当前页面是「\(snapshot.currentPage)」，下一步是 \(snapshot.nextStep)。"
     }
 
     private var heroGlyph: some View {
         ZStack {
             RoundedRectangle(cornerRadius: DashboardRadius.hero, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            AppSurfaceTokens.accentBlue.opacity(0.20),
-                            AppSurfaceTokens.accentPrimary.opacity(0.12)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DashboardRadius.hero, style: .continuous)
+                        .stroke(AppSurfaceTokens.accentBlue.opacity(0.12), lineWidth: 1)
                 )
                 .frame(width: 44, height: 44)
 
@@ -392,6 +634,9 @@ struct WorkspaceHomeView: View {
                 RingGauge(percentage: viewModel.snapshot.diskUsagePercent, tint: AppSurfaceTokens.accentOrange, label: "磁盘")
             }
         }
+#if DEBUG
+        .layoutDebugRegion("MetricsGrid")
+#endif
     }
 
     private var overviewRow: some View {
@@ -429,6 +674,9 @@ struct WorkspaceHomeView: View {
                 .frame(maxWidth: .infinity, minHeight: 144, alignment: .topLeading)
             }
             .layoutPriority(2)
+#if DEBUG
+            .layoutDebugRegion("RuntimeOverviewCard")
+#endif
 
             DashboardCard(title: "进程占用 Top 5", subtitle: nil, style: .regular) {
                 HStack(alignment: .center, spacing: 6) {
@@ -504,14 +752,7 @@ struct WorkspaceHomeView: View {
                         }
                         .padding(5.5)
                         .background(
-                            LinearGradient(
-                                colors: [
-                                    AppSurfaceTokens.accentOrange.opacity(0.08),
-                                    AppSurfaceTokens.cardBackgroundSoft.opacity(0.82)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            AppSurfaceTokens.cardBackgroundSoft
                         )
                         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
                     }
@@ -617,9 +858,9 @@ struct WorkspaceHomeView: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     HStack(spacing: 1.5) {
-                        summaryChip(icon: "cpu", title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.accentBlue)
-                        summaryChip(icon: "memorychip", title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.accentPrimary)
-                        summaryChip(icon: "internaldrive", title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.accentOrange)
+                        summaryChip(icon: "cpu", title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText)
+                        summaryChip(icon: "memorychip", title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.secondaryText)
+                        summaryChip(icon: "internaldrive", title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.secondaryText)
                     }
                 }
 
@@ -629,21 +870,55 @@ struct WorkspaceHomeView: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     HStack(spacing: 1.5) {
-                        summaryChip(icon: "network", title: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.accentGreen)
-                        summaryChip(icon: "powerplug", title: "电源", value: viewModel.batteryStateSummary, tint: AppSurfaceTokens.accentCyan)
-                        summaryChip(icon: "checkmark.shield", title: "权限", value: permissionFooterText, tint: AppSurfaceTokens.accentGreen)
+                        summaryChip(icon: "network", title: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.secondaryText)
+                        summaryChip(icon: "powerplug", title: "电源", value: viewModel.batteryStateSummary, tint: AppSurfaceTokens.secondaryText)
+                        summaryChip(icon: "checkmark.shield", title: "权限", value: permissionFooterText, tint: AppSurfaceTokens.secondaryText)
                     }
                 }
             }
         }
+#if DEBUG
+        .layoutDebugRegion("BottomSummary")
+#endif
+    }
+
+    private var workspaceClosingBoard: some View {
+        DashboardCard(title: "当前节奏", subtitle: "把页面、窗口和采样状态收成一块", style: .regular) {
+            VStack(alignment: .leading, spacing: 10) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    homeSummaryPill(title: "当前页面", value: appState.sidebarSelection.displayName, tint: homePalette.accent)
+                    homeSummaryPill(title: "窗口", value: windowStateText(appState.mainWindowState), tint: homePalette.info)
+                    homeSummaryPill(title: "采样", value: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor)
+                    homeSummaryPill(title: "权限", value: permissionFooterText, tint: homePalette.warning)
+                }
+
+                HStack(alignment: .center, spacing: 8) {
+                    StatusBadge(text: "最后刷新 \(viewModel.lastUpdatedText)", tone: .info, icon: "clock.arrow.circlepath", compact: true)
+                    StatusBadge(text: "建议先处理 \(nextActionHint)", tone: .neutral, icon: "arrow.right.circle", compact: true)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+#if DEBUG
+        .layoutDebugRegion("CurrentRhythm")
+#endif
+    }
+
+    private var nextActionHint: String {
+        if appState.isAppReady == false {
+            return "初始化"
+        }
+        if viewModel.snapshot.unavailableReasons.isEmpty == false {
+            return "风险"
+        }
+        return "工作"
     }
 
     private var permissionFooterText: String {
-        let unavailableCount = viewModel.snapshot.permissions.filter { $0.isAvailable == false }.count
-        if unavailableCount == 0 {
+        if dashboardViewModel.snapshot.unavailableReasons.isEmpty {
             return SystemStatusLabelFormatter.healthState(isHealthy: true)
         }
-        return "\(unavailableCount) 项待确认"
+        return dashboardViewModel.snapshot.permissionSummary
     }
 
     private var fanStatusNote: some View {
@@ -713,19 +988,19 @@ struct WorkspaceHomeView: View {
                 icon: "sensor.tag.radiowaves.forward.fill",
                 title: "传感",
                 value: SystemStatusLabelFormatter.availabilityState(isAvailable: currentTemperatureValue != nil),
-                accent: currentTemperatureValue == nil ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentGreen
+                accent: currentTemperatureValue == nil ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText
             ),
             WorkspaceStatusBadge(
                 icon: "network",
                 title: "网络",
                 value: SystemStatusLabelFormatter.healthState(isHealthy: viewModel.primaryInterfaceSummary != "不可用", healthyText: "在线"),
-                accent: viewModel.primaryInterfaceSummary == "不可用" ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentGreen
+                accent: viewModel.primaryInterfaceSummary == "不可用" ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText
             ),
             WorkspaceStatusBadge(
                 icon: "internaldrive",
                 title: "磁盘",
                 value: SystemStatusLabelFormatter.healthState(isHealthy: viewModel.diskSummary != "不可用"),
-                accent: viewModel.diskSummary == "不可用" ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentBlue
+                accent: viewModel.diskSummary == "不可用" ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText
             ),
             WorkspaceStatusBadge(
                 icon: "battery.100",
@@ -737,7 +1012,7 @@ struct WorkspaceHomeView: View {
                 icon: "hand.raised",
                 title: "权限",
                 value: permissionFooterText,
-                accent: permissionFooterText == "正常" ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange
+                accent: permissionFooterText == "正常" ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange
             )
         ]
     }
@@ -753,7 +1028,7 @@ struct WorkspaceHomeView: View {
     }
 
     private var batteryBadgeAccent: Color {
-        batteryBadgeValue == "良好" ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange
+        batteryBadgeValue == "良好" ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange
     }
 
     private var cpuCardDetail: String {
@@ -862,12 +1137,10 @@ struct WorkspaceHomeView: View {
     private func metricGlyph(systemName: String, tint: Color) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: DashboardRadius.hero, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [tint.opacity(0.14), tint.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DashboardRadius.hero, style: .continuous)
+                        .stroke(tint.opacity(0.10), lineWidth: 1)
                 )
                 .frame(width: 50, height: 50)
 
@@ -898,14 +1171,12 @@ struct WorkspaceHomeView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .center, spacing: 5) {
                     RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [tint.opacity(0.14), tint.opacity(0.08)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 19.5, height: 19.5)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous)
+                                .stroke(tint.opacity(0.10), lineWidth: 1)
+                        )
                         .overlay(
                             Image(systemName: icon)
                                 .font(.system(size: 8, weight: .semibold))
@@ -936,13 +1207,7 @@ struct WorkspaceHomeView: View {
     private func metricDetailLine(_ detail: String, tint: Color) -> some View {
         HStack(spacing: 5) {
             Capsule(style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [tint.opacity(0.95), tint.opacity(0.55)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .fill(tint.opacity(0.45))
                 .frame(width: 13, height: 3)
             Text(detail)
                 .font(.system(size: 8, weight: .semibold))
@@ -968,16 +1233,7 @@ struct WorkspaceHomeView: View {
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            tint.opacity(0.10),
-                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.76)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
@@ -1006,7 +1262,7 @@ struct WorkspaceHomeView: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     RoundedRectangle(cornerRadius: 99, style: .continuous)
-                        .fill(item.tint.opacity(0.32))
+                        .fill(AppSurfaceTokens.separator.opacity(0.22))
                         .frame(width: 13, height: 3)
 
                     Text(item.value)
@@ -1020,16 +1276,7 @@ struct WorkspaceHomeView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(6.5)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            item.tint.opacity(0.08),
-                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.82)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .background(AppSurfaceTokens.cardBackgroundSoft)
                 .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
             }
         }
@@ -1057,13 +1304,7 @@ struct WorkspaceHomeView: View {
                 .overlay(alignment: .leading) {
                     GeometryReader { proxy in
                         RoundedRectangle(cornerRadius: 99, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [segment.color.opacity(0.9), segment.color],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
+                            .fill(segment.color)
                             .frame(width: max(proxy.size.width * segment.ratio, 8))
                     }
                 }
@@ -1074,14 +1315,12 @@ struct WorkspaceHomeView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4.5) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [badge.accent.opacity(0.16), badge.accent.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .frame(width: 20, height: 20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(badge.accent.opacity(0.10), lineWidth: 1)
+                    )
                     .overlay {
                         Image(systemName: badge.icon)
                             .font(.system(size: 8, weight: .semibold))
@@ -1106,11 +1345,11 @@ struct WorkspaceHomeView: View {
         .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft.opacity(0.78))
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .stroke(badge.accent.opacity(0.10), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
     }
@@ -1118,14 +1357,12 @@ struct WorkspaceHomeView: View {
     private func statusLineRow(_ badge: WorkspaceStatusBadge) -> some View {
         HStack(spacing: 4.5) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [badge.accent.opacity(0.16), badge.accent.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
                 .frame(width: 19, height: 19)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(badge.accent.opacity(0.10), lineWidth: 1)
+                )
                 .overlay {
                     Image(systemName: badge.icon)
                         .font(.system(size: 7.5, weight: .semibold))
@@ -1153,20 +1390,11 @@ struct WorkspaceHomeView: View {
         .frame(maxWidth: .infinity, minHeight: 26.5)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            badge.accent.opacity(0.05),
-                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.76)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .stroke(badge.accent.opacity(0.08), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
     }
@@ -1185,17 +1413,11 @@ struct WorkspaceHomeView: View {
         .padding(.vertical, 2.25)
         .background(
             Capsule(style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [tint.opacity(0.14), tint.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(tint.opacity(0.10), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
         )
         .clipShape(Capsule(style: .continuous))
     }
@@ -1218,22 +1440,10 @@ struct WorkspaceHomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 2.75)
         .padding(.vertical, 1.75)
-        .background(
-            Capsule(style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            tint.opacity(0.08),
-                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.68)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
+        .background(Capsule(style: .continuous).fill(AppSurfaceTokens.cardBackgroundSoft))
         .overlay(
             Capsule(style: .continuous)
-                .stroke(tint.opacity(0.08), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
         )
         .clipShape(Capsule(style: .continuous))
     }
@@ -1256,17 +1466,8 @@ struct WorkspaceHomeView: View {
         }
         .padding(.horizontal, 7.5)
         .padding(.vertical, 4)
-        .background(
-            Capsule(style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [tint.opacity(0.14), tint.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(Capsule(style: .continuous).stroke(tint.opacity(0.14), lineWidth: 1))
+        .background(Capsule(style: .continuous).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .overlay(Capsule(style: .continuous).stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1))
     }
 
     private func topActionButton(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
@@ -1282,17 +1483,11 @@ struct WorkspaceHomeView: View {
             .frame(height: 24.5)
             .background(
                 RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [tint.opacity(0.14), tint.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
-                    .stroke(tint.opacity(0.13), lineWidth: 1)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -1308,16 +1503,7 @@ struct WorkspaceHomeView: View {
                 .frame(width: 26, height: 26)
                 .background(
                     RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    AppSurfaceTokens.background.opacity(0.92),
-                                    AppSurfaceTokens.cardBackground.opacity(0.84)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
@@ -1331,13 +1517,7 @@ struct WorkspaceHomeView: View {
         VStack(spacing: 2.5) {
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [action.tint.opacity(0.16), action.tint.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
                     .frame(width: 22, height: 22)
                 Image(systemName: action.icon)
                     .font(.system(size: 9, weight: .semibold))
@@ -1354,20 +1534,11 @@ struct WorkspaceHomeView: View {
         .frame(maxWidth: .infinity, minHeight: 28)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            action.tint.opacity(0.08),
-                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.60)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .stroke(action.tint.opacity(0.08), lineWidth: 1)
+                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
     }
@@ -1408,71 +1579,26 @@ struct WorkspaceHomeView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4.25)
-        .background(
-            LinearGradient(
-                colors: [
-                    item.isUnavailable ? AppSurfaceTokens.accentOrange.opacity(0.08) : AppSurfaceTokens.accentBlue.opacity(0.05),
-                    AppSurfaceTokens.cardBackgroundSoft.opacity(0.84)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous))
     }
 
     private func permissionRow(_ item: SystemPermissionSnapshot) -> some View {
-        let tint = item.isAvailable == false ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentGreen
-
-        return VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 4.5) {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [tint.opacity(0.16), tint.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 18, height: 18)
-                    .overlay {
-                        Image(systemName: item.isAvailable == false ? "exclamationmark.shield.fill" : "checkmark.shield.fill")
-                            .font(.system(size: 7.5, weight: .semibold))
-                            .foregroundStyle(tint)
-                    }
-                Spacer(minLength: 0)
-                Circle()
-                    .fill(tint)
-                    .frame(width: 4, height: 4)
+        PermissionStatusCard(
+            permission: item,
+            compact: true,
+            openSettings: item.isAvailable ? nil : {
+                openPermissionSettings(for: item)
             }
-            Text(item.name)
-                .font(.system(size: 8.75, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .lineLimit(1)
-            Text(item.value ?? "不可用")
-                .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .lineLimit(1)
-            if item.isAvailable == false, let reason = item.unavailableReason {
-                Text(reason)
-                    .font(.system(size: 7.5))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.horizontal, 6.75)
-        .padding(.vertical, 4.5)
-        .background(
-            LinearGradient(
-                colors: [
-                    tint.opacity(0.08),
-                    AppSurfaceTokens.cardBackgroundSoft.opacity(0.86)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
         )
-        .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous))
+    }
+
+    private func openPermissionSettings(for item: SystemPermissionSnapshot) {
+        if let kind = item.appPermissionKind {
+            permissionManager.openSettingsFor(kind)
+        } else {
+            permissionManager.openPrivacySettings()
+        }
     }
 
     private func keyValueRow(title: String, value: String) -> some View {
@@ -1487,7 +1613,7 @@ struct WorkspaceHomeView: View {
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 7)
-        .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.82))
+        .background(AppSurfaceTokens.cardBackgroundSoft)
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous))
     }
 
@@ -1576,61 +1702,31 @@ private struct DashboardCard<Content: View>: View {
     private var cardFill: AnyShapeStyle {
         switch style {
         case .regular:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        AppSurfaceTokens.background.opacity(0.98),
-                        AppSurfaceTokens.cardBackground,
-                        AppSurfaceTokens.cardBackgroundSoft.opacity(0.72)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            return AnyShapeStyle(AppSurfaceTokens.cardBackgroundSoft)
         case .prominent:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        AppSurfaceTokens.background,
-                        AppSurfaceTokens.accentBlue.opacity(0.04),
-                        AppSurfaceTokens.cardBackground,
-                        AppSurfaceTokens.cardBackgroundSoft.opacity(0.64)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            return AnyShapeStyle(AppSurfaceTokens.cardBackgroundSoft)
         case .subtle:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        AppSurfaceTokens.background.opacity(0.76),
-                        AppSurfaceTokens.cardBackgroundSoft.opacity(0.74)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            return AnyShapeStyle(AppSurfaceTokens.cardBackground.opacity(0.94))
         }
     }
 
     private var cardStroke: Color {
         switch style {
         case .regular:
-            return AppSurfaceTokens.separator.opacity(0.62)
+            return AppSurfaceTokens.separator.opacity(0.72)
         case .prominent:
-            return AppSurfaceTokens.accentBlue.opacity(0.18)
+            return AppSurfaceTokens.accentBlue.opacity(0.14)
         case .subtle:
-            return AppSurfaceTokens.separator.opacity(0.42)
+            return AppSurfaceTokens.separator.opacity(0.48)
         }
     }
 
     private var shadowColor: Color {
         switch style {
         case .regular:
-            return .black.opacity(0.026)
+            return .black.opacity(0.028)
         case .prominent:
-            return AppSurfaceTokens.accentBlue.opacity(0.075)
+            return AppSurfaceTokens.accentBlue.opacity(0.03)
         case .subtle:
             return .black.opacity(0.012)
         }
@@ -1638,17 +1734,17 @@ private struct DashboardCard<Content: View>: View {
 
     private var shadowRadius: CGFloat {
         switch style {
-        case .regular: return 9
-        case .prominent: return 13
-        case .subtle: return 6
+        case .regular: return 4
+        case .prominent: return 6
+        case .subtle: return 3
         }
     }
 
     private var shadowY: CGFloat {
         switch style {
-        case .regular: return 3
-        case .prominent: return 5
-        case .subtle: return 2
+        case .regular: return 1
+        case .prominent: return 2
+        case .subtle: return 1
         }
     }
 }
@@ -1683,6 +1779,9 @@ private struct HomeAction: Identifiable {
         case capture
         case inbox
         case settings
+        case agent
+        case schedule
+        case systemStatus
 
         @MainActor
         func perform(using appState: AppState) {
@@ -1692,9 +1791,15 @@ private struct HomeAction: Identifiable {
             case .capture:
                 NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
             case .inbox:
-                appState.selectSidebarItem(.inbox)
+                appState.navigate(to: .inbox)
             case .settings:
-                appState.selectSidebarItem(.settings)
+                appState.navigate(to: .settings)
+            case .agent:
+                appState.navigate(to: .agent)
+            case .schedule:
+                appState.navigate(to: .schedule)
+            case .systemStatus:
+                appState.navigate(to: .systemStatus)
             }
         }
     }
@@ -1775,7 +1880,7 @@ private struct MiniTrendStack: View {
             MiniSparkline(values: values.isEmpty ? [0] : values, tint: tint)
                 .frame(height: 28)
                 .padding(.vertical, 4)
-                .background(AppSurfaceTokens.cardBackgroundSoft.opacity(0.62))
+                .background(AppSurfaceTokens.cardBackground.opacity(0.9))
                 .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous))
         }
     }
@@ -1795,7 +1900,7 @@ private struct RingGauge: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(AppSurfaceTokens.cardBackgroundSoft.opacity(0.95), lineWidth: 7)
+                .stroke(AppSurfaceTokens.cardBackground.opacity(0.92), lineWidth: 7)
             Circle()
                 .trim(from: 0, to: CGFloat((percentage ?? 0).clamped(to: 0...100) / 100))
                 .stroke(tint, style: StrokeStyle(lineWidth: 7, lineCap: .round))
@@ -1830,14 +1935,7 @@ private struct ProcessDonutChart: View {
         ZStack {
             Circle()
                 .stroke(
-                    LinearGradient(
-                        colors: [
-                            AppSurfaceTokens.separator.opacity(0.10),
-                            AppSurfaceTokens.separator.opacity(0.22)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
+                    AppSurfaceTokens.separator.opacity(0.18),
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
 
@@ -1846,7 +1944,7 @@ private struct ProcessDonutChart: View {
                     .trim(from: startTrim(for: index), to: endTrim(for: index))
                     .stroke(
                         LinearGradient(
-                            colors: [segment.color.opacity(0.82), segment.color],
+                            colors: [segment.color.opacity(0.90), segment.color],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -1856,19 +1954,7 @@ private struct ProcessDonutChart: View {
             }
 
             Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            AppSurfaceTokens.accentBlue.opacity(0.045),
-                            AppSurfaceTokens.background.opacity(0.96),
-                            AppSurfaceTokens.cardBackground.opacity(0.92),
-                            AppSurfaceTokens.cardBackgroundSoft.opacity(0.68)
-                        ],
-                        center: .center,
-                        startRadius: 4,
-                        endRadius: 34
-                    )
-                )
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
                 .padding(lineWidth + 5)
                 .overlay {
                     Circle()
@@ -1902,5 +1988,90 @@ private struct ProcessDonutChart: View {
 private extension Double {
     func clamped(to range: ClosedRange<Double>) -> Double {
         min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+struct WorkspaceDashboardSnapshot: Equatable {
+    let phase: WorkspaceDashboardPhase
+    let nowLabel: String
+    let currentFocus: String
+    let nextStep: String
+    let pendingItems: [String]
+    let scheduleItems: [String]
+    let systemMetrics: [String]
+    let currentPage: String
+    let permissionSummary: String
+    let unavailableReasons: [SystemStatusUnavailableReason]
+}
+
+enum WorkspaceDashboardPhase: Equatable {
+    case loading
+    case loaded
+    case empty
+    case error(message: String)
+}
+
+@MainActor
+protocol WorkspaceDashboardRepositoryProtocol {
+    func loadSnapshot() -> WorkspaceDashboardSnapshot
+}
+
+@MainActor
+struct LiveWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
+    let appState: AppState
+    let systemStatusService: SystemStatusService
+
+    func loadSnapshot() -> WorkspaceDashboardSnapshot {
+        let preview = AcWorkPreviewData.homeSnapshot
+        let systemStatus = systemStatusService.snapshot
+        return WorkspaceDashboardSnapshot(
+            phase: .loaded,
+            nowLabel: preview.nowLabel,
+            currentFocus: preview.currentFocus,
+            nextStep: preview.nextStep,
+            pendingItems: preview.pendingItems,
+            scheduleItems: preview.scheduleItems,
+            systemMetrics: preview.systemMetrics,
+            currentPage: appState.sidebarSelection.displayName,
+            permissionSummary: SystemStatusLabelFormatter.permissionOverviewSummary(systemStatus.permissions),
+            unavailableReasons: systemStatus.unavailableReasons
+        )
+    }
+}
+
+@MainActor
+struct PreviewWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
+    let phase: WorkspaceDashboardPhase
+
+    func loadSnapshot() -> WorkspaceDashboardSnapshot {
+        let preview = AcWorkPreviewData.homeSnapshot
+        return WorkspaceDashboardSnapshot(
+            phase: phase,
+            nowLabel: preview.nowLabel,
+            currentFocus: preview.currentFocus,
+            nextStep: preview.nextStep,
+            pendingItems: preview.pendingItems,
+            scheduleItems: preview.scheduleItems,
+            systemMetrics: preview.systemMetrics,
+            currentPage: SidebarItem.home.displayName,
+            permissionSummary: "已授权 3 · 未知 0 · 不可用 0",
+            unavailableReasons: []
+        )
+    }
+}
+
+@MainActor
+final class WorkspaceDashboardViewModel: ObservableObject {
+    @Published private(set) var snapshot: WorkspaceDashboardSnapshot
+
+    private let repository: any WorkspaceDashboardRepositoryProtocol
+
+    init(repository: any WorkspaceDashboardRepositoryProtocol) {
+        self.repository = repository
+        self.snapshot = repository.loadSnapshot()
+    }
+
+    func refresh() {
+        snapshot = repository.loadSnapshot()
     }
 }

@@ -5,6 +5,7 @@ import AppKit
 public final class HotCornerManager {
     public typealias ActionExecutor = @MainActor (HotCornerAction) -> Void
 
+    private static let logger = AcMindLogger(category: .ui)
     private let actionExecutor: ActionExecutor
     private var settings: HotCornerSettings = .defaultSettings
     private var globalMonitor: Any?
@@ -24,6 +25,7 @@ public final class HotCornerManager {
     public func start() {
         guard !isRunning else { return }
         isRunning = true
+        Self.logger.debug("Hot corner manager start")
 
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved]) { [weak self] _ in
             Task { @MainActor in
@@ -55,6 +57,7 @@ public final class HotCornerManager {
     public func stop() {
         guard isRunning else { return }
         isRunning = false
+        Self.logger.debug("Hot corner manager stop")
         pendingHoverTask?.cancel()
         pendingHoverTask = nil
         hoveredCorner = nil
@@ -66,6 +69,7 @@ public final class HotCornerManager {
 
     public func update(settings: HotCornerSettings) {
         self.settings = settings
+        Self.logger.debug("Hot corner settings updated: enabled=\(settings.isEnabled), cornerSize=\(settings.cornerSize)")
         if !settings.isEnabled {
             stop()
         } else if !isRunning {
@@ -152,6 +156,7 @@ public final class HotCornerManager {
 
     private func refreshOverlayWindows() {
         guard settings.isEnabled else {
+            Self.logger.debug("Hot corner overlays cleared because settings are disabled")
             clearOverlayWindows()
             return
         }
@@ -185,6 +190,8 @@ public final class HotCornerManager {
                 }
             }
         }
+
+        Self.logger.debug("Hot corner overlay windows refreshed: count=\(overlayWindows.count)")
     }
 
     private func clearOverlayWindows() {
@@ -301,6 +308,7 @@ private final class HotCornerOverlayWindow: NSPanel {
             defer: false
         )
 
+        identifier = NSUserInterfaceItemIdentifier("acmind.hot-corner-overlay")
         configureWindow()
         installContent(frame: frame)
     }
@@ -348,7 +356,7 @@ private final class HotCornerOverlayContentView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
-        NSColor(white: 0, alpha: 1).setFill()
+        NSColor.black.setFill()
         let path = NSBezierPath()
         path.appendRect(bounds)
         path.append(NSBezierPath(ovalIn: HotCornerGeometry.overlayCutoutRect(for: corner, in: bounds, size: bounds.width)))

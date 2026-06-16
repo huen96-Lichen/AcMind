@@ -920,7 +920,7 @@ public enum VoiceError: Error, LocalizedError {
     public var recoverySuggestion: String? {
         switch self {
         case .permissionDenied:
-            return "请前往系统设置 > 隐私与安全性 > 麦克风，授予 AcMind 权限"
+            return "请前往系统设置 > 隐私与安全性 > 麦克风，授予 AcWork 权限"
         case .asrNotAvailable:
             return "请检查 ASR 配置或安装本地 Whisper"
         default:

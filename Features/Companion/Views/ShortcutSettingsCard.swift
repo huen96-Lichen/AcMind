@@ -12,7 +12,7 @@ struct ShortcutSettingsCard: View {
             iconName: "command",
             iconColor: .green,
             title: "随身快捷键",
-            description: "全局快捷键，快速触发 AcMind 能力。",
+            description: "全局快捷键，快速触发 AcWork 能力。",
             isEnabled: isEnabled,
             isGlobalEnabled: isGlobalEnabled,
             toggleEnabled: $isEnabled

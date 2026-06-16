@@ -55,7 +55,7 @@ struct ScheduleDashboardView: View {
     }
 
     var body: some View {
-        WorkspacePageShell(
+        AcWorkShell(
             title: "日程",
             subtitle: "\(viewModel.todayEventCount) 项待办",
             headerActions: AnyView(headerActions),
@@ -79,7 +79,7 @@ struct ScheduleDashboardView: View {
                 scheduleRightRail
             }
         )
-        .background(AppSurfaceTokens.islandBackground.ignoresSafeArea())
+        .background(AppSurfaceBackdrop())
         .sheet(isPresented: $viewModel.isCreatingEvent) {
             ScheduleEventEditorSheet(viewModel: viewModel)
         }
@@ -168,6 +168,8 @@ struct ScheduleDashboardView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 20) {
+            planningOverviewCard
+
             switch dashboardMode {
             case .day:
                 dayOverview
@@ -197,69 +199,49 @@ struct ScheduleDashboardView: View {
         }
     }
 
+    private var planningOverviewCard: some View {
+        SchedulePlanningSnapshotCard(
+            viewModel: viewModel,
+            snapshot: viewModel.planningSnapshot(for: viewModel.selectedDate)
+        )
+    }
+
     private var todayEventsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("今日日程")
-                    .font(.system(size: 15, weight: .semibold))
-                Spacer()
-                Text("\(viewModel.todayEvents.count) 项")
-                    .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
-
-            if viewModel.todayEvents.isEmpty {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.secondary.opacity(0.3))
-                        Text("今天还没有安排")
-                            .font(.caption)
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+        AppSurfaceCard(title: "今日日程", subtitle: "\(viewModel.todayEvents.count) 项", padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                if viewModel.todayEvents.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.secondary.opacity(0.3))
+                            Text("今天还没有安排")
+                                .font(.caption)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        }
+                        Spacer()
                     }
-                    Spacer()
-                }
-                .padding(.vertical, 20)
-            } else {
-                ForEach(viewModel.todayEvents.prefix(6)) { event in
-                    Button {
-                        viewModel.selectDate(event.startAt)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(event.startAt, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute())
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(AppSurfaceTokens.accentPrimary)
-                                .frame(width: 48, alignment: .leading)
-
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(categoryColor(for: event.categoryId))
-                                .frame(width: 3)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(event.title)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                                Text(event.categoryId.isEmpty ? "未分类" : viewModel.categoryName(for: event.categoryId))
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            }
-
-                            Spacer()
+                    .padding(.vertical, 18)
+                } else {
+                    ForEach(viewModel.todayEvents.prefix(6)) { event in
+                        Button {
+                            viewModel.selectDate(event.startAt)
+                        } label: {
+                            ScheduleEventCompactRow(
+                                event: event,
+                                categoryName: event.categoryId.isEmpty ? "未分类" : viewModel.categoryName(for: event.categoryId),
+                                categoryColor: categoryColor(for: event.categoryId),
+                                referenceDate: Date(),
+                                onEdit: {
+                                    viewModel.openEditEvent(event)
+                                },
+                                onDelete: {
+                                    viewModel.deleteEvent(event.id)
+                                }
+                            )
                         }
-                        .padding(10)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(AppSurfaceTokens.cardBackgroundSoft))
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("编辑") {
-                            viewModel.openEditEvent(event)
-                        }
-
-                        Button("删除", role: .destructive) {
-                            viewModel.deleteEvent(event.id)
-                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -267,62 +249,66 @@ struct ScheduleDashboardView: View {
     }
 
     private var timelineCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("时间线")
-                .font(.system(size: 15, weight: .semibold))
-
-            let cal = Calendar.current
-            let hours = timelineHours
-
-            ForEach(hours, id: \.self) { hour in
-                let hourEvents = viewModel.todayEvents.filter {
-                    cal.component(.hour, from: $0.startAt) == hour && $0.status != .cancelled
+        AppSurfaceCard(title: "时间线", subtitle: "双击空白处创建", padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Spacer()
+                    Text(Date(), format: .dateTime.hour().minute())
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
-                HStack(spacing: 12) {
-                    Text(String(format: "%02d:00", hour))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .frame(width: 48, alignment: .leading)
+                let cal = Calendar.current
+                let hours = timelineHours
 
-                    if hourEvents.isEmpty {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(AppSurfaceTokens.cardBackgroundSoft)
-                            .frame(height: 36)
-                            .overlay(
-                                Text("双击添加任务")
-                                    .font(.caption)
-                                    .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                            )
-                            .onTapGesture(count: 2) {
-                                viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
-                            }
-                    } else {
-                        VStack(spacing: 4) {
-                            ForEach(hourEvents) { event in
-                                HStack {
-                                    Circle()
-                                        .fill(viewModel.categoryColor(for: event.categoryId))
-                                        .frame(width: 6, height: 6)
-                                    Text(event.title)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .lineLimit(1)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(viewModel.categoryColor(for: event.categoryId).opacity(0.12))
+                ForEach(hours, id: \.self) { hour in
+                    let hourEvents = viewModel.todayEvents.filter {
+                        cal.component(.hour, from: $0.startAt) == hour && $0.status != .cancelled
+                    }
+
+                    HStack(spacing: 12) {
+                        Text(String(format: "%02d:00", hour))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .frame(width: 48, alignment: .leading)
+
+                        if hourEvents.isEmpty {
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackground)
+                                .frame(height: 36)
+                                .overlay(
+                                    Text("双击添加任务")
+                                        .font(.caption)
+                                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
                                 )
+                                .onTapGesture(count: 2) {
+                                    viewModel.openCreateEvent(on: viewModel.selectedDate, hour: hour, minute: 0)
+                                }
+                        } else {
+                            VStack(spacing: 4) {
+                                ForEach(hourEvents) { event in
+                                    HStack {
+                                        Circle()
+                                            .fill(viewModel.categoryColor(for: event.categoryId))
+                                            .frame(width: 6, height: 6)
+                                        Text(event.title)
+                                            .font(.system(size: 12, weight: .medium))
+                                            .lineLimit(1)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                                            .fill(viewModel.categoryColor(for: event.categoryId).opacity(0.12))
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var timelineHours: [Int] {
@@ -354,7 +340,7 @@ struct ScheduleDashboardView: View {
                 AppSurfaceCard(title: "快捷操作", subtitle: "保持外壳稳定", padding: 12) {
                     VStack(spacing: 6) {
                         Button("今天") { viewModel.goToToday() }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.bordered)
                             .frame(maxWidth: .infinity)
                         Button("新建日程") { viewModel.openCreateEvent() }
                             .buttonStyle(.bordered)
@@ -364,7 +350,7 @@ struct ScheduleDashboardView: View {
             }
             .padding(14)
         }
-        .background(AppSurfaceTokens.secondarySidebarBackground)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
     }
 
     private func dashboardTopBadge(icon: String, title: String, tint: Color = AppSurfaceTokens.secondaryText) -> some View {
@@ -380,47 +366,54 @@ struct ScheduleDashboardView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                .fill(tint.opacity(0.10))
-        )
+            .background(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
     }
 
     private var nextEventCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("下一事件")
-                .font(.system(size: 15, weight: .semibold))
+        AppSurfaceCard(title: "时间锚点", subtitle: "当前时段与下一件", padding: 16) {
+            let snapshot = viewModel.planningSnapshot(for: viewModel.selectedDate)
 
-            if let next = viewModel.todayEvents.first {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(next.title)
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("\(next.startAt.formatted(date: .omitted, time: .shortened)) - \(next.endAt.formatted(date: .omitted, time: .shortened))")
+            if let current = snapshot.currentEvent {
+                ScheduleEventCompactRow(
+                    event: current,
+                    categoryName: viewModel.categoryName(for: current.categoryId),
+                    categoryColor: categoryColor(for: current.categoryId),
+                    referenceDate: Date()
+                )
+            } else if let next = snapshot.nextEvent {
+                ScheduleEventCompactRow(
+                    event: next,
+                    categoryName: viewModel.categoryName(for: next.categoryId),
+                    categoryColor: categoryColor(for: next.categoryId),
+                    referenceDate: Date()
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("今天暂无事件")
+                        .font(.system(size: 13, weight: .medium))
+                    Text("可以直接从右侧新建日程，或者在时间线双击空白处创建。")
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
-            } else {
-                Text("今天暂无事件")
-                    .font(.caption)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var dayStatsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("今日统计")
-                .font(.system(size: 15, weight: .semibold))
+        AppSurfaceCard(title: "今日统计", subtitle: "关键数量概览", padding: 16) {
+            let snapshot = viewModel.planningSnapshot(for: viewModel.selectedDate)
 
-            statRow(label: "待办", value: "\(viewModel.todayEventCount)")
-            statRow(label: "专注分钟", value: "\(viewModel.todayFocusMinutes)")
-            statRow(label: "饱和度", value: "\(viewModel.todayWorkloadPercent)%")
+            VStack(alignment: .leading, spacing: 12) {
+                statRow(label: "待办", value: "\(snapshot.activeEventCount)")
+                statRow(label: "专注分钟", value: "\(viewModel.todayFocusMinutes)")
+                statRow(label: "饱和度", value: "\(viewModel.todayWorkloadPercent)%")
+                statRow(label: "全天", value: "\(snapshot.allDayEventCount)")
+                statRow(label: "逾期", value: "\(snapshot.overdueEventCount)")
+            }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private func statRow(label: String, value: String) -> some View {
@@ -442,17 +435,14 @@ struct ScheduleDashboardView: View {
     }
 
     private var weekGridCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("周视图")
-                .font(.system(size: 15, weight: .semibold))
-
+        AppSurfaceCard(title: "周视图", subtitle: "一周负载分布", padding: 16) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 7), spacing: 12) {
                 ForEach(viewModel.weekWorkloadDays) { day in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(day.date, format: .dateTime.weekday(.narrow))
                             .font(.caption)
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                             .fill(heatColor(for: day.workloadPercent))
                             .frame(height: 48)
                         Text("\(day.eventCount) 项")
@@ -462,30 +452,27 @@ struct ScheduleDashboardView: View {
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var weekEventsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("本周事件")
-                .font(.system(size: 15, weight: .semibold))
-
-            ForEach(viewModel.currentWeekEvents.prefix(8)) { event in
-                HStack {
-                    Text(event.title)
-                        .font(.system(size: 13))
-                    Spacer()
-                    Text(event.startAt.formatted(date: .omitted, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+        AppSurfaceCard(title: "本周事件", subtitle: "最近 8 条", padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(viewModel.currentWeekEvents.prefix(8)) { event in
+                    ScheduleEventCompactRow(
+                        event: event,
+                        categoryName: viewModel.categoryName(for: event.categoryId),
+                        categoryColor: categoryColor(for: event.categoryId),
+                        referenceDate: Date(),
+                        onEdit: {
+                            viewModel.openEditEvent(event)
+                        },
+                        onDelete: {
+                            viewModel.deleteEvent(event.id)
+                        }
+                    )
                 }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var monthOverview: some View {
@@ -496,10 +483,7 @@ struct ScheduleDashboardView: View {
     }
 
     private var monthGridCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("月视图")
-                .font(.system(size: 15, weight: .semibold))
-
+        AppSurfaceCard(title: "月视图", subtitle: "本月日期热图", padding: 16) {
             let cal = Calendar.current
             let monthInterval = cal.dateInterval(of: .month, for: viewModel.selectedDate)!
             let daysInMonth = cal.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day!
@@ -517,8 +501,8 @@ struct ScheduleDashboardView: View {
                         let hasEvent = viewModel.hasEvents(on: date)
                         let isToday = cal.isDateInToday(date)
 
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isSelected ? AppSurfaceTokens.accentPrimary.opacity(0.85) : AppSurfaceTokens.cardBackgroundSoft)
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                            .fill(isSelected ? AppSurfaceTokens.accentPrimary.opacity(0.85) : AppSurfaceTokens.cardBackground)
                             .frame(height: 42)
                             .overlay(
                                 VStack(spacing: 2) {
@@ -539,39 +523,27 @@ struct ScheduleDashboardView: View {
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var monthEventsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("本月事件")
-                .font(.system(size: 15, weight: .semibold))
-
-            ForEach(viewModel.currentMonthEvents.prefix(6)) { event in
-                HStack {
-                    Text(event.title)
-                        .font(.system(size: 13))
-                    Spacer()
-                    Text(event.startAt.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 6).fill(AppSurfaceTokens.cardBackgroundSoft))
-                .contextMenu {
-                    Button("编辑") {
-                        viewModel.openEditEvent(event)
-                    }
-
-                    Button("删除", role: .destructive) {
-                        viewModel.deleteEvent(event.id)
-                    }
+        AppSurfaceCard(title: "本月事件", subtitle: "最近 6 条", padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(viewModel.currentMonthEvents.prefix(6)) { event in
+                    ScheduleEventCompactRow(
+                        event: event,
+                        categoryName: viewModel.categoryName(for: event.categoryId),
+                        categoryColor: categoryColor(for: event.categoryId),
+                        referenceDate: Date(),
+                        onEdit: {
+                            viewModel.openEditEvent(event)
+                        },
+                        onDelete: {
+                            viewModel.deleteEvent(event.id)
+                        }
+                    )
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))
     }
 
     private var yearOverview: some View {
@@ -581,7 +553,7 @@ struct ScheduleDashboardView: View {
     private func heatColor(for percent: Int) -> Color {
         switch percent {
         case 0:
-            return AppSurfaceTokens.cardBackgroundSoft
+            return AppSurfaceTokens.cardBackground
         case 1..<25:
             return AppSurfaceTokens.accentPrimary.opacity(0.25)
         case 25..<50:
@@ -645,7 +617,7 @@ private struct ScheduleEventEditorSheet: View {
                 .tint(AppSurfaceTokens.accentPrimary)
             }
             .padding(20)
-            .background(AppSurfaceTokens.secondarySidebarBackground)
+            .background(AppSurfaceTokens.cardBackgroundSoft)
 
             Divider()
 

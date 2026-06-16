@@ -23,7 +23,7 @@ struct CompanionShortcutPanel: View {
             }
         }
         .frame(width: 560, height: 620)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
         .onChange(of: viewModel.companionShortcuts) { _, _ in
             persistCompanionSettings()
         }
@@ -65,6 +65,10 @@ struct CompanionShortcutPanel: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
     }
 
     // MARK: - Info Banner
@@ -88,11 +92,13 @@ struct CompanionShortcutPanel: View {
             Spacer()
         }
         .padding(16)
-        .background(Color.blue.opacity(0.08))
-        .cornerRadius(10)
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                 .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+        )
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -120,8 +126,14 @@ struct CompanionShortcutPanel: View {
                     }
                 }
             }
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(10)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+            )
         }
     }
 
@@ -193,7 +205,7 @@ struct ShortcutRow: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color.secondary.opacity(0.15))
-                            .cornerRadius(4)
+                            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
                 }
             }
@@ -204,7 +216,10 @@ struct ShortcutRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(isHovered ? AppSurfaceTokens.separator.opacity(0.08) : Color.clear)
+        )
         .onHover { hovering in
             isHovered = hovering
         }

@@ -115,6 +115,11 @@ public final class ClipboardService: ClipboardServiceProtocol {
         lastChangeCount = NSPasteboard.general.changeCount
         await startPollingTimer()
     }
+
+    public func monitoringState() -> ClipboardMonitoringState {
+        guard isWatching else { return .stopped }
+        return isPaused ? .paused : .active
+    }
     
     // MARK: - Clipboard Monitoring
     

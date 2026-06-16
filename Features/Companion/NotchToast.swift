@@ -103,12 +103,12 @@ struct NotchToastView: View {
             .padding(.vertical, 10)
             .frame(width: 260)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                     .fill(.regularMaterial)
                     .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                     .stroke(toast.type.color.opacity(0.25), lineWidth: 1)
             )
             .transition(.move(edge: .top).combined(with: .opacity))

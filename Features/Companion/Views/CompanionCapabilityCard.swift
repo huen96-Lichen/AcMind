@@ -36,8 +36,8 @@ struct CompanionCapabilityCard<Content: View>: View {
             HStack(alignment: .top, spacing: 12) {
                 // Icon
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(iconColor.opacity(0.15))
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 44, height: 44)
                     
                     Image(systemName: iconName)
@@ -76,12 +76,14 @@ struct CompanionCapabilityCard<Content: View>: View {
             }
         }
         .padding(20)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(18)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: AppSurfaceTokens.separator.opacity(0.08), radius: 3, x: 0, y: 1)
     }
 }

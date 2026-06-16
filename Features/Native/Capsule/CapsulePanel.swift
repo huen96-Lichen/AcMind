@@ -126,8 +126,8 @@ struct CapsuleContentView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(AppSurfaceTokens.background)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
                     .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
             )
 
@@ -166,8 +166,8 @@ struct CapsuleContentView: View {
                     .padding(.vertical, 12)
                 }
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(AppSurfaceTokens.background)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -496,8 +496,10 @@ struct ScreenshotModeButton: View {
                     .font(.caption)
             }
             .frame(width: 70, height: 60)
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }

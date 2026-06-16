@@ -13,11 +13,14 @@ struct NotchV2SystemStatusRail: View {
                     statusRow(title: "电池", value: viewModel.batterySummary, accent: .cyan)
                     statusRow(title: "网络", value: viewModel.networkSummary, accent: .green)
 
-                    Button("查看状态") {
-                        (NSApp.delegate as? AppDelegate)?.showSystemStatus()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    NotchV2StatusPill(
+                        icon: "arrow.up.right.square",
+                        title: "查看状态",
+                        accent: NotchV2DesignTokens.innerCardBackground.opacity(0.92),
+                        action: {
+                            (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                        }
+                    )
                     .padding(.top, 4)
                 }
             }
@@ -25,26 +28,6 @@ struct NotchV2SystemStatusRail: View {
     }
 
     private func statusRow(title: String, value: String, accent: Color) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(accent)
-                .frame(width: 5, height: 5)
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Text(value)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
-        )
+        NotchV2InfoRow(title: title, value: value, icon: nil, accent: accent, compactValue: true)
     }
 }

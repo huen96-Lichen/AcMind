@@ -58,8 +58,10 @@ struct DesktopCapsuleSettingsSection: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
-                        .background(AppSurfaceTokens.cardBackgroundSoft)
-                        .cornerRadius(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
+                        )
                 } else {
                     List {
                         ForEach(settings.actions.sorted { $0.order < $1.order }) { action in
@@ -107,8 +109,10 @@ struct DesktopCapsuleSettingsSection: View {
                 }
             }
             .padding()
-            .background(AppSurfaceTokens.cardBackgroundSoft)
-            .cornerRadius(8)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
+            )
         }
         .onAppear {
             loadSettings()
@@ -253,7 +257,7 @@ struct AddActionSheet: View {
                         VStack(spacing: 8) {
                             ZStack {
                             Circle()
-                                    .fill(isAdded ? AppSurfaceTokens.cardBackgroundSoft : type.defaultColor.opacity(0.1))
+                                    .fill(isAdded ? AppSurfaceTokens.cardBackground.opacity(0.94) : type.defaultColor.opacity(0.1))
                                     .frame(width: 48, height: 48)
 
                                 Image(systemName: type.defaultIcon)

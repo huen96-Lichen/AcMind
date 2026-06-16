@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ApplicationServices
 import AcMindKit
 import struct AcMindKit.KeyboardShortcut
 
@@ -22,6 +23,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var oobeWindowController: OOBEWindowController?
     private var clipboardPinWindowManager: ClipboardPinWindowManager?
     private var screenshotPreviewWindow: NSWindow?
+    private var placeholderWindowPruneTask: Task<Void, Never>?
+#if DEBUG
+    private var toolWorkspacePreviewWindow: NSWindow?
+    private var settingsPreviewWindow: NSWindow?
+    private var productPanelPreviewWindow: NSWindow?
+    private var agentPreviewWindow: NSWindow?
+    private var systemStatusPreviewWindow: NSWindow?
+    private var systemStatusPreviewService: SystemStatusService?
+#endif
 
     // MARK: - Notch Panel
 
@@ -87,16 +97,73 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         serviceContainer?.assetStore
     }
 
-    private var hotCornerSettingsStore: HotCornerSettingsStore? {
-        serviceContainer?.hotCornerSettingsStore
+    private func configureTransparentWindow(_ window: NSWindow) {
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
     }
 
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--settings-preview") {
+            if let exportPath = settingsPreviewExportPath() {
+                do {
+                    try exportSettingsPreviewImage(to: exportPath)
+                } catch {
+                    logger.error("Failed to export settings preview: \(error.localizedDescription)", file: "AppDelegate")
+                }
+                NSApp.terminate(nil)
+                return
+            }
+            showSettingsPreviewWindow()
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--acwork-export-screenshots") {
+            print("[AcWorkExport] starting screenshot export")
+            do {
+                print("[AcWorkExport] building preview container")
+                try exportAcWorkPhaseOneScreenshots(serviceContainer: ServiceContainer.preview())
+                print("[AcWorkExport] screenshot export finished")
+            } catch {
+                logger.error("Failed to export AcWork screenshots: \(error.localizedDescription)", file: "AppDelegate")
+                print("[AcWorkExport] export failed: \(error.localizedDescription)")
+            }
+            NSApp.terminate(nil)
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--acwork-layout-audit") {
+            print("[AcWorkAudit] starting layout audit export")
+            do {
+                try exportAcWorkLayoutAudit(serviceContainer: ServiceContainer.preview())
+                print("[AcWorkAudit] layout audit export finished")
+            } catch {
+                logger.error("Failed to export AcWork layout audit: \(error.localizedDescription)", file: "AppDelegate")
+                print("[AcWorkAudit] export failed: \(error.localizedDescription)")
+            }
+            NSApp.terminate(nil)
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--tool-workspace-preview") {
+            showToolWorkspacePreviewWindow()
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--product-panel-preview") {
+            showProductPanelPreviewWindow()
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--agent-preview") {
+            showAgentPreviewWindow()
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--system-status-preview") {
+            showSystemStatusPreviewWindow()
+            return
+        }
+#endif
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        showLaunchWindow()
         setupStatusBar()
         setupNotifications()
 
@@ -107,7 +174,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 await MainActor.run {
                     self.serviceContainer = container
                     self.appState.bindServiceContainerState(container)
-                    self.hideLaunchWindow()
                     self.connectCompanionPanels()
                     if self.clipboardPinWindowManager == nil {
                         self.clipboardPinWindowManager = ClipboardPinWindowManager(assetStore: self.assetStore ?? AssetStore())
@@ -118,6 +184,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         self.showOOBE()
                     } else {
                         self.showMainWindow()
+                        self.applyInitialOpenRouteIfNeeded()
                         // 启动时只展示一个随身形态，避免大陆与胶囊同时出现
                         if self.notchPanelEnabled {
                             self.showNotchPanel()
@@ -149,8 +216,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         desktopCapsulePanel.connect(notchController: notchPanel)
     }
 
+    private func applyInitialOpenRouteIfNeeded() {
+        guard let route = ProcessInfo.processInfo.arguments.compactMap(Self.initialOpenRoute(from:)).first else {
+            return
+        }
+
+        switch route {
+        case .home:
+            appState.navigate(to: .home)
+        case .inbox:
+            appState.navigate(to: .inbox)
+        case .agent:
+            appState.navigate(to: .agent)
+        case .schedule:
+            appState.navigate(to: .schedule)
+        case .systemStatus:
+            appState.navigate(to: .systemStatus)
+        case .settings:
+            appState.navigate(to: .settings)
+        }
+    }
+
+    private static func initialOpenRoute(from argument: String) -> InitialOpenRoute? {
+        guard argument.hasPrefix("--acwork-open=") else { return nil }
+        let value = String(argument.dropFirst("--acwork-open=".count))
+        return InitialOpenRoute(rawValue: value)
+    }
+
+    private enum InitialOpenRoute: String {
+        case home
+        case inbox
+        case agent
+        case schedule
+        case systemStatus
+        case settings
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         isTerminating = true
+        placeholderWindowPruneTask?.cancel()
+        placeholderWindowPruneTask = nil
         AudioMuteGuard.shared.forceRestore()
 
         // 清理资源
@@ -170,9 +275,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.removeObserver(self)
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        schedulePlaceholderWindowPrune()
+        setupHotCorners()
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
             showMainWindow()
+            if notchPanelEnabled {
+                showNotchPanel()
+            } else if desktopCapsuleEnabled {
+                showDesktopCapsule()
+            }
         }
         return true
     }
@@ -189,15 +304,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
-        mainWindowController?.normalizeWindowSizeIfNeeded(targetContentSize: AppWindowGeometry.mainFrame.size)
+        mainWindowController?.enforceMinimumContentSize()
+        mainWindowController?.ensureVisibleOnScreenIfNeeded()
         if shouldRestoreWindowPosition == false {
             mainWindowController?.window?.setFrame(
-                MainWindowController.frameRect(forContentSize: AppWindowGeometry.mainFrame.size, origin: AppWindowGeometry.mainFrame.origin, styleMask: mainWindowController?.window?.styleMask),
+                MainWindowController.frameRect(forContentSize: AppWindowGeometry.defaultFrame.size, origin: AppWindowGeometry.defaultFrame.origin, styleMask: mainWindowController?.window?.styleMask),
                 display: true
             )
         }
         mainWindowController?.window?.makeKeyAndOrderFront(nil)
         mainWindowController?.window?.orderFrontRegardless()
+        prunePlaceholderWindows()
+        schedulePlaceholderWindowPrune()
         appState.mainWindowDidOpen()
     }
 
@@ -205,6 +323,99 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindowController?.close()
         mainWindowController = nil
         appState.mainWindowDidClose()
+    }
+
+    private func prunePlaceholderWindows() {
+        let mainWindow = mainWindowController?.window
+        let launchWindow = launchWindowController?.window
+
+        for window in NSApp.windows {
+            let title = window.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard window !== mainWindow, window !== launchWindow, window !== notchPanelController, window !== desktopCapsuleController else { continue }
+            guard window.level < .statusBar else { continue }
+            let isSmallLaunchShell = window.frame.width <= 520 && window.frame.height <= 420
+            let isThinPlaceholder = window.frame.width >= 800 && window.frame.height <= 120
+            let isBlankAuxiliaryWindow =
+                title.isEmpty &&
+                window.frame.width >= 500 && window.frame.width <= 540 &&
+                window.frame.height >= 280 && window.frame.height <= 320
+            let shouldClosePlaceholder =
+                (title.isEmpty && isSmallLaunchShell) ||
+                ([AcWorkBrand.displayName, AcWorkBrand.legacyInternalName].contains(title) && isSmallLaunchShell) ||
+                ((title.isEmpty || [AcWorkBrand.displayName, AcWorkBrand.legacyInternalName].contains(title)) && isThinPlaceholder) ||
+                isBlankAuxiliaryWindow
+            guard shouldClosePlaceholder else { continue }
+            window.orderOut(nil)
+            window.close()
+        }
+
+        prunePlaceholderAXWindows()
+    }
+
+    private func prunePlaceholderAXWindows() {
+        let appElement = AXUIElementCreateApplication(pid_t(ProcessInfo.processInfo.processIdentifier))
+        var windowsValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsValue) == .success,
+              let windows = windowsValue as? [AXUIElement] else { return }
+
+        for window in windows {
+            var titleValue: CFTypeRef?
+            let titleResult = AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleValue)
+            let title = (titleValue as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+            var sizeValue: CFTypeRef?
+            let sizeResult = AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeValue)
+            var windowSize = CGSize.zero
+            if sizeResult == .success, let sizeValue, CFGetTypeID(sizeValue) == AXValueGetTypeID() {
+                let axValue = unsafeDowncast(sizeValue as AnyObject, to: AXValue.self)
+                AXValueGetValue(axValue, .cgSize, &windowSize)
+            }
+
+            guard windowSize.width > 64 || windowSize.height > 64 else { continue }
+
+            let isCompanionCollapsedWindow =
+                windowSize.width >= CompanionMenuBarLayout.collapsedMinWidth &&
+                windowSize.width <= CompanionMenuBarLayout.collapsedMaxWidth &&
+                windowSize.height >= CompanionMenuBarLayout.collapsedMinHeight &&
+                windowSize.height <= CompanionMenuBarLayout.collapsedMaxHeight
+            let isDesktopCapsuleWindow = windowSize.width <= 60 && windowSize.height <= 60
+            if isCompanionCollapsedWindow || isDesktopCapsuleWindow {
+                continue
+            }
+
+            let isSmallLaunchShell = windowSize.width <= 520 && windowSize.height <= 420
+            let isThinPlaceholder = windowSize.width >= 800 && windowSize.height <= 120
+            let isBlankAuxiliaryWindow =
+                title.isEmpty &&
+                windowSize.width >= 500 && windowSize.width <= 540 &&
+                windowSize.height >= 280 && windowSize.height <= 320
+            let shouldClosePlaceholder =
+                (title.isEmpty && isSmallLaunchShell) ||
+                ([AcWorkBrand.displayName, AcWorkBrand.legacyInternalName].contains(title) && isSmallLaunchShell) ||
+                ((title.isEmpty || [AcWorkBrand.displayName, AcWorkBrand.legacyInternalName].contains(title)) && isThinPlaceholder) ||
+                isBlankAuxiliaryWindow
+            guard shouldClosePlaceholder else { continue }
+
+            if titleResult == .success || sizeResult == .success {
+                var closeButtonValue: CFTypeRef?
+                if AXUIElementCopyAttributeValue(window, kAXCloseButtonAttribute as CFString, &closeButtonValue) == .success,
+                   let closeButtonValue,
+                   CFGetTypeID(closeButtonValue) == AXUIElementGetTypeID() {
+                    let closeButton = unsafeDowncast(closeButtonValue as AnyObject, to: AXUIElement.self)
+                    AXUIElementPerformAction(closeButton, kAXPressAction as CFString)
+                }
+            }
+        }
+    }
+
+    private func schedulePlaceholderWindowPrune() {
+        guard placeholderWindowPruneTask == nil else { return }
+        placeholderWindowPruneTask = Task { @MainActor in
+            while isTerminating == false && Task.isCancelled == false {
+                self.prunePlaceholderWindows()
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+        }
     }
 
     func toggleMainWindow() {
@@ -233,6 +444,612 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
     }
 
+#if DEBUG
+    private func settingsPreviewExportPath() -> String? {
+        ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--settings-preview-export=") })
+            .map { String($0.dropFirst("--settings-preview-export=".count)) }
+    }
+
+    private func settingsPreviewContentWidth() -> CGFloat {
+        ProcessInfo.processInfo.arguments.contains("--settings-preview-narrow") ? 880 : 1280
+    }
+
+    private func makeSettingsPreviewContentView(contentWidth: CGFloat, contentHeight: CGFloat) -> NSHostingView<AnyView> {
+        let rootView = AnyView(
+            SettingsView(
+                initialCategory: .security,
+                initialSearchQuery: "权限"
+            )
+            .preferredColorScheme(.dark)
+            .frame(width: contentWidth, height: contentHeight, alignment: .topLeading)
+        )
+        let hostingView = NSHostingView(rootView: rootView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
+        hostingView.layoutSubtreeIfNeeded()
+        return hostingView
+    }
+
+    private func exportSettingsPreviewImage(to path: String) throws {
+        let contentWidth = settingsPreviewContentWidth()
+        let contentHeight: CGFloat = 900
+        let hostingView = makeSettingsPreviewContentView(contentWidth: contentWidth, contentHeight: contentHeight)
+        let bounds = hostingView.bounds
+        guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: bounds) else {
+            throw NSError(domain: "SettingsPreviewExport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create bitmap representation"])
+        }
+        hostingView.cacheDisplay(in: bounds, to: rep)
+        guard let data = rep.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "SettingsPreviewExport", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unable to encode PNG representation"])
+        }
+        try data.write(to: URL(fileURLWithPath: path))
+    }
+
+    private func showSettingsPreviewWindow() {
+        let contentWidth = settingsPreviewContentWidth()
+        let contentHeight: CGFloat = 900
+
+        if settingsPreviewWindow == nil {
+            let contentView = makeSettingsPreviewContentView(contentWidth: contentWidth, contentHeight: contentHeight)
+
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Settings Preview"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            self.configureTransparentWindow(window)
+            window.contentView = contentView
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            settingsPreviewWindow = window
+        }
+    }
+
+    private func exportAcWorkPhaseOneScreenshots(serviceContainer: ServiceContainer) throws {
+        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/screenshots/acwork-phase1")
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        print("[AcWorkExport] output directory ready: \(outputDirectory.path)")
+
+        let appState = AppState.shared
+        let pinActions = previewClipboardPinActions()
+        let largeSize = NSSize(width: 1500, height: 920)
+        let compactSize = NSSize(width: 1180, height: 720)
+
+        if let single = screenshotExportSelection() {
+            try exportSelectedScreenshot(
+                single,
+                outputDirectory: outputDirectory,
+                largeSize: largeSize,
+                compactSize: compactSize,
+                appState: appState,
+                serviceContainer: serviceContainer,
+                pinActions: pinActions
+            )
+            return
+        }
+
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1500x920-workspace-populated.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .home,
+            viewMode: nil
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1500x920-inbox-list.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .inbox,
+            viewMode: "list"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1500x920-inbox-grid.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .inbox,
+            viewMode: "grid"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1500x920-clipboard.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .clipboard,
+            viewMode: "list"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1180x720-workspace.png"),
+            size: compactSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .home,
+            viewMode: nil
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1180x720-inbox.png"),
+            size: compactSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .inbox,
+            viewMode: "list"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1180x720-clipboard.png"),
+            size: compactSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .clipboard,
+            viewMode: "list"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("workspace-loading.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loading),
+            inboxScenario: .populated,
+            sidebarSelection: .home,
+            viewMode: nil
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("workspace-empty.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .empty),
+            inboxScenario: .populated,
+            sidebarSelection: .home,
+            viewMode: nil
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("workspace-error.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .error(message: "工作台加载失败")),
+            inboxScenario: .populated,
+            sidebarSelection: .home,
+            viewMode: nil
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("inbox-loading.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .loading,
+            sidebarSelection: .inbox,
+            viewMode: "list"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("inbox-empty.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .empty,
+            sidebarSelection: .inbox,
+            viewMode: "list"
+        )
+        try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("inbox-error.png"),
+            size: largeSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .error,
+            sidebarSelection: .inbox,
+            viewMode: "list"
+        )
+    }
+
+    private func exportAcWorkLayoutAudit(serviceContainer: ServiceContainer) throws {
+        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/audit")
+        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots")
+        try FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)
+        print("[AcWorkAudit] output directory ready: \(outputDirectory.path)")
+
+        let appState = AppState.shared
+        let pinActions = previewClipboardPinActions()
+        let sizes: [(name: String, size: NSSize)] = [
+            ("min", AppWindowGeometry.minimumContentSize),
+            ("default", AppWindowGeometry.defaultFrame.size),
+            ("1440x960", NSSize(width: 1440, height: 960)),
+            ("1728x1117", NSSize(width: 1728, height: 1117))
+        ]
+
+        var runtimeFrames = AuditRuntimeFrames(window: AuditWindowFrame(width: 1440, height: 960), components: [])
+
+        for entry in sizes {
+            let normalPath = screenshotsDirectory.appendingPathComponent("workbench-\(entry.name)-normal.png")
+            let debugPath = screenshotsDirectory.appendingPathComponent("workbench-\(entry.name)-debug.png")
+
+            try exportContentViewScreenshot(
+                normalPath,
+                size: entry.size,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil,
+                showLayoutDebugOverlay: false
+            )
+
+            try exportContentViewScreenshot(
+                debugPath,
+                size: entry.size,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil,
+                showLayoutDebugOverlay: true
+            )
+
+#if DEBUG
+            if entry.name == "1440x960" {
+                runtimeFrames = AuditRuntimeFrames(
+                    window: AuditWindowFrame(width: Int(entry.size.width), height: Int(entry.size.height)),
+                    components: LayoutDebugStore.shared.measurements.map {
+                        AuditComponentFrame(
+                            name: $0.name,
+                            x: Int($0.frame.minX),
+                            y: Int($0.frame.minY),
+                            width: Int($0.frame.width),
+                            height: Int($0.frame.height)
+                        )
+                    }
+                )
+            }
+#endif
+        }
+
+#if DEBUG
+        let jsonURL = outputDirectory.appendingPathComponent("AcWork_Workbench_Runtime_Frames.json")
+        let data = try JSONEncoder.prettyPrinted.encode(runtimeFrames)
+        try data.write(to: jsonURL)
+        print("[AcWorkAudit] wrote \(jsonURL.path)")
+#endif
+    }
+
+    private func screenshotExportSelection() -> String? {
+        ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--acwork-export-screenshot=") })
+            .map { String($0.dropFirst("--acwork-export-screenshot=".count)) }
+    }
+
+    private func exportSelectedScreenshot(
+        _ selection: String,
+        outputDirectory: URL,
+        largeSize: NSSize,
+        compactSize: NSSize,
+        appState: AppState,
+        serviceContainer: ServiceContainer,
+        pinActions: ClipboardPinActions
+    ) throws {
+        switch selection {
+        case "workspace-populated":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1500x920-workspace-populated.png"),
+                size: largeSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil
+            )
+        case "inbox-list":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1500x920-inbox-list.png"),
+                size: largeSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .inbox,
+                viewMode: "list"
+            )
+        case "inbox-grid":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1500x920-inbox-grid.png"),
+                size: largeSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .inbox,
+                viewMode: "grid"
+            )
+        case "clipboard":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1500x920-clipboard.png"),
+                size: largeSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .clipboard,
+                viewMode: "list"
+            )
+        case "workspace":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1180x720-workspace.png"),
+                size: compactSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil
+            )
+        case "inbox":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1180x720-inbox.png"),
+                size: compactSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .inbox,
+                viewMode: "list"
+            )
+        default:
+            throw NSError(domain: "AcWorkScreenshotExport", code: 3, userInfo: [NSLocalizedDescriptionKey: "Unknown screenshot selection: \(selection)"])
+        }
+    }
+
+    private func exportContentViewScreenshot(
+        _ path: URL,
+        size: NSSize,
+        appState: AppState,
+        container: ServiceContainer,
+        pinActions: ClipboardPinActions,
+        workspaceRepository: any WorkspaceDashboardRepositoryProtocol,
+        inboxScenario: AcWorkPreviewScenario,
+        sidebarSelection: SidebarItem,
+        viewMode: String?,
+        showLayoutDebugOverlay: Bool = false
+    ) throws {
+        appState.sidebarSelection = sidebarSelection
+        appState.sidebarCollapsed = false
+        appState.isAppReady = true
+        appState.initializationPhase = .completed
+        appState.mainWindowState = .normal
+        appState.inboxWorkspaceSelection = "all"
+        print("[AcWorkExport] rendering \(path.lastPathComponent) at \(Int(size.width))x\(Int(size.height))")
+
+        let defaults = UserDefaults.standard
+        defaults.set(viewMode ?? "grid", forKey: "acwork.inbox.viewMode")
+        defaults.set("standard", forKey: "acwork.inbox.density")
+
+        let rootView = ContentView(
+            clipboardPinActions: pinActions,
+            workspaceDashboardRepository: workspaceRepository,
+            inboxPreviewScenario: inboxScenario
+        )
+        .environmentObject(appState)
+        .environmentObject(container)
+        .preferredColorScheme(.light)
+
+        #if DEBUG
+        LayoutDebugStore.shared.isOverlayVisible = showLayoutDebugOverlay
+        defer { LayoutDebugStore.shared.isOverlayVisible = false }
+        #endif
+
+        let hostingView = NSHostingView(rootView: AnyView(rootView))
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.layoutSubtreeIfNeeded()
+        hostingView.displayIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+        guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
+            throw NSError(domain: "AcWorkScreenshotExport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create bitmap representation"])
+        }
+        hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
+        guard let data = rep.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "AcWorkScreenshotExport", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unable to encode PNG representation"])
+        }
+        try data.write(to: path)
+        print("[AcWorkExport] wrote \(path.lastPathComponent)")
+    }
+
+    private func previewClipboardPinActions() -> ClipboardPinActions {
+        ClipboardPinActions(
+            showItem: { _ in },
+            showAll: {},
+            hideAll: {},
+            closeAll: {},
+            copyDiagnostics: {}
+        )
+    }
+
+    private func showToolWorkspacePreviewWindow() {
+        let isNarrowPreview = ProcessInfo.processInfo.arguments.contains("--tool-workspace-preview-narrow")
+        let contentWidth: CGFloat = isNarrowPreview ? 880 : 1280
+        let contentHeight: CGFloat = isNarrowPreview ? 1180 : 980
+
+        if toolWorkspacePreviewWindow == nil {
+            let contentView = NSHostingView(
+                rootView: ToolWorkspacePreviewRoot()
+                    .preferredColorScheme(.dark)
+            )
+
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Tool Workspace Preview"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            self.configureTransparentWindow(window)
+            window.contentView = contentView
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            toolWorkspacePreviewWindow = window
+        }
+    }
+
+    private func showProductPanelPreviewWindow() {
+        let isNarrowPreview = ProcessInfo.processInfo.arguments.contains("--product-panel-preview-narrow")
+        let contentWidth = isNarrowPreview ? ProductPanelTokens.Layout.narrowWidth : ProductPanelTokens.Layout.defaultWidth
+        let contentHeight: CGFloat = isNarrowPreview ? 960 : 900
+
+        if productPanelPreviewWindow == nil {
+            let contentView = NSHostingView(
+                rootView: ProductPanelPreviewSample()
+                    .preferredColorScheme(.dark)
+            )
+
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Product Panel Preview"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            self.configureTransparentWindow(window)
+            window.contentView = contentView
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            productPanelPreviewWindow = window
+        }
+    }
+
+    private func showAgentPreviewWindow() {
+        let isNarrowPreview = ProcessInfo.processInfo.arguments.contains("--agent-preview-narrow")
+        let previewSelection: String
+        if ProcessInfo.processInfo.arguments.contains("--agent-preview-tool-call") {
+            previewSelection = "toolCall"
+        } else if ProcessInfo.processInfo.arguments.contains("--agent-preview-automation") {
+            previewSelection = "automation"
+        } else {
+            previewSelection = "quickAsk"
+        }
+        let contentWidth: CGFloat = isNarrowPreview ? 880 : 1280
+        let contentHeight: CGFloat = isNarrowPreview ? 1180 : 980
+
+        if agentPreviewWindow == nil {
+            let contentView = NSHostingView(
+                rootView: AgentDashboardView(
+                    viewModel: AgentViewModel.previewSample(),
+                    selectedSidebarItem: previewSelection,
+                    showRightPanel: true,
+                    previewSidebarSelection: previewSelection,
+                    shouldLoadDashboardData: false
+                )
+                    .preferredColorScheme(.dark)
+            )
+
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Agent Preview"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            self.configureTransparentWindow(window)
+            window.contentView = contentView
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            agentPreviewWindow = window
+        }
+    }
+
+    private func showSystemStatusPreviewWindow() {
+        let isNarrowPreview = ProcessInfo.processInfo.arguments.contains("--system-status-preview-narrow")
+        let contentWidth: CGFloat = isNarrowPreview ? 880 : 1280
+        let contentHeight: CGFloat = isNarrowPreview ? 1120 : 980
+
+        if systemStatusPreviewWindow == nil {
+            let service = SystemStatusService()
+            systemStatusPreviewService = service
+            service.start()
+
+            let contentView = NSHostingView(
+                rootView: SystemStatusView(
+                    systemStatusService: service,
+                    fanControlService: SystemFanControlService()
+                )
+                    .preferredColorScheme(.dark)
+            )
+
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "System Status Preview"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            self.configureTransparentWindow(window)
+            window.contentView = contentView
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            systemStatusPreviewWindow = window
+        }
+    }
+#endif
+
     func showLaunchWindow() {
         if launchWindowController == nil {
             launchWindowController = LaunchWindowController()
@@ -256,7 +1073,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Notch Panel
 
     func showNotchPanel() {
-        notchPanelController.showCompact()
+        // 启动和回到应用时，优先让灵动大陆保持可见的主内容态，
+        // 避免只露出一个过小的收起态，让用户误以为它“消失”了。
+        notchPanelController.show(page: .overview)
     }
 
     func showNotchPanel(page: NotchV2Page) {
@@ -332,7 +1151,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func copyClipboardPinDiagnosticsToPasteboard() {
-        let diagnostics = clipboardPinWindowManager?.diagnosticsReport() ?? "AcMind Clipboard Pin Diagnostics\nWindow Count: 0\nNo open pin windows."
+        let diagnostics = clipboardPinWindowManager?.diagnosticsReport() ?? "AcWork Clipboard Pin Diagnostics\nWindow Count: 0\nNo open pin windows."
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(diagnostics, forType: .string)
     }
@@ -404,7 +1223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "brain.head.profile", accessibilityDescription: "AcMind")
+            button.image = NSImage(systemSymbolName: "brain.head.profile", accessibilityDescription: AcWorkBrand.displayName)
         }
 
         setupStatusBarMenu()
@@ -720,7 +1539,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleHotCornersDidChange(_ notification: Notification) {
-        setupHotCorners()
+        refreshHotCorners()
     }
 
     @objc private func handleCompanionShortcutConfigChanged(_ notification: Notification) {
@@ -741,21 +1560,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Global Shortcuts
 
     private func setupHotCorners() {
-        guard let hotCornerStore = hotCornerSettingsStore else {
+        guard let settingsService else {
+            logger.debug("Hot corner setup skipped because settings service is unavailable", file: "AppDelegate")
             hotCornerManager?.stop()
             hotCornerManager = nil
             return
         }
 
         if hotCornerManager == nil {
+            logger.debug("Creating hot corner manager", file: "AppDelegate")
             hotCornerManager = HotCornerManager(actionExecutor: { [weak self] action in
                 self?.performHotCornerAction(action)
             })
         }
 
+        refreshHotCorners(from: settingsService)
+    }
+
+    private func refreshHotCorners() {
+        guard let settingsService else {
+            logger.debug("Hot corner refresh skipped because settings service is unavailable", file: "AppDelegate")
+            hotCornerManager?.stop()
+            hotCornerManager = nil
+            return
+        }
+
+        refreshHotCorners(from: settingsService)
+    }
+
+    private func refreshHotCorners(from hotCornerStore: SettingsServiceProtocol) {
         Task { [weak self] in
             let settings = await hotCornerStore.getHotCornerSettings()
             await MainActor.run {
+                self?.logger.debug("Applying hot corner settings: enabled=\(settings.isEnabled), cornerSize=\(settings.cornerSize)", file: "AppDelegate")
                 self?.hotCornerManager?.update(settings: settings)
             }
         }
@@ -934,10 +1771,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case "截图捕获":
             NotificationCenter.default.post(name: Notification.Name("AcMind.captureScreenshot"), object: nil)
         case "打开 Agent":
-            appState.selectSidebarItem(.agent)
+            appState.navigate(to: .agent)
             showMainWindow()
         case "今日日程":
-            appState.selectSidebarItem(.schedule)
+            appState.navigate(to: .schedule)
             showMainWindow()
         default:
             break
@@ -1102,6 +1939,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showPreferredSurface(for: item)
         } else {
             logger.warning("未知内部路由: \(routeIdentifier)", file: "AppDelegate")
+            showPreferredSurface(for: .home)
         }
     }
 
@@ -1122,37 +1960,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if notchPanelEnabled {
                 showNotchPanel(page: .overview)
             } else {
-                appState.selectSidebarItem(.dynamicContinent)
+                appState.navigate(to: .dynamicContinent)
                 showMainWindow()
             }
         case .agent:
             if notchPanelEnabled {
                 showNotchPanel(page: .agent)
             } else {
-                appState.selectSidebarItem(.agent)
+                appState.navigate(to: .agent)
                 showMainWindow()
             }
         case .schedule:
             if notchPanelEnabled {
                 showNotchPanel(page: .schedule)
             } else {
-                appState.selectSidebarItem(.schedule)
+                appState.navigate(to: .schedule)
                 showMainWindow()
             }
         case .systemStatus:
-            appState.selectSidebarItem(.systemStatus)
+            appState.navigate(to: .systemStatus)
             showMainWindow()
         case .voiceEntry:
-            appState.selectSidebarItem(.voiceEntry)
+            appState.navigate(to: .voiceEntry)
             showMainWindow()
         default:
-            appState.selectSidebarItem(item)
+            appState.navigate(to: item)
             showMainWindow()
         }
     }
 
     @objc func showSystemStatus() {
-        appState.selectSidebarItem(.systemStatus)
+        appState.navigate(to: .systemStatus)
         showMainWindow()
     }
 
@@ -1191,13 +2029,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.toggleFullScreen(nil)
     }
 
+    func openSettingsWindow() {
+        showSettings()
+    }
+
     @objc private func showSettings() {
-        appState.selectSidebarItem(.settings)
+        appState.navigate(to: .settings)
         showMainWindow()
     }
 
     @objc private func handleOpenHomeNotification(_ notification: Notification) {
-        appState.selectSidebarItem(.home)
+        appState.navigate(to: .home)
         showMainWindow()
     }
 
@@ -1259,6 +2101,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         screenshotPreviewWindow = previewWindow
         previewWindow.title = "截图预览"
+        configureTransparentWindow(previewWindow)
         previewWindow.center()
         
         // 创建预览视图
@@ -1434,8 +2277,16 @@ struct ScreenshotPreviewView: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
-            .padding()
-            .background(AppSurfaceTokens.cardBackgroundSoft)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+            )
             
             // 预览区域
             if let image = image {
@@ -1460,9 +2311,10 @@ struct ScreenshotPreviewView: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(AppSurfaceTokens.secondarySidebarBackground)
+                .background(AppSurfaceTokens.sidebarBackground)
             }
         }
+        .background(AppSurfaceBackdrop())
     }
     
     private var imageSizeString: String? {
@@ -1484,18 +2336,21 @@ class MainWindowController: NSWindowController {
     private var didEnforceInitialSize = false
 
     convenience init(restoreWindowPosition: Bool, clipboardPinActions: ClipboardPinActions, serviceContainer: ServiceContainer) {
+        let mainFrame = AppWindowGeometry.defaultFrame
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 650),
+            contentRect: NSRect(x: 0, y: 0, width: mainFrame.width, height: mainFrame.height),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
-        window.title = "AcMind"
-        window.contentMinSize = NSSize(width: 1200, height: 650)
+        window.title = AcWorkBrand.displayName
+        window.contentMinSize = AppWindowGeometry.minimumContentSize
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         if restoreWindowPosition {
             window.setFrameAutosaveName("MainWindow")
@@ -1522,17 +2377,32 @@ class MainWindowController: NSWindowController {
         didEnforceInitialSize = true
 
         guard let window else { return }
-        let targetContentSize = NSSize(width: 1200, height: 650)
-        if window.contentLayoutRect.size != targetContentSize {
-            window.setFrame(Self.frameRect(forContentSize: targetContentSize, origin: window.frame.origin, styleMask: window.styleMask), display: true)
-        }
+        enforceMinimumContentSize()
     }
 
-    func normalizeWindowSizeIfNeeded(targetContentSize: NSSize) {
+    func enforceMinimumContentSize() {
         guard let window else { return }
-        if window.contentLayoutRect.size != targetContentSize {
-            window.setFrame(Self.frameRect(forContentSize: targetContentSize, origin: window.frame.origin, styleMask: window.styleMask), display: true)
+        let currentSize = window.contentLayoutRect.size
+        let targetSize = AppWindowGeometry.clampedContentSize(for: currentSize)
+        guard targetSize != currentSize else { return }
+        window.setFrame(Self.frameRect(forContentSize: targetSize, origin: window.frame.origin, styleMask: window.styleMask), display: true)
+    }
+
+    func ensureVisibleOnScreenIfNeeded() {
+        guard let window else { return }
+        let frame = window.frame
+        let mouseLocation = NSEvent.mouseLocation
+        let targetScreen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) ?? NSScreen.main ?? NSScreen.screens.first
+        let targetFrame = targetScreen?.visibleFrame ?? .zero
+        guard targetFrame.intersects(frame) == false else {
+            return
         }
+
+        let centeredOrigin = NSPoint(
+            x: targetFrame.midX - frame.width / 2,
+            y: targetFrame.midY - frame.height / 2
+        )
+        window.setFrame(Self.frameRect(forContentSize: window.contentLayoutRect.size, origin: centeredOrigin, styleMask: window.styleMask), display: true)
     }
 
     static func frameRect(forContentSize contentSize: NSSize, origin: NSPoint, styleMask: NSWindow.StyleMask?) -> NSRect {
@@ -1575,7 +2445,7 @@ class CapsuleWindowController: NSWindowController {
             defer: false
         )
 
-        window.title = "AcMind Capsule"
+        window.title = "\(AcWorkBrand.displayName) Capsule"
         window.isFloatingPanel = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace]
@@ -1607,17 +2477,18 @@ class LaunchWindowController: NSWindowController {
             defer: false
         )
 
-        window.title = "AcMind"
+        window.title = AcWorkBrand.displayName
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.level = .statusBar
-        window.center()
-        window.orderFrontRegardless()
+        window.isOpaque = false
+        window.backgroundColor = .clear
 
         let contentView = LaunchView()
             .environmentObject(AppState.shared)
 
         window.contentView = NSHostingView(rootView: contentView)
+        window.center()
 
         self.init(window: window)
     }
@@ -1626,9 +2497,44 @@ class LaunchWindowController: NSWindowController {
 // MARK: - Window Geometry
 
 enum AppWindowGeometry {
-    static let mainFrame = NSRect(x: 120, y: 120, width: 1200, height: 650)
+    static let defaultFrame = NSRect(x: 120, y: 120, width: 1500, height: 920)
+    static let minimumContentSize = NSSize(width: 1180, height: 720)
     static let launchFrame = NSRect(x: 220, y: 180, width: 460, height: 340)
     static let capsuleFrame = NSRect(x: 320, y: 260, width: 400, height: 60)
+
+    static func clampedContentSize(for contentSize: NSSize) -> NSSize {
+        NSSize(
+            width: max(contentSize.width, minimumContentSize.width),
+            height: max(contentSize.height, minimumContentSize.height)
+        )
+    }
+}
+
+struct AuditWindowFrame: Codable, Equatable {
+    let width: Int
+    let height: Int
+}
+
+struct AuditComponentFrame: Codable, Equatable, Identifiable {
+    var id: String { name }
+    let name: String
+    let x: Int
+    let y: Int
+    let width: Int
+    let height: Int
+}
+
+struct AuditRuntimeFrames: Codable, Equatable {
+    let window: AuditWindowFrame
+    let components: [AuditComponentFrame]
+}
+
+private extension JSONEncoder {
+    static var prettyPrinted: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return encoder
+    }
 }
 
 extension CapsuleWindowController: NSWindowDelegate {

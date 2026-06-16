@@ -55,7 +55,7 @@ struct CompanionView: View {
             .frame(maxWidth: 1200, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AppSurfaceTokens.background)
+        .background(AppSurfaceBackdrop())
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -85,7 +85,7 @@ struct CompanionView: View {
             HStack {
                 Image(systemName: "lock.shield.fill")
                     .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 
                 Text("权限状态")
                     .font(.title3)
@@ -113,6 +113,15 @@ struct CompanionView: View {
             }
         }
         .opacity(viewModel.companionEnabled ? 1.0 : 0.55)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+        )
     }
 
     private func persistCompanionSettings() {
@@ -156,10 +165,16 @@ struct CompanionPermissionRow: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(status.color.opacity(0.1))
-            .cornerRadius(6)
+            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
         }
         .padding(12)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-        .cornerRadius(8)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+        )
     }
 }
