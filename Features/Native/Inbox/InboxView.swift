@@ -976,7 +976,11 @@ private struct CollectedItemThumbnailView: View {
 
     private func loadThumbnailIfNeeded() async {
         guard let cacheKey = item.thumbnailCacheKey else { return }
-        if let cached = await MainActor.run(body: { CollectedItemThumbnailCache.shared.image(for: cacheKey) }) {
+        var cached: NSImage?
+        await MainActor.run {
+            cached = CollectedItemThumbnailCache.shared.image(for: cacheKey)
+        }
+        if let cached {
             thumbnail = cached
             return
         }
@@ -1074,7 +1078,11 @@ private struct CollectedLinkSiteIconView: View {
 
     private func loadIconIfNeeded() async {
         guard let host = item.linkHost, let faviconURL = item.faviconURL else { return }
-        if let cached = await MainActor.run(body: { CollectedLinkIconCache.shared.image(for: host) }) {
+        var cached: NSImage?
+        await MainActor.run {
+            cached = CollectedLinkIconCache.shared.image(for: host)
+        }
+        if let cached {
             icon = cached
             return
         }

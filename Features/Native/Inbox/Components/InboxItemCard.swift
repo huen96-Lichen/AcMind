@@ -389,26 +389,24 @@ private struct ImagePreview: View {
     }
 
     private static func loadThumbnail(from url: URL) async -> NSImage? {
-        await Task.detached(priority: .userInitiated) {
-            let sourceOptions = [
-                kCGImageSourceShouldCache: false
-            ] as CFDictionary
-            guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions) else {
-                return NSImage(contentsOf: url)
-            }
+        let sourceOptions = [
+            kCGImageSourceShouldCache: false
+        ] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions) else {
+            return NSImage(contentsOf: url)
+        }
 
-            let thumbnailOptions = [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceShouldCacheImmediately: true,
-                kCGImageSourceThumbnailMaxPixelSize: Int(max(ContentCardPresentation.thumbnailHeight * 2.4, 480))
-            ] as CFDictionary
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(max(ContentCardPresentation.thumbnailHeight * 2.4, 480))
+        ] as CFDictionary
 
-            guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
-                return NSImage(contentsOf: url)
-            }
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return NSImage(contentsOf: url)
+        }
 
-            return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-        }.value
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
 }
