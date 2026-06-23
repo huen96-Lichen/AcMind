@@ -998,7 +998,11 @@ private struct CollectedItemThumbnailView: View {
                 loaded = nil
             }
         } else if let fileURL = item.thumbnailFileURL {
-            loaded = await Self.quickLookThumbnail(url: fileURL, maxPixelSize: maxPixelSize)
+            if let cgImage = await Self.quickLookThumbnail(url: fileURL, maxPixelSize: maxPixelSize) {
+                loaded = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+            } else {
+                loaded = nil
+            }
         } else {
             loaded = nil
         }
@@ -1010,7 +1014,7 @@ private struct CollectedItemThumbnailView: View {
         }
     }
 
-    private static func quickLookThumbnail(url: URL, maxPixelSize: CGFloat) async -> NSImage? {
+    private static func quickLookThumbnail(url: URL, maxPixelSize: CGFloat) async -> CGImage? {
         let request = QLThumbnailGenerator.Request(
             fileAt: url,
             size: CGSize(width: maxPixelSize, height: maxPixelSize),
@@ -1020,7 +1024,7 @@ private struct CollectedItemThumbnailView: View {
 
         return await withCheckedContinuation { continuation in
             QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { representation, _ in
-                continuation.resume(returning: representation?.nsImage)
+                continuation.resume(returning: representation?.cgImage)
             }
         }
     }

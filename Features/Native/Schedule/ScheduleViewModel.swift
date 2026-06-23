@@ -606,21 +606,17 @@ class ScheduleViewModel: ObservableObject {
     // MARK: - Event Loading
 
     private func loadEvents() {
-        Task {
+        Task { @MainActor in
             let localEvents = localStore.load()
 
             do {
                 let granted = try await eventStore.requestFullAccessToEvents()
-                await MainActor.run {
-                    self.calendarAccessGranted = granted
-                }
+                calendarAccessGranted = granted
                 if granted == false {
-                    await MainActor.run {
-                        self.events = localEvents
-                        self.accessNotice = localEvents.isEmpty
-                            ? "系统日历访问未授权，当前仅显示本地保存的日程。"
-                            : "系统日历访问未授权，当前优先显示本地保存的日程。"
-                    }
+                    events = localEvents
+                    accessNotice = localEvents.isEmpty
+                        ? "系统日历访问未授权，当前仅显示本地保存的日程。"
+                        : "系统日历访问未授权，当前优先显示本地保存的日程。"
                     return
                 }
 
@@ -654,18 +650,14 @@ class ScheduleViewModel: ObservableObject {
                         tag: nil
                     )
                 }
-                await MainActor.run {
-                    self.events = self.mergeEvents(localEvents + systemEvents)
-                    self.accessNotice = self.events.isEmpty ? "没有可显示的日程。" : nil
-                }
+                events = mergeEvents(localEvents + systemEvents)
+                accessNotice = events.isEmpty ? "没有可显示的日程。" : nil
             } catch {
                 Self.logger.error("EventKit 错误: \(error.localizedDescription)")
-                await MainActor.run {
-                    self.events = localEvents
-                    self.accessNotice = localEvents.isEmpty
-                        ? "日历读取失败，当前仅显示本地保存的日程。"
-                        : "日历读取失败，当前优先显示本地保存的日程。"
-                }
+                events = localEvents
+                accessNotice = localEvents.isEmpty
+                    ? "日历读取失败，当前仅显示本地保存的日程。"
+                    : "日历读取失败，当前优先显示本地保存的日程。"
             }
         }
     }
