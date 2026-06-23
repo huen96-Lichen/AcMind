@@ -299,18 +299,7 @@ public actor DataMigrationService: Sendable {
                             kind = excluded.kind,
                             created_at = excluded.created_at
                     """,
-                    mapRow: { row in
-                        [
-                            row.string("id") ?? UUID().uuidString,
-                            row.string("source_item_id"),
-                            row.string("file_name") ?? row.string("name") ?? "",
-                            row.string("file_path") ?? row.string("path") ?? "",
-                            row.string("mime_type"),
-                            row.int("file_size"),
-                            row.string("kind") ?? "other",
-                            row.int("created_at") ?? Int(Date().timeIntervalSince1970)
-                        ]
-                    }
+                    mapRow: Self.mapAssetFileRow
                 )
             })
 
@@ -427,20 +416,7 @@ public actor DataMigrationService: Sendable {
                             started_at = excluded.started_at,
                             finished_at = excluded.finished_at
                     """,
-                    mapRow: { row in
-                        [
-                            row.string("id") ?? UUID().uuidString,
-                            row.string("source_item_id"),
-                            row.string("job_type") ?? row.string("type") ?? "parse",
-                            row.string("status") ?? "queued",
-                            row.string("input") ?? row.string("metadata_json") ?? "{}",
-                            row.string("output"),
-                            row.string("error"),
-                            row.int("created_at") ?? Int(Date().timeIntervalSince1970),
-                            row.int("started_at"),
-                            row.int("finished_at")
-                        ]
-                    }
+                    mapRow: Self.mapProcessJobRow
                 )
             })
 
@@ -545,6 +521,54 @@ public actor DataMigrationService: Sendable {
             error,
             row.string("action_proposals") ?? "[]",
             createdAt
+        ]
+    }
+
+    private static func mapAssetFileRow(_ row: SQLiteRow) -> [Any?] {
+        let id = row.string("id") ?? UUID().uuidString
+        let sourceItemId = row.string("source_item_id")
+        let fileName = row.string("file_name") ?? row.string("name") ?? ""
+        let filePath = row.string("file_path") ?? row.string("path") ?? ""
+        let mimeType = row.string("mime_type")
+        let fileSize = row.int("file_size")
+        let kind = row.string("kind") ?? "other"
+        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+
+        return [
+            id,
+            sourceItemId,
+            fileName,
+            filePath,
+            mimeType,
+            fileSize,
+            kind,
+            createdAt
+        ]
+    }
+
+    private static func mapProcessJobRow(_ row: SQLiteRow) -> [Any?] {
+        let id = row.string("id") ?? UUID().uuidString
+        let sourceItemId = row.string("source_item_id")
+        let jobType = row.string("job_type") ?? row.string("type") ?? "parse"
+        let status = row.string("status") ?? "queued"
+        let input = row.string("input") ?? row.string("metadata_json") ?? "{}"
+        let output = row.string("output")
+        let error = row.string("error")
+        let createdAt = row.int("created_at") ?? Int(Date().timeIntervalSince1970)
+        let startedAt = row.int("started_at")
+        let finishedAt = row.int("finished_at")
+
+        return [
+            id,
+            sourceItemId,
+            jobType,
+            status,
+            input,
+            output,
+            error,
+            createdAt,
+            startedAt,
+            finishedAt
         ]
     }
 
