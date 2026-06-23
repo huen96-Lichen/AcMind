@@ -81,6 +81,8 @@ public enum DynamicContinentModuleID: String, CaseIterable, Codable, Sendable, I
         }
     }
 
+    public var description: String { displayName }
+
     public var icon: String {
         switch self {
         case .music: return "music.note"
@@ -113,9 +115,11 @@ public enum CompanionRuntimeContentID: String, CaseIterable, Codable, Sendable, 
         case .systemStatus: return "系统状态"
         }
     }
+
+    public var description: String { displayName }
 }
 
-public enum CompanionCollapsedHeightMode: String, CaseIterable, Codable, Sendable {
+public enum CompanionCollapsedHeightMode: String, CaseIterable, Codable, Sendable, Identifiable, CustomStringConvertible {
     case matchHardwareNotch
     case matchMenuBar
     case custom
@@ -127,9 +131,13 @@ public enum CompanionCollapsedHeightMode: String, CaseIterable, Codable, Sendabl
         case .custom: return "自定义"
         }
     }
+
+    public var description: String { displayName }
+
+    public var id: String { rawValue }
 }
 
-public enum CompanionNonNotchHeightMode: String, CaseIterable, Codable, Sendable {
+public enum CompanionNonNotchHeightMode: String, CaseIterable, Codable, Sendable, Identifiable, CustomStringConvertible {
     case matchMenuBar
     case matchNotchReference
     case custom
@@ -141,6 +149,10 @@ public enum CompanionNonNotchHeightMode: String, CaseIterable, Codable, Sendable
         case .custom: return "自定义"
         }
     }
+
+    public var description: String { displayName }
+
+    public var id: String { rawValue }
 }
 
 /// 灵动大陆显示与行为配置
@@ -154,9 +166,12 @@ struct CompanionDisplaySettings: Codable, Sendable, Equatable {
     public var hideInFullscreen: Bool
     public var hideWhenScreenRecording: Bool
     public var enabledDynamicModules: Set<DynamicContinentModuleID>
+    public var dynamicModuleOrder: [DynamicContinentModuleID]
     public var overviewVisibleModules: Set<DynamicContinentModuleID>
     public var collapsedVisibleContents: Set<CompanionRuntimeContentID>
+    public var collapsedVisibleContentOrder: [CompanionRuntimeContentID]
     public var primarySurfaceContents: Set<CompanionRuntimeContentID>
+    public var primarySurfaceContentOrder: [CompanionRuntimeContentID]
     public var nonNotchCollapsedWidth: CGFloat
     public var notchHeightMode: CompanionCollapsedHeightMode
     public var notchCustomHeight: CGFloat
@@ -177,9 +192,12 @@ struct CompanionDisplaySettings: Codable, Sendable, Equatable {
         hideInFullscreen: Bool = true,
         hideWhenScreenRecording: Bool = true,
         enabledDynamicModules: Set<DynamicContinentModuleID> = Set(DynamicContinentModuleID.allCases),
+        dynamicModuleOrder: [DynamicContinentModuleID] = DynamicContinentModuleID.allCases,
         overviewVisibleModules: Set<DynamicContinentModuleID> = Set(DynamicContinentModuleID.allCases),
         collapsedVisibleContents: Set<CompanionRuntimeContentID> = Set(CompanionRuntimeContentID.allCases),
+        collapsedVisibleContentOrder: [CompanionRuntimeContentID] = CompanionRuntimeContentID.allCases,
         primarySurfaceContents: Set<CompanionRuntimeContentID> = Set(CompanionRuntimeContentID.allCases),
+        primarySurfaceContentOrder: [CompanionRuntimeContentID] = CompanionRuntimeContentID.allCases,
         nonNotchCollapsedWidth: CGFloat = 220,
         notchHeightMode: CompanionCollapsedHeightMode = .matchHardwareNotch,
         notchCustomHeight: CGFloat = 30,
@@ -199,9 +217,12 @@ struct CompanionDisplaySettings: Codable, Sendable, Equatable {
         self.hideInFullscreen = hideInFullscreen
         self.hideWhenScreenRecording = hideWhenScreenRecording
         self.enabledDynamicModules = enabledDynamicModules
+        self.dynamicModuleOrder = Self.normalizedOrder(dynamicModuleOrder, fallback: DynamicContinentModuleID.allCases)
         self.overviewVisibleModules = overviewVisibleModules
         self.collapsedVisibleContents = collapsedVisibleContents
+        self.collapsedVisibleContentOrder = Self.normalizedOrder(collapsedVisibleContentOrder, fallback: CompanionRuntimeContentID.allCases)
         self.primarySurfaceContents = primarySurfaceContents
+        self.primarySurfaceContentOrder = Self.normalizedOrder(primarySurfaceContentOrder, fallback: CompanionRuntimeContentID.allCases)
         self.nonNotchCollapsedWidth = nonNotchCollapsedWidth
         self.notchHeightMode = notchHeightMode
         self.notchCustomHeight = notchCustomHeight
@@ -223,9 +244,12 @@ struct CompanionDisplaySettings: Codable, Sendable, Equatable {
         case hideInFullscreen
         case hideWhenScreenRecording
         case enabledDynamicModules
+        case dynamicModuleOrder
         case overviewVisibleModules
         case collapsedVisibleContents
+        case collapsedVisibleContentOrder
         case primarySurfaceContents
+        case primarySurfaceContentOrder
         case nonNotchCollapsedWidth
         case notchHeightMode
         case notchCustomHeight
@@ -248,9 +272,21 @@ struct CompanionDisplaySettings: Codable, Sendable, Equatable {
         hideInFullscreen = try container.decodeIfPresent(Bool.self, forKey: .hideInFullscreen) ?? true
         hideWhenScreenRecording = try container.decodeIfPresent(Bool.self, forKey: .hideWhenScreenRecording) ?? true
         enabledDynamicModules = try container.decodeIfPresent(Set<DynamicContinentModuleID>.self, forKey: .enabledDynamicModules) ?? Set(DynamicContinentModuleID.allCases)
+        dynamicModuleOrder = Self.normalizedOrder(
+            try container.decodeIfPresent([DynamicContinentModuleID].self, forKey: .dynamicModuleOrder) ?? DynamicContinentModuleID.allCases,
+            fallback: DynamicContinentModuleID.allCases
+        )
         overviewVisibleModules = try container.decodeIfPresent(Set<DynamicContinentModuleID>.self, forKey: .overviewVisibleModules) ?? enabledDynamicModules
         collapsedVisibleContents = try container.decodeIfPresent(Set<CompanionRuntimeContentID>.self, forKey: .collapsedVisibleContents) ?? Set(CompanionRuntimeContentID.allCases)
+        collapsedVisibleContentOrder = Self.normalizedOrder(
+            try container.decodeIfPresent([CompanionRuntimeContentID].self, forKey: .collapsedVisibleContentOrder) ?? CompanionRuntimeContentID.allCases,
+            fallback: CompanionRuntimeContentID.allCases
+        )
         primarySurfaceContents = try container.decodeIfPresent(Set<CompanionRuntimeContentID>.self, forKey: .primarySurfaceContents) ?? Set(CompanionRuntimeContentID.allCases)
+        primarySurfaceContentOrder = Self.normalizedOrder(
+            try container.decodeIfPresent([CompanionRuntimeContentID].self, forKey: .primarySurfaceContentOrder) ?? CompanionRuntimeContentID.allCases,
+            fallback: CompanionRuntimeContentID.allCases
+        )
         nonNotchCollapsedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .nonNotchCollapsedWidth) ?? 220
         notchHeightMode = try container.decodeIfPresent(CompanionCollapsedHeightMode.self, forKey: .notchHeightMode) ?? .matchHardwareNotch
         notchCustomHeight = try container.decodeIfPresent(CGFloat.self, forKey: .notchCustomHeight) ?? 30
@@ -271,6 +307,16 @@ struct CompanionDisplaySettings: Codable, Sendable, Equatable {
             behavior.insert(.fullScreenAuxiliary)
         }
         return behavior
+    }
+
+    private static func normalizedOrder<T: Hashable & Codable>(
+        _ values: [T],
+        fallback: [T]
+    ) -> [T] {
+        let filtered = values.filter { fallback.contains($0) }
+        let seen = Set(filtered)
+        let missing = fallback.filter { seen.contains($0) == false }
+        return filtered + missing
     }
 }
 

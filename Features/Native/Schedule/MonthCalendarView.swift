@@ -14,7 +14,7 @@ struct MonthCalendarView: View {
             HStack(spacing: 0) {
                 ForEach(weekdaySymbols, id: \.self) { sym in
                     Text(sym)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
@@ -74,7 +74,7 @@ private struct MonthDayCell: View {
             // 日期数字
             HStack {
                 Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: isToday ? 14 : 13, weight: isToday ? .bold : .regular))
+                    .font(.system(size: isToday ? AppSurfaceTokens.Typography.bodyLarge : AppSurfaceTokens.Typography.body, weight: isToday ? .bold : .regular))
                     .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
                     .frame(width: isToday ? 24 : 20, height: isToday ? 24 : 20)
                     .background(
@@ -97,7 +97,7 @@ private struct MonthDayCell: View {
                             .frame(width: 3, height: 10)
 
                         Text(event.title)
-                            .font(.system(size: 10))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(event.status == .done ? AppSurfaceTokens.tertiaryText : AppSurfaceTokens.primaryText)
                             .lineLimit(1)
                     }
@@ -105,7 +105,7 @@ private struct MonthDayCell: View {
 
                 if overflowCount > 0 {
                     Text("+\(overflowCount)")
-                        .font(.system(size: 10))
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .padding(.leading, 6)
                 }

@@ -60,7 +60,7 @@ struct ScheduleDashboardView: View {
             subtitle: "\(viewModel.todayEventCount) 项待办",
             headerActions: AnyView(headerActions),
             leadingRailWidth: 208,
-            trailingRailWidth: 224,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
                 SecondarySidebarWithHeader(
                     title: "日程",
@@ -101,7 +101,7 @@ struct ScheduleDashboardView: View {
                     Image(systemName: "calendar.badge.exclamationmark")
                         .foregroundStyle(.orange)
                     Text(accessNotice)
-                        .font(.caption)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Spacer()
                 }
@@ -115,7 +115,7 @@ struct ScheduleDashboardView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     content
                 }
-                .padding(20)
+                .padding(AppSurfaceTokens.Spacing.lg)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -143,7 +143,7 @@ struct ScheduleDashboardView: View {
                 viewModel.goToPrevious()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 12))
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
             }
             .buttonStyle(.bordered)
 
@@ -151,7 +151,7 @@ struct ScheduleDashboardView: View {
                 viewModel.goToToday()
             } label: {
                 Text("今天")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
             }
             .buttonStyle(.borderedProminent)
             .tint(AppSurfaceTokens.accentPrimary)
@@ -160,7 +160,7 @@ struct ScheduleDashboardView: View {
                 viewModel.goToNext()
             } label: {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
             }
             .buttonStyle(.bordered)
         }
@@ -168,6 +168,8 @@ struct ScheduleDashboardView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 20) {
+            scheduleOverviewCard
+
             planningOverviewCard
 
             switch dashboardMode {
@@ -184,7 +186,7 @@ struct ScheduleDashboardView: View {
     }
 
     private var dayOverview: some View {
-        HStack(alignment: .top, spacing: 20) {
+        HStack(alignment: .top, spacing: AppSurfaceTokens.Spacing.lg) {
             VStack(alignment: .leading, spacing: 16) {
                 todayEventsCard
                 timelineCard
@@ -195,7 +197,7 @@ struct ScheduleDashboardView: View {
                 nextEventCard
                 dayStatsCard
             }
-            .frame(width: 224)
+            .frame(width: AppSurfaceTokens.Layout.summaryWidth)
         }
     }
 
@@ -206,6 +208,55 @@ struct ScheduleDashboardView: View {
         )
     }
 
+    private var scheduleOverviewCard: some View {
+        AppSurfaceCard(title: "日程概览", subtitle: "摘要卡 + 传统日历", padding: 16) {
+            let snapshot = viewModel.planningSnapshot(for: viewModel.selectedDate)
+
+            VStack(alignment: .leading, spacing: 12) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(
+                        title: "今日",
+                        value: "\(viewModel.todayEventCount) 项",
+                        tint: AppSurfaceTokens.accentPrimary
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "饱和度",
+                        value: "\(viewModel.todayWorkloadPercent)%",
+                        tint: AppSurfaceTokens.accentOrange
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "下一条",
+                        value: snapshot.nextEvent?.title ?? "暂无",
+                        tint: AppSurfaceTokens.accentGreen
+                    )
+                ])
+
+                HStack(spacing: 10) {
+                    AppSurfaceSummaryChip(
+                        title: "模式",
+                        value: viewModel.viewTitle,
+                        tint: AppSurfaceTokens.secondaryText
+                    )
+                    AppSurfaceSummaryChip(
+                        title: "完成",
+                        value: "\(snapshot.completedEventCount) 项",
+                        tint: AppSurfaceTokens.accentGreen
+                    )
+                    AppSurfaceSummaryChip(
+                        title: "全天",
+                        value: "\(snapshot.allDayEventCount) 项",
+                        tint: AppSurfaceTokens.accentBlue
+                    )
+                }
+
+                Text("顶部先给出今天和当前视图的摘要，下面再进入详细日历和时间线。")
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(2)
+            }
+        }
+    }
+
     private var todayEventsCard: some View {
         AppSurfaceCard(title: "今日日程", subtitle: "\(viewModel.todayEvents.count) 项", padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
@@ -214,10 +265,10 @@ struct ScheduleDashboardView: View {
                         Spacer()
                         VStack(spacing: 8) {
                             Image(systemName: "calendar")
-                                .font(.system(size: 32))
+                                .font(.system(size: AppSurfaceTokens.Typography.display, weight: .regular))
                                 .foregroundStyle(.secondary.opacity(0.3))
                             Text("今天还没有安排")
-                                .font(.caption)
+                                .font(.system(size: AppSurfaceTokens.Typography.caption))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
                         Spacer()
@@ -254,7 +305,7 @@ struct ScheduleDashboardView: View {
                 HStack {
                     Spacer()
                     Text(Date(), format: .dateTime.hour().minute())
-                        .font(.caption)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 

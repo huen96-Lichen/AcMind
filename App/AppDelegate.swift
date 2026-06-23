@@ -145,6 +145,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.terminate(nil)
             return
         }
+        if ProcessInfo.processInfo.arguments.contains("--acwork-workbench-v2-audit") {
+            print("[AcWorkV2Audit] starting workbench V2 audit export")
+            do {
+                try exportWorkbenchV2LayoutAudit()
+                print("[AcWorkV2Audit] workbench V2 audit export finished")
+            } catch {
+                logger.error("Failed to export Workbench V2 audit: \(error.localizedDescription)", file: "AppDelegate")
+                print("[AcWorkV2Audit] export failed: \(error.localizedDescription)")
+            }
+            NSApp.terminate(nil)
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--acwork-workbench-v2-background-verify") {
+            print("[AcWorkV2Background] starting background persistence verification")
+            do {
+                try exportWorkbenchV2BackgroundVerification()
+                print("[AcWorkV2Background] background persistence verification finished")
+            } catch {
+                logger.error("Failed to export Workbench V2 background verification: \(error.localizedDescription)", file: "AppDelegate")
+                print("[AcWorkV2Background] export failed: \(error.localizedDescription)")
+            }
+            NSApp.terminate(nil)
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--companion-six-pages-export") {
+            print("[CompanionExport] starting companion export")
+            do {
+                try exportCompanionSixPageScreenshots(serviceContainer: ServiceContainer.preview())
+                print("[CompanionExport] companion export finished")
+            } catch {
+                logger.error("Failed to export companion screenshots: \(error.localizedDescription)", file: "AppDelegate")
+                print("[CompanionExport] export failed: \(error.localizedDescription)")
+            }
+            NSApp.terminate(nil)
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("--tool-workspace-preview") {
             showToolWorkspacePreviewWindow()
             return
@@ -164,6 +200,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 #endif
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        applyApplicationIcon()
         setupStatusBar()
         setupNotifications()
 
@@ -843,6 +880,164 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private struct CompanionScreenshotSpec {
+        let page: NotchV2Page
+        let fileName: String
+        let title: String
+    }
+
+    private func exportCompanionSixPageScreenshots(serviceContainer: ServiceContainer) throws {
+        let outputDirectory = URL(fileURLWithPath: "/Users/lichen/Desktop/AcMind/docs/screenshots/companion-unification")
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        print("[CompanionExport] output directory ready: \(outputDirectory.path)")
+
+        let specs: [CompanionScreenshotSpec] = [
+            .init(page: .overview, fileName: "companion-local-880x300.png", title: "本机"),
+            .init(page: .launcher, fileName: "companion-launcher-880x300.png", title: "启动器"),
+            .init(page: .music, fileName: "companion-music-880x300.png", title: "音乐"),
+            .init(page: .agent, fileName: "companion-ai-880x300.png", title: "AI"),
+            .init(page: .systemStatus, fileName: "companion-status-880x300.png", title: "状态"),
+            .init(page: .settings, fileName: "companion-settings-880x300.png", title: "设置")
+        ]
+
+        var exportedImages: [(title: String, image: NSImage)] = []
+
+        for spec in specs {
+            let image = try renderCompanionScreenshot(
+                page: spec.page,
+                serviceContainer: serviceContainer
+            )
+            let outputURL = outputDirectory.appendingPathComponent(spec.fileName)
+            try write(image: image, to: outputURL)
+            exportedImages.append((title: spec.title, image: image))
+            print("[CompanionExport] wrote \(outputURL.lastPathComponent)")
+        }
+
+        let contactSheetURL = outputDirectory.appendingPathComponent("companion-six-pages-contact-sheet.png")
+        let sheet = try composeContactSheet(images: exportedImages)
+        try write(image: sheet, to: contactSheetURL)
+        print("[CompanionExport] wrote \(contactSheetURL.lastPathComponent)")
+    }
+
+    private func renderCompanionScreenshot(page: NotchV2Page, serviceContainer: ServiceContainer) throws -> NSImage {
+        let panelController = CompanionScreenshotPanelController()
+        let viewModel = NotchV2ViewModel(
+            panelController: panelController,
+            batteryService: serviceContainer.batteryService,
+            systemStatusService: serviceContainer.systemStatusService,
+            systemEventCenter: serviceContainer.systemEventCenter,
+            musicService: serviceContainer.musicService
+        )
+        viewModel.updateDisplaySettings { settings in
+            settings.enabledDynamicModules = Set(DynamicContinentModuleID.allCases)
+            settings.dynamicModuleOrder = DynamicContinentModuleID.allCases
+            settings.overviewVisibleModules = Set(DynamicContinentModuleID.allCases)
+            settings.collapsedVisibleContents = Set(CompanionRuntimeContentID.allCases)
+            settings.collapsedVisibleContentOrder = CompanionRuntimeContentID.allCases
+            settings.primarySurfaceContents = Set(CompanionRuntimeContentID.allCases)
+            settings.primarySurfaceContentOrder = CompanionRuntimeContentID.allCases
+            settings.enabledSystemEventKinds = Set(SystemEventKind.allCases)
+        }
+        viewModel.selectedPage = page
+        viewModel.presentationState = .expanded
+        viewModel.isExpanded = true
+
+        let rootView = NotchV2RootView(viewModel: viewModel)
+            .environmentObject(serviceContainer)
+            .preferredColorScheme(.dark)
+            .frame(
+                width: CompanionLayoutTokens.expandedWindowWidth,
+                height: CompanionLayoutTokens.expandedWindowHeight,
+                alignment: .topLeading
+            )
+
+        let hostingView = NSHostingView(rootView: AnyView(rootView))
+        hostingView.frame = NSRect(
+            origin: .zero,
+            size: NSSize(width: CompanionLayoutTokens.expandedWindowWidth, height: CompanionLayoutTokens.expandedWindowHeight)
+        )
+        hostingView.layoutSubtreeIfNeeded()
+        return try renderImage(from: hostingView)
+    }
+
+    private func renderImage(from hostingView: NSHostingView<AnyView>) throws -> NSImage {
+        let bounds = hostingView.bounds
+        guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: bounds) else {
+            throw NSError(domain: "CompanionExport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create bitmap representation"])
+        }
+        hostingView.cacheDisplay(in: bounds, to: rep)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(rep)
+        return image
+    }
+
+    private func write(image: NSImage, to url: URL) throws {
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let data = rep.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "CompanionExport", code: 3, userInfo: [NSLocalizedDescriptionKey: "Unable to encode PNG"])
+        }
+        try data.write(to: url)
+    }
+
+    private func composeContactSheet(images: [(title: String, image: NSImage)]) throws -> NSImage {
+        let columns = 3
+        let rows = 2
+        let tileWidth: CGFloat = CompanionLayoutTokens.expandedWindowWidth
+        let tileHeight: CGFloat = CompanionLayoutTokens.expandedWindowHeight
+        let titleBandHeight: CGFloat = 24
+        let padding: CGFloat = 16
+        let gutter: CGFloat = 14
+        let sheetWidth = padding * 2 + CGFloat(columns) * tileWidth + CGFloat(columns - 1) * gutter
+        let sheetHeight = padding * 2 + CGFloat(rows) * (tileHeight + titleBandHeight) + CGFloat(rows - 1) * gutter
+        let canvas = NSImage(size: NSSize(width: sheetWidth, height: sheetHeight))
+
+        canvas.lockFocus()
+        defer { canvas.unlockFocus() }
+
+        NSColor(red: 0.03, green: 0.03, blue: 0.035, alpha: 1).setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: sheetWidth, height: sheetHeight)).fill()
+
+        let titleFont = NSFont.systemFont(ofSize: 16, weight: .semibold)
+        let labelFont = NSFont.systemFont(ofSize: 11, weight: .medium)
+        let labelColor = NSColor.white.withAlphaComponent(0.88)
+
+        for (index, item) in images.enumerated() {
+            let column = index % columns
+            let row = index / columns
+            let x = padding + CGFloat(column) * (tileWidth + gutter)
+            let y = sheetHeight - padding - CGFloat(row + 1) * (tileHeight + titleBandHeight) - CGFloat(row) * gutter
+
+            let labelRect = NSRect(x: x, y: y + tileHeight + 4, width: tileWidth, height: 18)
+            let labelStyle = NSMutableParagraphStyle()
+            labelStyle.alignment = .left
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: titleFont,
+                .foregroundColor: labelColor,
+                .paragraphStyle: labelStyle
+            ]
+            item.title.draw(in: labelRect, withAttributes: attributes)
+
+            let imageRect = NSRect(x: x, y: y, width: tileWidth, height: tileHeight)
+            item.image.draw(in: imageRect)
+
+            let captionRect = NSRect(x: x, y: y + tileHeight - 18, width: tileWidth, height: 16)
+            let captionAttributes: [NSAttributedString.Key: Any] = [
+                .font: labelFont,
+                .foregroundColor: NSColor.white.withAlphaComponent(0.6)
+            ]
+            "880 × 300".draw(in: captionRect, withAttributes: captionAttributes)
+        }
+
+        return canvas
+    }
+
+    @MainActor
+    private final class CompanionScreenshotPanelController: NotchPanelControlling {
+        func hide() {}
+        func showCompact(on screen: NSScreen?) {}
+    }
+
     private func exportContentViewScreenshot(
         _ path: URL,
         size: NSSize,
@@ -897,6 +1092,684 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         try data.write(to: path)
         print("[AcWorkExport] wrote \(path.lastPathComponent)")
     }
+
+    private func exportWorkbenchV2LayoutAudit() throws {
+        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/workbench-v17")
+        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots")
+        try FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)
+        print("[AcWorkV2Audit] output directory ready: \(outputDirectory.path)")
+
+        let selectedBackgroundURL = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/临时/DSCF0251.jpg")
+        guard FileManager.default.fileExists(atPath: selectedBackgroundURL.path) else {
+            throw NSError(domain: "AcWorkWorkbenchV2Audit", code: 20, userInfo: [NSLocalizedDescriptionKey: "Missing hero background image at \(selectedBackgroundURL.path)"])
+        }
+        let heroBackgroundStore = WorkbenchV2HeroBackgroundStore()
+        heroBackgroundStore.resetToDefaultBackground()
+
+        let layouts: [(name: String, size: NSSize, data: WorkbenchV2MockData)] = [
+            ("default", NSSize(width: WorkbenchV2Metrics.defaultContentWidth, height: WorkbenchV2Metrics.defaultContentHeight), .preview()),
+            ("compact", NSSize(width: WorkbenchV2Metrics.minimumWindowWidth, height: WorkbenchV2Metrics.minimumWindowHeight), .compactWarning())
+        ]
+
+        var snapshots: [WorkbenchV2RuntimeLayoutSnapshot] = []
+        var currentFocusSnapshots: [WorkbenchV2CurrentFocusLayoutSnapshot] = []
+        var validationSummaries: [String] = []
+        var currentFocusValidationSummaries: [String] = []
+        var defaultCurrentFocusFrame: AuditComponentFrame?
+        var pixelValidationSummaries: [String] = []
+
+        let beforeBackgroundPath = screenshotsDirectory.appendingPathComponent("background-before-1500x888.png")
+        try exportStandaloneViewScreenshot(
+            beforeBackgroundPath,
+            size: NSSize(width: WorkbenchV2Metrics.defaultContentWidth, height: WorkbenchV2Metrics.defaultContentHeight),
+            showLayoutDebugOverlay: false
+        ) {
+            WorkbenchV2View(
+                mockData: .preview(),
+                debugOverlayEnabled: true,
+                heroBackgroundStore: heroBackgroundStore
+            )
+        }
+
+        try heroBackgroundStore.setBackground(from: selectedBackgroundURL)
+        let afterBackgroundPath = screenshotsDirectory.appendingPathComponent("background-after-1500x888.png")
+        try exportStandaloneViewScreenshot(
+            afterBackgroundPath,
+            size: NSSize(width: WorkbenchV2Metrics.defaultContentWidth, height: WorkbenchV2Metrics.defaultContentHeight),
+            showLayoutDebugOverlay: false
+        ) {
+            WorkbenchV2View(
+                mockData: .preview(),
+                debugOverlayEnabled: true,
+                heroBackgroundStore: heroBackgroundStore
+            )
+        }
+
+        for entry in layouts {
+            #if DEBUG
+            LayoutDebugStore.shared.update([])
+            #endif
+
+            let normalPath = screenshotsDirectory.appendingPathComponent("swiftui-\(Int(entry.size.width))x\(Int(entry.size.height)).png")
+            let debugPath = screenshotsDirectory.appendingPathComponent("swiftui-\(Int(entry.size.width))x\(Int(entry.size.height))-debug.png")
+
+#if DEBUG
+            LayoutDebugStore.shared.update([])
+#endif
+            try exportStandaloneViewScreenshot(
+                normalPath,
+                size: entry.size,
+                showLayoutDebugOverlay: false
+            ) {
+                WorkbenchV2View(
+                    mockData: entry.data,
+                    debugOverlayEnabled: true,
+                    heroBackgroundStore: heroBackgroundStore
+                )
+            }
+
+#if DEBUG
+            LayoutDebugStore.shared.update([])
+#endif
+            try exportStandaloneViewScreenshot(
+                debugPath,
+                size: entry.size,
+                showLayoutDebugOverlay: true
+            ) {
+                WorkbenchV2View(
+                    mockData: entry.data,
+                    debugOverlayEnabled: true,
+                    heroBackgroundStore: heroBackgroundStore
+                )
+            }
+
+#if DEBUG
+            let frames = LayoutDebugStore.shared.measurements.map {
+                AuditComponentFrame(
+                    name: $0.name,
+                    x: Int($0.frame.minX),
+                    y: Int($0.frame.minY),
+                    width: Int($0.frame.width),
+                    height: Int($0.frame.height)
+                )
+            }
+            let validation = try validateWorkbenchV2Frames(
+                layoutName: entry.name,
+                frames: frames,
+                contentSize: entry.size
+            )
+            print("[AcWorkV2Audit] validation result for \(entry.name):\n\(validation)")
+            validationSummaries.append(validation)
+            let currentFocusFrames = frames.filter { $0.name.hasPrefix("CurrentFocus") }
+            if let cardFrame = frames.first(where: { $0.name == "CurrentFocusCard" }) {
+                if entry.name == "default" {
+                    defaultCurrentFocusFrame = cardFrame
+                }
+                let currentFocusValidation = try validateCurrentFocusFrames(
+                    layoutName: entry.name,
+                    cardFrame: cardFrame,
+                    frames: currentFocusFrames,
+                    contentSize: entry.size
+                )
+                print("[AcWorkV2Audit] current focus validation result for \(entry.name):\n\(currentFocusValidation)")
+                currentFocusValidationSummaries.append(currentFocusValidation)
+            }
+            currentFocusSnapshots.append(
+                WorkbenchV2CurrentFocusLayoutSnapshot(
+                    name: entry.name,
+                    window: AuditWindowFrame(width: Int(entry.size.width), height: Int(entry.size.height)),
+                    components: currentFocusFrames
+                )
+            )
+            snapshots.append(
+                WorkbenchV2RuntimeLayoutSnapshot(
+                    name: entry.name,
+                    window: AuditWindowFrame(width: Int(entry.size.width), height: Int(entry.size.height)),
+                    components: frames
+                )
+            )
+#endif
+        }
+
+        let restoredStore = WorkbenchV2HeroBackgroundStore()
+        let restoredBackgroundPath = screenshotsDirectory.appendingPathComponent("background-restored-1500x888.png")
+        try exportStandaloneViewScreenshot(
+            restoredBackgroundPath,
+            size: NSSize(width: WorkbenchV2Metrics.defaultContentWidth, height: WorkbenchV2Metrics.defaultContentHeight),
+            showLayoutDebugOverlay: false
+        ) {
+            WorkbenchV2View(
+                mockData: .preview(),
+                debugOverlayEnabled: true,
+                heroBackgroundStore: restoredStore
+            )
+        }
+
+        let persistedBackgroundPath = restoredStore.backgroundPath
+        if persistedBackgroundPath.isEmpty == false {
+            try? FileManager.default.removeItem(atPath: persistedBackgroundPath)
+        }
+        let fallbackStore = WorkbenchV2HeroBackgroundStore()
+        let fallbackBackgroundPath = screenshotsDirectory.appendingPathComponent("background-fallback-1500x888.png")
+        try exportStandaloneViewScreenshot(
+            fallbackBackgroundPath,
+            size: NSSize(width: WorkbenchV2Metrics.defaultContentWidth, height: WorkbenchV2Metrics.defaultContentHeight),
+            showLayoutDebugOverlay: false
+        ) {
+            WorkbenchV2View(
+                mockData: .preview(),
+                debugOverlayEnabled: true,
+                heroBackgroundStore: fallbackStore
+            )
+        }
+
+#if DEBUG
+        if let defaultCurrentFocusFrame {
+            let pixelValidation = try validateWorkbenchV2BackgroundPixels(
+                cardFrame: defaultCurrentFocusFrame,
+                baselinePath: beforeBackgroundPath,
+                comparisonPaths: [
+                    afterBackgroundPath,
+                    restoredBackgroundPath,
+                    fallbackBackgroundPath
+                ]
+            )
+            print("[AcWorkV2Audit] background pixel validation result:\n\(pixelValidation)")
+            pixelValidationSummaries.append(pixelValidation)
+        }
+
+        let jsonURL = outputDirectory.appendingPathComponent("WorkbenchV17_Frames.json")
+        let data = try JSONEncoder.prettyPrinted.encode(WorkbenchV2RuntimeFrames(layouts: snapshots))
+        try data.write(to: jsonURL)
+        print("[AcWorkV2Audit] wrote \(jsonURL.path)")
+
+        let currentFocusJSONURL = outputDirectory.appendingPathComponent("WorkbenchV17_CurrentFocus_Frames.json")
+        let currentFocusData = try JSONEncoder.prettyPrinted.encode(WorkbenchV2CurrentFocusFrames(layouts: currentFocusSnapshots))
+        try currentFocusData.write(to: currentFocusJSONURL)
+        print("[AcWorkV2Audit] wrote \(currentFocusJSONURL.path)")
+
+        let validationURL = outputDirectory.appendingPathComponent("WorkbenchV17_Validation.txt")
+        let validationReport = (validationSummaries + currentFocusValidationSummaries + pixelValidationSummaries).joined(separator: "\n\n")
+        try validationReport.write(to: validationURL, atomically: true, encoding: .utf8)
+        print("[AcWorkV2Audit] wrote \(validationURL.path)")
+#endif
+    }
+
+    private func exportWorkbenchV2BackgroundVerification() throws {
+        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/workbench-v17")
+        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots")
+        try FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)
+
+        let selectedBackgroundURL = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/临时/DSCF0251.jpg")
+        guard FileManager.default.fileExists(atPath: selectedBackgroundURL.path) else {
+            throw NSError(domain: "AcWorkWorkbenchV2BackgroundVerification", code: 20, userInfo: [NSLocalizedDescriptionKey: "Missing hero background image at \(selectedBackgroundURL.path)"])
+        }
+
+        let stage = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--acwork-workbench-v2-background-stage=") })
+        let stageValue = stage.flatMap { String($0.dropFirst("--acwork-workbench-v2-background-stage=".count)) } ?? "restore"
+
+        let heroBackgroundStore = WorkbenchV2HeroBackgroundStore()
+        if stageValue == "seed" {
+            heroBackgroundStore.resetToDefaultBackground()
+            try heroBackgroundStore.setBackground(from: selectedBackgroundURL)
+        }
+
+        let exportedName: String
+        switch stageValue {
+        case "seed":
+            exportedName = "background-selected-1500x888.png"
+        case "fallback":
+            exportedName = "background-fallback-1500x888.png"
+        default:
+            exportedName = "background-restored-1500x888.png"
+        }
+
+        let exportPath = screenshotsDirectory.appendingPathComponent(exportedName)
+        try exportStandaloneViewScreenshot(
+            exportPath,
+            size: NSSize(width: WorkbenchV2Metrics.defaultContentWidth, height: WorkbenchV2Metrics.defaultContentHeight),
+            showLayoutDebugOverlay: false
+        ) {
+            WorkbenchV2View(
+                mockData: .preview(),
+                debugOverlayEnabled: true,
+                heroBackgroundStore: heroBackgroundStore
+            )
+        }
+
+        let reportURL = outputDirectory.appendingPathComponent("WorkbenchV17_BackgroundPersistence.txt")
+        let persistedPath = heroBackgroundStore.backgroundPath.isEmpty ? "(empty)" : heroBackgroundStore.backgroundPath
+        let fileExists = heroBackgroundStore.backgroundPath.isEmpty == false && FileManager.default.fileExists(atPath: heroBackgroundStore.backgroundPath)
+        let fallbackBehavior = fileExists ? "restored selected background" : "fell back to generated default background"
+        let report = [
+            "[background verification]",
+            "stage=\(stageValue)",
+            "userDefaultsKey=WorkbenchV2.heroBackgroundPath",
+            "persistedPath=\(persistedPath)",
+            "fileExists=\(fileExists)",
+            "fallbackBehavior=\(fallbackBehavior)",
+            "selectedBackgroundSource=\(selectedBackgroundURL.path)"
+        ].joined(separator: "\n")
+        try report.write(to: reportURL, atomically: true, encoding: .utf8)
+        print("[AcWorkV2Background] wrote \(exportPath.lastPathComponent)")
+        print("[AcWorkV2Background] wrote \(reportURL.path)")
+        print("[AcWorkV2Background] persistedPath=\(persistedPath)")
+        print("[AcWorkV2Background] fallbackBehavior=\(fallbackBehavior)")
+    }
+
+    private func exportStandaloneViewScreenshot<V: View>(
+        _ path: URL,
+        size: NSSize,
+        showLayoutDebugOverlay: Bool = false,
+        @ViewBuilder rootView: () -> V
+    ) throws {
+#if DEBUG
+        LayoutDebugStore.shared.isOverlayVisible = showLayoutDebugOverlay
+        defer { LayoutDebugStore.shared.isOverlayVisible = false }
+#endif
+
+        let hostingView = NSHostingView(rootView: AnyView(rootView().preferredColorScheme(.light)))
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.layoutSubtreeIfNeeded()
+        hostingView.displayIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+        guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
+            throw NSError(domain: "AcWorkScreenshotExport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create bitmap representation"])
+        }
+        hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
+        guard let data = rep.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "AcWorkScreenshotExport", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unable to encode PNG representation"])
+        }
+        try data.write(to: path)
+        print("[AcWorkV2Audit] wrote \(path.lastPathComponent)")
+    }
+
+    #if DEBUG
+    private func validateWorkbenchV2Frames(
+        layoutName: String,
+        frames: [AuditComponentFrame],
+        contentSize: NSSize
+    ) throws -> String {
+        let trackedOrder: [String] = [
+            "WorkbenchHeader",
+            "CurrentFocusCard",
+            "TodayOverviewPanel",
+            "PendingItemsCard",
+            "RecentCollectionCard",
+            "QuickActionsCard",
+            "ActivityTrendCard",
+            "DeviceStatusBar"
+        ]
+        let trackedFrames = trackedOrder.compactMap { name in
+            frames.first(where: { $0.name == name })
+        }
+        let missingNames = trackedOrder.filter { name in frames.contains(where: { $0.name == name }) == false }
+        if missingNames.isEmpty == false {
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 9,
+                userInfo: [NSLocalizedDescriptionKey: "\(layoutName): missing tracked frames: \(missingNames.joined(separator: ", "))"]
+            )
+        }
+        let duplicates = Dictionary(grouping: trackedFrames, by: \.name).filter { $1.count > 1 }
+        if duplicates.isEmpty == false {
+            let duplicateList = duplicates.keys.sorted().joined(separator: ", ")
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 10,
+                userInfo: [NSLocalizedDescriptionKey: "\(layoutName): duplicated tracked frames: \(duplicateList)"]
+            )
+        }
+
+        func rect(for frame: AuditComponentFrame) -> CGRect {
+            CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
+        }
+
+        var reportLines: [String] = ["[\(layoutName)] frame audit"]
+        var violations: [String] = []
+
+        for frame in trackedFrames {
+            let frameRect = rect(for: frame)
+            let boundsOk = frameRect.maxX <= contentSize.width && frameRect.maxY <= contentSize.height
+            if boundsOk == false {
+                violations.append("\(frame.name) exceeds bounds \(Int(contentSize.width))x\(Int(contentSize.height))")
+            }
+            reportLines.append(
+                "\(frame.name): x=\(frame.x) y=\(frame.y) w=\(frame.width) h=\(frame.height) maxX=\(Int(frameRect.maxX)) maxY=\(Int(frameRect.maxY)) bounds=\(boundsOk ? "PASS" : "FAIL")"
+            )
+        }
+
+        for lhsIndex in trackedFrames.indices {
+            let lhs = trackedFrames[lhsIndex]
+            let lhsRect = rect(for: lhs)
+            guard lhsIndex + 1 < trackedFrames.count else { continue }
+            for rhsIndex in (lhsIndex + 1)..<trackedFrames.count {
+                let rhs = trackedFrames[rhsIndex]
+                let rhsRect = rect(for: rhs)
+                let intersection = lhsRect.intersection(rhsRect)
+                let intersects = lhsRect.intersects(rhsRect)
+                let pairName = "\(lhs.name) × \(rhs.name)"
+                let intersectionText = intersection.isNull
+                    ? "null"
+                    : "x=\(Int(intersection.minX)) y=\(Int(intersection.minY)) w=\(Int(intersection.width)) h=\(Int(intersection.height))"
+                reportLines.append("\(pairName): \(intersects ? "FAIL" : "PASS")")
+                reportLines.append("  A: x=\(lhs.x) y=\(lhs.y) w=\(lhs.width) h=\(lhs.height)")
+                reportLines.append("  B: x=\(rhs.x) y=\(rhs.y) w=\(rhs.width) h=\(rhs.height)")
+                reportLines.append("  intersection: \(intersectionText)")
+                if intersects {
+                    violations.append("\(pairName) intersects")
+                }
+            }
+        }
+
+        let today = trackedFrames.first(where: { $0.name == "TodayOverviewPanel" })
+        let quick = trackedFrames.first(where: { $0.name == "QuickActionsCard" })
+        let trend = trackedFrames.first(where: { $0.name == "ActivityTrendCard" })
+        let footer = trackedFrames.first(where: { $0.name == "DeviceStatusBar" })
+        let currentFocus = trackedFrames.first(where: { $0.name == "CurrentFocusCard" })
+        let pending = trackedFrames.first(where: { $0.name == "PendingItemsCard" })
+        let recent = trackedFrames.first(where: { $0.name == "RecentCollectionCard" })
+
+        if let today, let quick, rect(for: today).maxY > rect(for: quick).minY {
+            violations.append("TodayOverviewPanel.maxY exceeds QuickActionsCard.minY")
+        }
+        if let trend, let footer, rect(for: trend).maxY > rect(for: footer).minY {
+            violations.append("ActivityTrendCard.maxY exceeds DeviceStatusBar.minY")
+        }
+        if let quick, let footer, rect(for: quick).maxY > rect(for: footer).minY {
+            violations.append("QuickActionsCard.maxY exceeds DeviceStatusBar.minY")
+        }
+        if let trend, let quick {
+            let sameThirdRowY = trend.y == quick.y
+            let sameThirdRowHeight = trend.height == quick.height
+            let sameThirdRowBottom = trend.y + trend.height == quick.y + quick.height
+            reportLines.append("[\(layoutName)] third row alignment audit")
+            reportLines.append("ActivityTrendCard.y == QuickActionsCard.y: \(trend.y) / \(quick.y) \(sameThirdRowY ? "PASS" : "FAIL")")
+            reportLines.append("ActivityTrendCard.height == QuickActionsCard.height: \(trend.height) / \(quick.height) \(sameThirdRowHeight ? "PASS" : "FAIL")")
+            reportLines.append("ActivityTrendCard.maxY == QuickActionsCard.maxY: \(trend.y + trend.height) / \(quick.y + quick.height) \(sameThirdRowBottom ? "PASS" : "FAIL")")
+            if sameThirdRowY == false {
+                violations.append("ActivityTrendCard and QuickActionsCard do not start on the same third row")
+            }
+            if sameThirdRowHeight == false {
+                violations.append("ActivityTrendCard and QuickActionsCard heights differ")
+            }
+            if sameThirdRowBottom == false {
+                violations.append("ActivityTrendCard and QuickActionsCard bottom edges differ")
+            }
+        }
+
+        let minimumGap = Int(WorkbenchV2Tokens.Layout.dashboardRowGap)
+        let spacingChecks: [(String, AuditComponentFrame?, AuditComponentFrame?)] = [
+            ("ActivityTrendCard.minY - PendingItemsCard.maxY", pending, trend),
+            ("ActivityTrendCard.minY - RecentCollectionCard.maxY", recent, trend),
+            ("QuickActionsCard.minY - TodayOverviewPanel.maxY", today, quick),
+            ("DeviceStatusBar.minY - ActivityTrendCard.maxY", trend, footer),
+            ("DeviceStatusBar.minY - QuickActionsCard.maxY", quick, footer)
+        ]
+        reportLines.append("[\(layoutName)] spacing audit minimum=\(minimumGap)")
+        for check in spacingChecks {
+            guard let upper = check.1, let lower = check.2 else {
+                violations.append("\(check.0) missing frames")
+                continue
+            }
+            let actualGap = lower.y - (upper.y + upper.height)
+            let passes = actualGap >= minimumGap
+            reportLines.append("\(check.0): \(actualGap) \(passes ? "PASS" : "FAIL")")
+            if passes == false {
+                violations.append("\(check.0) is \(actualGap), expected >= \(minimumGap)")
+            }
+        }
+
+        let exactGap = Int(WorkbenchV2Tokens.Layout.dashboardRowGap)
+        let gridGapChecks: [(String, AuditComponentFrame?, AuditComponentFrame?, (AuditComponentFrame, AuditComponentFrame) -> Int)] = [
+            ("CurrentFocusCard.right -> TodayOverviewPanel.left", currentFocus, today, { left, right in right.x - (left.x + left.width) }),
+            ("PendingItemsCard.right -> RecentCollectionCard.left", pending, recent, { left, right in right.x - (left.x + left.width) }),
+            ("ActivityTrendCard.right -> QuickActionsCard.left", trend, quick, { left, right in right.x - (left.x + left.width) }),
+            ("CurrentFocusCard.bottom -> PendingItemsCard.top", currentFocus, pending, { upper, lower in lower.y - (upper.y + upper.height) }),
+            ("CurrentFocusCard.bottom -> RecentCollectionCard.top", currentFocus, recent, { upper, lower in lower.y - (upper.y + upper.height) }),
+            ("PendingItemsCard.bottom -> ActivityTrendCard.top", pending, trend, { upper, lower in lower.y - (upper.y + upper.height) }),
+            ("RecentCollectionCard.bottom -> ActivityTrendCard.top", recent, trend, { upper, lower in lower.y - (upper.y + upper.height) }),
+            ("TodayOverviewPanel.bottom -> QuickActionsCard.top", today, quick, { upper, lower in lower.y - (upper.y + upper.height) })
+        ]
+        reportLines.append("[\(layoutName)] six-card grid gutter audit expected=\(exactGap)")
+        for check in gridGapChecks {
+            guard let first = check.1, let second = check.2 else {
+                violations.append("\(check.0) missing frames")
+                continue
+            }
+            let actualGap = check.3(first, second)
+            let passes = actualGap == exactGap
+            reportLines.append("\(check.0): \(actualGap) \(passes ? "PASS" : "FAIL")")
+            if passes == false {
+                violations.append("\(check.0) is \(actualGap), expected \(exactGap)")
+            }
+        }
+
+        let gridAlignmentChecks: [(String, Bool)] = [
+            (
+                "CurrentFocusCard.y == TodayOverviewPanel.y",
+                currentFocus.flatMap { focus in today.map { focus.y == $0.y } } ?? false
+            ),
+            (
+                "PendingItemsCard.y == RecentCollectionCard.y",
+                pending.flatMap { pending in recent.map { pending.y == $0.y } } ?? false
+            ),
+            (
+                "ActivityTrendCard.y == QuickActionsCard.y",
+                trend.flatMap { trend in quick.map { trend.y == $0.y } } ?? false
+            ),
+            (
+                "PendingItemsCard.maxY == RecentCollectionCard.maxY",
+                pending.flatMap { pending in recent.map { pending.y + pending.height == $0.y + $0.height } } ?? false
+            ),
+            (
+                "ActivityTrendCard.maxY == QuickActionsCard.maxY",
+                trend.flatMap { trend in quick.map { trend.y + trend.height == $0.y + $0.height } } ?? false
+            )
+        ]
+        reportLines.append("[\(layoutName)] six-card grid alignment audit")
+        for check in gridAlignmentChecks {
+            reportLines.append("\(check.0): \(check.1 ? "PASS" : "FAIL")")
+            if check.1 == false {
+                violations.append("\(check.0) failed")
+            }
+        }
+
+        if violations.isEmpty == false {
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 11,
+                userInfo: [NSLocalizedDescriptionKey: "\(layoutName): " + violations.joined(separator: "; ")]
+            )
+        }
+
+        let footerCheck = footer.map { $0.y + $0.height <= Int(contentSize.height) } ?? true
+        if footerCheck == false {
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 12,
+                userInfo: [NSLocalizedDescriptionKey: "\(layoutName): DeviceStatusBar.maxY exceeds content height"]
+            )
+        }
+
+        return reportLines.joined(separator: "\n")
+    }
+
+    private func validateCurrentFocusFrames(
+        layoutName: String,
+        cardFrame: AuditComponentFrame,
+        frames: [AuditComponentFrame],
+        contentSize: NSSize
+    ) throws -> String {
+        let trackedOrder = [
+            "CurrentFocusBackground",
+            "CurrentFocusContent",
+            "CurrentFocusMetrics",
+            "CurrentFocusActions"
+        ]
+        let cardRect = CGRect(x: cardFrame.x, y: cardFrame.y, width: cardFrame.width, height: cardFrame.height)
+        let namedFrames = trackedOrder.compactMap { name in
+            frames.first(where: { $0.name == name })
+        }
+
+        if namedFrames.count != trackedOrder.count {
+            let missing = trackedOrder.filter { name in frames.contains(where: { $0.name == name }) == false }
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 21,
+                userInfo: [NSLocalizedDescriptionKey: "\(layoutName): missing current focus frames: \(missing.joined(separator: ", "))"]
+            )
+        }
+
+        var reportLines: [String] = ["[\(layoutName)] current focus internal audit"]
+        var violations: [String] = []
+
+        for frame in namedFrames {
+            let rect = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
+            let boundsOk = rect.minX >= cardRect.minX
+                && rect.maxX <= cardRect.maxX
+                && rect.minY >= cardRect.minY
+                && rect.maxY <= cardRect.maxY
+                && rect.maxX <= contentSize.width
+                && rect.maxY <= contentSize.height
+            reportLines.append(
+                "\(frame.name): x=\(frame.x) y=\(frame.y) w=\(frame.width) h=\(frame.height) maxX=\(Int(rect.maxX)) maxY=\(Int(rect.maxY)) bounds=\(boundsOk ? "PASS" : "FAIL")"
+            )
+            if boundsOk == false {
+                violations.append("\(frame.name) exceeds CurrentFocusCard bounds")
+            }
+        }
+
+        if let actions = namedFrames.first(where: { $0.name == "CurrentFocusActions" }) {
+            let actionsRect = CGRect(x: actions.x, y: actions.y, width: actions.width, height: actions.height)
+            if actionsRect.maxY > cardRect.maxY - 1 {
+                violations.append("CurrentFocusActions.maxY exceeds CurrentFocusCard.maxY")
+            }
+        }
+
+        if let background = namedFrames.first(where: { $0.name == "CurrentFocusBackground" }) {
+            let backgroundRect = CGRect(x: background.x, y: background.y, width: background.width, height: background.height)
+            if backgroundRect.minX < cardRect.minX
+                || backgroundRect.minY < cardRect.minY
+                || backgroundRect.maxX > cardRect.maxX
+                || backgroundRect.maxY > cardRect.maxY {
+                violations.append("CurrentFocusBackground exceeds CurrentFocusCard bounds")
+            }
+        }
+
+        if violations.isEmpty == false {
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 22,
+                userInfo: [NSLocalizedDescriptionKey: "\(layoutName): " + violations.joined(separator: "; ")]
+            )
+        }
+
+        return reportLines.joined(separator: "\n")
+    }
+
+    private func validateWorkbenchV2BackgroundPixels(
+        cardFrame: AuditComponentFrame,
+        baselinePath: URL,
+        comparisonPaths: [URL]
+    ) throws -> String {
+        let cardRect = CGRect(
+            x: cardFrame.x,
+            y: cardFrame.y,
+            width: cardFrame.width,
+            height: cardFrame.height
+        )
+        guard let baselineBitmap = bitmapImageRep(from: baselinePath) else {
+            throw NSError(
+                domain: "AcWorkWorkbenchV2Audit",
+                code: 30,
+                userInfo: [NSLocalizedDescriptionKey: "Unable to read baseline screenshot \(baselinePath.path)"]
+            )
+        }
+
+        var reportLines: [String] = ["[background] pixel audit"]
+        reportLines.append("CurrentFocusCard: x=\(cardFrame.x) y=\(cardFrame.y) w=\(cardFrame.width) h=\(cardFrame.height)")
+
+        for path in comparisonPaths {
+            guard let comparisonBitmap = bitmapImageRep(from: path) else {
+                throw NSError(
+                    domain: "AcWorkWorkbenchV2Audit",
+                    code: 31,
+                    userInfo: [NSLocalizedDescriptionKey: "Unable to read comparison screenshot \(path.path)"]
+                )
+            }
+
+            let result = comparePixelsOutsideCard(
+                baseline: baselineBitmap,
+                comparison: comparisonBitmap,
+                cardRect: cardRect
+            )
+            let status = result.changedPixels == 0 ? "PASS" : "FAIL"
+            reportLines.append("\(path.lastPathComponent): \(status) outsideChangedPixels=\(result.changedPixels) sampledPixels=\(result.sampledPixels)")
+            if result.changedPixels > 0 {
+                throw NSError(
+                    domain: "AcWorkWorkbenchV2Audit",
+                    code: 32,
+                    userInfo: [NSLocalizedDescriptionKey: "\(path.lastPathComponent): background pixels changed outside CurrentFocusCard"]
+                )
+            }
+        }
+
+        return reportLines.joined(separator: "\n")
+    }
+
+    private func bitmapImageRep(from path: URL) -> NSBitmapImageRep? {
+        guard let image = NSImage(contentsOf: path),
+              let tiffData = image.tiffRepresentation else {
+            return nil
+        }
+        return NSBitmapImageRep(data: tiffData)
+    }
+
+    private func comparePixelsOutsideCard(
+        baseline: NSBitmapImageRep,
+        comparison: NSBitmapImageRep,
+        cardRect: CGRect
+    ) -> (changedPixels: Int, sampledPixels: Int) {
+        let width = min(baseline.pixelsWide, comparison.pixelsWide)
+        let height = min(baseline.pixelsHigh, comparison.pixelsHigh)
+        let scaleX = CGFloat(width) / CGFloat(WorkbenchV2Metrics.defaultContentWidth)
+        let scaleY = CGFloat(height) / CGFloat(WorkbenchV2Metrics.defaultContentHeight)
+        let pixelCardRect = CGRect(
+            x: cardRect.minX * scaleX,
+            y: cardRect.minY * scaleY,
+            width: cardRect.width * scaleX,
+            height: cardRect.height * scaleY
+        ).insetBy(dx: -2, dy: -2)
+
+        var changedPixels = 0
+        var sampledPixels = 0
+        for y in 0..<height {
+            for x in 0..<width {
+                if pixelCardRect.contains(CGPoint(x: x, y: y)) {
+                    continue
+                }
+
+                sampledPixels += 1
+                guard let baselineColor = baseline.colorAt(x: x, y: y),
+                      let comparisonColor = comparison.colorAt(x: x, y: y) else {
+                    continue
+                }
+
+                let delta = abs(baselineColor.redComponent - comparisonColor.redComponent)
+                    + abs(baselineColor.greenComponent - comparisonColor.greenComponent)
+                    + abs(baselineColor.blueComponent - comparisonColor.blueComponent)
+                    + abs(baselineColor.alphaComponent - comparisonColor.alphaComponent)
+                if delta > 0.1 {
+                    changedPixels += 1
+                }
+            }
+        }
+
+        return (changedPixels, sampledPixels)
+    }
+    #endif
 
     private func previewClipboardPinActions() -> ClipboardPinActions {
         ClipboardPinActions(
@@ -1219,11 +2092,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Status Bar
 
+    private func applicationIconImage() -> NSImage? {
+        NSImage(named: "AppIcon") ?? NSApp.applicationIconImage
+    }
+
+    private func statusBarIconImage() -> NSImage? {
+        guard let sourceImage = applicationIconImage() else { return nil }
+        let targetSize = NSSize(width: 18, height: 18)
+        let image = NSImage(size: targetSize)
+        image.lockFocus()
+        defer { image.unlockFocus() }
+
+        let sourceRect = NSRect(origin: .zero, size: sourceImage.size)
+        let targetRect = NSRect(origin: .zero, size: targetSize)
+        sourceImage.draw(in: targetRect, from: sourceRect, operation: .sourceOver, fraction: 1.0)
+        image.isTemplate = false
+        return image
+    }
+
+    private func applyApplicationIcon() {
+        guard let image = applicationIconImage() else { return }
+        NSApp.applicationIconImage = image
+    }
+
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "brain.head.profile", accessibilityDescription: AcWorkBrand.displayName)
+            button.image = statusBarIconImage()
         }
 
         setupStatusBarMenu()
@@ -2376,7 +3272,7 @@ class MainWindowController: NSWindowController {
         guard didEnforceInitialSize == false else { return }
         didEnforceInitialSize = true
 
-        guard let window else { return }
+        guard window != nil else { return }
         enforceMinimumContentSize()
     }
 
@@ -2527,6 +3423,26 @@ struct AuditComponentFrame: Codable, Equatable, Identifiable {
 struct AuditRuntimeFrames: Codable, Equatable {
     let window: AuditWindowFrame
     let components: [AuditComponentFrame]
+}
+
+struct WorkbenchV2RuntimeLayoutSnapshot: Codable, Equatable {
+    let name: String
+    let window: AuditWindowFrame
+    let components: [AuditComponentFrame]
+}
+
+struct WorkbenchV2RuntimeFrames: Codable, Equatable {
+    let layouts: [WorkbenchV2RuntimeLayoutSnapshot]
+}
+
+struct WorkbenchV2CurrentFocusLayoutSnapshot: Codable, Equatable {
+    let name: String
+    let window: AuditWindowFrame
+    let components: [AuditComponentFrame]
+}
+
+struct WorkbenchV2CurrentFocusFrames: Codable, Equatable {
+    let layouts: [WorkbenchV2CurrentFocusLayoutSnapshot]
 }
 
 private extension JSONEncoder {

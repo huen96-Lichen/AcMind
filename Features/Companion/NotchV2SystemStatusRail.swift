@@ -6,7 +6,7 @@ struct NotchV2SystemStatusRail: View {
 
     var body: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "状态", symbol: "desktopcomputer", cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            CompanionPanel(title: "本机状态", subtitle: "系统和权限", symbol: "desktopcomputer") {
                 VStack(alignment: .leading, spacing: 6) {
                     statusRow(title: "CPU", value: viewModel.cpuSummary, accent: .blue)
                     statusRow(title: "内存", value: viewModel.memorySummary, accent: .purple)

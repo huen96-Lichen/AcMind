@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="zh-CN" data-mode="standard">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcWork Workbench V2 Formal Prototype</title>
+  <meta name="description" content="AcWork 工作台正式 HTML 视觉原型，基于 WorkbenchV2 骨架的单文件静态预览入口。" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#workbench-main">跳到主内容</a>
+
+  <div class="prototype-shell" data-prototype-root>
+    <aside class="primary-sidebar-panel" data-debug-id="PrimarySidebarPanel">
+      <div class="sidebar-inner">
+        <div class="brand-card">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span>
+          </div>
+          <div class="brand-copy">
+            <div class="brand-title">AcWork</div>
+            <div class="brand-subtitle">工作台</div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="主导航">
+          <section class="sidebar-group">
+            <h2>工作</h2>
+            <button class="nav-item is-active" type="button" data-nav="工作台">
+              <span class="nav-icon">◫</span>
+              <span class="nav-label">工作台</span>
+            </button>
+            <button class="nav-item" type="button" data-nav="Agent">
+              <span class="nav-icon">◌</span>
+              <span class="nav-label">Agent</span>
+            </button>
+            <button class="nav-item" type="button" data-nav="收集箱">
+              <span class="nav-icon">▣</span>
+              <span class="nav-label">收集箱</span>
+            </button>
+            <button class="nav-item" type="button" data-nav="日程">
+              <span class="nav-icon">◷</span>
+              <span class="nav-label">日程</span>
+            </button>
+          </section>
+
+          <section class="sidebar-group">
+            <h2>处理</h2>
+            <button class="nav-item" type="button" data-nav="工具台">
+              <span class="nav-icon">▭</span>
+              <span class="nav-label">工具台</span>
+            </button>
+          </section>
+
+          <section class="sidebar-group">
+            <h2>随身能力</h2>
+            <button class="nav-item" type="button" data-nav="灵动大陆">
+              <span class="nav-icon">◈</span>
+              <span class="nav-label">灵动大陆</span>
+            </button>
+            <button class="nav-item" type="button" data-nav="说入法">
+              <span class="nav-icon">◉</span>
+              <span class="nav-label">说入法</span>
+            </button>
+          </section>
+
+          <section class="sidebar-group">
+            <h2>系统</h2>
+            <button class="nav-item" type="button" data-nav="状态">
+              <span class="nav-icon">◔</span>
+              <span class="nav-label">状态</span>
+            </button>
+            <button class="nav-item" type="button" data-nav="模型">
+              <span class="nav-icon">◍</span>
+              <span class="nav-label">模型</span>
+            </button>
+            <button class="nav-item" type="button" data-nav="设置">
+              <span class="nav-icon">◕</span>
+              <span class="nav-label">设置</span>
+            </button>
+          </section>
+        </nav>
+
+        <div class="sidebar-footer" data-debug-id="SidebarFooter">
+          <div class="status-dot" aria-hidden="true"></div>
+          <div class="footer-copy">
+            <div class="footer-title">系统在线</div>
+            <div class="footer-subtitle">同步正常，暂无告警</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="separator" aria-hidden="true"></div>
+
+    <main class="workbench-page" id="workbench-main" data-debug-id="WorkbenchPage">
+      <header class="workbench-header" data-debug-id="WorkbenchHeader">
+        <div class="header-copy">
+          <p class="header-kicker">工作台</p>
+          <h1>今天的工作从这里继续</h1>
+        </div>
+
+        <div class="header-actions" aria-label="快捷操作">
+          <div class="search-shell" data-search-shell>
+            <input type="search" id="global-search" placeholder="搜索任务、收集、页面…" aria-label="搜索" />
+          </div>
+          <button class="icon-action is-search-toggle" type="button" data-action="toggle-search" aria-label="展开搜索">
+            <span aria-hidden="true">⌕</span>
+          </button>
+          <button class="ghost-action" type="button" data-action="quick-note">快速记录</button>
+          <button class="ghost-action" type="button" data-action="enter-agent">进入 Agent</button>
+          <button class="ghost-action" type="button" data-action="mode-standard">标准</button>
+          <button class="ghost-action" type="button" data-action="mode-compact">紧凑</button>
+          <button class="ghost-action" type="button" data-action="toggle-debug">调试</button>
+        </div>
+      </header>
+
+      <section class="dashboard-grid" data-debug-id="MainDashboardGrid">
+        <div class="main-column" data-debug-id="MainColumn">
+          <article class="focus-card card-surface current-focus-card" data-debug-id="CurrentFocusCard">
+            <div class="card-topline">
+              <div class="card-heading">
+                <p class="card-kicker">当前工作</p>
+                <h2>AcWork Phase 1 UI 重制</h2>
+                <p class="card-summary">现在只做结构和视觉基准确认，先把新版工作台的节奏、层级和落点定下来。</p>
+              </div>
+              <div class="phase-rail" aria-label="当前阶段">
+                <span class="phase-chip is-live">HTML 原型确认</span>
+                <span class="phase-step is-done">审计</span>
+                <span class="phase-step is-active">原型</span>
+                <span class="phase-step">SwiftUI</span>
+              </div>
+            </div>
+
+            <div class="focus-grid">
+              <section class="focus-block">
+                <span class="focus-label">当前项目</span>
+                <strong>WorkbenchV2</strong>
+              </section>
+              <section class="focus-block">
+                <span class="focus-label">当前任务</span>
+                <strong>完成主页视觉定稿并同步 SwiftUI</strong>
+              </section>
+              <section class="focus-block">
+                <span class="focus-label">下一步行动</span>
+                <strong>等 HTML 原型确认后，逐组件替换正式内容</strong>
+              </section>
+              <section class="focus-block">
+                <span class="focus-label">最近更新</span>
+                <strong>10:42</strong>
+              </section>
+            </div>
+
+            <div class="focus-footer">
+              <div class="focus-meta">
+                <div class="meta-pill accent">
+                  <span class="meta-kicker">当前阶段</span>
+                  <span class="meta-value">HTML 原型确认</span>
+                </div>
+                <div class="meta-pill soft">
+                  <span class="meta-kicker">节奏</span>
+                  <span class="meta-value">内容优先，单屏完成</span>
+                </div>
+              </div>
+
+              <div class="focus-actions">
+                <button class="primary-action" type="button">完成主页视觉定稿</button>
+                <button class="secondary-action" type="button">查看阶段说明</button>
+              </div>
+            </div>
+          </article>
+
+          <section class="work-queue-row" data-debug-id="WorkQueueRow">
+            <article class="card-surface pending-items-card" data-debug-id="PendingItemsCard">
+              <div class="card-header-row">
+                <div>
+                  <p class="card-kicker">待处理</p>
+                  <h3>3 项待处理</h3>
+                </div>
+                <button class="text-action" type="button">全部处理</button>
+              </div>
+
+              <div class="task-list">
+                <article class="task-item">
+                  <span class="task-priority priority-p0">P0</span>
+                  <div>
+                    <strong>确认工作台 HTML 原型</strong>
+                    <p>完成结构、交互、截图和说明文档。</p>
+                  </div>
+                </article>
+                <article class="task-item">
+                  <span class="task-priority priority-p1">P1</span>
+                  <div>
+                    <strong>整理收集箱卡片状态</strong>
+                    <p>为收集箱、快捷动作与设备状态统一节奏。</p>
+                  </div>
+                </article>
+                <article class="task-item">
+                  <span class="task-priority priority-p2">P2</span>
+                  <div>
+                    <strong>检查 Agent 页面入口</strong>
+                    <p>保持入口可见，但不在本轮扩展流程。</p>
+                  </div>
+                </article>
+              </div>
+            </article>
+
+            <article class="card-surface recent-collection-card" data-debug-id="RecentCollectionCard">
+              <div class="card-header-row">
+                <div>
+                  <p class="card-kicker">最近收集</p>
+                  <h3>收集箱的最新入口</h3>
+                </div>
+                <button class="text-action" type="button">打开收集箱</button>
+              </div>
+
+              <div class="collection-list">
+                <article class="collection-item">
+                  <span class="collection-icon type-web">网页</span>
+                  <div>
+                    <strong>HTML 原型任务说明</strong>
+                    <p>Safari · 12:40</p>
+                  </div>
+                </article>
+                <article class="collection-item">
+                  <span class="collection-icon type-shot">截图</span>
+                  <div>
+                    <strong>WorkbenchV2 默认布局</strong>
+                    <p>Finder · 10:58</p>
+                  </div>
+                </article>
+                <article class="collection-item">
+                  <span class="collection-icon type-text">文本</span>
+                  <div>
+                    <strong>原型验收要点</strong>
+                    <p>Notes · 10:42</p>
+                  </div>
+                </article>
+                <article class="collection-item">
+                  <span class="collection-icon type-file">文件</span>
+                  <div>
+                    <strong>0.1.0 结构说明</strong>
+                    <p>Documents · 09:31</p>
+                  </div>
+                </article>
+              </div>
+            </article>
+          </section>
+
+          <article class="card-surface activity-trend-card" data-debug-id="ActivityTrendCard">
+            <div class="card-header-row">
+              <div>
+                <p class="card-kicker">趋势</p>
+                <h3>今日工作节奏</h3>
+              </div>
+              <div class="trend-summary">
+                <span class="trend-value" data-current-trend-value>78.4</span>
+                <span class="trend-delta positive">+12.6%</span>
+              </div>
+            </div>
+
+            <div class="trend-note">
+              处理活动在上午略有抬升，当前保持平稳推进。主要曲线覆盖今天的工作节奏，次要曲线仅作很弱对比。
+            </div>
+
+            <div class="trend-meta">
+              <div class="trend-meta-item">
+                <span>处理活动</span>
+                <strong>稳定上行</strong>
+              </div>
+              <div class="trend-meta-item">
+                <span>收集数量</span>
+                <strong>12 条</strong>
+              </div>
+              <div class="trend-meta-item">
+                <span>Agent 执行</span>
+                <strong>等待确认</strong>
+              </div>
+            </div>
+
+            <div class="trend-chart-wrap">
+              <svg class="trend-chart" viewBox="0 0 860 220" preserveAspectRatio="none" role="img" aria-label="今日工作节奏趋势图" data-chart>
+                <defs>
+                  <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2f7cf6" stop-opacity="0.28"></stop>
+                    <stop offset="100%" stop-color="#2f7cf6" stop-opacity="0.03"></stop>
+                  </linearGradient>
+                </defs>
+                <g class="chart-grid" data-chart-grid></g>
+                <path class="chart-baseline" d="" data-chart-baseline></path>
+                <path class="chart-secondary" d="" data-chart-secondary></path>
+                <path class="chart-primary-area" d="" data-chart-area></path>
+                <path class="chart-primary-line" d="" data-chart-line></path>
+                <g class="chart-points" data-chart-points></g>
+                <g class="chart-hover" data-chart-hover hidden>
+                  <line class="chart-hover-line" x1="0" y1="0" x2="0" y2="220"></line>
+                  <circle class="chart-hover-dot" r="5"></circle>
+                </g>
+              </svg>
+
+              <div class="chart-tooltip" data-chart-tooltip hidden>
+                <span class="tooltip-label">10:30</span>
+                <strong>82.7</strong>
+                <small>活动水平 · 峰值稳定</small>
+              </div>
+            </div>
+
+            <div class="trend-axis">
+              <span>09:00</span>
+              <span>11:00</span>
+              <span>13:00</span>
+              <span>15:00</span>
+              <span>17:00</span>
+            </div>
+          </article>
+        </div>
+
+        <aside class="context-column" data-debug-id="ContextColumn">
+          <article class="card-surface today-status-panel" data-debug-id="TodayStatusPanel">
+            <div class="card-header-row compact">
+              <div>
+                <p class="card-kicker">今日状态</p>
+                <h3>工作节奏概览</h3>
+              </div>
+            </div>
+
+            <div class="status-grid">
+              <div class="status-item">
+                <span>今日收集</span>
+                <strong>12</strong>
+              </div>
+              <div class="status-item">
+                <span>待确认</span>
+                <strong>3</strong>
+              </div>
+              <div class="status-item">
+                <span>Agent 运行</span>
+                <strong>运行中</strong>
+              </div>
+              <div class="status-item">
+                <span>日程</span>
+                <strong>2</strong>
+              </div>
+              <div class="status-item">
+                <span>异常</span>
+                <strong>0</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card-surface quick-actions-card" data-debug-id="QuickActionsCard">
+            <div class="card-header-row compact">
+              <div>
+                <p class="card-kicker">快捷动作</p>
+                <h3>四个常用入口</h3>
+              </div>
+            </div>
+
+            <div class="actions-grid">
+              <button class="action-tile" type="button">
+                <span class="action-icon">✎</span>
+                <span class="action-text">
+                  <strong>快速记录</strong>
+                  <small>随手记下一条内容</small>
+                </span>
+              </button>
+              <button class="action-tile" type="button">
+                <span class="action-icon">＋</span>
+                <span class="action-text">
+                  <strong>新建任务</strong>
+                  <small>追加一个待办</small>
+                </span>
+              </button>
+              <button class="action-tile" type="button">
+                <span class="action-icon">▥</span>
+                <span class="action-text">
+                  <strong>打开收集箱</strong>
+                  <small>查看最新输入</small>
+                </span>
+              </button>
+              <button class="action-tile" type="button">
+                <span class="action-icon">↯</span>
+                <span class="action-text">
+                  <strong>启动 Agent</strong>
+                  <small>进入自动处理</small>
+                </span>
+              </button>
+            </div>
+          </article>
+        </aside>
+      </section>
+
+      <footer class="device-status-bar" data-debug-id="DeviceStatusBar">
+        <div class="device-status-left">
+          <div class="device-title-row">
+            <p class="card-kicker">设备状态</p>
+            <h3>当前机器稳定运行</h3>
+          </div>
+          <div class="device-metrics">
+            <span>CPU 48%</span>
+            <span>内存 61%</span>
+            <span>温度 42°C</span>
+            <span>风扇 2100 RPM</span>
+            <span>电源 已接入</span>
+            <span>权限 正常</span>
+          </div>
+        </div>
+        <button class="text-action" type="button">查看详情</button>
+      </footer>
+    </main>
+
+    <div class="debug-overlay" data-debug-overlay aria-hidden="true"></div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

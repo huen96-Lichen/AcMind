@@ -18,12 +18,11 @@ struct SystemGaugeRing: View {
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 2) {
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .foregroundStyle(color)
                 Text("\(Int(value * 100))%")
-                    .font(NotchV2DesignTokens.Typography.footnote)
-                    .fontWeight(.bold)
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .bold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
             }
         }
         .frame(width: size, height: size)
@@ -71,12 +70,12 @@ struct SystemMetricTile: View {
             )
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    .font(.system(size: AppSurfaceTokens.Typography.badge))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 HStack(spacing: 4) {
                     Text(value)
-                        .font(NotchV2DesignTokens.Typography.title)
-                        .foregroundStyle(.white)
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle + 3, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
                     trendIcon
                 }
             }
@@ -84,8 +83,8 @@ struct SystemMetricTile: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -94,16 +93,16 @@ struct SystemMetricTile: View {
         switch trend {
         case .up:
             Image(systemName: "arrow.up.right")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.green)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .bold))
+                .foregroundStyle(AppSurfaceTokens.accentGreen)
         case .down:
             Image(systemName: "arrow.down.right")
-                .font(.system(size: 8, weight: .bold))
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .bold))
                 .foregroundStyle(.red)
         case .stable:
             Image(systemName: "arrow.right")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .bold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
     }
 }
@@ -121,24 +120,24 @@ struct SystemProcessRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(name)
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .font(.system(size: AppSurfaceTokens.Typography.badge))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Text("\(Int(cpuPercent))%")
-                    .font(NotchV2DesignTokens.Typography.footnote)
-                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             HStack(spacing: 6) {
-                progressBar(value: cpuPercent / 100, color: NotchV2DesignTokens.secondaryText)
-                progressBar(value: memoryPercent / 100, color: NotchV2DesignTokens.secondaryText)
+                progressBar(value: cpuPercent / 100, color: AppSurfaceTokens.secondaryText)
+                progressBar(value: memoryPercent / 100, color: AppSurfaceTokens.secondaryText)
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 
@@ -181,25 +180,25 @@ struct SystemPermissionIndicator: View {
     }
 
     private var content: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .frame(width: 14)
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .frame(width: 14)
             Text(label)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .font(.system(size: AppSurfaceTokens.Typography.badge))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .lineLimit(1)
             Spacer(minLength: 0)
             Circle()
-                .fill(NotchV2DesignTokens.secondaryText)
+                .fill(AppSurfaceTokens.secondaryText)
                 .frame(width: 6, height: 6)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
     }
 }
@@ -218,16 +217,15 @@ struct SystemNetworkRate: View {
     private func rateItem(icon: String, label: String, rate: String, color: Color) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .bold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
-                    .font(NotchV2DesignTokens.Typography.footnote)
-                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
                 Text(rate)
-                    .font(NotchV2DesignTokens.Typography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
             }
         }
     }

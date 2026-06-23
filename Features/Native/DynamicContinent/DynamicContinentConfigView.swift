@@ -89,7 +89,7 @@ struct DynamicContinentConfigView: View {
             title: "灵动大陆 & 配置",
             subtitle: "伴随能力的配置中心。",
             leadingRailWidth: 208,
-            trailingRailWidth: 224,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
                 dynamicContinentSummaryRail
             },
@@ -230,11 +230,11 @@ struct DynamicContinentConfigView: View {
     private func railRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 12))
+                .font(.system(size: AppSurfaceTokens.Typography.badge))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
         }
@@ -319,6 +319,31 @@ struct DynamicContinentConfigView: View {
                     }
                 }
             }
+
+            AppSurfaceSummaryStrip(
+                chips: [
+                    AppSurfaceSummaryChip(
+                        title: "启用",
+                        value: viewModel.isEnabled ? "已启用" : "已关闭",
+                        tint: viewModel.isEnabled ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentSecondary
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "模块",
+                        value: "\(viewModel.activeModuleCount)",
+                        tint: AppSurfaceTokens.accentBlue
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "展示",
+                        value: "\(viewModel.overviewVisibleModules.count)/\(viewModel.modules.count)",
+                        tint: AppSurfaceTokens.accentOrange
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "HUD",
+                        value: viewModel.showSystemEventHUD ? "开启" : "关闭",
+                        tint: viewModel.showSystemEventHUD ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentSecondary
+                    )
+                ]
+            )
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {

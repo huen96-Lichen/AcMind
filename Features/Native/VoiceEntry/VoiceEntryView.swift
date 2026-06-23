@@ -7,21 +7,12 @@ struct VoiceEntryView: View {
     @State private var preferredMicrophoneSelection = VoiceMicrophonePreferenceStore.defaultName
     @State private var microphoneDevices: [VoiceMicrophoneDevice] = []
 
-    private enum UI {
-        static let maxWidth: CGFloat = 1040
-        static let pagePadding: CGFloat = 20
-        static let sectionSpacing: CGFloat = 14
-        static let cardRadius: CGFloat = 16
-        static let rowRadius: CGFloat = 12
-        static let summaryWidth: CGFloat = 224
-    }
-
     var body: some View {
         AcWorkShell(
             title: "说入法设置",
             subtitle: "真实控制语音输入链路：入口、识别、润色、输出、静音检测和连续输入。",
             leadingRailWidth: 208,
-            trailingRailWidth: UI.summaryWidth,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
                 voiceSummaryRail
             },
@@ -51,13 +42,38 @@ struct VoiceEntryView: View {
 
     private var voiceContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: UI.sectionSpacing) {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Spacing.md) {
+                AppSurfaceSummaryStrip(
+                    chips: [
+                        AppSurfaceSummaryChip(
+                            title: "启用",
+                            value: viewModel.companionVoiceEnabled ? "已启用" : "已关闭",
+                            tint: viewModel.companionVoiceEnabled ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentSecondary
+                        ),
+                        AppSurfaceSummaryChip(
+                            title: "快捷键",
+                            value: viewModel.companionVoiceShortcut,
+                            tint: AppSurfaceTokens.accentBlue
+                        ),
+                        AppSurfaceSummaryChip(
+                            title: "输出",
+                            value: viewModel.voiceOutputMode.displayName,
+                            tint: AppSurfaceTokens.accentOrange
+                        ),
+                        AppSurfaceSummaryChip(
+                            title: "麦克风",
+                            value: viewModel.microphonePermissionStatus.displayName,
+                            tint: AppSurfaceTokens.secondaryText
+                        )
+                    ]
+                )
+
                 workflowCard
                 summaryGrid
                 controlSections
             }
-            .padding(UI.pagePadding)
-            .frame(maxWidth: UI.maxWidth, alignment: .leading)
+            .padding(AppSurfaceTokens.Spacing.lg)
+            .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, alignment: .leading)
         }
         .background(AppSurfaceBackdrop())
     }
@@ -115,7 +131,7 @@ struct VoiceEntryView: View {
                 statusEntryCard
                 microphoneCard
             }
-            .padding(16)
+            .padding(AppSurfaceTokens.Spacing.lg)
         }
         .background(AppSurfaceTokens.cardBackgroundSoft)
     }
@@ -123,11 +139,11 @@ struct VoiceEntryView: View {
     private func railSummaryRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 12))
+                .font(.system(size: AppSurfaceTokens.Typography.caption))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
         }
@@ -269,17 +285,17 @@ struct VoiceEntryView: View {
     }
 
     private var controlSections: some View {
-        VStack(alignment: .leading, spacing: UI.sectionSpacing) {
+        VStack(alignment: .leading, spacing: AppSurfaceTokens.Spacing.md) {
             settingCard(title: "入口与触发", description: "说入法真实入口。已移除的独立问答和翻译入口不再出现在这里。") {
                 toggleRow(title: "启用说入法", description: "控制快捷键入口是否工作。", isOn: persistedBinding(\.companionVoiceEnabled))
                 divider
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("触发快捷键")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
                         Text("当前全局入口。")
-                            .font(.system(size: 12))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                     Spacer()

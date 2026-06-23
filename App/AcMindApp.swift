@@ -142,9 +142,12 @@ struct LaunchView: View {
     var body: some View {
         VStack(spacing: 24) {
             // Logo
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 64))
-                .foregroundStyle(Color.primary)
+            if let iconImage = AppBranding.launchIconImage() {
+                Image(nsImage: iconImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+            }
 
             Text(AcWorkBrand.displayName)
                 .font(.largeTitle)
@@ -189,6 +192,13 @@ struct LaunchView: View {
         .frame(width: 400, height: 300)
         .padding()
         .background(AppSurfaceBackdrop())
+    }
+}
+
+private enum AppBranding {
+    @MainActor
+    static func launchIconImage() -> NSImage? {
+        NSImage(named: "AppIcon") ?? NSApp.applicationIconImage
     }
 }
 

@@ -108,6 +108,39 @@ struct AgentDashboardView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    AppSurfaceCard(title: "协作概览", subtitle: "对话 + 任务 + 状态", padding: 14) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            AppSurfaceSummaryStrip(chips: [
+                                AppSurfaceSummaryChip(
+                                    title: "模式",
+                                    value: currentModeTitle,
+                                    tint: AppSurfaceTokens.accentBlue
+                                ),
+                                AppSurfaceSummaryChip(
+                                    title: "模型",
+                                    value: viewModel.selectedModelLabel,
+                                    tint: AppSurfaceTokens.accentGreen
+                                ),
+                                AppSurfaceSummaryChip(
+                                    title: "任务",
+                                    value: "\(viewModel.agentTasks.count) 个",
+                                    tint: AppSurfaceTokens.secondaryText
+                                )
+                            ])
+
+                            HStack(spacing: 10) {
+                                overviewMetric(title: "会话", value: "\(viewModel.recentItems.count) 条", tint: AppSurfaceTokens.accentOrange)
+                                overviewMetric(title: "执行态", value: viewModel.isLoading ? "处理中" : "待命", tint: viewModel.isLoading ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.secondaryText)
+                                overviewMetric(title: "追溯", value: viewModel.distilledNote != nil ? "已生成" : "空", tint: viewModel.distilledNote != nil ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.secondaryText)
+                            }
+
+                            Text("顶部先把当前模式、模型、任务和执行状态亮出来，下面仍然保持消息流和输入区。")
+                                .font(.system(size: AppSurfaceTokens.Typography.caption))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                .lineLimit(2)
+                        }
+                    }
+
                     AppSurfaceCard(title: "对话记录", subtitle: "消息流与上下文", padding: 14) {
                         messageStream
                     }
@@ -124,6 +157,32 @@ struct AgentDashboardView: View {
             conversationComposer
                 .padding(16)
         }
+    }
+
+    private func overviewMetric(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.88)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
+        .padding(.vertical, AppSurfaceTokens.Spacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
     }
 
     private var headerActions: some View {
@@ -323,7 +382,9 @@ struct AgentDashboardView: View {
     }
 
     private var summaryRailCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
+            AppSurfaceSummaryStrip(chips: summaryRailChips)
+
             VStack(alignment: .leading, spacing: 8) {
                 Text(viewModel.currentWorkSummary)
                     .font(.system(size: 14, weight: .semibold))
@@ -335,6 +396,26 @@ struct AgentDashboardView: View {
                     .lineLimit(4)
             }
         }
+    }
+
+    private var summaryRailChips: [AppSurfaceSummaryChip] {
+        [
+            AppSurfaceSummaryChip(
+                title: "模型",
+                value: viewModel.selectedModelLabel,
+                tint: AppSurfaceTokens.accentBlue
+            ),
+            AppSurfaceSummaryChip(
+                title: "任务",
+                value: "\(viewModel.agentTasks.count) 个",
+                tint: AppSurfaceTokens.accentGreen
+            ),
+            AppSurfaceSummaryChip(
+                title: "会话",
+                value: "\(viewModel.recentItems.count) 条",
+                tint: AppSurfaceTokens.secondaryText
+            )
+        ]
     }
 
     private var taskBoardSection: some View {
@@ -1090,7 +1171,7 @@ struct MessageBubble: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 Text(content)
-                    .font(.system(size: 13))
+                    .font(.system(size: AppSurfaceTokens.Typography.body))
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
@@ -1098,7 +1179,7 @@ struct MessageBubble: View {
                     )
 
                     Text(isUser ? "你" : "Agent")
-                        .font(.system(size: 10))
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
@@ -1115,11 +1196,11 @@ private struct StatusPill: View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(color.opacity(0.1)))
+        .background(Capsule(style: .continuous).fill(color.opacity(0.1)))
     }
 }
 

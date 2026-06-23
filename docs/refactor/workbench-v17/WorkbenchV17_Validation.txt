@@ -1,0 +1,311 @@
+[default] frame audit
+WorkbenchHeader: x=24 y=18 w=1452 h=48 maxX=1476 maxY=66 bounds=PASS
+CurrentFocusCard: x=24 y=78 w=993 h=232 maxX=1017 maxY=310 bounds=PASS
+TodayOverviewPanel: x=1029 y=78 w=447 h=400 maxX=1476 maxY=478 bounds=PASS
+PendingItemsCard: x=24 y=322 w=505 h=156 maxX=529 maxY=478 bounds=PASS
+RecentCollectionCard: x=541 y=322 w=476 h=156 maxX=1017 maxY=478 bounds=PASS
+QuickActionsCard: x=1029 y=490 w=447 h=252 maxX=1476 maxY=742 bounds=PASS
+ActivityTrendCard: x=24 y=490 w=993 h=252 maxX=1017 maxY=742 bounds=PASS
+DeviceStatusBar: x=24 y=754 w=1452 h=56 maxX=1476 maxY=810 bounds=PASS
+WorkbenchHeader × CurrentFocusCard: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=24 y=78 w=993 h=232
+  intersection: null
+WorkbenchHeader × TodayOverviewPanel: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=1029 y=78 w=447 h=400
+  intersection: null
+WorkbenchHeader × PendingItemsCard: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=24 y=322 w=505 h=156
+  intersection: null
+WorkbenchHeader × RecentCollectionCard: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=541 y=322 w=476 h=156
+  intersection: null
+WorkbenchHeader × QuickActionsCard: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=1029 y=490 w=447 h=252
+  intersection: null
+WorkbenchHeader × ActivityTrendCard: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=24 y=490 w=993 h=252
+  intersection: null
+WorkbenchHeader × DeviceStatusBar: PASS
+  A: x=24 y=18 w=1452 h=48
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+CurrentFocusCard × TodayOverviewPanel: PASS
+  A: x=24 y=78 w=993 h=232
+  B: x=1029 y=78 w=447 h=400
+  intersection: null
+CurrentFocusCard × PendingItemsCard: PASS
+  A: x=24 y=78 w=993 h=232
+  B: x=24 y=322 w=505 h=156
+  intersection: null
+CurrentFocusCard × RecentCollectionCard: PASS
+  A: x=24 y=78 w=993 h=232
+  B: x=541 y=322 w=476 h=156
+  intersection: null
+CurrentFocusCard × QuickActionsCard: PASS
+  A: x=24 y=78 w=993 h=232
+  B: x=1029 y=490 w=447 h=252
+  intersection: null
+CurrentFocusCard × ActivityTrendCard: PASS
+  A: x=24 y=78 w=993 h=232
+  B: x=24 y=490 w=993 h=252
+  intersection: null
+CurrentFocusCard × DeviceStatusBar: PASS
+  A: x=24 y=78 w=993 h=232
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+TodayOverviewPanel × PendingItemsCard: PASS
+  A: x=1029 y=78 w=447 h=400
+  B: x=24 y=322 w=505 h=156
+  intersection: null
+TodayOverviewPanel × RecentCollectionCard: PASS
+  A: x=1029 y=78 w=447 h=400
+  B: x=541 y=322 w=476 h=156
+  intersection: null
+TodayOverviewPanel × QuickActionsCard: PASS
+  A: x=1029 y=78 w=447 h=400
+  B: x=1029 y=490 w=447 h=252
+  intersection: null
+TodayOverviewPanel × ActivityTrendCard: PASS
+  A: x=1029 y=78 w=447 h=400
+  B: x=24 y=490 w=993 h=252
+  intersection: null
+TodayOverviewPanel × DeviceStatusBar: PASS
+  A: x=1029 y=78 w=447 h=400
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+PendingItemsCard × RecentCollectionCard: PASS
+  A: x=24 y=322 w=505 h=156
+  B: x=541 y=322 w=476 h=156
+  intersection: null
+PendingItemsCard × QuickActionsCard: PASS
+  A: x=24 y=322 w=505 h=156
+  B: x=1029 y=490 w=447 h=252
+  intersection: null
+PendingItemsCard × ActivityTrendCard: PASS
+  A: x=24 y=322 w=505 h=156
+  B: x=24 y=490 w=993 h=252
+  intersection: null
+PendingItemsCard × DeviceStatusBar: PASS
+  A: x=24 y=322 w=505 h=156
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+RecentCollectionCard × QuickActionsCard: PASS
+  A: x=541 y=322 w=476 h=156
+  B: x=1029 y=490 w=447 h=252
+  intersection: null
+RecentCollectionCard × ActivityTrendCard: PASS
+  A: x=541 y=322 w=476 h=156
+  B: x=24 y=490 w=993 h=252
+  intersection: null
+RecentCollectionCard × DeviceStatusBar: PASS
+  A: x=541 y=322 w=476 h=156
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+QuickActionsCard × ActivityTrendCard: PASS
+  A: x=1029 y=490 w=447 h=252
+  B: x=24 y=490 w=993 h=252
+  intersection: null
+QuickActionsCard × DeviceStatusBar: PASS
+  A: x=1029 y=490 w=447 h=252
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+ActivityTrendCard × DeviceStatusBar: PASS
+  A: x=24 y=490 w=993 h=252
+  B: x=24 y=754 w=1452 h=56
+  intersection: null
+[default] third row alignment audit
+ActivityTrendCard.y == QuickActionsCard.y: 490 / 490 PASS
+ActivityTrendCard.height == QuickActionsCard.height: 252 / 252 PASS
+ActivityTrendCard.maxY == QuickActionsCard.maxY: 742 / 742 PASS
+[default] spacing audit minimum=12
+ActivityTrendCard.minY - PendingItemsCard.maxY: 12 PASS
+ActivityTrendCard.minY - RecentCollectionCard.maxY: 12 PASS
+QuickActionsCard.minY - TodayOverviewPanel.maxY: 12 PASS
+DeviceStatusBar.minY - ActivityTrendCard.maxY: 12 PASS
+DeviceStatusBar.minY - QuickActionsCard.maxY: 12 PASS
+[default] six-card grid gutter audit expected=12
+CurrentFocusCard.right -> TodayOverviewPanel.left: 12 PASS
+PendingItemsCard.right -> RecentCollectionCard.left: 12 PASS
+ActivityTrendCard.right -> QuickActionsCard.left: 12 PASS
+CurrentFocusCard.bottom -> PendingItemsCard.top: 12 PASS
+CurrentFocusCard.bottom -> RecentCollectionCard.top: 12 PASS
+PendingItemsCard.bottom -> ActivityTrendCard.top: 12 PASS
+RecentCollectionCard.bottom -> ActivityTrendCard.top: 12 PASS
+TodayOverviewPanel.bottom -> QuickActionsCard.top: 12 PASS
+[default] six-card grid alignment audit
+CurrentFocusCard.y == TodayOverviewPanel.y: PASS
+PendingItemsCard.y == RecentCollectionCard.y: PASS
+ActivityTrendCard.y == QuickActionsCard.y: PASS
+PendingItemsCard.maxY == RecentCollectionCard.maxY: PASS
+ActivityTrendCard.maxY == QuickActionsCard.maxY: PASS
+
+[compact] frame audit
+WorkbenchHeader: x=16 y=16 w=1148 h=44 maxX=1164 maxY=60 bounds=PASS
+CurrentFocusCard: x=16 y=72 w=884 h=204 maxX=900 maxY=276 bounds=PASS
+TodayOverviewPanel: x=912 y=72 w=252 h=366 maxX=1164 maxY=438 bounds=PASS
+PendingItemsCard: x=16 y=288 w=453 h=150 maxX=469 maxY=438 bounds=PASS
+RecentCollectionCard: x=481 y=288 w=418 h=150 maxX=899 maxY=438 bounds=PASS
+QuickActionsCard: x=912 y=450 w=252 h=180 maxX=1164 maxY=630 bounds=PASS
+ActivityTrendCard: x=16 y=450 w=884 h=180 maxX=900 maxY=630 bounds=PASS
+DeviceStatusBar: x=16 y=642 w=1148 h=52 maxX=1164 maxY=694 bounds=PASS
+WorkbenchHeader × CurrentFocusCard: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=16 y=72 w=884 h=204
+  intersection: null
+WorkbenchHeader × TodayOverviewPanel: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=912 y=72 w=252 h=366
+  intersection: null
+WorkbenchHeader × PendingItemsCard: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=16 y=288 w=453 h=150
+  intersection: null
+WorkbenchHeader × RecentCollectionCard: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=481 y=288 w=418 h=150
+  intersection: null
+WorkbenchHeader × QuickActionsCard: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=912 y=450 w=252 h=180
+  intersection: null
+WorkbenchHeader × ActivityTrendCard: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=16 y=450 w=884 h=180
+  intersection: null
+WorkbenchHeader × DeviceStatusBar: PASS
+  A: x=16 y=16 w=1148 h=44
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+CurrentFocusCard × TodayOverviewPanel: PASS
+  A: x=16 y=72 w=884 h=204
+  B: x=912 y=72 w=252 h=366
+  intersection: null
+CurrentFocusCard × PendingItemsCard: PASS
+  A: x=16 y=72 w=884 h=204
+  B: x=16 y=288 w=453 h=150
+  intersection: null
+CurrentFocusCard × RecentCollectionCard: PASS
+  A: x=16 y=72 w=884 h=204
+  B: x=481 y=288 w=418 h=150
+  intersection: null
+CurrentFocusCard × QuickActionsCard: PASS
+  A: x=16 y=72 w=884 h=204
+  B: x=912 y=450 w=252 h=180
+  intersection: null
+CurrentFocusCard × ActivityTrendCard: PASS
+  A: x=16 y=72 w=884 h=204
+  B: x=16 y=450 w=884 h=180
+  intersection: null
+CurrentFocusCard × DeviceStatusBar: PASS
+  A: x=16 y=72 w=884 h=204
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+TodayOverviewPanel × PendingItemsCard: PASS
+  A: x=912 y=72 w=252 h=366
+  B: x=16 y=288 w=453 h=150
+  intersection: null
+TodayOverviewPanel × RecentCollectionCard: PASS
+  A: x=912 y=72 w=252 h=366
+  B: x=481 y=288 w=418 h=150
+  intersection: null
+TodayOverviewPanel × QuickActionsCard: PASS
+  A: x=912 y=72 w=252 h=366
+  B: x=912 y=450 w=252 h=180
+  intersection: null
+TodayOverviewPanel × ActivityTrendCard: PASS
+  A: x=912 y=72 w=252 h=366
+  B: x=16 y=450 w=884 h=180
+  intersection: null
+TodayOverviewPanel × DeviceStatusBar: PASS
+  A: x=912 y=72 w=252 h=366
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+PendingItemsCard × RecentCollectionCard: PASS
+  A: x=16 y=288 w=453 h=150
+  B: x=481 y=288 w=418 h=150
+  intersection: null
+PendingItemsCard × QuickActionsCard: PASS
+  A: x=16 y=288 w=453 h=150
+  B: x=912 y=450 w=252 h=180
+  intersection: null
+PendingItemsCard × ActivityTrendCard: PASS
+  A: x=16 y=288 w=453 h=150
+  B: x=16 y=450 w=884 h=180
+  intersection: null
+PendingItemsCard × DeviceStatusBar: PASS
+  A: x=16 y=288 w=453 h=150
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+RecentCollectionCard × QuickActionsCard: PASS
+  A: x=481 y=288 w=418 h=150
+  B: x=912 y=450 w=252 h=180
+  intersection: null
+RecentCollectionCard × ActivityTrendCard: PASS
+  A: x=481 y=288 w=418 h=150
+  B: x=16 y=450 w=884 h=180
+  intersection: null
+RecentCollectionCard × DeviceStatusBar: PASS
+  A: x=481 y=288 w=418 h=150
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+QuickActionsCard × ActivityTrendCard: PASS
+  A: x=912 y=450 w=252 h=180
+  B: x=16 y=450 w=884 h=180
+  intersection: null
+QuickActionsCard × DeviceStatusBar: PASS
+  A: x=912 y=450 w=252 h=180
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+ActivityTrendCard × DeviceStatusBar: PASS
+  A: x=16 y=450 w=884 h=180
+  B: x=16 y=642 w=1148 h=52
+  intersection: null
+[compact] third row alignment audit
+ActivityTrendCard.y == QuickActionsCard.y: 450 / 450 PASS
+ActivityTrendCard.height == QuickActionsCard.height: 180 / 180 PASS
+ActivityTrendCard.maxY == QuickActionsCard.maxY: 630 / 630 PASS
+[compact] spacing audit minimum=12
+ActivityTrendCard.minY - PendingItemsCard.maxY: 12 PASS
+ActivityTrendCard.minY - RecentCollectionCard.maxY: 12 PASS
+QuickActionsCard.minY - TodayOverviewPanel.maxY: 12 PASS
+DeviceStatusBar.minY - ActivityTrendCard.maxY: 12 PASS
+DeviceStatusBar.minY - QuickActionsCard.maxY: 12 PASS
+[compact] six-card grid gutter audit expected=12
+CurrentFocusCard.right -> TodayOverviewPanel.left: 12 PASS
+PendingItemsCard.right -> RecentCollectionCard.left: 12 PASS
+ActivityTrendCard.right -> QuickActionsCard.left: 12 PASS
+CurrentFocusCard.bottom -> PendingItemsCard.top: 12 PASS
+CurrentFocusCard.bottom -> RecentCollectionCard.top: 12 PASS
+PendingItemsCard.bottom -> ActivityTrendCard.top: 12 PASS
+RecentCollectionCard.bottom -> ActivityTrendCard.top: 12 PASS
+TodayOverviewPanel.bottom -> QuickActionsCard.top: 12 PASS
+[compact] six-card grid alignment audit
+CurrentFocusCard.y == TodayOverviewPanel.y: PASS
+PendingItemsCard.y == RecentCollectionCard.y: PASS
+ActivityTrendCard.y == QuickActionsCard.y: PASS
+PendingItemsCard.maxY == RecentCollectionCard.maxY: PASS
+ActivityTrendCard.maxY == QuickActionsCard.maxY: PASS
+
+[default] current focus internal audit
+CurrentFocusBackground: x=24 y=78 w=993 h=232 maxX=1017 maxY=310 bounds=PASS
+CurrentFocusContent: x=24 y=78 w=993 h=216 maxX=1017 maxY=294 bounds=PASS
+CurrentFocusMetrics: x=40 y=181 w=961 h=55 maxX=1001 maxY=236 bounds=PASS
+CurrentFocusActions: x=207 y=244 w=794 h=34 maxX=1001 maxY=278 bounds=PASS
+
+[compact] current focus internal audit
+CurrentFocusBackground: x=16 y=72 w=884 h=204 maxX=900 maxY=276 bounds=PASS
+CurrentFocusContent: x=16 y=72 w=884 h=173 maxX=900 maxY=245 bounds=PASS
+CurrentFocusMetrics: x=28 y=151 w=860 h=52 maxX=888 maxY=203 bounds=PASS
+CurrentFocusActions: x=28 y=207 w=860 h=26 maxX=888 maxY=233 bounds=PASS
+
+[background] pixel audit
+CurrentFocusCard: x=24 y=78 w=993 h=232
+background-after-1500x888.png: PASS outsideChangedPixels=0 sampledPixels=4396680
+background-restored-1500x888.png: PASS outsideChangedPixels=0 sampledPixels=4396680
+background-fallback-1500x888.png: PASS outsideChangedPixels=0 sampledPixels=4396680

@@ -23,7 +23,14 @@ struct CompanionShortcutPanel: View {
             }
         }
         .frame(width: 560, height: 620)
-        .background(AppSurfaceBackdrop())
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                )
+        )
         .onChange(of: viewModel.companionShortcuts) { _, _ in
             persistCompanionSettings()
         }
@@ -38,12 +45,12 @@ struct CompanionShortcutPanel: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("随身快捷键")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text("系统级快捷键，保存后会在下次启动和当前会话中生效")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -57,8 +64,8 @@ struct CompanionShortcutPanel: View {
 
                 Button(action: { dismiss() }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(Color.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -76,17 +83,17 @@ struct CompanionShortcutPanel: View {
     private var infoBanner: some View {
         HStack(spacing: 12) {
             Image(systemName: "info.circle.fill")
-                .font(.title3)
-                .foregroundStyle(Color.blue)
+                .font(.system(size: AppSurfaceTokens.Typography.cardTitle))
+                .foregroundStyle(AppSurfaceTokens.accentBlue)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("这里展示的是可持久化的快捷键配置")
-                    .font(.body)
-                    .fontWeight(.medium)
+                    .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text("启用状态、快捷键文本和说明都来自设置存储，不再依赖示例数据。")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
@@ -94,7 +101,7 @@ struct CompanionShortcutPanel: View {
         .padding(16)
         .overlay(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                .stroke(AppSurfaceTokens.accentBlue.opacity(0.18), lineWidth: 1)
         )
         .background(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
@@ -108,7 +115,8 @@ struct CompanionShortcutPanel: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("随身快捷键")
-                    .font(.headline)
+                    .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Spacer()
 
@@ -127,11 +135,11 @@ struct CompanionShortcutPanel: View {
                 }
             }
         .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
             .overlay(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                     .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
             )
         }
@@ -158,7 +166,7 @@ struct ShortcutRow: View {
                     .frame(width: 36, height: 36)
 
                 Image(systemName: iconForAction(shortcut.action))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                     .foregroundStyle(Color.accentColor)
             }
 
@@ -166,26 +174,26 @@ struct ShortcutRow: View {
                 if shortcut.isEditable {
                     TextField("动作名称", text: $shortcut.action)
                         .textFieldStyle(.plain)
-                        .font(.body.weight(.medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                         .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
                         .layoutPriority(1)
                 } else {
                     Text(shortcut.action)
-                        .font(.body)
-                        .fontWeight(.medium)
+                        .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
                 }
 
                 if shortcut.isEditable {
                     TextField("说明", text: $shortcut.description)
                         .textFieldStyle(.plain)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
                         .layoutPriority(1)
                 } else {
                     Text(shortcut.description)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -200,12 +208,12 @@ struct ShortcutRow: View {
                 } else {
                     ForEach(shortcut.shortcut.split(separator: " "), id: \.self) { key in
                         Text(String(key))
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption, design: .monospaced))
                             .fontWeight(.medium)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.secondary.opacity(0.15))
-                            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
                     }
                 }
             }

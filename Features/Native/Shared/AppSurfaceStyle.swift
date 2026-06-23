@@ -56,20 +56,27 @@ enum AppSurfaceTokens {
         static let display: CGFloat = 28
         static let pageTitle: CGFloat = 24
         static let pageSubtitle: CGFloat = 13
+        static let pageEyebrow: CGFloat = 11
         static let sectionTitle: CGFloat = 15
         static let sectionDesc: CGFloat = 12
         static let cardTitle: CGFloat = 14
         static let bodyLarge: CGFloat = 15
         static let body: CGFloat = 13
         static let caption: CGFloat = 11
+        static let control: CGFloat = 12
+        static let controlStrong: CGFloat = 13
         static let rowTitle: CGFloat = 13
         static let rowDesc: CGFloat = 12
+        static let metricValue: CGFloat = 18
+        static let metricUnit: CGFloat = 11
+        static let metricLabel: CGFloat = 11
+        static let badge: CGFloat = 10.5
         static let dialogTitle: CGFloat = 22
     }
 
     enum Layout {
         static let pageMaxWidth: CGFloat = 1240
-        static let sidebarWidth: CGFloat = 216
+        static let sidebarWidth: CGFloat = 250
         static let toolbarHeight: CGFloat = 60
         static let leadingRailWidth: CGFloat = 220
         static let trailingRailWidth: CGFloat = 304
@@ -84,9 +91,12 @@ enum AppSurfaceTokens {
         static let tabHeight: CGFloat = 40
         static let tabMinWidth: CGFloat = 112
         static let chipHeight: CGFloat = 28
+        static let compactChipHeight: CGFloat = 24
         static let buttonHeight: CGFloat = 32
         static let keycapHeight: CGFloat = 28
+        static let inputHeight: CGFloat = 36
         static let summaryWidth: CGFloat = 224
+        static let rowMinHeight: CGFloat = 42
     }
 }
 
@@ -115,12 +125,12 @@ struct AppSurfaceCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             if let title {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
-                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                Text(title)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
                     if let subtitle {
                         Text(subtitle)
-                            .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                            .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
@@ -215,28 +225,28 @@ struct AppSurfaceMetricTile: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
                         .fill(tint.opacity(0.12))
-                    Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(tint)
-                }
-                .frame(width: 30, height: 30)
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+            .frame(width: 30, height: 30)
 
                 Spacer(minLength: 0)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.metricLabel, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Text(value)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.metricValue, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 11.5, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.tertiaryText)
                         .lineLimit(1)
                 }
@@ -255,6 +265,57 @@ struct AppSurfaceMetricTile: View {
                 )
         )
         .shadow(color: AppSurfaceTokens.separator.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+struct AppSurfaceSummaryChip: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.88)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
+        .padding(.vertical, AppSurfaceTokens.Spacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
+struct AppSurfaceSummaryStrip: View {
+    let chips: [AppSurfaceSummaryChip]
+
+    var body: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: AppSurfaceTokens.Spacing.sm),
+                GridItem(.flexible(), spacing: AppSurfaceTokens.Spacing.sm),
+                GridItem(.flexible(), spacing: AppSurfaceTokens.Spacing.sm)
+            ],
+            spacing: AppSurfaceTokens.Spacing.sm
+        ) {
+            ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+                chip
+            }
+        }
     }
 }
 
@@ -339,11 +400,11 @@ struct AcStatusBadge: View {
     }
 
     var body: some View {
-        Text(text)
-            .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+                Text(text)
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
             .background(
                 Capsule(style: .continuous)
                     .fill(tint.opacity(0.12))
@@ -383,12 +444,12 @@ struct AcSearchField: View {
             if let focusBinding {
                 TextField(placeholder, text: $text)
                     .textFieldStyle(.plain)
-                    .font(.caption)
+                    .font(.system(size: AppSurfaceTokens.Typography.control))
                     .focused(focusBinding)
             } else {
                 TextField(placeholder, text: $text)
                     .textFieldStyle(.plain)
-                    .font(.caption)
+                    .font(.system(size: AppSurfaceTokens.Typography.control))
             }
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
                 Button {
@@ -410,6 +471,7 @@ struct AcSearchField: View {
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator, lineWidth: 1)
         )
+        .frame(minHeight: AppSurfaceTokens.Layout.inputHeight)
         .frame(width: width)
     }
 }
@@ -488,11 +550,11 @@ struct AppSurfaceEmptyState: View {
 
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.bodyLarge, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text(message)
-                    .font(.system(size: 12.5))
+                    .font(.system(size: AppSurfaceTokens.Typography.body))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)

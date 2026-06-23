@@ -5,9 +5,9 @@ struct ShortcutKeycap: View {
 
     var body: some View {
         Text(key)
-            .font(.system(size: 12, design: .monospaced))
+            .font(.system(size: AppSurfaceTokens.Typography.caption, design: .monospaced))
             .fontWeight(.medium)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)

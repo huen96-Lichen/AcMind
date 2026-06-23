@@ -21,6 +21,9 @@ struct ContentView: View {
     @State private var showVoicePanel = false
     @State private var showCapturePanel = false
     @State private var showQuickNote = false
+#if DEBUG
+    @AppStorage("useWorkbenchV2") private var useWorkbenchV2 = WorkbenchV2Routing.defaultUseWorkbenchV2
+#endif
 
     init(
         clipboardPinActions: ClipboardPinActions,
@@ -51,7 +54,7 @@ struct ContentView: View {
                 inboxPreviewScenario: inboxPreviewScenario
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .clipped()
+            .modifier(MainContentClippingModifier(isEnabled: shouldClipMainContent))
 #if DEBUG
             .layoutDebugRegion("WorkbenchContent")
 #endif
@@ -110,6 +113,27 @@ struct ContentView: View {
             showQuickNote = true
         }
     }
+
+    private var shouldClipMainContent: Bool {
+#if DEBUG
+        return appState.sidebarSelection != .home || useWorkbenchV2 == false
+#else
+        return true
+#endif
+    }
+}
+
+private struct MainContentClippingModifier: ViewModifier {
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.clipped()
+        } else {
+            content
+        }
+    }
 }
 
 // MARK: - Main Content
@@ -120,6 +144,12 @@ struct MainContent: View {
     let workspaceDashboardRepository: (any WorkspaceDashboardRepositoryProtocol)?
     let inboxPreviewScenario: AcWorkPreviewScenario?
     @EnvironmentObject private var serviceContainer: ServiceContainer
+    @StateObject private var workbenchV2HeroBackgroundStore = WorkbenchV2HeroBackgroundStore()
+#if DEBUG
+    @AppStorage("useWorkbenchV2") private var useWorkbenchV2 = WorkbenchV2Routing.defaultUseWorkbenchV2
+#else
+    private let useWorkbenchV2 = false
+#endif
 
     init(
         selectedItem: SidebarItem,
@@ -137,12 +167,21 @@ struct MainContent: View {
         Group {
             switch selectedItem {
             case .home:
-                WorkspaceHomeView(
-                    systemStatusService: serviceContainer.systemStatusService,
-                    permissionManager: serviceContainer.permissionManager,
-                    dashboardRepository: workspaceDashboardRepository
-                )
-                    .navigationTitle("工作台")
+                if useWorkbenchV2 {
+                    WorkbenchV2View(
+                        mockData: WorkbenchV2MockData.preview(),
+                        debugOverlayEnabled: true,
+                        heroBackgroundStore: workbenchV2HeroBackgroundStore
+                    )
+                        .navigationTitle("工作台")
+                } else {
+                    WorkspaceHomeView(
+                        systemStatusService: serviceContainer.systemStatusService,
+                        permissionManager: serviceContainer.permissionManager,
+                        dashboardRepository: workspaceDashboardRepository
+                    )
+                        .navigationTitle("工作台")
+                }
             case .systemStatus:
                 SystemStatusView(
                     systemStatusService: serviceContainer.systemStatusService,

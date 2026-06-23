@@ -37,7 +37,7 @@ struct SystemStatusView: View {
             subtitle: "真实采样 · \(viewModel.lastUpdatedText) · \(viewModel.refreshHint)",
             headerActions: AnyView(dashboardHeaderActions),
             leadingRailWidth: AppSurfaceTokens.Layout.leadingRailWidth,
-            trailingRailWidth: DashboardLayout.sideCardWidth,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
                 dashboardLeadingRail
             },
@@ -58,7 +58,7 @@ struct SystemStatusView: View {
             fanRefreshTask?.cancel()
             fanRefreshTask = nil
         }
-        .onChange(of: viewModel.snapshot.fanControlStates) { _ in
+        .onChange(of: viewModel.snapshot.fanControlStates) {
             syncFanControlDraftFromSnapshot()
         }
     }
@@ -91,18 +91,68 @@ struct SystemStatusView: View {
     private var dashboardContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 4) {
+                dashboardOverviewHeader
                 dashboardHealthSection
                 dashboardTrendSection
                 dashboardDiagnosticsSection
                 dashboardCapabilitySection
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, AppSurfaceTokens.Spacing.lg)
             .padding(.vertical, 0)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .scrollIndicators(.hidden)
         .background(Color.clear)
+    }
+
+    private var dashboardOverviewHeader: some View {
+        AppSurfaceCard(title: "系统概览", subtitle: "Bento 概览 + 详细仪表盘", padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(title: "CPU", value: viewModel.cpuSummary, tint: .blue),
+                    AppSurfaceSummaryChip(title: "内存", value: viewModel.memoryUsagePercentSummary, tint: .purple),
+                    AppSurfaceSummaryChip(title: "网络", value: viewModel.networkSummary, tint: .green)
+                ])
+
+                HStack(spacing: 10) {
+                    overviewMetric(title: "磁盘", value: viewModel.diskSummary, tint: .orange)
+                    overviewMetric(title: "电源", value: viewModel.hasBattery ? viewModel.batterySummary : viewModel.thermalThrottleSummary, tint: viewModel.hasBattery ? .cyan : .red)
+                    overviewMetric(title: "采样", value: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor)
+                }
+
+                Text("顶部先给出关键状态总览，下面再进入 CPU、内存、网络、磁盘和权限的详细分区。")
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(2)
+            }
+        }
+    }
+
+    private func overviewMetric(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.88)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
+        .padding(.vertical, AppSurfaceTokens.Spacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
     }
 
     private var dashboardHealthSection: some View {
@@ -252,6 +302,12 @@ struct SystemStatusView: View {
     private var dashboardLeadingRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(title: "CPU", value: viewModel.cpuSummary, tint: .blue),
+                    AppSurfaceSummaryChip(title: "内存", value: viewModel.memorySummary, tint: .purple),
+                    AppSurfaceSummaryChip(title: "磁盘", value: viewModel.diskSummary, tint: .orange)
+                ])
+
                 AppSurfaceCard(title: "系统摘要", subtitle: "轻量概览", padding: 8) {
                     VStack(alignment: .leading, spacing: 5) {
                         dashboardMiniLine(title: "CPU", value: viewModel.cpuSummary)
@@ -357,6 +413,12 @@ struct SystemStatusView: View {
     private var dashboardTrailingRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(title: "采样", value: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor),
+                    AppSurfaceSummaryChip(title: "权限", value: viewModel.permissionFooterSummary, tint: AppSurfaceTokens.accentBlue),
+                    AppSurfaceSummaryChip(title: "热节流", value: viewModel.thermalThrottleSummary, tint: AppSurfaceTokens.accentOrange)
+                ])
+
                 AppSurfaceCard(title: "状态指示", subtitle: "图标化状态矩阵", padding: 5) {
                     VStack(alignment: .leading, spacing: 4) {
                         dashboardStatusMatrix
@@ -570,11 +632,11 @@ struct SystemStatusView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("权限快照")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                 Spacer(minLength: 0)
                 Text(viewModel.permissionFooterSummary)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
             }
@@ -597,10 +659,10 @@ struct SystemStatusView: View {
                     StatusBadge(text: "无明确不可用项", tone: .success, icon: "checkmark.circle.fill", compact: true)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("当前采样没有暴露硬件、授权或系统层面的降级原因。")
-                            .font(.system(size: 11.5, weight: .medium))
+                            .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                         Text("如果后续出现不可用项，这里会保留来源、类别和细节。")
-                            .font(.system(size: 10.5))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     }
                     Spacer(minLength: 0)
@@ -617,7 +679,7 @@ struct SystemStatusView: View {
                             HStack(spacing: 8) {
                                 StatusBadge(text: category.uppercased(), tone: .warning, icon: "exclamationmark.triangle.fill", compact: true)
                                 Text("\(categoryReasons.count) 项")
-                                    .font(.system(size: 10.5, weight: .semibold))
+                                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 Spacer(minLength: 0)
                             }
@@ -635,11 +697,11 @@ struct SystemStatusView: View {
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(reason.message)
-                                            .font(.system(size: 11.5, weight: .semibold))
+                                            .font(.system(size: AppSurfaceTokens.Typography.body, weight: .semibold))
                                             .foregroundStyle(AppSurfaceTokens.primaryText)
                                         if let detail = reason.detail {
                                             Text(detail)
-                                                .font(.system(size: 10.5))
+                                                .font(.system(size: AppSurfaceTokens.Typography.caption))
                                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                                                 .fixedSize(horizontal: false, vertical: true)
                                         }
@@ -903,10 +965,10 @@ struct SystemStatusView: View {
     private func dashboardTopBadge(icon: String, title: String, tint: Color = AppSurfaceTokens.cardBackground) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 8.5, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
             Text(title)
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
         }

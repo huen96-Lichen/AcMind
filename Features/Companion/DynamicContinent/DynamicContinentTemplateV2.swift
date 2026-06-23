@@ -10,21 +10,21 @@ enum DynamicContinentLayoutMetrics {
     static var collapsedHeight: CGFloat {
         menuBarHeight
     }
-    static let expandedWidth: CGFloat = NotchV2DesignTokens.expandedWidth
-    static let expandedHeight: CGFloat = NotchV2DesignTokens.expandedOverviewHeight
-    static let topBarHeight: CGFloat = NotchV2DesignTokens.topBarHeight
+    static let expandedWidth: CGFloat = CompanionLayoutTokens.expandedWindowWidth
+    static let expandedHeight: CGFloat = CompanionLayoutTokens.expandedWindowHeight
+    static let topBarHeight: CGFloat = CompanionLayoutTokens.topBarHeight
     static let topBarY: CGFloat = 28
     static let topBarHorizontalPadding: CGFloat = 56
     static let centerAvoidWidth: CGFloat = NotchV2DesignTokens.notchSafeZoneWidth
     static let centerAvoidHeight: CGFloat = NotchV2DesignTokens.notchSafeZoneHeight
-    static let pageHorizontalPadding: CGFloat = 22
-    static let pageBottomPadding: CGFloat = 16
-    static let columnGap: CGFloat = 14
-    static let rowGap: CGFloat = 14
-    static let leftColumnWidth: CGFloat = 180
+    static let pageHorizontalPadding: CGFloat = CompanionLayoutTokens.pageHorizontalPadding
+    static let pageBottomPadding: CGFloat = CompanionLayoutTokens.pageVerticalPadding
+    static let columnGap: CGFloat = CompanionLayoutTokens.majorColumnSpacing
+    static let rowGap: CGFloat = CompanionLayoutTokens.majorColumnSpacing
+    static let leftColumnWidth: CGFloat = CompanionLayoutTokens.templateAColumnWidth
     static let centerColumnWidth: CGFloat = 300
-    static let rightColumnWidth: CGFloat = 200
-    static let cardCornerRadius: CGFloat = NotchV2DesignTokens.cardRadius
+    static let rightColumnWidth: CGFloat = CompanionLayoutTokens.templateAColumnWidth
+    static let cardCornerRadius: CGFloat = CompanionLayoutTokens.cardCornerRadius
     static let containerCornerRadius: CGFloat = NotchV2DesignTokens.largeRadius
 }
 
@@ -56,7 +56,8 @@ struct DynamicContinentTemplateV2: View {
 
     var body: some View {
         let containerShape = NotchShape(topCornerRadius: 14, bottomCornerRadius: DynamicContinentLayoutMetrics.containerCornerRadius)
-        let footerHeight = NotchV2DesignTokens.dashboardFooterHeight
+        let statusItems = viewModel.lightStatusItems
+        let shouldShowStatusStrip = statusItems.contains(where: { $0.highlighted })
 
         VStack(spacing: 0) {
             DynamicContinentTopBar(viewModel: viewModel)
@@ -78,10 +79,12 @@ struct DynamicContinentTemplateV2: View {
             .zIndex(0)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-            NotchV2LightStatusStrip(items: viewModel.lightStatusItems)
-                .padding(.horizontal, NotchV2DesignTokens.pagePadding)
-                .frame(height: footerHeight, alignment: .center)
-                .fixedSize(horizontal: false, vertical: true)
+            if shouldShowStatusStrip {
+                NotchV2LightStatusStrip(items: statusItems)
+                    .padding(.horizontal, NotchV2DesignTokens.pagePadding)
+                    .padding(.bottom, 4)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
         .frame(
             width: DynamicContinentLayoutMetrics.expandedWidth,
@@ -91,7 +94,7 @@ struct DynamicContinentTemplateV2: View {
         .background(
             containerShape
                 .fill(DynamicContinentDesignTokens.containerBackground)
-                .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 8)
+                .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 5)
         )
         .clipShape(containerShape)
     }
@@ -101,6 +104,8 @@ struct DynamicContinentTemplateV2: View {
         switch viewModel.effectiveSelectedPage {
         case .overview:
             DynamicContinentTodayPage(viewModel: viewModel)
+        case .launcher:
+            DynamicContinentLauncherPage(viewModel: viewModel)
         case .music:
             DynamicContinentMusicPage(viewModel: viewModel)
         case .agent:
@@ -109,6 +114,8 @@ struct DynamicContinentTemplateV2: View {
             DynamicContinentSystemStatusPage(viewModel: viewModel)
         case .schedule:
             DynamicContinentSchedulePage(viewModel: viewModel)
+        case .settings:
+            NotchV2SettingsPage(viewModel: viewModel)
         }
     }
 }

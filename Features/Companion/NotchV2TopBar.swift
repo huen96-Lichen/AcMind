@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 import AcMindKit
 
 struct NotchV2TopBar: View {
@@ -39,7 +38,7 @@ struct NotchV2TopBar: View {
         .frame(width: NotchV2DesignTokens.expandedWidth, height: NotchV2DesignTokens.topBarHeight)
         .overlay(
             Rectangle()
-                .fill(NotchV2DesignTokens.separator.opacity(0.45))
+                .fill(NotchV2DesignTokens.separator.opacity(0.65))
                 .frame(height: 1)
                 .frame(maxHeight: .infinity, alignment: .bottom)
         )
@@ -49,6 +48,10 @@ struct NotchV2TopBar: View {
         HStack(spacing: 6) {
             topNavPill(title: "本机", icon: "desktopcomputer", selected: viewModel.effectiveSelectedPage == .overview) {
                 viewModel.select(.overview)
+            }
+
+            topNavPill(title: "启动器", icon: "square.grid.2x2", selected: viewModel.effectiveSelectedPage == .launcher) {
+                viewModel.select(.launcher)
             }
 
             if viewModel.isModuleEnabled(.music) {
@@ -67,11 +70,11 @@ struct NotchV2TopBar: View {
         .padding(.vertical, 4)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+                .fill(NotchV2DesignTokens.panelBackground)
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(NotchV2DesignTokens.separator.opacity(0.28), lineWidth: 1)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.8), lineWidth: 0.8)
         )
     }
 
@@ -94,7 +97,7 @@ struct NotchV2TopBar: View {
             NotchV2StatusPill(
                 icon: "desktopcomputer",
                 title: "状态",
-                accent: NotchV2DesignTokens.panelBackground.opacity(0.90),
+                accent: NotchV2DesignTokens.innerCardBackground,
                 isSelected: viewModel.effectiveSelectedPage == .systemStatus,
                 action: {
                     viewModel.openSystemStatusPage()
@@ -108,16 +111,17 @@ struct NotchV2TopBar: View {
             NotchV2StatusPill(
                 icon: "gearshape",
                 title: "设置",
-                accent: NotchV2DesignTokens.panelBackground.opacity(0.90),
+                accent: NotchV2DesignTokens.innerCardBackground,
+                isSelected: viewModel.effectiveSelectedPage == .settings,
                 action: {
-                    (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
+                    viewModel.select(.settings)
                 }
             )
 
             NotchV2StatusPill(
                 icon: "chevron.up",
                 title: "收起",
-                accent: NotchV2DesignTokens.panelBackground.opacity(0.90),
+                accent: NotchV2DesignTokens.innerCardBackground,
                 action: {
                     viewModel.collapse()
                 }
@@ -127,11 +131,11 @@ struct NotchV2TopBar: View {
         .padding(.vertical, 4)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+                .fill(NotchV2DesignTokens.panelBackground)
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(NotchV2DesignTokens.separator.opacity(0.28), lineWidth: 1)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.8), lineWidth: 0.8)
         )
     }
 
@@ -154,7 +158,7 @@ struct NotchV2TopBar: View {
                 }
 
                 Button("打开设置") {
-                    (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
+                    viewModel.select(.settings)
                 }
 
                 Button("收起") {
@@ -164,7 +168,7 @@ struct NotchV2TopBar: View {
                 NotchV2StatusPill(
                     icon: "ellipsis",
                     title: "更多",
-                    accent: NotchV2DesignTokens.panelBackground.opacity(0.90)
+                    accent: NotchV2DesignTokens.innerCardBackground
                 )
             }
             .menuStyle(.borderlessButton)
@@ -174,22 +178,25 @@ struct NotchV2TopBar: View {
         .padding(.vertical, 4)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
+                .fill(NotchV2DesignTokens.panelBackground)
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(NotchV2DesignTokens.separator.opacity(0.28), lineWidth: 1)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.8), lineWidth: 0.8)
         )
     }
 
     private var voiceStatusPill: some View {
         HStack(spacing: 6) {
-            Image(systemName: viewModel.voiceDisplayIcon)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(viewModel.voiceDisplayAccent)
+            NotchV2Glyph(
+                symbol: viewModel.voiceDisplayIcon,
+                role: .pill,
+                tint: viewModel.voiceDisplayAccent,
+                isActive: viewModel.isVoicePriorityActive
+            )
 
             Text(voiceCompactTitle)
-                .font(NotchV2DesignTokens.Typography.caption)
+                .font(.system(size: AppSurfaceTokens.Typography.badge))
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -221,7 +228,7 @@ struct NotchV2TopBar: View {
         NotchV2StatusPill(
             icon: icon,
             title: title,
-            accent: selected ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.panelBackground.opacity(0.90),
+            accent: selected ? NotchV2DesignTokens.accentBlue : NotchV2DesignTokens.innerCardBackground,
             isSelected: selected,
             action: action
         )

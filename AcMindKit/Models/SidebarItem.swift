@@ -45,11 +45,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public static var coreWorkflow: [SidebarItem] {
-        [.home, .agent, .inbox, .schedule]
-    }
-
-    public static var processingItems: [SidebarItem] {
-        [.workbench]
+        [.home, .agent, .inbox, .schedule, .workbench]
     }
 
     public static var companionCapabilities: [SidebarItem] {
@@ -57,11 +53,11 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     }
 
     public static var systemItems: [SidebarItem] {
-        [.systemStatus, .modelManagement, .settings]
+        [.systemStatus, .modelManagement]
     }
 
     public static var mainItems: [SidebarItem] {
-        coreWorkflow + processingItems + companionCapabilities + systemItems
+        coreWorkflow + companionCapabilities + systemItems
     }
 
     public static var shortcutItems: [SidebarItem] {
@@ -152,7 +148,6 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
 
     public enum Group: String, CaseIterable {
         case coreWorkflow = "工作"
-        case processing = "处理"
         case companionCapabilities = "随身能力"
         case system = "系统"
 
@@ -161,10 +156,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
 
     public var group: Group {
         switch self {
-        case .home, .agent, .inbox, .clipboard, .schedule:
+        case .home, .agent, .inbox, .clipboard, .schedule, .workbench:
             return .coreWorkflow
-        case .workbench:
-            return .processing
         case .dynamicContinent, .voiceEntry:
             return .companionCapabilities
         case .systemStatus, .modelManagement, .settings:

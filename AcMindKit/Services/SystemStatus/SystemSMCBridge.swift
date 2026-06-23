@@ -104,7 +104,7 @@ public final class SystemSMCBridge: SystemHardwareBridge {
         var iterator: io_iterator_t = 0
         let matchingDictionary: CFMutableDictionary = IOServiceMatching("AppleSMC")
 
-        result = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDictionary, &iterator)
+        result = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDictionary, &iterator)
         guard result == kIOReturnSuccess else { return nil }
 
         let device = IOIteratorNext(iterator)

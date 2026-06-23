@@ -20,7 +20,7 @@ struct ExampleApp: App {
   var body: some Scene {
     WindowGroup {
       NavigationStack {
-        AnimationListView(content: .directory("Samples"))
+        LauncherHomeView()
       }
     }
   }

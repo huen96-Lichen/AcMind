@@ -209,10 +209,10 @@ struct DesktopCapsuleView: View {
                         Circle()
                             .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
                     )
-                    .shadow(color: .black.opacity(0.10), radius: 7, x: 0, y: 3)
+                    .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 7, x: 0, y: 3)
 
                 Image(systemName: "brain.head.profile")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.controlStrong + 3, weight: .medium))
                     .foregroundStyle(isHovered ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.primaryText)
             }
         }
@@ -243,7 +243,7 @@ struct DesktopCapsuleView: View {
                         .frame(width: 33, height: 33)
 
                     Image(systemName: "brain.head.profile")
-                        .font(.system(size: 13.5, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.accentBlue)
                 }
             }
@@ -270,7 +270,7 @@ struct DesktopCapsuleView: View {
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(width: 24, height: 33)
             }
@@ -323,7 +323,7 @@ struct CapsuleActionButtonView: View {
                         .frame(width: 15, height: 15)
                 } else {
                     Image(systemName: action.type.defaultIcon)
-                        .font(.system(size: 13.5, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                         .foregroundStyle(isHovered ? action.type.defaultColor : AppSurfaceTokens.primaryText)
                 }
             }

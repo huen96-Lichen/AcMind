@@ -123,9 +123,23 @@
 		A10000000000000000000144 /* CompanionShortcutPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014B /* CompanionShortcutPanel.swift */; };
 		A10000000000000000000145 /* CompanionVoicePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014C /* CompanionVoicePanel.swift */; };
 		A10000000000000000000146 /* CompanionCapturePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000014D /* CompanionCapturePanel.swift */; };
-		A10000000000000000000154 /* ClipboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000158 /* ClipboardView.swift */; };
-		A10000000000000000000156 /* WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015A /* WorkbenchView.swift */; };
-		A10000000000000000000157 /* ToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015B /* ToolsView.swift */; };
+			A10000000000000000000154 /* ClipboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000158 /* ClipboardView.swift */; };
+			A10000000000000000000156 /* WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015A /* WorkbenchView.swift */; };
+			A10000000000000000000720 /* WorkbenchV2Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000700 /* WorkbenchV2Tokens.swift */; };
+			A10000000000000000000721 /* WorkbenchV2Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000701 /* WorkbenchV2Layout.swift */; };
+			A10000000000000000000722 /* WorkbenchV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000702 /* WorkbenchV2View.swift */; };
+			A10000000000000000000723 /* WorkbenchHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000703 /* WorkbenchHeader.swift */; };
+			A10000000000000000000724 /* CurrentFocusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000704 /* CurrentFocusCard.swift */; };
+			A10000000000000000000725 /* PendingItemsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000705 /* PendingItemsCard.swift */; };
+			A10000000000000000000726 /* RecentCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000706 /* RecentCollectionCard.swift */; };
+			A10000000000000000000727 /* TodayStatusPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000707 /* TodayStatusPanel.swift */; };
+			A1000000000000000000072C /* TodayOverviewPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070C /* TodayOverviewPanel.swift */; };
+			A1000000000000000000072D /* WorkbenchV2HeroBackgroundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070D /* WorkbenchV2HeroBackgroundStore.swift */; };
+			A10000000000000000000728 /* ActivityTrendCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000708 /* ActivityTrendCard.swift */; };
+			A10000000000000000000729 /* QuickActionsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000709 /* QuickActionsCard.swift */; };
+			A1000000000000000000072A /* DeviceStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070A /* DeviceStatusBar.swift */; };
+			A1000000000000000000072B /* WorkbenchV2MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070B /* WorkbenchV2MockData.swift */; };
+			A10000000000000000000157 /* ToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015B /* ToolsView.swift */; };
 		A10000000000000000000160 /* VoicePolishMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000171 /* VoicePolishMode.swift */; };
 		A10000000000000000000161 /* PolishPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000172 /* PolishPrompts.swift */; };
 		A10000000000000000000162 /* PolishService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000173 /* PolishService.swift */; };
@@ -178,6 +192,8 @@
 		A100000000000000000002FE /* NotchV2OverviewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000308 /* NotchV2OverviewPage.swift */; };
 		A100000000000000000002FF /* NotchV2MusicPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000309 /* NotchV2MusicPage.swift */; };
 		A10000000000000000000300 /* NotchV2AgentPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030A /* NotchV2AgentPage.swift */; };
+		A10000000000000000000322 /* NotchV2LauncherPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000323 /* NotchV2LauncherPage.swift */; };
+		A10000000000000000000988 /* NotchV2SettingsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000989 /* NotchV2SettingsPage.swift */; };
 		A1000000000000000000030E /* AgentDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030B /* AgentDashboardView.swift */; };
 		A1000000000000000000030F /* SettingsSuiteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030C /* SettingsSuiteView.swift */; };
 		A10000000000000000000310 /* ScheduleDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030D /* ScheduleDashboardView.swift */; };
@@ -193,6 +209,7 @@
 		A1000000000000000000041A /* CompanionDockingRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000419 /* CompanionDockingRulesTests.swift */; };
 		A1000000000000000000041B /* NotchV2StatusStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000041C /* NotchV2StatusStrip.swift */; };
 		A1000000000000000000041D /* SystemEventHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000041E /* SystemEventHUD.swift */; };
+		A10000000000000000000990 /* CompanionSharedLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000991 /* CompanionSharedLayout.swift */; };
 		A10000000000000000000420 /* ToolCompletionPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000421 /* ToolCompletionPanels.swift */; };
 		A10000000000000000000674 /* ToolWorkspaceComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000677 /* ToolWorkspaceComponents.swift */; };
 		A10000000000000000000675 /* ToolWorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000678 /* ToolWorkspaceState.swift */; };
@@ -377,6 +394,7 @@
 			);
 			name = "Stage System Status Helper";
 			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchServices/com.acmind.systemstatus.helper",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -557,6 +575,8 @@
 		A10000000000000000000308 /* NotchV2OverviewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2OverviewPage.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000309 /* NotchV2MusicPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2MusicPage.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030A /* NotchV2AgentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2AgentPage.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000323 /* NotchV2LauncherPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2LauncherPage.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000989 /* NotchV2SettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2SettingsPage.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030B /* AgentDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Agent/AgentDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030C /* SettingsSuiteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Settings/SettingsSuiteView.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000030D /* ScheduleDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Schedule/ScheduleDashboardView.swift; sourceTree = SOURCE_ROOT; };
@@ -572,13 +592,28 @@
 		A10000000000000000000419 /* CompanionDockingRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/CompanionDockingRulesTests.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000041C /* NotchV2StatusStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/NotchV2StatusStrip.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000041E /* SystemEventHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/SystemEventHUD.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000991 /* CompanionSharedLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/CompanionSharedLayout.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000421 /* ToolCompletionPanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolCompletionPanels.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000677 /* ToolWorkspaceComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspaceComponents.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000678 /* ToolWorkspaceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspaceState.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000679 /* ToolWorkspaceStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ToolWorkspaceStateTests.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000681 /* ToolWorkspacePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspacePreview.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000422 /* WorkspaceHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Home/WorkspaceHomeView.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000431 /* HotCornerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/HotCornerConfig.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000681 /* ToolWorkspacePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Tools/ToolWorkspacePreview.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000422 /* WorkspaceHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Home/WorkspaceHomeView.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000700 /* WorkbenchV2Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2Tokens.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000701 /* WorkbenchV2Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2Layout.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000702 /* WorkbenchV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2View.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000703 /* WorkbenchHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/WorkbenchHeader.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000704 /* CurrentFocusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/CurrentFocusCard.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000705 /* PendingItemsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/PendingItemsCard.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000706 /* RecentCollectionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/RecentCollectionCard.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000707 /* TodayStatusPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/TodayStatusPanel.swift; sourceTree = SOURCE_ROOT; };
+			A1000000000000000000070C /* TodayOverviewPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/TodayOverviewPanel.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000708 /* ActivityTrendCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/ActivityTrendCard.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000709 /* QuickActionsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/QuickActionsCard.swift; sourceTree = SOURCE_ROOT; };
+			A1000000000000000000070A /* DeviceStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/DeviceStatusBar.swift; sourceTree = SOURCE_ROOT; };
+			A1000000000000000000070B /* WorkbenchV2MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Preview/WorkbenchV2MockData.swift; sourceTree = SOURCE_ROOT; };
+			A1000000000000000000070D /* WorkbenchV2HeroBackgroundStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2HeroBackgroundStore.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000431 /* HotCornerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/HotCornerConfig.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000433 /* HotCornerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/HotCornerManager.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000435 /* SayInputCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Voice/SayInput/SayInputCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000640 /* SystemFanControlServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Protocols/SystemFanControlServiceProtocol.swift; sourceTree = SOURCE_ROOT; };
@@ -1209,8 +1244,11 @@
 				A10000000000000000000307 /* NotchV2ExpandedView.swift */,
 				A10000000000000000000442 /* NotchV2DashboardLayout.swift */,
 				A10000000000000000000308 /* NotchV2OverviewPage.swift */,
+				A10000000000000000000323 /* NotchV2LauncherPage.swift */,
 				A10000000000000000000309 /* NotchV2MusicPage.swift */,
 				A1000000000000000000030A /* NotchV2AgentPage.swift */,
+				A10000000000000000000989 /* NotchV2SettingsPage.swift */,
+				A10000000000000000000991 /* CompanionSharedLayout.swift */,
 				A1000000000000000000041C /* NotchV2StatusStrip.swift */,
 				A1000000000000000000041E /* SystemEventHUD.swift */,
 				A1000000000000000000018E /* CompanionView.swift */,
@@ -1364,14 +1402,52 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000424 /* Home */ = {
-			isa = PBXGroup;
-			children = (
-				A10000000000000000000422 /* WorkspaceHomeView.swift */,
-			);
-			path = Home;
-			sourceTree = "<group>";
-		};
+			A10000000000000000000424 /* Home */ = {
+				isa = PBXGroup;
+				children = (
+					A10000000000000000000422 /* WorkspaceHomeView.swift */,
+					A10000000000000000000710 /* HomeV2 */,
+				);
+				path = Home;
+				sourceTree = "<group>";
+			};
+			A10000000000000000000710 /* HomeV2 */ = {
+				isa = PBXGroup;
+				children = (
+					A10000000000000000000700 /* WorkbenchV2Tokens.swift */,
+					A10000000000000000000701 /* WorkbenchV2Layout.swift */,
+					A10000000000000000000702 /* WorkbenchV2View.swift */,
+					A1000000000000000000070D /* WorkbenchV2HeroBackgroundStore.swift */,
+					A10000000000000000000711 /* Components */,
+					A10000000000000000000712 /* Preview */,
+				);
+				path = HomeV2;
+				sourceTree = "<group>";
+			};
+			A10000000000000000000711 /* Components */ = {
+				isa = PBXGroup;
+				children = (
+					A10000000000000000000703 /* WorkbenchHeader.swift */,
+					A10000000000000000000704 /* CurrentFocusCard.swift */,
+					A10000000000000000000705 /* PendingItemsCard.swift */,
+					A10000000000000000000706 /* RecentCollectionCard.swift */,
+					A10000000000000000000707 /* TodayStatusPanel.swift */,
+					A1000000000000000000070C /* TodayOverviewPanel.swift */,
+					A10000000000000000000708 /* ActivityTrendCard.swift */,
+					A10000000000000000000709 /* QuickActionsCard.swift */,
+					A1000000000000000000070A /* DeviceStatusBar.swift */,
+				);
+				path = Components;
+				sourceTree = "<group>";
+			};
+			A10000000000000000000712 /* Preview */ = {
+				isa = PBXGroup;
+				children = (
+					A1000000000000000000070B /* WorkbenchV2MockData.swift */,
+				);
+				path = Preview;
+				sourceTree = "<group>";
+			};
 		A10000000000000000000438 /* SystemStatus */ = {
 			isa = PBXGroup;
 			children = (
@@ -1648,8 +1724,11 @@
 				A100000000000000000002FD /* NotchV2ExpandedView.swift in Sources */,
 				A10000000000000000000441 /* NotchV2DashboardLayout.swift in Sources */,
 				A100000000000000000002FE /* NotchV2OverviewPage.swift in Sources */,
+				A10000000000000000000322 /* NotchV2LauncherPage.swift in Sources */,
 				A100000000000000000002FF /* NotchV2MusicPage.swift in Sources */,
 				A10000000000000000000300 /* NotchV2AgentPage.swift in Sources */,
+				A10000000000000000000988 /* NotchV2SettingsPage.swift in Sources */,
+				A10000000000000000000990 /* CompanionSharedLayout.swift in Sources */,
 				A1000000000000000000041B /* NotchV2StatusStrip.swift in Sources */,
 				A1000000000000000000041D /* SystemEventHUD.swift in Sources */,
 				A10000000000000000000413 /* DynamicContinentTemplateV2.swift in Sources */,
@@ -1679,9 +1758,23 @@
 				A1000000000000000000010E /* SettingsViewModel.swift in Sources */,
 				A10000000000000000000154 /* ClipboardView.swift in Sources */,
 				C10000000000000000000010 /* PasteQueuePanel.swift in Sources */,
-				A10000000000000000000156 /* WorkbenchView.swift in Sources */,
-				A10000000000000000000423 /* WorkspaceHomeView.swift in Sources */,
-				A10000000000000000000157 /* ToolsView.swift in Sources */,
+					A10000000000000000000156 /* WorkbenchView.swift in Sources */,
+					A10000000000000000000423 /* WorkspaceHomeView.swift in Sources */,
+					A10000000000000000000720 /* WorkbenchV2Tokens.swift in Sources */,
+					A10000000000000000000721 /* WorkbenchV2Layout.swift in Sources */,
+					A10000000000000000000722 /* WorkbenchV2View.swift in Sources */,
+					A10000000000000000000723 /* WorkbenchHeader.swift in Sources */,
+					A10000000000000000000724 /* CurrentFocusCard.swift in Sources */,
+					A10000000000000000000725 /* PendingItemsCard.swift in Sources */,
+					A10000000000000000000726 /* RecentCollectionCard.swift in Sources */,
+					A10000000000000000000727 /* TodayStatusPanel.swift in Sources */,
+					A1000000000000000000072C /* TodayOverviewPanel.swift in Sources */,
+					A10000000000000000000728 /* ActivityTrendCard.swift in Sources */,
+					A10000000000000000000729 /* QuickActionsCard.swift in Sources */,
+					A1000000000000000000072A /* DeviceStatusBar.swift in Sources */,
+					A1000000000000000000072B /* WorkbenchV2MockData.swift in Sources */,
+					A1000000000000000000072D /* WorkbenchV2HeroBackgroundStore.swift in Sources */,
+					A10000000000000000000157 /* ToolsView.swift in Sources */,
 				A100000000000000000002B1 /* WebDigestPanel.swift in Sources */,
 				A100000000000000000002B3 /* ToolPanels.swift in Sources */,
 				A100000000000000000002B5 /* ToolAdvancedPanels.swift in Sources */,

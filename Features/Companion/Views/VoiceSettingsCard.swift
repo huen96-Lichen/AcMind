@@ -19,7 +19,8 @@ struct VoiceSettingsCard: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("快捷键")
-                        .font(.headline)
+                        .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
 
                     HStack(spacing: 4) {
                         ShortcutKeycap(key: "Fn")
@@ -28,7 +29,8 @@ struct VoiceSettingsCard: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("清洗完成后")
-                        .font(.headline)
+                        .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
 
                     Picker("", selection: $outputMode) {
                         ForEach(VoiceOutputMode.allCases, id: \.self) { mode in

@@ -332,16 +332,16 @@ struct SystemEventHUDView: View {
         if let event = center.currentHUD {
             HStack(spacing: 12) {
                 Image(systemName: event.kind.icon)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold))
                     .foregroundStyle(event.kind.accent)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(NotchV2DesignTokens.primaryText)
+                        .font(.system(size: AppSurfaceTokens.Typography.body, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
                     Text(event.detail)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Spacer(minLength: 10)
@@ -361,24 +361,24 @@ struct SystemEventHUDView: View {
             .padding(.vertical, 10)
             .frame(width: 260)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(NotchV2DesignTokens.panelBackground.opacity(0.96))
-                    .shadow(color: .black.opacity(0.24), radius: 12, x: 0, y: 6)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 10, x: 0, y: 5)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                     .stroke(event.kind.accent.opacity(0.25), lineWidth: 1)
             )
             .overlay(alignment: .bottomTrailing) {
                 if center.pendingHUDKinds.isEmpty == false {
                     Text(pendingQueueText)
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.9))
+                                .fill(AppSurfaceTokens.cardBackgroundSoft)
                         )
                         .overlay(
                             Capsule(style: .continuous)

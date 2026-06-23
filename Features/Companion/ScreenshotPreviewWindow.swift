@@ -68,8 +68,8 @@ struct ScreenshotPreviewContentView: View {
                 
                 if let size = imageSizeString {
                     Text(size)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.badge))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 
                 Spacer()
@@ -110,12 +110,12 @@ struct ScreenshotPreviewContentView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "photo")
                         .font(.system(size: 48))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text("截图已保存")
-                        .font(.headline)
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
                     Text("可在收集箱中查看")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.body))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .frame(minWidth: 560, maxWidth: .infinity, minHeight: 360, maxHeight: .infinity)
                 .background(AppSurfaceBackdrop())
@@ -154,7 +154,7 @@ struct ScreenshotQuickNotePanel: View {
         VStack(spacing: 16) {
             HStack {
                 Text("快速记录")
-                    .font(.headline)
+                    .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
                 Spacer()
                 Button("关闭") {
                     dismiss()
@@ -177,7 +177,14 @@ struct ScreenshotQuickNotePanel: View {
         }
         .padding()
         .frame(width: 500, height: 350)
-        .background(AppSurfaceBackdrop())
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                )
+        )
         .onAppear {
             isFocused = true
         }

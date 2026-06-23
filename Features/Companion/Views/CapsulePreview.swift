@@ -7,7 +7,8 @@ struct CapsulePreview: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("预览效果")
-                .font(.headline)
+                .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
             
             // macOS 菜单栏示意
             ZStack(alignment: position.alignment) {
@@ -17,7 +18,7 @@ struct CapsulePreview: View {
                     .frame(height: 32)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                            .stroke(AppSurfaceTokens.separator, lineWidth: 1)
                     )
                 
                 // 胶囊示意
@@ -28,17 +29,17 @@ struct CapsulePreview: View {
                         .frame(width: 18, height: 18)
                         .overlay(
                             Image(systemName: "sparkles")
-                                .font(.system(size: 10))
-                                .foregroundColor(.white)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white)
                         )
                     
                     RoundedRectangle(cornerRadius: 4)
                         .fill(AppSurfaceTokens.cardBackgroundSoft)
                         .frame(width: 24, height: 18)
                         .overlay(
-                            Image(systemName: "mic")
+                        Image(systemName: "mic")
                                 .font(.system(size: 10))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                         )
                 }
                 .padding(4)

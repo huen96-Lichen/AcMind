@@ -214,12 +214,12 @@ struct SectionHeader: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 if let description {
                     Text(description)
-                        .font(.system(size: 12))
+                        .font(.system(size: AppSurfaceTokens.Typography.sectionDesc))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -230,7 +230,7 @@ struct SectionHeader: View {
             HStack(spacing: 8) {
                 if let status {
                     Text(status)
-                        .font(.system(size: 10.5, weight: .semibold))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -334,7 +334,7 @@ struct StatusBadge: View {
                     .accessibilityHidden(true)
             }
             Text(text)
-                .font(.system(size: compact ? 10 : 10.5, weight: .semibold))
+                .font(.system(size: compact ? 10 : AppSurfaceTokens.Typography.badge, weight: .semibold))
         }
         .foregroundStyle(foregroundColor)
         .padding(.horizontal, compact ? 8 : 10)
@@ -498,19 +498,19 @@ struct MetricCard<Accessory: View>: View {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(label)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: AppSurfaceTokens.Typography.metricLabel, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(primaryValue)
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: AppSurfaceTokens.Typography.metricValue, weight: .semibold))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
                             .lineLimit(1)
                             .minimumScaleFactor(0.82)
 
                         if let unit {
                             Text(unit)
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: AppSurfaceTokens.Typography.metricUnit, weight: .semibold))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .lineLimit(1)
                         }
@@ -524,7 +524,7 @@ struct MetricCard<Accessory: View>: View {
 
             if let trend {
                 Text(trend)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(1)
             }
@@ -536,7 +536,7 @@ struct MetricCard<Accessory: View>: View {
 
                 if let lastUpdated {
                     Text(lastUpdated)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .lineLimit(1)
                 }

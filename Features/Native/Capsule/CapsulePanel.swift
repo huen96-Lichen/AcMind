@@ -91,7 +91,7 @@ struct CapsuleContentView: View {
             HStack(spacing: 12) {
                 Button(action: { toggleExpand() }) {
                     Image(systemName: isExpanded ? "xmark.circle.fill" : "plus.circle.fill")
-                        .font(.system(size: 20))
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle + 5))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -105,7 +105,7 @@ struct CapsuleContentView: View {
 
                 Button(action: { showingScreenshotOptions = true }) {
                     Image(systemName: "camera.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .disabled(isCapturing)
@@ -118,7 +118,7 @@ struct CapsuleContentView: View {
 
                 Button(action: { captureClipboard() }) {
                     Image(systemName: "doc.on.clipboard")
-                        .font(.system(size: 16))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .disabled(isCapturing)
@@ -126,9 +126,13 @@ struct CapsuleContentView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
-                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                            .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                    )
+                    .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 8, x: 0, y: 4)
             )
 
             // 展开状态 - 更多选项
@@ -166,8 +170,8 @@ struct CapsuleContentView: View {
                     .padding(.vertical, 12)
                 }
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(AppSurfaceTokens.cardBackground.opacity(0.96))
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
             }

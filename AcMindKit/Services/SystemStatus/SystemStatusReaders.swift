@@ -1142,7 +1142,7 @@ final class SMCReader {
     init?() {
         var iterator: io_iterator_t = 0
         let matchingDictionary = IOServiceMatching("AppleSMC")
-        let result = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDictionary, &iterator)
+        let result = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDictionary, &iterator)
         guard result == kIOReturnSuccess else {
             return nil
         }

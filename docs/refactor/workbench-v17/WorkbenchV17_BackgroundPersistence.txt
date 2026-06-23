@@ -1,0 +1,22 @@
+[background verification]
+userDefaultsKey=WorkbenchV2.heroBackgroundPath
+selectedBackgroundSource=/Volumes/White Atlas/03_Projects/AcMind/临时/DSCF0251.jpg
+persistedPath=/Users/lichen/Library/Application Support/com.acmind.app/WorkbenchV2/Backgrounds/hero-background.jpg
+
+stage=seed
+result=selected and persisted
+fileExists=true
+fallbackBehavior=restored selected background
+screenshot=docs/refactor/workbench-v17/screenshots/background-selected-1500x888.png
+
+stage=restore
+result=reopened app and reloaded persisted file
+fileExists=true
+fallbackBehavior=restored selected background
+screenshot=docs/refactor/workbench-v17/screenshots/background-restored-1500x888.png
+
+stage=fallback
+result=deleted persisted file, relaunch fell back to default background
+fileExists=false
+fallbackBehavior=fell back to generated default background
+screenshot=docs/refactor/workbench-v17/screenshots/background-fallback-1500x888.png

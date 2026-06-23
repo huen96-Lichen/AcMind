@@ -171,13 +171,13 @@ struct WorkspaceHomeView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
                             greetingHeader
+                            homeOverviewStrip
                             homePrimaryDeck
                             overviewRow
                             kpiRow
                             infoRow
                             sensorRow
-                            summaryFooter
-                            workspaceClosingBoard
+                            auxiliaryRow
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)
@@ -235,10 +235,10 @@ struct WorkspaceHomeView: View {
         HStack(alignment: .top, spacing: 5.5) {
             VStack(alignment: .leading, spacing: 0.5) {
                 Text(greetingText)
-                    .font(.system(size: 17.5, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.pageTitle, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                 Text("保持高效创作")
-                    .font(.system(size: 8, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.pageEyebrow, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
@@ -372,16 +372,16 @@ struct WorkspaceHomeView: View {
     }
 
     private var topSearchField: some View {
-        HStack(spacing: 5) {
+            HStack(spacing: 5) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Text("搜索与命令")
-                .font(.system(size: 9.5, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer(minLength: 0)
         }
-        .frame(width: 128, height: 23.5)
+        .frame(width: 132, height: AppSurfaceTokens.Layout.compactChipHeight)
         .padding(.horizontal, 6)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
@@ -400,7 +400,7 @@ struct WorkspaceHomeView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("工作台总览")
-                        .font(.system(size: 17.5, weight: .semibold))
+                        .font(.system(size: AppSurfaceTokens.Typography.pageTitle, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 5.5) {
@@ -414,10 +414,10 @@ struct WorkspaceHomeView: View {
 
                 VStack(alignment: .trailing, spacing: 3.5) {
                     Text(viewModel.refreshHint)
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                     Text("工作台实时")
-                        .font(.system(size: 9.5, weight: .semibold))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
@@ -434,6 +434,28 @@ struct WorkspaceHomeView: View {
         default:
             return "晚上好，AcWork"
         }
+    }
+
+    private var homeOverviewStrip: some View {
+        AppSurfaceSummaryStrip(
+            chips: [
+                AppSurfaceSummaryChip(
+                    title: "当前页面",
+                    value: appState.sidebarSelection.displayName,
+                    tint: homePalette.accent
+                ),
+                AppSurfaceSummaryChip(
+                    title: "下一步",
+                    value: nextActionHint,
+                    tint: homePalette.info
+                ),
+                AppSurfaceSummaryChip(
+                    title: "刷新",
+                    value: viewModel.refreshHint,
+                    tint: AppSurfaceTokens.secondaryText
+                )
+            ]
+        )
     }
 
     private func homeActionChip(_ action: HomeAction) -> some View {
@@ -839,6 +861,17 @@ struct WorkspaceHomeView: View {
         }
     }
 
+    private var auxiliaryRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            summaryFooter
+                .layoutPriority(2)
+
+            workspaceClosingBoard
+                .frame(maxWidth: 332)
+                .layoutPriority(1)
+        }
+    }
+
     private var summaryFooter: some View {
         DashboardCard(padding: 1.5, style: .subtle) {
             VStack(alignment: .leading, spacing: 4) {
@@ -857,11 +890,13 @@ struct WorkspaceHomeView: View {
                         .font(.system(size: 7.5, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                    HStack(spacing: 1.5) {
-                        summaryChip(icon: "cpu", title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText)
-                        summaryChip(icon: "memorychip", title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.secondaryText)
-                        summaryChip(icon: "internaldrive", title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.secondaryText)
-                    }
+                    AppSurfaceSummaryStrip(
+                        chips: [
+                            AppSurfaceSummaryChip(title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText),
+                            AppSurfaceSummaryChip(title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.secondaryText),
+                            AppSurfaceSummaryChip(title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.secondaryText)
+                        ]
+                    )
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -869,11 +904,13 @@ struct WorkspaceHomeView: View {
                         .font(.system(size: 7.5, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                    HStack(spacing: 1.5) {
-                        summaryChip(icon: "network", title: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.secondaryText)
-                        summaryChip(icon: "powerplug", title: "电源", value: viewModel.batteryStateSummary, tint: AppSurfaceTokens.secondaryText)
-                        summaryChip(icon: "checkmark.shield", title: "权限", value: permissionFooterText, tint: AppSurfaceTokens.secondaryText)
-                    }
+                    AppSurfaceSummaryStrip(
+                        chips: [
+                            AppSurfaceSummaryChip(title: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.secondaryText),
+                            AppSurfaceSummaryChip(title: "电源", value: viewModel.batteryStateSummary, tint: AppSurfaceTokens.secondaryText),
+                            AppSurfaceSummaryChip(title: "权限", value: permissionFooterText, tint: AppSurfaceTokens.secondaryText)
+                        ]
+                    )
                 }
             }
         }
@@ -1474,9 +1511,9 @@ struct WorkspaceHomeView: View {
         Button(action: action) {
             HStack(spacing: 3.5) {
                 Image(systemName: icon)
-                    .font(.system(size: 8.5, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 8.75, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
             }
             .foregroundStyle(AppSurfaceTokens.primaryText)
             .padding(.horizontal, 7)
@@ -1525,7 +1562,7 @@ struct WorkspaceHomeView: View {
             }
 
             Text(action.title)
-                .font(.system(size: 7.5, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
@@ -1547,7 +1584,7 @@ struct WorkspaceHomeView: View {
         VStack(alignment: .leading, spacing: 6.5) {
             if items.isEmpty {
                 Text(placeholder)
-                    .font(.system(size: 11))
+                    .font(.system(size: AppSurfaceTokens.Typography.sectionDesc))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             } else {
                 ForEach(items.indices, id: \.self) { index in
@@ -1561,19 +1598,19 @@ struct WorkspaceHomeView: View {
         HStack(spacing: 6) {
             VStack(alignment: .leading, spacing: 1.5) {
                 Text(item.displayName)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                 Text(item.displaySource)
-                    .font(.system(size: 9))
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             Spacer(minLength: 0)
             Text(item.displayValue)
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
             if item.isUnavailable {
                 Text("不可用")
-                    .font(.system(size: 8.5, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.accentOrange)
             }
         }

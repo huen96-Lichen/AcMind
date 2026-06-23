@@ -13,7 +13,7 @@ import AcMindKit
 import OSLog
 import SwiftUI
 import Darwin
-import Vision
+@preconcurrency import Vision
 
 // MARK: - Playback State
 
@@ -1024,35 +1024,35 @@ private enum QishuiMusicNowPlayingProbe {
         }
 
         return await withCheckedContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, error in
-                if let error {
-                    logger.debug("汽水音乐 OCR failed: \(error.localizedDescription, privacy: .public)")
-                    continuation.resume(returning: [])
-                    return
-                }
-
-                let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
-                let candidates = observations.compactMap { observation -> Candidate? in
-                    guard let text = observation.topCandidates(1).first?.string else { return nil }
-                    let cleaned = cleanQishuiText(text)
-                    guard cleaned.isEmpty == false else { return nil }
-
-                    let boundingBox = observation.boundingBox
-                    let frame = CGRect(
-                        x: windowFrame.minX + boundingBox.minX * windowFrame.width,
-                        y: windowFrame.minY + (1 - boundingBox.maxY) * windowFrame.height,
-                        width: boundingBox.width * windowFrame.width,
-                        height: boundingBox.height * windowFrame.height
-                    )
-                    return Candidate(text: cleaned, frame: frame)
-                }
-                continuation.resume(returning: candidates)
-            }
-            request.recognitionLevel = .accurate
-            request.recognitionLanguages = ["zh-Hans", "ja-JP", "en-US"]
-            request.usesLanguageCorrection = true
-
             DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNRecognizeTextRequest { request, error in
+                    if let error {
+                        logger.debug("汽水音乐 OCR failed: \(error.localizedDescription, privacy: .public)")
+                        continuation.resume(returning: [])
+                        return
+                    }
+
+                    let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
+                    let candidates = observations.compactMap { observation -> Candidate? in
+                        guard let text = observation.topCandidates(1).first?.string else { return nil }
+                        let cleaned = cleanQishuiText(text)
+                        guard cleaned.isEmpty == false else { return nil }
+
+                        let boundingBox = observation.boundingBox
+                        let frame = CGRect(
+                            x: windowFrame.minX + boundingBox.minX * windowFrame.width,
+                            y: windowFrame.minY + (1 - boundingBox.maxY) * windowFrame.height,
+                            width: boundingBox.width * windowFrame.width,
+                            height: boundingBox.height * windowFrame.height
+                        )
+                        return Candidate(text: cleaned, frame: frame)
+                    }
+                    continuation.resume(returning: candidates)
+                }
+                request.recognitionLevel = .accurate
+                request.recognitionLanguages = ["zh-Hans", "ja-JP", "en-US"]
+                request.usesLanguageCorrection = true
+
                 do {
                     try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
                 } catch {

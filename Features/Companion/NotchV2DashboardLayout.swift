@@ -9,9 +9,9 @@ struct NotchV2DashboardLayout<Left: View, Center: View, Right: View>: View {
     let rightColumn: Right
 
     init(
-        leftColumnWidth: CGFloat = 216,
-        rightColumnWidth: CGFloat = 240,
-        topInset: CGFloat = 6,
+        leftColumnWidth: CGFloat = CompanionLayoutTokens.templateAColumnWidth,
+        rightColumnWidth: CGFloat = CompanionLayoutTokens.templateAColumnWidth,
+        topInset: CGFloat = CompanionLayoutTokens.pageVerticalPadding,
         @ViewBuilder leftColumn: () -> Left,
         @ViewBuilder centerColumn: () -> Center,
         @ViewBuilder rightColumn: () -> Right
@@ -25,7 +25,7 @@ struct NotchV2DashboardLayout<Left: View, Center: View, Right: View>: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: NotchV2DesignTokens.cardSpacing) {
+        HStack(alignment: .top, spacing: CompanionLayoutTokens.majorColumnSpacing) {
             leftColumn
                 .frame(width: leftColumnWidth, alignment: .topLeading)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
@@ -37,7 +37,7 @@ struct NotchV2DashboardLayout<Left: View, Center: View, Right: View>: View {
                 .frame(width: rightColumnWidth, alignment: .topLeading)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(.horizontal, NotchV2DesignTokens.pagePadding)
+        .padding(.horizontal, CompanionLayoutTokens.pageHorizontalPadding)
         .padding(.top, topInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

@@ -35,7 +35,15 @@ struct CompanionCapturePanel: View {
             }
         }
         .frame(width: 460, height: 540)
-        .background(AppSurfaceBackdrop())
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
+                )
+                .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 10, x: 0, y: 5)
+        )
         .onChange(of: viewModel.openDetailAfterCapture) { _, _ in
             viewModel.saveCapturePreferences()
         }
@@ -50,20 +58,19 @@ struct CompanionCapturePanel: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("随身捕获")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
 
                 Text("快速保存当前内容到收集箱")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -76,7 +83,7 @@ struct CompanionCapturePanel: View {
     private var captureTypesGrid: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("捕获方式")
-                .font(.headline)
+                .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(CompanionCaptureType.allCases) { type in
@@ -96,16 +103,16 @@ struct CompanionCapturePanel: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("最近捕获")
-                    .font(.headline)
+                    .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
 
                 Spacer()
 
                 Button("查看全部") {
                     viewModel.showAllCaptures()
                 }
-                .font(.caption)
+                .font(.system(size: AppSurfaceTokens.Typography.badge))
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             VStack(spacing: 8) {
@@ -129,27 +136,27 @@ struct CompanionCapturePanel: View {
     private var quickSettingsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("快速设置")
-                .font(.headline)
+                .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
 
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("自动保存到收集箱")
-                            .font(.body)
+                            .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
 
                         Spacer()
 
                         Text("始终开启")
-                            .font(.caption2)
+                            .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.12))
+                            .background(AppSurfaceTokens.cardBackgroundSoft)
                             .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
 
                     Text("当前所有捕获结果都会自动写入收集箱，这里仅作为状态说明。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.body))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Toggle("捕获后打开详情", isOn: $viewModel.openDetailAfterCapture)
@@ -188,18 +195,17 @@ struct CaptureTypeCard: View {
                         .frame(width: 48, height: 48)
 
                     Image(systemName: type.icon)
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .medium))
                         .foregroundStyle(isHovered ? Color.accentColor : Color.primary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(type.displayName)
-                        .font(.body)
-                        .fontWeight(.medium)
+                        .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
 
                     Text(descriptionForType(type))
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 Spacer()
@@ -253,7 +259,7 @@ struct RecentCaptureRow: View {
                     .frame(width: 32, height: 32)
 
                 Image(systemName: iconForType(capture.type))
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                     .foregroundStyle(colorForType(capture.type))
             }
 

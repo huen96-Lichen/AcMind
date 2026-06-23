@@ -26,20 +26,20 @@ struct EventEditorView: View {
                     viewModel.closeCreateEvent()
                     dismiss()
                 }
-                .font(.system(size: 13))
+                .font(.system(size: AppSurfaceTokens.Typography.body))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
 
                 Text(isEditing ? "编辑日程" : "新建日程")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
 
                 Spacer()
 
                 Button(isEditing ? "更新" : "创建") {
                     validateAndCreate()
                 }
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 5)
@@ -59,20 +59,20 @@ struct EventEditorView: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("标题")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                        TextField("输入日程标题", text: $title)
-                            .font(.system(size: 14))
-                            .textFieldStyle(.plain)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .background(AppSurfaceTokens.cardBackgroundSoft)
-                            .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
-                                    .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
-                            )
+                    TextField("输入日程标题", text: $title)
+                        .font(.system(size: AppSurfaceTokens.Typography.bodyLarge))
+                        .textFieldStyle(.plain)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(AppSurfaceTokens.cardBackgroundSoft)
+                        .cornerRadius(AppSurfaceTokens.secondaryCardRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
+                                .stroke(AppSurfaceTokens.separator, lineWidth: 0.5)
+                        )
                         .onAppear {
                             DispatchQueue.main.async {
                                 NSTextView.currentFirstResponder()?.becomeFirstResponder()
@@ -82,7 +82,7 @@ struct EventEditorView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("分类")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     HStack(spacing: 6) {
@@ -95,7 +95,7 @@ struct EventEditorView: View {
                                         .fill(category.color)
                                         .frame(width: 8, height: 8)
                                     Text(category.name)
-                                        .font(.system(size: 12))
+                                        .font(.system(size: AppSurfaceTokens.Typography.badge))
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -117,14 +117,14 @@ struct EventEditorView: View {
                 }
 
                 Toggle("全天", isOn: $isAllDay)
-                    .font(.system(size: 13))
+                    .font(.system(size: AppSurfaceTokens.Typography.body))
                     .toggleStyle(.switch)
 
                 if !isAllDay {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("开始时间")
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             HStack(spacing: 4) {
@@ -138,7 +138,7 @@ struct EventEditorView: View {
                                 .frame(width: 60)
 
                                 Text(":")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: AppSurfaceTokens.Typography.bodyLarge, weight: .medium))
 
                                 Picker("分", selection: $startMinute) {
                                     ForEach([0, 15, 30, 45], id: \.self) { m in
@@ -161,7 +161,7 @@ struct EventEditorView: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("时长")
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             Picker("时长", selection: $durationMinutes) {
@@ -184,11 +184,11 @@ struct EventEditorView: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("结束时间")
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                             Text(endTimeString)
-                                .font(.system(size: 13))
+                                .font(.system(size: AppSurfaceTokens.Typography.body))
                                 .foregroundStyle(AppSurfaceTokens.primaryText)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -200,20 +200,20 @@ struct EventEditorView: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
-                        .font(.system(size: 12))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Text(dateString)
-                        .font(.system(size: 13))
+                        .font(.system(size: AppSurfaceTokens.Typography.body))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 if let error = validationError ?? viewModel.createError {
                     VStack(alignment: .leading, spacing: 4) {
                         Image(systemName: "exclamationmark.circle")
-                            .font(.system(size: 12))
+                            .font(.system(size: AppSurfaceTokens.Typography.badge))
                             .foregroundStyle(AppSurfaceTokens.accentOrange)
                         Text(error)
-                            .font(.system(size: 12))
+                            .font(.system(size: AppSurfaceTokens.Typography.badge))
                             .foregroundStyle(AppSurfaceTokens.accentOrange)
                             .lineLimit(nil)
                     }

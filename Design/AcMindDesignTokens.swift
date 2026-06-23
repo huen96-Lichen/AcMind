@@ -736,7 +736,7 @@ struct ProductPanelCard<Content: View>: View {
                             .foregroundStyle(palette.textPrimary)
                             .lineLimit(1)
 
-                        if let statusText {
+                        if statusText != nil {
                             Text(ProductPanelTokens.statusLabel(for: resolvedTone))
                                 .font(ProductPanelTokens.Typography.cardCaption)
                                 .foregroundStyle(ProductPanelTokens.tint(for: resolvedTone, palette: palette))

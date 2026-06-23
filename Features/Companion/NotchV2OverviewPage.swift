@@ -5,22 +5,20 @@ struct NotchV2OverviewPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 232, rightColumnWidth: 232) {
+        CompanionPageTemplate.triple(leftWidth: CompanionLayoutTokens.templateAColumnWidth, rightWidth: CompanionLayoutTokens.templateAColumnWidth, left: {
             leftColumn
-        } centerColumn: {
+        }, center: {
             centerColumn
-        } rightColumn: {
+        }, right: {
             rightColumn
-        }
+        })
     }
 
     private var leftColumn: some View {
-        NotchV2Card(
+        CompanionPanel(
             title: "当前任务",
             symbol: "target",
-            padding: 12,
             fillHeight: true,
-            cardAccent: nil
         ) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
@@ -58,12 +56,23 @@ struct NotchV2OverviewPage: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("模块状态")
-                        .font(NotchV2DesignTokens.Typography.caption)
+                        .font(NotchV2DesignTokens.Typography.caption.weight(.medium))
                         .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                    HStack(spacing: 6) {
-                        moduleStatusDot(title: "音乐", enabled: viewModel.isModuleEnabled(.music), active: viewModel.playbackState.isPlaying)
-                        moduleStatusDot(title: "AI", enabled: viewModel.isModuleEnabled(.agent), active: viewModel.status == .listening || viewModel.status == .transcribing)
-                        moduleStatusDot(title: "日程", enabled: viewModel.isModuleEnabled(.schedule), active: false)
+                    if activeOverviewModules.isEmpty {
+                        Text("全部待命")
+                            .font(NotchV2DesignTokens.Typography.caption)
+                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                            .lineLimit(1)
+                    } else {
+                        HStack(spacing: 6) {
+                            ForEach(activeOverviewModules, id: \.self) { module in
+                                moduleStatusDot(
+                                    title: module.displayName.replacingOccurrences(of: "模块", with: ""),
+                                    enabled: viewModel.isModuleEnabled(module),
+                                    active: moduleActiveState(module)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -72,7 +81,7 @@ struct NotchV2OverviewPage: View {
 
     private var centerColumn: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(title: "便捷动作", symbol: "bolt.fill", padding: 12, cardAccent: nil) {
+            CompanionPanel(title: "便捷动作", symbol: "bolt.fill") {
                 VStack(alignment: .leading, spacing: 10) {
                     LazyVGrid(
                         columns: [
@@ -88,32 +97,14 @@ struct NotchV2OverviewPage: View {
                                 action: action.action
                             )
                         }
-
-                        NotchV2ActionButton(
-                            icon: "desktopcomputer",
-                            title: "状态",
-                            isSelected: false
-                        ) {
-                            viewModel.openSystemStatusPage()
-                        }
-
-                        NotchV2ActionButton(
-                            icon: "gearshape",
-                            title: "设置",
-                            isSelected: false
-                        ) {
-                            (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
-                        }
                     }
                 }
             }
 
-            NotchV2Card(
+            CompanionPanel(
                 title: "运行中",
                 symbol: "sparkles",
-                padding: 12,
                 fillHeight: true,
-                cardAccent: nil
             ) {
                 HStack(spacing: 8) {
                     Image(systemName: viewModel.activeRuntimeSurface.symbol)
@@ -151,7 +142,7 @@ struct NotchV2OverviewPage: View {
                 }
             }
 
-            NotchV2Card(title: "系统快览", symbol: "cpu", fillHeight: true, cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            CompanionPanel(title: "系统快览", symbol: "cpu", fillHeight: true, accent: nil) {
                 VStack(alignment: .leading, spacing: 6) {
                     NotchV2InfoRow(title: "电池", value: viewModel.batteryStateText, icon: batteryIconName, accent: viewModel.batteryAccent, compactValue: true)
                     NotchV2InfoRow(title: "麦克风", value: viewModel.microphonePermissionStatus.displayName, icon: "mic.fill", accent: permissionAccent(for: viewModel.microphonePermissionStatus), compactValue: true)
@@ -232,15 +223,32 @@ struct NotchV2OverviewPage: View {
         viewModel.batteryIconName
     }
 
+    private var activeOverviewModules: [DynamicContinentModuleID] {
+        viewModel.orderedOverviewModules.filter { moduleActiveState($0) }
+    }
+
     private func moduleStatusDot(title: String, enabled: Bool, active: Bool) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(active ? NotchV2DesignTokens.secondaryText : (enabled ? NotchV2DesignTokens.secondaryText.opacity(0.75) : NotchV2DesignTokens.weakText))
-                .frame(width: 5, height: 5)
-            Text(title)
-                .font(NotchV2DesignTokens.Typography.caption)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(active ? NotchV2DesignTokens.secondaryText : (enabled ? NotchV2DesignTokens.secondaryText.opacity(0.75) : NotchV2DesignTokens.weakText))
+                    .frame(width: 5, height: 5)
+                Text(title)
+                .font(NotchV2DesignTokens.Typography.caption.weight(.medium))
                 .foregroundStyle(enabled ? NotchV2DesignTokens.primaryText : NotchV2DesignTokens.weakText)
                 .lineLimit(1)
+            }
+    }
+
+    private func moduleActiveState(_ module: DynamicContinentModuleID) -> Bool {
+        switch module {
+        case .music:
+            return viewModel.playbackState.isPlaying
+        case .agent:
+            return viewModel.status == .listening || viewModel.status == .transcribing
+        case .schedule:
+            return false
+        case .systemStatus:
+            return viewModel.systemAttentionHint != nil
         }
     }
 

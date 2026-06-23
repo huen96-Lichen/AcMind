@@ -75,17 +75,8 @@ struct NotchRuntimeSurfaceContext {
 }
 
 enum NotchRuntimeSurfaceDispatcher {
-    static let orderedContentIDs: [CompanionRuntimeContentID] = [
-        .voice,
-        .screenshot,
-        .systemStatus,
-        .music,
-        .schedule,
-        .agent
-    ]
-
     static func resolve(context: NotchRuntimeSurfaceContext, scope: NotchRuntimeSurfaceScope) -> NotchRuntimeSurface {
-        for provider in providers {
+        for provider in orderedProviders(context: context, scope: scope) {
             if let surface = provider(context, scope) {
                 return surface
             }
@@ -93,14 +84,30 @@ enum NotchRuntimeSurfaceDispatcher {
         return .idle
     }
 
-    private static let providers: [@Sendable (NotchRuntimeSurfaceContext, NotchRuntimeSurfaceScope) -> NotchRuntimeSurface?] = [
-        voiceSurface,
-        screenshotSurface,
-        musicSurface,
-        systemStatusSurface,
-        scheduleSurface,
-        agentSurface
+    private static let providers: [(contentID: CompanionRuntimeContentID, provider: @Sendable (NotchRuntimeSurfaceContext, NotchRuntimeSurfaceScope) -> NotchRuntimeSurface?)] = [
+        (.voice, voiceSurface),
+        (.screenshot, screenshotSurface),
+        (.music, musicSurface),
+        (.systemStatus, systemStatusSurface),
+        (.schedule, scheduleSurface),
+        (.agent, agentSurface)
     ]
+
+    private static func orderedProviders(
+        context: NotchRuntimeSurfaceContext,
+        scope: NotchRuntimeSurfaceScope
+    ) -> [@Sendable (NotchRuntimeSurfaceContext, NotchRuntimeSurfaceScope) -> NotchRuntimeSurface?] {
+        let order = switch scope {
+        case .collapsed:
+            context.displaySettings.collapsedVisibleContentOrder
+        case .primary:
+            context.displaySettings.primarySurfaceContentOrder
+        }
+
+        return order.compactMap { contentID in
+            providers.first(where: { $0.contentID == contentID })?.provider
+        }
+    }
 
     private static func voiceSurface(context: NotchRuntimeSurfaceContext, scope: NotchRuntimeSurfaceScope) -> NotchRuntimeSurface? {
         guard context.voiceSurfaceState.isActive, context.allows(.voice, scope: scope) else { return nil }

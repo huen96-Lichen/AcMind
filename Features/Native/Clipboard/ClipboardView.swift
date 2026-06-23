@@ -133,7 +133,7 @@ struct ClipboardView: View {
                     Task { await viewModel.clearHistory() }
                 } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 14))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 .buttonStyle(.plain)
@@ -148,7 +148,7 @@ struct ClipboardView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("概览")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                         Spacer()
                     }
@@ -179,7 +179,7 @@ struct ClipboardView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Pin 管理")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     HStack(spacing: 6) {
@@ -210,10 +210,10 @@ struct ClipboardView: View {
     private func statBadge(count: Int, label: String, color: Color) -> some View {
         VStack(spacing: 2) {
             Text("\(count)")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: AppSurfaceTokens.Typography.metricValue, weight: .bold, design: .rounded))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
             Text(label)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
         .frame(maxWidth: .infinity)
@@ -232,9 +232,9 @@ struct ClipboardView: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
+                    .font(.system(size: AppSurfaceTokens.Typography.control))
                 Text(title)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
@@ -248,9 +248,9 @@ struct ClipboardView: View {
     private var pinWindowCountBadge: some View {
         return HStack(spacing: 6) {
             Image(systemName: "pin")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
             Text("Pin \(pinWindowCount)")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -273,12 +273,12 @@ struct ClipboardView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .font(.caption)
+                .font(.system(size: AppSurfaceTokens.Typography.control))
 
             TextField("搜索...", text: $viewModel.searchQuery)
                 .textFieldStyle(.plain)
                 .frame(width: 160)
-                .font(.system(size: 12))
+                .font(.system(size: AppSurfaceTokens.Typography.control))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -339,10 +339,10 @@ struct ClipboardView: View {
                         HStack(spacing: 4) {
                             if let icon = filter?.icon {
                                 Image(systemName: icon)
-                                    .font(.system(size: 11))
+                                    .font(.system(size: AppSurfaceTokens.Typography.badge))
                             }
                             Text(filter?.displayName ?? "全部")
-                                .font(.caption)
+                                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -373,7 +373,7 @@ struct ClipboardView: View {
                                     .fill(tag.swiftColor)
                                     .frame(width: 6, height: 6)
                                 Text(tag.name)
-                                    .font(.caption)
+                                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
@@ -414,11 +414,11 @@ struct ClipboardView: View {
 
             VStack(spacing: 6) {
                 Text(viewModel.searchQuery.isEmpty ? "剪贴板为空" : "未找到匹配内容")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: AppSurfaceTokens.Typography.bodyLarge, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Text(viewModel.searchQuery.isEmpty ? "复制内容后将自动记录在此处" : "尝试修改搜索关键词或筛选条件")
-                    .font(.system(size: 12))
+                    .font(.system(size: AppSurfaceTokens.Typography.body))
                     .foregroundStyle(AppSurfaceTokens.tertiaryText)
             }
 
@@ -429,7 +429,7 @@ struct ClipboardView: View {
                     viewModel.selectedTag = nil
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)

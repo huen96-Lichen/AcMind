@@ -41,19 +41,19 @@ struct CompanionCapabilityCard<Content: View>: View {
                         .frame(width: 44, height: 44)
                     
                     Image(systemName: iconName)
-                        .font(.title)
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle + 2, weight: .semibold))
                         .foregroundColor(iconColor)
                 }
                 
                 // Title & Description
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.title3)
-                        .fontWeight(.semibold)
+                        .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
                     
                     Text(description)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 
                 Spacer()
@@ -77,11 +77,11 @@ struct CompanionCapabilityCard<Content: View>: View {
         }
         .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
         )
         .shadow(color: AppSurfaceTokens.separator.opacity(0.08), radius: 3, x: 0, y: 1)

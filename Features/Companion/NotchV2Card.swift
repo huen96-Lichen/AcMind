@@ -7,6 +7,69 @@ enum NotchV2CardStyle {
     case timeline
 }
 
+struct NotchV2Glyph: View {
+    enum Role {
+        case cardTitle
+        case action
+        case pill
+        case infoRow
+        case statusStrip
+
+        var fontSize: CGFloat {
+            switch self {
+            case .cardTitle: return 10
+            case .action: return 10
+            case .pill: return 9
+            case .infoRow: return 9
+            case .statusStrip: return 8
+            }
+        }
+
+        var frameSize: CGSize {
+            switch self {
+            case .cardTitle: return CGSize(width: 16, height: 16)
+            case .action: return CGSize(width: 24, height: 24)
+            case .pill: return CGSize(width: 12, height: 12)
+            case .infoRow: return CGSize(width: 14, height: 14)
+            case .statusStrip: return CGSize(width: 11, height: 11)
+            }
+        }
+
+        var backgroundOpacity: Double {
+            switch self {
+            case .cardTitle: return 0.08
+            case .action: return 0.12
+            case .pill, .infoRow, .statusStrip: return 0
+            }
+        }
+    }
+
+    let symbol: String
+    var role: Role = .pill
+    var tint: Color = NotchV2DesignTokens.secondaryText
+    var isActive: Bool = false
+
+    var body: some View {
+        let size = role.frameSize
+
+        ZStack {
+            if role.backgroundOpacity > 0 {
+                RoundedRectangle(cornerRadius: min(size.width, size.height) * 0.28, style: .continuous)
+                    .fill(tint.opacity(isActive ? role.backgroundOpacity + 0.04 : role.backgroundOpacity))
+            }
+
+            Image(systemName: symbol)
+                .symbolRenderingMode(.monochrome)
+                .imageScale(.small)
+                .font(.system(size: role.fontSize, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: size.width, height: size.height, alignment: .center)
+        }
+        .frame(width: size.width, height: size.height, alignment: .center)
+        .accessibilityHidden(true)
+    }
+}
+
 struct NotchV2Card<Content: View>: View {
     let title: String?
     let subtitle: String?
@@ -58,9 +121,7 @@ struct NotchV2Card<Content: View>: View {
             if let title {
                 HStack(alignment: .center, spacing: 6) {
                     if let symbol {
-                        Image(systemName: symbol)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                        NotchV2Glyph(symbol: symbol, role: .cardTitle)
                     }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(title)
@@ -93,11 +154,11 @@ struct NotchV2Card<Content: View>: View {
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .stroke(
-                    cardAccent?.opacity(0.22) ?? NotchV2DesignTokens.panelBorder,
-                    lineWidth: 0.8
+                    cardAccent?.opacity(0.16) ?? NotchV2DesignTokens.panelBorder.opacity(0.92),
+                    lineWidth: 0.75
                 )
         )
-        .shadow(color: cardAccent?.opacity(0.03) ?? .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: cardAccent?.opacity(0.02) ?? .black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 
@@ -150,40 +211,7 @@ struct NotchV2ActionButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                        .fill(isSelected ? accent.opacity(0.14) : NotchV2DesignTokens.innerCardBackground.opacity(0.95))
-                        .frame(width: 24, height: 24)
-
-                    Image(systemName: icon)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(isSelected ? accent : NotchV2DesignTokens.secondaryText)
-                }
-
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(minHeight: 36)
-            .background(
-                RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                    .fill(isSelected ? NotchV2DesignTokens.panelBackground : NotchV2DesignTokens.panelBackground.opacity(0.90))
-            )
-                .overlay(
-                    RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                        .stroke(isSelected ? NotchV2DesignTokens.separator.opacity(0.50) : NotchV2DesignTokens.separator.opacity(0.22), lineWidth: 1)
-                )
-                .shadow(color: isSelected ? .black.opacity(0.05) : .clear, radius: 4, x: 0, y: 2)
-        }
-        .buttonStyle(.plain)
+        CompanionActionButton(icon: icon, title: title, accent: accent, isSelected: isSelected, action: action)
     }
 }
 
@@ -220,30 +248,7 @@ struct NotchV2StatusPill: View {
     }
 
     private var pillContent: some View {
-        HStack(spacing: 5) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(NotchV2DesignTokens.primaryText)
-            }
-            Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .scaleEffect(isSelected ? 1.02 : 1.0)
-        .background(
-            Capsule(style: .continuous)
-                .fill(isSelected ? accent.opacity(0.92) : accent.opacity(0.92))
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(isSelected ? Color.white.opacity(0.12) : Color.white.opacity(0.06), lineWidth: 1)
-        )
-        .animation(.easeOut(duration: 0.16), value: isSelected)
+        CompanionStatusPill(icon: icon, title: title, accent: accent, isSelected: isSelected, action: action)
     }
 }
 
@@ -307,36 +312,6 @@ struct NotchV2InfoRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .frame(width: 14)
-            }
-
-            Text(title)
-                .font(NotchV2DesignTokens.Typography.caption)
-                .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            Text(value)
-                .font(compactValue ? NotchV2DesignTokens.Typography.caption : NotchV2DesignTokens.Typography.body)
-                .foregroundStyle(NotchV2DesignTokens.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(accent.opacity(0.10), lineWidth: 1)
-        )
+        CompanionValueRow(title: title, value: value, icon: icon, accent: accent)
     }
 }

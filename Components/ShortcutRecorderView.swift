@@ -16,31 +16,35 @@ struct ShortcutRecorderView: View {
             }
         }) {
             HStack(spacing: 8) {
+                Image(systemName: isRecording ? "record.circle.fill" : "keyboard")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(isRecording ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
+
                 if isRecording {
                     Text("按下快捷键...")
-                        .font(.system(size: 13))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.accentBlue)
                 } else if shortcut.isEmpty {
                     Text("点击录制")
-                        .font(.system(size: 13))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 } else {
                     Text(shortcut)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .monospaced))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .frame(minWidth: 120)
+            .frame(minWidth: 128, minHeight: AppSurfaceTokens.Layout.buttonHeight)
             .background(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .fill(isRecording ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackground.opacity(0.94))
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
+                    .fill(isRecording ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackgroundSoft)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
                     .stroke(isRecording ? AppSurfaceTokens.accentBlue.opacity(0.5) : AppSurfaceTokens.separator.opacity(0.6), lineWidth: 1)
             )
+            .shadow(color: AppSurfaceTokens.separator.opacity(isRecording ? 0.08 : 0.05), radius: 2, x: 0, y: 1)
         }
         .buttonStyle(.plain)
         .onDisappear {

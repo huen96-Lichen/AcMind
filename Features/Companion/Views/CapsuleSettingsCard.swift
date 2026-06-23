@@ -22,7 +22,8 @@ struct CapsuleSettingsCard: View {
                     // Display Position
                     VStack(alignment: .leading, spacing: 8) {
                         Text("展示位置")
-                            .font(.headline)
+                            .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
                         
                         Picker("位置", selection: $position) {
                             ForEach(CompanionCapsulePosition.allCases, id: \.self) { pos in

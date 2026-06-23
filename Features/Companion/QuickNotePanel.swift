@@ -25,7 +25,7 @@ struct QuickNotePanel: View {
 
                     if viewModel.noteText.isEmpty {
                         Text("输入快速记录内容...")
-                            .font(.system(size: 15))
+                            .font(.system(size: AppSurfaceTokens.Typography.bodyLarge))
                             .foregroundStyle(AppSurfaceTokens.tertiaryText)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 22)
@@ -36,8 +36,8 @@ struct QuickNotePanel: View {
                 // 底部操作栏
                 HStack {
                     Text("Cmd+Enter 保存  ·  Esc 关闭")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
+                        .foregroundStyle(AppSurfaceTokens.tertiaryText)
 
                     Spacer()
 
@@ -90,20 +90,19 @@ struct QuickNotePanel: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("快速记录")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
 
                 Text("保存到收集箱")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
             Spacer()
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             .buttonStyle(PlainButtonStyle())
         }

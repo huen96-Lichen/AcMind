@@ -16,20 +16,20 @@ struct NotchV2LightStatusStrip: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            ForEach(sortedItems.prefix(6)) { item in
+            ForEach(displayItems) { item in
                 statusChip(item)
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
         .background(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .fill(NotchV2DesignTokens.panelBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .stroke(NotchV2DesignTokens.separator.opacity(0.36), lineWidth: 1)
+                .stroke(NotchV2DesignTokens.separator.opacity(0.24), lineWidth: 0.8)
         )
     }
 
@@ -45,20 +45,36 @@ struct NotchV2LightStatusStrip: View {
         }
     }
 
-    private func statusChip(_ item: NotchV2LightStatusItem) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: item.icon)
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(item.accent)
+    private var displayItems: [NotchV2LightStatusItem] {
+        let prioritized = sortedItems.filter { $0.highlighted }
+        if prioritized.isEmpty {
+            return Array(sortedItems.prefix(4))
+        }
+        return Array((prioritized + sortedItems.filter { $0.highlighted == false }).prefix(4))
+    }
 
-            Text("\(item.title) · \(item.detail)")
-                .font(.system(size: 8, weight: .medium, design: .rounded))
+    private func statusChip(_ item: NotchV2LightStatusItem) -> some View {
+        HStack(spacing: 5) {
+            NotchV2Glyph(
+                symbol: item.icon,
+                role: .statusStrip,
+                tint: item.accent,
+                isActive: item.highlighted
+            )
+
+            Text(item.title)
+                .font(.system(size: 8.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+
+            Text(item.detail)
+                .font(.system(size: 8, weight: .medium, design: .rounded))
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .scaleEffect(item.highlighted ? 1.02 : 1.0)
         .background(
             RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
@@ -66,9 +82,9 @@ struct NotchV2LightStatusStrip: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                .stroke(item.highlighted ? item.accent.opacity(0.18) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
+                .stroke(item.highlighted ? item.accent.opacity(0.12) : NotchV2DesignTokens.separator.opacity(0.12), lineWidth: 0.8)
         )
-        .shadow(color: item.highlighted ? item.accent.opacity(0.05) : .clear, radius: 4, x: 0, y: 2)
+        .shadow(color: item.highlighted ? item.accent.opacity(0.03) : .clear, radius: 3, x: 0, y: 1)
         .animation(.easeOut(duration: 0.16), value: item.highlighted)
     }
 }
@@ -245,11 +261,10 @@ struct NotchV2SystemRail: View {
 
     var body: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            NotchV2Card(
+            CompanionPanel(
                 title: "本机状态",
                 symbol: "desktopcomputer",
-                fillHeight: true,
-                cornerRadius: NotchV2DesignTokens.rightCardRadius
+                fillHeight: true
             ) {
                 VStack(alignment: .leading, spacing: 6) {
                     statusRow(title: "电池", value: viewModel.batteryStateText, accent: viewModel.batteryAccent)

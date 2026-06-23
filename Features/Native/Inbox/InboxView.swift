@@ -32,7 +32,7 @@ struct InboxView: View {
             subtitle: "\(viewModel.items.count) 条内容",
             headerActions: AnyView(addContentMenu),
             leadingRailWidth: AppSurfaceTokens.Layout.leadingRailWidth,
-            trailingRailWidth: AppSurfaceTokens.Layout.trailingRailWidth,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             usesResponsiveInspector: true,
             compactInspectorTitle: "收集详情",
             leadingRail: {
@@ -161,6 +161,10 @@ struct InboxView: View {
 
     private var itemList: some View {
         VStack(spacing: 0) {
+            inboxOverviewCard
+
+            Divider()
+
             inboxControlBar
 
             if let batchResult = viewModel.lastBatchOperationResult {
@@ -268,6 +272,76 @@ struct InboxView: View {
         } message: {
             Text("删除后这些收集项会从当前来源移除。此操作不会影响未选择的内容。")
         }
+    }
+
+    private var inboxOverviewCard: some View {
+        AppSurfaceCard(title: "收集概览", subtitle: "摘要卡 + 列表区", padding: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10)
+                    ],
+                    spacing: 10
+                ) {
+                    inboxSummaryChip(title: "总量", value: "\(viewModel.allItems.count) 条", tint: AppSurfaceTokens.accentBlue)
+                    inboxSummaryChip(title: "待处理", value: "\(viewModel.count(for: InboxQuickFilter.pending)) 条", tint: AppSurfaceTokens.accentOrange)
+                    inboxSummaryChip(title: "Pin", value: "\(viewModel.count(for: .pinned)) 条", tint: AppSurfaceTokens.accentGreen)
+                    inboxSummaryChip(title: "收藏", value: "\(viewModel.count(for: .favorites)) 条", tint: AppSurfaceTokens.secondaryText)
+                }
+
+                HStack(alignment: .center, spacing: 10) {
+                    AppSurfaceSummaryChip(
+                        title: "筛选",
+                        value: activeFilterSummary,
+                        tint: AppSurfaceTokens.primaryText
+                    )
+                    AppSurfaceSummaryChip(
+                        title: "队列",
+                        value: viewModel.pasteQueueItems.isEmpty ? "空" : "\(viewModel.pasteQueueItems.count) 项",
+                        tint: AppSurfaceTokens.accentBlue
+                    )
+                    AppSurfaceSummaryChip(
+                        title: "模式",
+                        value: viewModel.viewMode == .list ? "列表" : "网格",
+                        tint: AppSurfaceTokens.secondaryText
+                    )
+                }
+
+                Text("列表主体保持高效浏览，顶部只负责概览与状态解释。")
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+            }
+        }
+        .padding(.horizontal, AppSurfaceTokens.Spacing.lg)
+        .padding(.top, AppSurfaceTokens.Spacing.lg)
+    }
+
+    private func inboxSummaryChip(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
+        .padding(.vertical, AppSurfaceTokens.Spacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
     }
 
     private func inboxColumns(availableWidth: CGFloat) -> [GridItem] {
@@ -593,7 +667,7 @@ struct InboxView: View {
                 tint: AppSurfaceTokens.accentBlue
             )
         }
-        .padding(16)
+        .padding(AppSurfaceTokens.Spacing.lg)
     }
 
     private var loadingState: some View {
@@ -602,7 +676,7 @@ struct InboxView: View {
         ) {
             EmptyView()
         }
-        .padding(16)
+        .padding(AppSurfaceTokens.Spacing.lg)
     }
 
     private func errorState(message: String) -> some View {
@@ -613,7 +687,7 @@ struct InboxView: View {
         ) {
             EmptyView()
         }
-        .padding(16)
+        .padding(AppSurfaceTokens.Spacing.lg)
     }
 
     @MainActor
@@ -721,7 +795,7 @@ private struct CollectedInboxFilterRail: View {
                     .padding(.top, 2)
                 }
             }
-            .padding(14)
+            .padding(AppSurfaceTokens.Spacing.lg)
         }
         .background(AppSurfaceBackdrop())
         .accessibilityLabel("收集箱筛选栏")
@@ -730,16 +804,16 @@ private struct CollectedInboxFilterRail: View {
     private var railHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Filter Rail")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .bold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .textCase(.uppercase)
 
             Text("收集箱")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.pageTitle, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
 
             Text("\(items.count) 条内容 · 多条件筛选")
-                .font(.system(size: 12))
+                .font(.system(size: AppSurfaceTokens.Typography.caption))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
     }

@@ -86,7 +86,7 @@ struct SettingsView: View {
                 )
             ),
             leadingRailWidth: 208,
-            trailingRailWidth: 224,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
                 settingsSidebar
             },
@@ -97,6 +97,9 @@ struct SettingsView: View {
                             settingsSearchResultsPanel
                                 .padding(.bottom, 20)
                         }
+
+                        settingsOverviewCard
+                            .padding(.bottom, 18)
 
                         settingsHeader
 
@@ -124,7 +127,7 @@ struct SettingsView: View {
                 settingsSummaryRail
             }
         )
-        .frame(minWidth: 1500, minHeight: 860)
+        .frame(minWidth: AppSurfaceTokens.Layout.minimumWindowWidth, minHeight: AppSurfaceTokens.Layout.minimumWindowHeight)
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -150,6 +153,61 @@ struct SettingsView: View {
 
     private var settingsSearchQuery: String {
         searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var settingsOverviewCard: some View {
+        AppSurfaceCard(title: "设置概览", subtitle: "Bento 概览 + 线性内容", padding: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(
+                        title: "分类",
+                        value: selectedCategory.displayName,
+                        tint: AppSurfaceTokens.accentBlue
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "搜索",
+                        value: settingsSearchQuery.isEmpty ? "无" : "已启用",
+                        tint: settingsSearchQuery.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "插件",
+                        value: "\(pluginSummaries.count) 个",
+                        tint: AppSurfaceTokens.accentGreen
+                    )
+                ])
+
+                HStack(spacing: 10) {
+                    overviewMetric(title: "录制快捷键", value: recordingShortcutTarget == nil ? "空闲" : "进行中", tint: recordingShortcutTarget == nil ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
+                    overviewMetric(title: "偏好项", value: viewModel.companionCapsuleShowOnLaunch ? "启动显示" : "按需显示", tint: AppSurfaceTokens.accentBlue)
+                    overviewMetric(title: "加载状态", value: isLoadingPluginSummaries ? "刷新中" : "就绪", tint: AppSurfaceTokens.secondaryText)
+                }
+
+                Text("顶部只负责给出当前上下文和状态摘要，下面继续保持原有线性设置内容。")
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(2)
+            }
+        }
+    }
+
+    private var settingsSummaryChips: [AppSurfaceSummaryChip] {
+        [
+            AppSurfaceSummaryChip(
+                title: "当前分类",
+                value: selectedCategory.displayName,
+                tint: AppSurfaceTokens.accentBlue
+            ),
+            AppSurfaceSummaryChip(
+                title: "搜索",
+                value: settingsSearchQuery.isEmpty ? "无" : "已输入",
+                tint: settingsSearchQuery.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange
+            ),
+            AppSurfaceSummaryChip(
+                title: "插件",
+                value: "\(pluginSummaries.count) 个",
+                tint: AppSurfaceTokens.accentGreen
+            )
+        ]
     }
 
     private var searchKeyboardShortcut: some View {
@@ -187,12 +245,14 @@ struct SettingsView: View {
     private var settingsSummaryRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceSummaryStrip(chips: settingsSummaryChips)
+
                 AppSurfaceCard(title: "当前分类", subtitle: "固定结构中的上下文提示", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(selectedCategory.displayName)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
                         Text(selectedCategory.description)
-                            .font(.system(size: 12))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
@@ -212,7 +272,7 @@ struct SettingsView: View {
                 AppSurfaceCard(title: "视图状态", subtitle: "真实可见内容", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("搜索: \(searchQuery.isEmpty ? "无" : searchQuery)")
-                            .font(.system(size: 12))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                         Text(
                             "快捷键录制: " + SettingsStatusLabelFormatter.binaryState(
@@ -221,7 +281,7 @@ struct SettingsView: View {
                                 disabledText: "未开启"
                             )
                         )
-                            .font(.system(size: 12))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                 }
@@ -308,6 +368,24 @@ struct SettingsView: View {
             padding: 14
         ) {
             VStack(alignment: .leading, spacing: 8) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(
+                        title: "结果",
+                        value: results.isEmpty ? "0" : "\(results.count)",
+                        tint: results.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentBlue
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "分类",
+                        value: selectedCategory.displayName,
+                        tint: AppSurfaceTokens.accentGreen
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "插件",
+                        value: "\(pluginSummaries.count) 个",
+                        tint: AppSurfaceTokens.accentOrange
+                    )
+                ])
+
                 if results.isEmpty {
                     Text("没有找到匹配的设置项。可以试试“主题”、“快捷键”、“权限”或“备份”。")
                         .font(.caption)
@@ -569,6 +647,32 @@ struct SettingsView: View {
             status: settingsSearchQuery.isEmpty ? "类别 · \(selectedCategory.icon)" : "搜索 · \(settingsSearchQuery)"
         )
         .padding(.bottom, 20)
+    }
+
+    private func overviewMetric(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
+        .padding(.vertical, AppSurfaceTokens.Spacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
     }
 
 }

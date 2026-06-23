@@ -25,7 +25,7 @@ struct ToolsView: View {
                 )
             ),
             leadingRailWidth: 208,
-            trailingRailWidth: 224,
+            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
                 toolsFilterRail
             },
@@ -87,7 +87,7 @@ struct ToolsView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(AppSurfaceTokens.Spacing.lg)
         }
         .background(AppSurfaceTokens.cardBackgroundSoft)
     }
@@ -110,11 +110,11 @@ struct ToolsView: View {
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(selectedTool.name)
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
                                         .foregroundStyle(AppSurfaceTokens.primaryText)
                                         .lineLimit(2)
                                     Text(selectedTool.description)
-                                        .font(.system(size: 12))
+                                        .font(.system(size: AppSurfaceTokens.Typography.caption))
                                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -149,7 +149,7 @@ struct ToolsView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(AppSurfaceTokens.Spacing.lg)
         }
         .background(AppSurfaceTokens.cardBackgroundSoft)
     }
@@ -162,11 +162,11 @@ struct ToolsView: View {
     private func railSummaryRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 12))
+                .font(.system(size: AppSurfaceTokens.Typography.caption))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Spacer()
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .lineLimit(1)
         }
@@ -211,6 +211,8 @@ struct ToolsView: View {
     private var toolsGrid: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                toolsOverviewCard
+
                 AppSurfaceCard(title: "工具总览", subtitle: "搜索、筛选与快速入口都放在同一层", padding: 16) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
@@ -246,9 +248,44 @@ struct ToolsView: View {
                     }
                 }
             }
-            .padding(20)
+            .padding(AppSurfaceTokens.Spacing.lg)
         }
         .background(Color.clear)
+    }
+
+    private var toolsOverviewCard: some View {
+        AppSurfaceCard(title: "工具台概览", subtitle: "入口矩阵 + 结果区", padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                AppSurfaceSummaryStrip(chips: [
+                    AppSurfaceSummaryChip(
+                        title: "分类",
+                        value: viewModel.selectedCategory.displayName,
+                        tint: AppSurfaceTokens.accentBlue
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "命中",
+                        value: "\(viewModel.filteredTools.count) 个",
+                        tint: AppSurfaceTokens.accentGreen
+                    ),
+                    AppSurfaceSummaryChip(
+                        title: "最近",
+                        value: "\(viewModel.recentTools.count) 个",
+                        tint: viewModel.recentTools.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange
+                    )
+                ])
+
+                HStack(spacing: 10) {
+                    overviewMetric(title: "工作阶段", value: ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute).title, tint: AppSurfaceTokens.accentBlue)
+                    overviewMetric(title: "筛选状态", value: viewModel.searchQuery.isEmpty ? "未搜索" : "已搜索", tint: viewModel.searchQuery.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
+                    overviewMetric(title: "详情面板", value: selectedTool == nil ? "未选中" : "已打开", tint: selectedTool == nil ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentGreen)
+                }
+
+                Text("顶部先把当前分类、命中数和最近使用亮出来，下面仍然保持原来的工具网格与详情区。")
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(2)
+            }
+        }
     }
 
     private var toolsCategoryStrip: some View {
@@ -283,14 +320,14 @@ struct ToolsView: View {
         }
     }
 
-    private func overviewMetric(title: String, value: String) -> some View {
+    private func overviewMetric(title: String, value: String, tint: Color = AppSurfaceTokens.primaryText) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(.system(size: 11))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
             Text(value)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .foregroundStyle(tint)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

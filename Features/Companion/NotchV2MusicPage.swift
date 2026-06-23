@@ -5,17 +5,17 @@ struct NotchV2MusicPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 224, rightColumnWidth: 224) {
+        CompanionPageTemplate.triple(leftWidth: CompanionLayoutTokens.templateAColumnWidth, rightWidth: CompanionLayoutTokens.templateAColumnWidth, left: {
             leftColumn
-        } centerColumn: {
+        }, center: {
             centerColumn
-        } rightColumn: {
+        }, right: {
             rightColumn
-        }
+        })
     }
 
     private var leftColumn: some View {
-        NotchV2Card(title: "播放队列", symbol: "music.note.list", fillHeight: true) {
+        CompanionPanel(title: "播放队列", symbol: "music.note.list", fillHeight: true) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("当前上下文")
                     .font(NotchV2DesignTokens.Typography.caption)
@@ -26,15 +26,6 @@ struct NotchV2MusicPage: View {
                     NotchV2InfoRow(title: "状态", value: playbackStatusText, icon: "waveform", accent: .green, compactValue: true)
                     NotchV2InfoRow(title: "专辑", value: albumText, icon: "music.note", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
                 }
-
-                Divider()
-                    .overlay(NotchV2DesignTokens.separator.opacity(0.45))
-
-                Text(contextDetailText)
-                    .font(NotchV2DesignTokens.Typography.body)
-                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
-                    .lineLimit(3)
-                    .truncationMode(.tail)
 
                 Divider()
                     .overlay(NotchV2DesignTokens.separator.opacity(0.45))
@@ -54,11 +45,10 @@ struct NotchV2MusicPage: View {
     }
 
     private var centerColumn: some View {
-        NotchV2Card(
+        CompanionPanel(
             title: "正在播放",
             symbol: "play.circle.fill",
-            fillHeight: true,
-            cardAccent: NotchV2DesignTokens.accentGreen
+            fillHeight: true
         ) {
             VStack(alignment: .leading, spacing: 10) {
                 if viewModel.hasPlaybackContext == false {
@@ -129,11 +119,10 @@ struct NotchV2MusicPage: View {
     }
 
     private var controlCard: some View {
-        NotchV2Card(
+        CompanionPanel(
             title: "播放控制",
             symbol: "slider.horizontal.3",
             fillHeight: true,
-            cornerRadius: NotchV2DesignTokens.rightCardRadius
         ) {
             VStack(alignment: .leading, spacing: 7) {
                 controlRow(
@@ -294,23 +283,7 @@ struct NotchV2MusicPage: View {
     }
 
     private var queueEmptyStateDetail: String {
-        viewModel.hasPlaybackContext ? "当前只检测到正在播放的曲目，暂未拿到下一首队列。" : "开始播放后，这里会保留当前曲目和后续队列的上下文。"
-    }
-
-    private var contextDetailText: String {
-        guard viewModel.hasPlaybackContext else {
-            return "暂无播放上下文。开始播放音乐或网页媒体后，来源、曲目和播放状态会在这里汇合。"
-        }
-
-        if viewModel.playbackState.title.isEmpty == false {
-            return NowPlayingSourceLabelFormatter.trackDetailLabel(
-                title: viewModel.playbackState.title,
-                bundleIdentifier: viewModel.playbackState.bundleIdentifier,
-                source: viewModel.playbackState.sourceLabel
-            )
-        }
-
-        return sourceTitle
+        viewModel.hasPlaybackContext ? "当前只检测到播放中的曲目，暂未拿到下一首队列。" : "开始播放后，这里会保留当前曲目和后续队列。"
     }
 
     private func playbackButton(systemName: String, size: CGFloat, isPrimary: Bool = false, action: @escaping () -> Void) -> some View {

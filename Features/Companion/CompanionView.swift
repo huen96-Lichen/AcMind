@@ -50,9 +50,9 @@ struct CompanionView: View {
                 // Permissions Section (optional, kept at bottom)
                 companionPermissionsSection
             }
-            .padding(.horizontal, 40)
-            .padding(.vertical, 24)
-            .frame(maxWidth: 1200, alignment: .leading)
+            .padding(.horizontal, AppSurfaceTokens.Spacing.xl)
+            .padding(.vertical, AppSurfaceTokens.Spacing.lg)
+            .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppSurfaceBackdrop())
@@ -84,12 +84,12 @@ struct CompanionView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "lock.shield.fill")
-                    .font(.title3)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                 
                 Text("权限状态")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
             }
             
             VStack(spacing: 12) {
@@ -113,13 +113,13 @@ struct CompanionView: View {
             }
         }
         .opacity(viewModel.companionEnabled ? 1.0 : 0.55)
-        .padding(16)
+        .padding(AppSurfaceTokens.Spacing.md)
         .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
         )
     }
@@ -142,12 +142,12 @@ struct CompanionPermissionRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.body)
-                    .fontWeight(.medium)
+                    .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
                 
                 Text(description)
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
             
             Spacer()
@@ -158,16 +158,15 @@ struct CompanionPermissionRow: View {
                     .frame(width: 8, height: 8)
                 
                 Text(status.displayName)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
                     .foregroundStyle(status.color)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
             .padding(.vertical, 4)
-            .background(status.color.opacity(0.1))
-            .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+            .background(status.color.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous))
         }
-        .padding(12)
+        .padding(AppSurfaceTokens.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackgroundSoft)

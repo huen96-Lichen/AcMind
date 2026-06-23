@@ -70,20 +70,24 @@ enum NotchV2DesignTokens {
 
 enum NotchV2Page: String, CaseIterable, Identifiable {
     case overview
+    case launcher
     case music
     case agent
     case schedule
     case systemStatus
+    case settings
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .overview: return "本机"
+        case .launcher: return "启动器"
         case .music: return "音乐"
         case .agent: return "AI"
         case .schedule: return "日程"
         case .systemStatus: return "状态"
+        case .settings: return "设置"
         }
     }
 }

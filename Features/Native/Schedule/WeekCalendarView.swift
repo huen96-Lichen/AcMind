@@ -49,11 +49,11 @@ private struct WeekHeader: View {
 
                 VStack(spacing: 2) {
                     Text(weekdaySymbols[weekdayIndex])
-                        .font(.system(size: 10))
+                        .font(.system(size: AppSurfaceTokens.Typography.badge))
                         .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
 
                     Text("\(calendar.component(.day, from: date))")
-                        .font(.system(size: isToday ? 16 : 14, weight: isToday ? .bold : .medium))
+                        .font(.system(size: isToday ? AppSurfaceTokens.Typography.bodyLarge + 1 : AppSurfaceTokens.Typography.bodyLarge - 1, weight: isToday ? .bold : .medium))
                         .foregroundStyle(isToday ? AppSurfaceTokens.primaryText : AppSurfaceTokens.primaryText)
                         .frame(width: isToday ? 28 : 24, height: isToday ? 28 : 24)
                         .background(
@@ -82,7 +82,7 @@ private struct AllDayEventRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Text("全天")
-                .font(.system(size: 10))
+                .font(.system(size: AppSurfaceTokens.Typography.badge))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .frame(width: ScheduleLayout.weekTimeColumnWidth, alignment: .trailing)
                 .padding(.trailing, 8)
@@ -93,7 +93,7 @@ private struct AllDayEventRow: View {
                 VStack(spacing: 2) {
                     ForEach(dayAllDayEvents) { event in
                         Text(event.title)
-                            .font(.system(size: 10))
+                            .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -151,7 +151,7 @@ private struct HourRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(String(format: "%02d:00", hour))
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: AppSurfaceTokens.Typography.caption, design: .monospaced))
                 .foregroundStyle(AppSurfaceTokens.tertiaryText)
                 .frame(width: ScheduleLayout.weekTimeColumnWidth, alignment: .trailing)
                 .padding(.trailing, 8)

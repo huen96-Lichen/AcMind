@@ -23,11 +23,12 @@ struct ShortcutSettingsCard: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(shortcut.action)
-                                .font(.body)
+                                .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
                             
                             Text(shortcut.description)
-                                .font(.caption)
-                                .foregroundStyle(Color.secondary)
+                                .font(.system(size: AppSurfaceTokens.Typography.caption))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
                         
                         Spacer()

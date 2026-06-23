@@ -105,7 +105,7 @@ final class NotchV2ViewModel: ObservableObject {
         let openStatusAction: () -> Void
 
         var body: some View {
-            NotchV2Card(title: hint.title, symbol: hint.symbol, cornerRadius: NotchV2DesignTokens.rightCardRadius) {
+            CompanionPanel(title: hint.title, symbol: hint.symbol) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .top, spacing: 8) {
                         Circle()
@@ -452,6 +452,8 @@ final class NotchV2ViewModel: ObservableObject {
         switch page {
         case .overview:
             return true
+        case .launcher:
+            return true
         case .music:
             return isModuleEnabled(.music)
         case .agent:
@@ -460,6 +462,194 @@ final class NotchV2ViewModel: ObservableObject {
             return isModuleEnabled(.schedule)
         case .systemStatus:
             return true
+        case .settings:
+            return true
+        }
+    }
+
+    var orderedEnabledModules: [DynamicContinentModuleID] {
+        displaySettings.dynamicModuleOrder.filter { displaySettings.enabledDynamicModules.contains($0) }
+    }
+
+    var orderedOverviewModules: [DynamicContinentModuleID] {
+        displaySettings.dynamicModuleOrder.filter {
+            displaySettings.enabledDynamicModules.contains($0) &&
+            displaySettings.overviewVisibleModules.contains($0)
+        }
+    }
+
+    func orderedRuntimeContents(for scope: NotchRuntimeSurfaceScope) -> [CompanionRuntimeContentID] {
+        let baseOrder = switch scope {
+        case .collapsed:
+            displaySettings.collapsedVisibleContentOrder
+        case .primary:
+            displaySettings.primarySurfaceContentOrder
+        }
+        let allowedSet = switch scope {
+        case .collapsed:
+            displaySettings.collapsedVisibleContents
+        case .primary:
+            displaySettings.primarySurfaceContents
+        }
+        return baseOrder.filter { allowedSet.contains($0) }
+    }
+
+    func updateDisplaySettings(_ mutate: (inout CompanionDisplaySettings) -> Void) {
+        var settings = displaySettings
+        mutate(&settings)
+        settings.dynamicModuleOrder = Self.normalizedOrder(
+            settings.dynamicModuleOrder,
+            fallback: DynamicContinentModuleID.allCases
+        )
+        settings.collapsedVisibleContentOrder = Self.normalizedOrder(
+            settings.collapsedVisibleContentOrder,
+            fallback: CompanionRuntimeContentID.allCases
+        )
+        settings.primarySurfaceContentOrder = Self.normalizedOrder(
+            settings.primarySurfaceContentOrder,
+            fallback: CompanionRuntimeContentID.allCases
+        )
+        displaySettings = settings
+        CompanionDisplaySettingsStore.save(settings)
+        syncDisplaySettings()
+    }
+
+    func setDisplayEnabled(_ isEnabled: Bool) {
+        updateDisplaySettings { $0.isEnabled = isEnabled }
+    }
+
+    func setAutoExpand(_ enabled: Bool) {
+        updateDisplaySettings { $0.autoExpand = enabled }
+    }
+
+    func setHoverExpandDelay(_ delay: Double) {
+        updateDisplaySettings { $0.hoverExpandDelay = delay }
+    }
+
+    func setShowOnAllDisplays(_ enabled: Bool) {
+        updateDisplaySettings { $0.showOnAllDisplays = enabled }
+    }
+
+    func setAutoSwitchDisplays(_ enabled: Bool) {
+        updateDisplaySettings { $0.autoSwitchDisplays = enabled }
+    }
+
+    func setHideInFullscreen(_ enabled: Bool) {
+        updateDisplaySettings { $0.hideInFullscreen = enabled }
+    }
+
+    func setHideWhenScreenRecording(_ enabled: Bool) {
+        updateDisplaySettings { $0.hideWhenScreenRecording = enabled }
+    }
+
+    func setNotchHeightMode(_ mode: CompanionCollapsedHeightMode) {
+        updateDisplaySettings { $0.notchHeightMode = mode }
+    }
+
+    func setNotchCustomHeight(_ height: CGFloat) {
+        updateDisplaySettings { $0.notchCustomHeight = height }
+    }
+
+    func setNonNotchHeightMode(_ mode: CompanionNonNotchHeightMode) {
+        updateDisplaySettings { $0.nonNotchHeightMode = mode }
+    }
+
+    func setNonNotchCustomHeight(_ height: CGFloat) {
+        updateDisplaySettings { $0.nonNotchCustomHeight = height }
+    }
+
+    func setNonNotchCollapsedWidth(_ width: CGFloat) {
+        updateDisplaySettings { $0.nonNotchCollapsedWidth = width }
+    }
+
+    func setCollapsedSubtitleVisible(_ enabled: Bool) {
+        updateDisplaySettings { $0.showCollapsedSubtitle = enabled }
+    }
+
+    func setCollapsedStatusDotsVisible(_ enabled: Bool) {
+        updateDisplaySettings { $0.showCollapsedStatusDots = enabled }
+    }
+
+    func setSystemEventHUDVisible(_ enabled: Bool) {
+        updateDisplaySettings { $0.showSystemEventHUD = enabled }
+    }
+
+    func setModuleEnabled(_ module: DynamicContinentModuleID, isEnabled: Bool) {
+        updateDisplaySettings { settings in
+            if isEnabled {
+                settings.enabledDynamicModules.insert(module)
+            } else {
+                settings.enabledDynamicModules.remove(module)
+                settings.overviewVisibleModules.remove(module)
+            }
+        }
+    }
+
+    func setModuleOverviewVisible(_ module: DynamicContinentModuleID, isVisible: Bool) {
+        updateDisplaySettings { settings in
+            if isVisible {
+                settings.overviewVisibleModules.insert(module)
+            } else {
+                settings.overviewVisibleModules.remove(module)
+            }
+        }
+    }
+
+    func moveModule(_ module: DynamicContinentModuleID, by offset: Int) {
+        updateDisplaySettings { settings in
+            guard let index = settings.dynamicModuleOrder.firstIndex(of: module) else { return }
+            let newIndex = min(max(index + offset, 0), settings.dynamicModuleOrder.count - 1)
+            guard newIndex != index else { return }
+            settings.dynamicModuleOrder.remove(at: index)
+            settings.dynamicModuleOrder.insert(module, at: newIndex)
+        }
+    }
+
+    func setContentVisible(_ content: CompanionRuntimeContentID, scope: NotchRuntimeSurfaceScope, isVisible: Bool) {
+        updateDisplaySettings { settings in
+            switch scope {
+            case .collapsed:
+                if isVisible {
+                    settings.collapsedVisibleContents.insert(content)
+                } else {
+                    settings.collapsedVisibleContents.remove(content)
+                }
+            case .primary:
+                if isVisible {
+                    settings.primarySurfaceContents.insert(content)
+                } else {
+                    settings.primarySurfaceContents.remove(content)
+                }
+            }
+        }
+    }
+
+    func moveContent(_ content: CompanionRuntimeContentID, scope: NotchRuntimeSurfaceScope, by offset: Int) {
+        updateDisplaySettings { settings in
+            switch scope {
+            case .collapsed:
+                guard let index = settings.collapsedVisibleContentOrder.firstIndex(of: content) else { return }
+                let newIndex = min(max(index + offset, 0), settings.collapsedVisibleContentOrder.count - 1)
+                guard newIndex != index else { return }
+                settings.collapsedVisibleContentOrder.remove(at: index)
+                settings.collapsedVisibleContentOrder.insert(content, at: newIndex)
+            case .primary:
+                guard let index = settings.primarySurfaceContentOrder.firstIndex(of: content) else { return }
+                let newIndex = min(max(index + offset, 0), settings.primarySurfaceContentOrder.count - 1)
+                guard newIndex != index else { return }
+                settings.primarySurfaceContentOrder.remove(at: index)
+                settings.primarySurfaceContentOrder.insert(content, at: newIndex)
+            }
+        }
+    }
+
+    func setSystemEventEnabled(_ kind: SystemEventKind, isEnabled: Bool) {
+        updateDisplaySettings { settings in
+            if isEnabled {
+                settings.enabledSystemEventKinds.insert(kind)
+            } else {
+                settings.enabledSystemEventKinds.remove(kind)
+            }
         }
     }
 
@@ -1188,5 +1378,15 @@ final class NotchV2ViewModel: ObservableObject {
         if presentationState == .blockedClose, closeBlocker == nil {
             setPresentationState(.compact)
         }
+    }
+
+    private static func normalizedOrder<T: Hashable & Codable>(
+        _ values: [T],
+        fallback: [T]
+    ) -> [T] {
+        let filtered = values.filter { fallback.contains($0) }
+        let seen = Set(filtered)
+        let missing = fallback.filter { seen.contains($0) == false }
+        return filtered + missing
     }
 }

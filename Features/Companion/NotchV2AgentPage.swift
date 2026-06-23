@@ -5,17 +5,15 @@ struct NotchV2AgentPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        NotchV2DashboardLayout(leftColumnWidth: 136, rightColumnWidth: 0) {
+        CompanionPageTemplate.double(leftWidth: CompanionLayoutTokens.templateBLeftColumnWidth, left: {
             leftColumn
-        } centerColumn: {
+        }, center: {
             centerColumn
-        } rightColumn: {
-            EmptyView()
-        }
+        })
     }
 
     private var leftColumn: some View {
-        NotchV2Card(title: "对话历史", symbol: "clock.arrow.circlepath", fillHeight: true) {
+        CompanionPanel(title: "对话历史", symbol: "clock.arrow.circlepath", fillHeight: true) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 6) {
                     Circle()
@@ -63,26 +61,27 @@ struct NotchV2AgentPage: View {
     }
 
     private var centerColumn: some View {
-        NotchV2Card(title: "对话", symbol: "message", fillHeight: true, cardAccent: NotchV2DesignTokens.accentBlue) {
+        CompanionPanel(title: "对话", symbol: "message", fillHeight: true) {
             VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(chatPreviewMessages, id: \.id) { message in
-                        chatBubble(message)
-                    }
-
-                    if viewModel.quickAskIsSending {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                            Text("正在发送...")
-                                .font(NotchV2DesignTokens.Typography.caption)
-                                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(chatPreviewMessages, id: \.id) { message in
+                            chatBubble(message)
                         }
-                        .padding(.top, 2)
+
+                        if viewModel.quickAskIsSending {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text("正在发送...")
+                                    .font(NotchV2DesignTokens.Typography.caption)
+                                    .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                            }
+                            .padding(.top, 2)
+                        }
                     }
                 }
-
-                Spacer(minLength: 0)
+                .frame(maxHeight: .infinity, alignment: .topLeading)
 
                 quickAskComposer
             }
@@ -96,7 +95,7 @@ struct NotchV2AgentPage: View {
                     Text("快速提问")
                         .font(NotchV2DesignTokens.Typography.title)
                         .foregroundStyle(NotchV2DesignTokens.primaryText)
-                    Text("基于当前上下文继续问，不要把它当成普通输入框。")
+                    Text("基于当前上下文继续问。")
                         .font(NotchV2DesignTokens.Typography.caption)
                         .foregroundStyle(NotchV2DesignTokens.secondaryText)
                         .lineLimit(2)
@@ -105,33 +104,31 @@ struct NotchV2AgentPage: View {
                 Spacer(minLength: 0)
 
                 StatusBadge(
-                    text: viewModel.quickAskIsSending ? "发送中" : "Ready",
+                    text: viewModel.quickAskIsSending ? "发送中" : "就绪",
                     tone: viewModel.quickAskIsSending ? .warning : .info,
                     icon: viewModel.quickAskIsSending ? "arrow.triangle.2.circlepath" : "sparkles"
                 )
             }
 
-                HStack(spacing: 8) {
-                    notchComposerStage(title: "输入", isActive: viewModel.quickAskDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, tint: NotchV2DesignTokens.accentBlue)
-                    notchComposerStage(title: "发送", isActive: viewModel.quickAskIsSending, tint: NotchV2DesignTokens.accentBlue)
-                    notchComposerStage(title: "历史", isActive: viewModel.quickAskMessages.isEmpty == false, tint: NotchV2DesignTokens.secondaryText)
+            HStack(spacing: 8) {
+                quickPromptPill(title: "总结") {
+                    viewModel.quickAskDraft = "帮我总结一下刚才的对话"
                 }
-
-                HStack(alignment: .bottom, spacing: 10) {
-                    VStack(spacing: 8) {
-                    quickComposerAction(icon: "sparkles", title: "总结", tint: NotchV2DesignTokens.secondaryText) {
-                        viewModel.quickAskDraft = "帮我总结一下刚才的对话"
-                    }
-                    quickComposerAction(icon: "translate", title: "翻译", tint: NotchV2DesignTokens.secondaryText) {
-                        viewModel.quickAskDraft = "翻译成英文"
-                    }
+                quickPromptPill(title: "翻译") {
+                    viewModel.quickAskDraft = "翻译成英文"
                 }
+                quickPromptPill(title: "整理") {
+                    viewModel.quickAskDraft = "把这些内容整理成要点"
+                }
+            }
 
+            HStack(alignment: .bottom, spacing: 10) {
                 ZStack(alignment: .topLeading) {
-                    AppSurfaceTextEditorShell(
+                    NotchQuickAskTextEditorShell(
                         text: $viewModel.quickAskDraft,
-                        minHeight: 86,
-                        font: NotchV2DesignTokens.Typography.body
+                        minHeight: 84,
+                        font: NotchV2DesignTokens.Typography.body,
+                        accent: NotchV2DesignTokens.accentBlue
                     )
 
                     if viewModel.quickAskDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -143,7 +140,7 @@ struct NotchV2AgentPage: View {
                             .allowsHitTesting(false)
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 86, maxHeight: 116, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 84, maxHeight: 104, alignment: .topLeading)
                 .onTapGesture {
                     // keep focus behaviour native; TextEditor will take focus naturally when clicked
                 }
@@ -153,35 +150,23 @@ struct NotchV2AgentPage: View {
                 } label: {
                     VStack(spacing: 5) {
                         Image(systemName: viewModel.quickAskIsSending ? "progress.indicator" : "arrow.up.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                         Text(viewModel.quickAskIsSending ? "发送中" : "发送")
                             .font(NotchV2DesignTokens.Typography.caption)
                     }
                     .foregroundStyle(.white)
-                    .frame(width: 68, height: 110)
+                    .frame(width: 68, height: 100)
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
                             .fill(viewModel.quickAskIsSending ? NotchV2DesignTokens.secondaryText.opacity(0.55) : NotchV2DesignTokens.accentBlue.opacity(0.85))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
                             .stroke(NotchV2DesignTokens.separator.opacity(0.20), lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
                 .disabled(viewModel.quickAskDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.quickAskIsSending)
-            }
-
-            HStack(spacing: 8) {
-                quickPromptPill(title: "解释") {
-                    viewModel.quickAskDraft = "解释一下这段内容"
-                }
-                quickPromptPill(title: "追问") {
-                    viewModel.quickAskDraft = "继续追问当前上下文"
-                }
-                quickPromptPill(title: "整理") {
-                    viewModel.quickAskDraft = "把这些内容整理成要点"
-                }
             }
 
             if let error = viewModel.quickAskError, error.isEmpty == false {
@@ -194,56 +179,41 @@ struct NotchV2AgentPage: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
                 .fill(NotchV2DesignTokens.panelBackground.opacity(0.90))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
                 .stroke(NotchV2DesignTokens.separator.opacity(0.22), lineWidth: 1)
         )
     }
 
-    private func notchComposerStage(title: String, isActive: Bool, tint: Color) -> some View {
-        Text(title)
-            .font(NotchV2DesignTokens.Typography.caption)
-            .foregroundStyle(isActive ? NotchV2DesignTokens.primaryText : NotchV2DesignTokens.secondaryText)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isActive ? tint.opacity(0.16) : NotchV2DesignTokens.innerCardBackground.opacity(0.90))
-                )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(isActive ? tint.opacity(0.22) : NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 1)
-            )
-    }
+    private struct NotchQuickAskTextEditorShell: View {
+        @Binding var text: String
+        var minHeight: CGFloat
+        var font: Font
+        var accent: Color
 
-    private func quickComposerAction(icon: String, title: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(title)
-                    .font(NotchV2DesignTokens.Typography.caption)
-            }
-            .foregroundStyle(tint)
-            .frame(width: 56, height: 34)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                    .fill(tint.opacity(0.10))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                    .stroke(tint.opacity(0.18), lineWidth: 1)
-            )
+        var body: some View {
+            TextEditor(text: $text)
+                .font(font)
+                .scrollContentBackground(.hidden)
+                .padding(10)
+                .frame(minHeight: minHeight)
+                .background(
+                    RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                        .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
+                        .stroke(accent.opacity(0.20), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous))
         }
-        .buttonStyle(.plain)
     }
 
     private var chatPreviewMessages: [ChatMessage] {
-        viewModel.quickAskMessages.suffix(3).map { $0 }
+        viewModel.quickAskMessages.suffix(2).map { $0 }
     }
 
     private func chatBubble(_ message: ChatMessage) -> some View {
@@ -266,11 +236,11 @@ struct NotchV2AgentPage: View {
             .padding(.vertical, 8)
             .frame(maxWidth: 320, alignment: .leading)
             .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
                     .fill(isUser ? NotchV2DesignTokens.accentBlue.opacity(0.08) : NotchV2DesignTokens.cardBackgroundStrong)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
                     .stroke(isUser ? NotchV2DesignTokens.accentBlue.opacity(0.12) : NotchV2DesignTokens.separator.opacity(0.25), lineWidth: 1)
             )
 

@@ -3,11 +3,10 @@ import XCTest
 
 final class SidebarItemTests: XCTestCase {
     func testPrimaryNavigationMatchesAcWorkInformationArchitecture() {
-        XCTAssertEqual(SidebarItem.coreWorkflow, [.home, .agent, .inbox, .schedule])
-        XCTAssertEqual(SidebarItem.processingItems, [.workbench])
+        XCTAssertEqual(SidebarItem.coreWorkflow, [.home, .agent, .inbox, .schedule, .workbench])
         XCTAssertEqual(SidebarItem.companionCapabilities, [.dynamicContinent, .voiceEntry])
-        XCTAssertEqual(SidebarItem.systemItems, [.systemStatus, .modelManagement, .settings])
-        XCTAssertEqual(SidebarItem.mainItems.count, 10)
+        XCTAssertEqual(SidebarItem.systemItems, [.systemStatus, .modelManagement])
+        XCTAssertEqual(SidebarItem.mainItems.count, 9)
         XCTAssertFalse(SidebarItem.mainItems.contains(.clipboard))
     }
 

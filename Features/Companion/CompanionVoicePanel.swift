@@ -28,7 +28,7 @@ struct CompanionVoicePanel: View {
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.mainCardRadius, style: .continuous)
                         .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
                 )
-                .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 12, x: 0, y: 6)
+                .shadow(color: AppSurfaceTokens.separator.opacity(0.10), radius: 10, x: 0, y: 5)
         )
         .padding(12)
         .onAppear {
@@ -62,17 +62,17 @@ struct CompanionVoicePanel: View {
                     .frame(width: 34, height: 34)
 
                 Image(systemName: viewModel.isRecording ? "waveform" : "mic.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold))
                     .foregroundStyle(viewModel.isProcessing ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.accentOrange)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("说入法")
-                    .font(.headline)
+                    .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text("长按 Fn 开始，说完松开即可整理成可直接使用的文稿")
-                    .font(.caption)
+                    .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
 
@@ -82,7 +82,7 @@ struct CompanionVoicePanel: View {
                 Task { await cancelAndDismiss() }
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
@@ -104,7 +104,7 @@ struct CompanionVoicePanel: View {
                 .foregroundStyle(viewModel.statusColor)
 
             Text(viewModel.statusText)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: AppSurfaceTokens.Typography.body, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
 
             Spacer()
@@ -129,7 +129,7 @@ struct CompanionVoicePanel: View {
 
     private func stageChip(title: String, isActive: Bool) -> some View {
         Text(title)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
             .foregroundStyle(isActive ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -147,7 +147,7 @@ struct CompanionVoicePanel: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(viewModel.resultTitle)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                 Spacer()
@@ -157,29 +157,29 @@ struct CompanionVoicePanel: View {
                         viewModel.revertEditedText()
                     }
                     .buttonStyle(.plain)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                     Button("复制") {
                         viewModel.copyResultToClipboard()
                     }
                     .buttonStyle(.plain)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
                 }
             }
 
             ScrollView {
                 if viewModel.hasResult {
-                    AppSurfaceTextEditorShell(text: $viewModel.editableText, minHeight: 188, font: .system(size: 14))
+                    AppSurfaceTextEditorShell(text: $viewModel.editableText, minHeight: 188, font: .system(size: AppSurfaceTokens.Typography.bodyLarge))
                 } else if viewModel.isRealtimeMode && !viewModel.realtimeText.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("实时转写")
-                            .font(.caption.weight(.semibold))
+                            .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                         Text(viewModel.realtimeText)
-                            .font(.system(size: 13))
+                            .font(.system(size: AppSurfaceTokens.Typography.body))
                             .foregroundStyle(AppSurfaceTokens.primaryText.opacity(0.75))
                             .lineSpacing(3)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -200,16 +200,16 @@ struct CompanionVoicePanel: View {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(spacing: 10) {
                                 Image(systemName: "waveform.badge.mic")
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold))
                                     .foregroundStyle(Color.accentColor)
 
                                 Text("准备就绪")
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.system(size: AppSurfaceTokens.Typography.body, weight: .semibold))
                                     .foregroundStyle(AppSurfaceTokens.primaryText)
                             }
 
                             Text("按住 Fn 开始说话，松开后会自动整理成可直接使用的修正版。")
-                                .font(.system(size: 13))
+                                .font(.system(size: AppSurfaceTokens.Typography.body))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .lineSpacing(3)
 
@@ -241,7 +241,7 @@ struct CompanionVoicePanel: View {
 
     private func helperPill(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
             .foregroundStyle(AppSurfaceTokens.secondaryText)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
