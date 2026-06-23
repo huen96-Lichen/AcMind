@@ -483,11 +483,12 @@ public class MusicService: ObservableObject {
         if key == lastLyricsKey, lyrics != nil { return }
         lastLyricsKey = key
         isLoadingLyrics = true
-        Task.detached { [weak self] in
+        Task { [weak self] in
             let result = await Self.requestLyrics(title: title, artist: artist)
             await MainActor.run {
-                self?.lyrics = result
-                self?.isLoadingLyrics = false
+                guard let self else { return }
+                self.lyrics = result
+                self.isLoadingLyrics = false
             }
         }
     }
