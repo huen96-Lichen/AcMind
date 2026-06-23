@@ -103,6 +103,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.hasShadow = true
     }
 
+#if DEBUG
+    private func auditExportsDirectory(named subdirectory: String) throws -> URL {
+        let baseDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AcMind", isDirectory: true)
+            .appendingPathComponent("AuditExports", isDirectory: true)
+        let exportDirectory = baseDirectory.appendingPathComponent(subdirectory, isDirectory: true)
+        try FileManager.default.createDirectory(at: exportDirectory, withIntermediateDirectories: true)
+        return exportDirectory
+    }
+
+    private func repositoryRootURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+    }
+
+    private func workbenchV2FixtureBackgroundURL() -> URL {
+        repositoryRootURL()
+            .appendingPathComponent("docs/refactor/workbench-v17/screenshots/background-selected-1500x888.png")
+    }
+#endif
+
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -548,8 +570,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func exportAcWorkPhaseOneScreenshots(serviceContainer: ServiceContainer) throws {
-        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/screenshots/acwork-phase1")
-        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        let outputDirectory = try auditExportsDirectory(named: "acwork-phase1")
         print("[AcWorkExport] output directory ready: \(outputDirectory.path)")
 
         let appState = AppState.shared
@@ -716,8 +737,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func exportAcWorkLayoutAudit(serviceContainer: ServiceContainer) throws {
-        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/audit")
-        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots")
+        let outputDirectory = try auditExportsDirectory(named: "audit")
+        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots", isDirectory: true)
         try FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)
         print("[AcWorkAudit] output directory ready: \(outputDirectory.path)")
 
@@ -887,8 +908,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func exportCompanionSixPageScreenshots(serviceContainer: ServiceContainer) throws {
-        let outputDirectory = URL(fileURLWithPath: "/Users/lichen/Desktop/AcMind/docs/screenshots/companion-unification")
-        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        let outputDirectory = try auditExportsDirectory(named: "companion-unification")
         print("[CompanionExport] output directory ready: \(outputDirectory.path)")
 
         let specs: [CompanionScreenshotSpec] = [
@@ -1094,12 +1114,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func exportWorkbenchV2LayoutAudit() throws {
-        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/workbench-v17")
-        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots")
+        let outputDirectory = try auditExportsDirectory(named: "workbench-v17")
+        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots", isDirectory: true)
         try FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)
         print("[AcWorkV2Audit] output directory ready: \(outputDirectory.path)")
 
-        let selectedBackgroundURL = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/临时/DSCF0251.jpg")
+        let selectedBackgroundURL = workbenchV2FixtureBackgroundURL()
         guard FileManager.default.fileExists(atPath: selectedBackgroundURL.path) else {
             throw NSError(domain: "AcWorkWorkbenchV2Audit", code: 20, userInfo: [NSLocalizedDescriptionKey: "Missing hero background image at \(selectedBackgroundURL.path)"])
         }
@@ -1296,11 +1316,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func exportWorkbenchV2BackgroundVerification() throws {
-        let outputDirectory = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/workbench-v17")
-        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots")
+        let outputDirectory = try auditExportsDirectory(named: "workbench-v17")
+        let screenshotsDirectory = outputDirectory.appendingPathComponent("screenshots", isDirectory: true)
         try FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)
 
-        let selectedBackgroundURL = URL(fileURLWithPath: "/Volumes/White Atlas/03_Projects/AcMind/临时/DSCF0251.jpg")
+        let selectedBackgroundURL = workbenchV2FixtureBackgroundURL()
         guard FileManager.default.fileExists(atPath: selectedBackgroundURL.path) else {
             throw NSError(domain: "AcWorkWorkbenchV2BackgroundVerification", code: 20, userInfo: [NSLocalizedDescriptionKey: "Missing hero background image at \(selectedBackgroundURL.path)"])
         }

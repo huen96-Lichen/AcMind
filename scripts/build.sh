@@ -216,7 +216,7 @@ if [ "$DO_SIGN" = true ]; then
         --deep \
         --force \
         --timestamp \
-        --entitlements "$PROJECT_DIR/AcMind.entitlements" \
+        --entitlements "$PROJECT_DIR/Config/Entitlements/AcMind.entitlements" \
         "$APP_PATH"
 
     # 验证签名
