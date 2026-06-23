@@ -1,0 +1,61 @@
+name: Feature request
+description: Suggest a new capability, workflow, or improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Please focus on the problem you are trying to solve and the workflow impact.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One short sentence describing the request.
+      placeholder: Add...
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you want to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention other approaches you thought about.
+  - type: input
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of AcMind does this touch?
+      placeholder: Clipboard, system status, voice input, AI routing, docs, etc.
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How urgent is this to you?
+      options:
+        - Nice to have
+        - Important
+        - High priority
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Mockups, examples, or references
+      description: Optional supporting material, if it helps explain the request.

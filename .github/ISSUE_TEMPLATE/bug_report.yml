@@ -1,0 +1,97 @@
+name: Bug report
+description: Report a reproducible problem or regression in AcMind.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include as much verified context as you can.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One short sentence describing the issue.
+      placeholder: AcMind crashes when...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: List the steps needed to reproduce the issue.
+      placeholder: |
+        1. Open...
+        2. Click...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+  - type: input
+    id: feature
+    attributes:
+      label: Affected feature
+      description: Which area of the app is affected?
+      placeholder: Clipboard, system status, voice input, settings, build, etc.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: 26.5.1 (25F80)
+    validations:
+      required: true
+  - type: input
+    id: architecture
+    attributes:
+      label: Mac architecture
+      placeholder: arm64
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit or release version
+      description: Provide the commit SHA or release tag you tested.
+      placeholder: 1109c5e...
+    validations:
+      required: true
+  - type: input
+    id: xcode-swift
+    attributes:
+      label: Xcode and Swift version
+      placeholder: Xcode 26.5, Swift 6.3.2
+    validations:
+      required: true
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression status
+      description: Is this a new regression?
+      options:
+        - New regression
+        - Existing issue
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or notes
+      description: Add any relevant logs or screenshots, but avoid secrets or private data.
+      placeholder: Paste logs here or attach a screenshot.

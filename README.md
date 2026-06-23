@@ -1,155 +1,245 @@
 # AcMind
 
-AcMind 是一款面向 macOS 的本地优先电脑助手。
+AcMind is an open-source, local-first macOS workspace for persistent desktop interaction, information capture, voice input, system monitoring, and AI-assisted organization.
 
-它不是单纯的 AI 对话壳，而是把“采集、识别、整理、导出、监控、常驻交互”放在同一套桌面工作流里：
+English | [简体中文](README.zh-CN.md)
 
-- 通过灵动大陆、桌面胶囊、热角和全局快捷键，提供常驻式入口
-- 通过说入法，把语音直接转成可用文本并写回当前工作流
-- 通过系统状态监控，持续查看 CPU、内存、磁盘、网络、电池和活跃进程
-- 通过采集与蒸馏链路，把剪贴板、语音、截图、网页、PDF、DOCX 等内容整理成结构化知识
-- 通过 Obsidian 导出，把结果直接写入 Vault
+![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
+![Language](https://img.shields.io/badge/language-Swift-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-active%20development-orange)
 
-## 这款软件在做什么
+![AcMind current workspace screenshot](docs/screenshots/acwork-phase1/1500x920-workspace-populated.png)
 
-AcMind 的核心定位是“电脑助手 + 知识中枢”：
+## Overview
 
-1. 作为电脑助手，它负责常驻唤起、系统监控、快捷入口、语音输入、热角触发、桌面胶囊和灵动大陆。
-2. 作为知识中枢，它负责多源采集、AI 蒸馏、知识卡片管理、搜索、标签和导出。
-3. 作为本地优先应用，它优先支持本地模型和本地存储，同时兼容 OpenAI-compatible 云端接口。
+AcMind is a desktop workspace, not just a chat shell. It combines capture, extraction, organization, monitoring, and persistent interaction in one macOS app so a user can keep working without constantly switching between disconnected tools.
 
-## 主要功能
+The repository currently contains:
 
-### 常驻桌面能力
+- a native macOS workbench experience
+- a companion / continent-style persistent surface
+- desktop capsule entry points
+- global shortcuts and hot corners
+- voice input and ASR routing
+- clipboard, screenshot, document, and web capture flows
+- AI distillation and export pipelines
+- system monitoring surfaces
+- local and cloud model routing
+- agent-oriented tools and schedule-related surfaces
 
-- 灵动大陆：展开 / 收起两种形态，带顶部导航、页面切换和系统事件 HUD
-- 桌面胶囊：轻量常驻入口，适合快速查看和触发
-- 热角：支持屏幕角落触发动作与可视化覆盖区域
-- 全局快捷键：统一接入主窗口、采集、语音和页面切换
-- 状态栏菜单：提供应用级的快速控制入口
+## Why AcMind
 
-### 说入法
+AcMind is designed for knowledge workers and power users who want one place to:
 
-- 支持 Fn 长按、单击切换、双击锁定等触发模式
-- 支持录音、ASR 转写、自动润色、连续输入和静音检测
-- 支持多种输出方式：复制到剪贴板、自动粘贴、询问
-- 支持写入收集箱，便于后续蒸馏或整理
+- capture something quickly
+- inspect system state without leaving the workflow
+- turn raw input into structured notes
+- keep a persistent desktop surface available for repeated actions
+- route work between local and cloud AI providers when needed
 
-### 系统状态监控
+The project tries to feel like a real system tool: calm, direct, and useful, with the fewest possible interruptions.
 
-- CPU 使用率
-- 内存占用
-- 磁盘占用
-- 网络上下行速率
-- 电池电量与供电状态
-- 活跃进程列表
+## Current Status
 
-### 采集与知识整理
+The repository is buildable from source with both SwiftPM and Xcode.
 
-- 剪贴板采集
-- 截图与区域截图
-- 语音录入
-- 网页内容处理
-- PDF / DOCX 等文档输入
-- AI 蒸馏为结构化 Markdown
-- 导出到 Obsidian Vault
+- `swift package resolve` works
+- `swift build` works
+- `xcodebuild ... build` works for the `AcMind` scheme with signing disabled
+- `swift test` currently has documented known failures across multiple suites, so the suite is not green yet
+- there is no public release tag in this checkpoint
 
-### 原生工作台
+That means this repo is credible and reproducible, but not yet release-polished.
 
-- 首页
-- Agent
-- 收集箱
-- 剪贴板
-- 日程
-- 工具台
-- 灵动大陆配置
-- 系统状态
-- 说入法
-- 设置
+## Features
 
-## 环境要求
+Feature maturity in this repository is intentionally conservative.
 
-- Xcode >= 15.0
-- macOS >= 14.0 (Sonoma)
-- Swift >= 5.9
-- Ollama（可选，用于本地 AI 推理）
+| Area | Status | Notes |
+|---|---|---|
+| Native macOS workbench | Available | The main workspace shell and navigation are implemented in the app target and feature views. |
+| Dynamic continent / companion window | Available | Persistent companion surfaces and collapsed / expanded states are implemented. |
+| Desktop capsule | Available | A lightweight floating entry point exists. |
+| Global shortcuts | Available | Hotkey registration and persistence are implemented. |
+| Hot corners | Available | Corner-triggered actions and overlays exist. |
+| Clipboard collection | Available | Clipboard capture and pinning workflows are present. |
+| System monitoring | Available | CPU, memory, disk, network, battery, and process surfaces are implemented. |
+| Obsidian export | Available | Export flows target an Obsidian vault / local note workflow. |
+| Voice input | Beta | Voice entry surfaces, recording, and permission handling exist, but the feature depends on system permissions and provider setup. |
+| ASR | Beta | Multiple ASR providers are wired, but outcomes depend on the selected backend and environment. |
+| Screenshot capture | Beta | Screenshot export and preview tooling are present, but this is still a workflow area rather than a polished end-user feature. |
+| Document processing | Beta | PDF / DOCX / web capture and distillation paths exist, but the pipeline should still be treated as evolving. |
+| AI distillation | Beta | Markdown distillation and structured output helpers are implemented, but the workflow is still under active refinement. |
+| Local AI provider support | Beta | Local provider routing exists, including Ollama-oriented paths. |
+| OpenAI-compatible provider support | Beta | OpenAI-compatible routing exists, but requires user configuration and credentials. |
+| Agent functionality | Beta | Agent-related models, services, and UI surfaces are present, but this area is still maturing. |
+| Scheduling | Beta | Schedule-related models and services exist, but they should still be treated as evolving integration points. |
+| Automation | Planned | No separate public automation product claim is made in this checkpoint. |
 
-## 快速开始
+## Screenshots
+
+Hero screenshot:
+
+![AcMind workbench screenshot](docs/screenshots/acwork-phase1/1500x920-workspace-populated.png)
+
+Additional current exports and reference images live under `docs/screenshots/` and `docs/refactor/`.
+
+## Requirements
+
+- macOS 14.0 or later
+- Xcode 17.x or later
+- Swift 6 toolchain via Xcode
+- Optional: local AI backends such as Ollama, if you want to use local model routing
+- Optional: provider credentials stored locally for cloud-backed features
+
+Permissions used by the current implementation include:
+
+- Microphone, for voice input
+- Speech Recognition, for ASR-backed voice workflows
+- Accessibility, for text insertion and system interaction
+- Screen Recording, for screenshot and capture workflows
+- Full Disk Access, for file-heavy workflows where the app needs broader filesystem visibility
+- Notifications, for user-facing system feedback
+
+API keys are stored locally through the app's secret storage, with Keychain-based storage available and a plaintext fallback in local settings when that preference is selected.
+
+## Build from Source
+
+Swift package validation:
 
 ```bash
-# 解析 Swift 依赖
 swift package resolve
-
-# 构建 Debug 版本
 swift build
-
-# 运行应用（macOS）
-open .build/debug/AcMind.app
+swift test
 ```
 
-## 常用命令
+Important note: `swift test` currently has documented known failures across multiple suites. Do not treat the suite as passing until the baseline document says otherwise.
 
-| 命令 | 说明 |
-|---|---|
-| `swift build` | 构建 Debug 版本 |
-| `swift build -c release` | 构建 Release 版本 |
-| `swift test --parallel` | 运行测试 |
-| `bash scripts/build.sh` | 完整构建（含 Xcode） |
-| `bash scripts/build.sh --release` | Release 构建 |
-| `bash scripts/build.sh --release --package` | Release + DMG 打包 |
-| `bash scripts/build.sh --clean` | 清理构建产物 |
+Xcode application build:
 
-## 项目结构
-
-```text
-AcMind.xcodeproj/     # Xcode 工程
-App/                  # 应用入口、生命周期、全局状态、视图模型
-AcMindKit/            # 核心业务库
-├── Models/           # 数据模型
-├── Protocols/        # 抽象接口
-└── Services/         # 业务服务
-    ├── AI/           # Provider 路由、聊天、蒸馏、任务队列
-    ├── Agent/        # Agent 相关路由与能力编排
-    ├── Hotkeys/      # 热键与输入监控
-    ├── Input/        # 采集、剪贴板、上下文捕获
-    ├── Knowledge/    # 知识卡片与搜索
-    ├── Permissions/  # 权限管理
-    ├── Settings/     # 配置与偏好
-    ├── Storage/      # SQLite / 文件存储 / 迁移
-    ├── Sync/         # 云同步
-    ├── SystemStatus/ # 系统状态采样
-    ├── UI/           # 灵动大陆、热角等 UI 规则
-    ├── Voice/        # 录音、ASR、润色、说入法
-    └── Workflow/     # 蒸馏与导出
-Features/             # 主要界面
-├── Companion/        # 灵动大陆、桌面胶囊、常驻交互
-├── Native/           # 原生页面与工作台
-├── Sidebar/          # 侧边栏
-Design/               # 设计系统
-Resources/            # 资源文件
-Vendor/               # 第三方依赖
-docs/                 # 架构与交接文档
-scripts/              # 构建脚本
+```bash
+xcodebuild \
+  -project AcMind.xcodeproj \
+  -scheme AcMind \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_REQUIRED=NO \
+  build
 ```
 
-## 技术栈
+To locate the built app bundle, inspect the build settings instead of hard-coding a DerivedData path:
 
-| 层 | 技术 |
-|---|---|
-| UI | SwiftUI + AppKit |
-| 语言 | Swift 5.9 / strict concurrency |
-| 构建 | Xcode + Swift Package Manager |
-| 数据库 | GRDB.swift / SQLite |
-| AI | Ollama、OpenAI-compatible API、WhisperKit、其他本地 ASR 实现 |
-| 并发 | Swift Concurrency / Actor |
+```bash
+xcodebuild \
+  -project AcMind.xcodeproj \
+  -scheme AcMind \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_REQUIRED=NO \
+  -showBuildSettings | rg 'TARGET_BUILD_DIR|FULL_PRODUCT_NAME'
+```
 
-## 架构说明
+The bundle path is `"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME"`, which resolves to `AcMind.app` in the Xcode build output directory.
 
-更多模型调用与路由说明见：
+## Run the App
 
-- [docs/model-invocation-architecture.md](</Volumes/White Atlas/03_Projects/AcMind/docs/model-invocation-architecture.md>)
-- [docs/acmind-handoff-2026-05-13.md](</Volumes/White Atlas/03_Projects/AcMind/docs/acmind-handoff-2026-05-13.md>)
+Recommended local workflow:
 
-## 许可证
+1. Open `AcMind.xcodeproj` in Xcode.
+2. Select the `AcMind` scheme.
+3. Choose your local Mac destination.
+4. Configure signing if you want a signed developer build.
+5. Build and run.
+
+If you are using the command line, build first and then open the bundle from the build settings path above. `swift build` validates the package targets, but it does not produce `./.build/debug/AcMind.app`.
+
+## Permissions and Privacy
+
+AcMind is local-first, but it is not magically offline in every configuration. What leaves the device depends on the provider and workflow you choose.
+
+- Voice input needs microphone and speech permissions.
+- Text insertion and some desktop interactions rely on Accessibility.
+- Screenshot capture needs Screen Recording.
+- Some file-heavy workflows need broader file access.
+- Global shortcuts are handled through registered hotkeys, not through a keyboard logger.
+- Cloud providers receive whatever prompt, file, or capture data you explicitly route to them.
+- Local model workflows stay on-device, but their outputs and caches still live in local storage.
+- API credentials are stored locally, preferably in Keychain.
+- No explicit telemetry pipeline was identified in the audited codebase.
+
+Users can revoke permissions in System Settings → Privacy & Security. Local data can be cleared by removing the app's stored settings, vault data, and secret material from the machine.
+
+## Project Architecture
+
+AcMind is split into a few broad layers:
+
+- `App/` for app lifecycle, top-level orchestration, and window routing
+- `Features/` for user-facing surfaces such as the companion, native workspace, sidebar, and specialized panels
+- `AcMindKit/` for reusable core models, services, and infrastructure
+- `Design/` for visual and interaction system material
+- `Resources/` for app assets
+- `Vendor/` for third-party source and dependencies
+- `docs/` for architecture notes, screenshots, audits, and handoff material
+
+The key architectural idea is that the same shell and service layer support multiple surfaces, instead of each surface reinventing the app around itself.
+
+## AcMindKit
+
+`AcMindKit` is the reusable core. It contains the app's service and model layer, including:
+
+- storage and migration
+- permissions
+- hotkeys
+- voice and ASR routing
+- clipboard and capture flows
+- system status readers and formatters
+- AI provider routing
+- agent services
+- schedule-related services
+- export and distillation helpers
+
+If another Swift macOS project needs a similar split between an app shell and a reusable service layer, `AcMindKit` is the part most worth studying first.
+
+## Known Limitations
+
+- `swift test` currently has documented known failures across multiple suites.
+- `swift build` does not create `./.build/debug/AcMind.app`; use Xcode builds for the app bundle.
+- Some feature areas depend on macOS permissions or external provider setup.
+- Several areas are still evolving, especially agent, scheduling, automation, and some capture pipelines.
+- This repository is not yet at a public release milestone.
+
+See [`docs/testing-and-build-baseline.md`](docs/testing-and-build-baseline.md) for the verified build and test baseline, and [`docs/privacy-and-permissions.md`](docs/privacy-and-permissions.md) for the current permission and data-flow notes.
+
+## Roadmap
+
+The near-term roadmap is intentionally practical. See [`ROADMAP.md`](ROADMAP.md) for the current planning view.
+
+1. Stabilize the current UI and layout test surface.
+2. Keep the community files and GitHub Actions aligned with the current release baseline.
+3. Tighten privacy and security documentation around permissions, secrets, and local data handling.
+4. Continue reducing doc drift between source code, screenshots, and handoff notes.
+5. Prepare the first public alpha release once the surrounding hygiene is in place.
+
+Draft alpha release notes live in [`CHANGELOG.md`](CHANGELOG.md) and [`docs/releases/v0.1.0-alpha.md`](docs/releases/v0.1.0-alpha.md).
+
+## Contributing
+
+Contributions are welcome, especially in areas that improve correctness, readability, reproducibility, and safety. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the baseline workflow and validation expectations.
+
+- Open a GitHub issue for a bug report or feature request.
+- Open a pull request for a focused change.
+- Keep changes scoped and reproducible, especially for build, test, and documentation updates.
+- When adding or changing a feature surface, update the relevant screenshots or notes if they help explain the new state.
+
+## Security
+
+Please do not report security issues as public issues. See [`SECURITY.md`](SECURITY.md) for the private reporting path and current security limitations.
+
+Private vulnerability reporting through GitHub Security Advisories is the preferred path once the repository enables it. Until then, keep vulnerability discussions private and avoid posting secrets, credentials, or exploit details in public threads.
+
+## License
 
 MIT
