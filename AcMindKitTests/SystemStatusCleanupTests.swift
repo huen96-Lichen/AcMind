@@ -153,7 +153,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("SidebarFooterRow(status: footerStatus, isCompact: true)"))
         XCTAssertTrue(source.contains("if (isHovered || isSelected), let shortcut = item.shortcut"))
         XCTAssertTrue(itemSource.contains("public var compactName: String"))
-        XCTAssertTrue(itemSource.contains("面板"))
+        XCTAssertTrue(itemSource.contains("截图"))
         XCTAssertTrue(itemSource.contains("case .screenshotHistory: return \"历史\""))
         XCTAssertTrue(itemSource.contains("case .clipboard: return \"同步\""))
         XCTAssertTrue(contentSource.contains("appState.sidebarCollapsed ? 84 : AppSurfaceTokens.Layout.sidebarWidth"))
