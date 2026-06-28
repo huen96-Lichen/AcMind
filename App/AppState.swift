@@ -62,13 +62,8 @@ public final class AppState: ObservableObject, Sendable {
     private var shortcutHandlers: [KeyboardShortcut: () -> Void] = [:]
 
     public init() {
-        setupBindings()
         checkFirstLaunch()
     }
-
-    // MARK: - Setup
-
-    private func setupBindings() {}
 
     public func bindServiceContainerState(_ container: ServiceContainer) {
         container.$currentPhase
@@ -114,6 +109,10 @@ public final class AppState: ObservableObject, Sendable {
             selectInboxWorkspace("all")
             return
         }
+        if item == .screenshotHistory {
+            selectInboxWorkspace("screenshotHistory")
+            return
+        }
         sidebarSelection = canonicalSidebarItem(for: item)
     }
 
@@ -126,8 +125,9 @@ public final class AppState: ObservableObject, Sendable {
     }
 
     public func selectInboxWorkspace(_ selection: String?) {
-        sidebarSelection = .inbox
-        inboxWorkspaceSelection = selection ?? "all"
+        let resolvedSelection = selection ?? "all"
+        inboxWorkspaceSelection = resolvedSelection
+        sidebarSelection = resolvedSelection == "screenshotHistory" ? .screenshotHistory : .inbox
     }
 
     public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {

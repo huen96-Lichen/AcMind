@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RecentCollectionCard: View {
-    let model: WorkbenchV2MockData.RecentCollection
+    let model: WorkbenchV2DashboardData.RecentCollection
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -32,13 +32,15 @@ struct RecentCollectionCard: View {
     }
 }
 
+#if DEBUG
 struct RecentCollectionCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            RecentCollectionCard(model: WorkbenchV2MockData.preview().recentCollection, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 360, height: 180)))
+            RecentCollectionCard(model: WorkbenchV2DashboardData.preview().recentCollection, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 360, height: 180)))
             RecentCollectionCard(model: .init(state: .empty, title: "最近收集", items: []), layout: WorkbenchV2Layout.resolve(for: CGSize(width: 360, height: 180)))
         }
         .padding()
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

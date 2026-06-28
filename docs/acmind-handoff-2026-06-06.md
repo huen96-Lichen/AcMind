@@ -20,7 +20,7 @@
 
 最近一次可用验证结果：
 - `swift test --parallel` 通过
-- `xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -derivedDataPath /tmp/acmind-dd build` 通过
+- `xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -derivedDataPath "$TMPDIR/acmind-dd" build` 通过
 - 真实启动后的窗口检查中，`状态` 页可完整显示，左侧一级菜单没有再被切掉
 
 ## 已完成的核心工作
@@ -37,9 +37,9 @@
 - 已补回归测试，避免以后再把采样路径炸掉
 
 相关文件：
-- [`/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Services/SystemStatus/SystemStatusReaders.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/AcMindKit/Services/SystemStatus/SystemStatusReaders.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/AcMindKitTests/SystemStatusServiceTests.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/AcMindKitTests/SystemStatusServiceTests.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Services/SystemStatus/SystemStatusService.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/AcMindKit/Services/SystemStatus/SystemStatusService.swift)
+- [`../AcMindKit/Services/SystemStatus/SystemStatusReaders.swift`](../AcMindKit/Services/SystemStatus/SystemStatusReaders.swift)
+- [`../AcMindKitTests/SystemStatusServiceTests.swift`](../AcMindKitTests/SystemStatusServiceTests.swift)
+- [`../AcMindKit/Services/SystemStatus/SystemStatusService.swift`](../AcMindKit/Services/SystemStatus/SystemStatusService.swift)
 
 ### 2. 主壳层已统一到固定轨道
 
@@ -49,9 +49,9 @@
 - 多数主页面都已经换到同一套 `WorkspacePageShell` 轨道
 
 关键文件：
-- [`/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/App/ContentView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Sidebar/SidebarView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Sidebar/SidebarView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift)
+- [`../App/ContentView.swift`](../App/ContentView.swift)
+- [`../Features/Sidebar/SidebarView.swift`](../Features/Sidebar/SidebarView.swift)
+- [`../Features/Native/Shared/AppSurfaceStyle.swift`](../Features/Native/Shared/AppSurfaceStyle.swift)
 
 当前用于统一壳层的关键尺寸思路：
 - 主侧栏：`208`
@@ -68,20 +68,20 @@
 - 没有可用数据的地方必须清楚写 `未知` / `不可用`
 
 相关文件：
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift)
+- [`../Features/Native/SystemStatus/SystemStatusView.swift`](../Features/Native/SystemStatus/SystemStatusView.swift)
 
 ### 4. 常用子页面也在统一视觉语言
 
 已经被拉到统一壳层/统一尺度的一些页面和弹窗：
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/VoiceEntry/VoiceEntryView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/VoiceEntry/VoiceEntryView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/DynamicContinent/DynamicContinentConfigView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/DynamicContinent/DynamicContinentConfigView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Tools/ToolPanels.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Tools/ToolPanels.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Capsule/CapsulePanel.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Capsule/CapsulePanel.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Inbox/InboxView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Inbox/InboxView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Agent/AgentDashboardView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Agent/AgentDashboardView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Schedule/ScheduleDashboardView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Schedule/ScheduleDashboardView.swift)
-- [`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Settings/SettingsView.swift`](/Volumes/White%20Atlas/03%20Projects/AcMind/Features/Native/Settings/SettingsView.swift)
+- [`../Features/Native/Home/WorkspaceHomeView.swift`](../Features/Native/Home/WorkspaceHomeView.swift)
+- [`../Features/Native/VoiceEntry/VoiceEntryView.swift`](../Features/Native/VoiceEntry/VoiceEntryView.swift)
+- [`../Features/Native/DynamicContinent/DynamicContinentConfigView.swift`](../Features/Native/DynamicContinent/DynamicContinentConfigView.swift)
+- [`../Features/Native/Tools/ToolPanels.swift`](../Features/Native/Tools/ToolPanels.swift)
+- [`../Features/Native/Capsule/CapsulePanel.swift`](../Features/Native/Capsule/CapsulePanel.swift)
+- [`../Features/Native/Inbox/InboxView.swift`](../Features/Native/Inbox/InboxView.swift)
+- [`../Features/Native/Agent/AgentDashboardView.swift`](../Features/Native/Agent/AgentDashboardView.swift)
+- [`../Features/Native/Schedule/ScheduleDashboardView.swift`](../Features/Native/Schedule/ScheduleDashboardView.swift)
+- [`../Features/Native/Settings/SettingsView.swift`](../Features/Native/Settings/SettingsView.swift)
 
 ## 当前产品方向
 
@@ -94,10 +94,10 @@
 - 图形优先，少写长句，多用环、条、矩阵、chip、短状态
 
 相关文档：
-- [`/Volumes/White Atlas/03_Projects/AcMind/PRODUCT.md`](/Volumes/White%20Atlas/03%20Projects/AcMind/PRODUCT.md)
-- [`/Volumes/White Atlas/03_Projects/AcMind/docs/acmind-handoff-2026-06-05.md`](/Volumes/White%20Atlas/03%20Projects/AcMind/docs/acmind-handoff-2026-06-05.md)
-- [`/Volumes/White Atlas/03_Projects/AcMind/docs/superpowers/plans/2026-06-02-acmind-visual-polish.md`](/Volumes/White%20Atlas/03%20Projects/AcMind/docs/superpowers/plans/2026-06-02-acmind-visual-polish.md)
-- [`/Volumes/White Atlas/03_Projects/AcMind/docs/superpowers/specs/2026-05-25-acmind-ui-stability-design.md`](/Volumes/White%20Atlas/03%20Projects/AcMind/docs/superpowers/specs/2026-05-25-acmind-ui-stability-design.md)
+- [`../PRODUCT.md`](../PRODUCT.md)
+- [`acmind-handoff-2026-06-05.md`](acmind-handoff-2026-06-05.md)
+- [`superpowers/plans/2026-06-02-acmind-visual-polish.md`](superpowers/plans/2026-06-02-acmind-visual-polish.md)
+- [`superpowers/specs/2026-05-25-acmind-ui-stability-design.md`](superpowers/specs/2026-05-25-acmind-ui-stability-design.md)
 
 ## 换机后先做什么
 
@@ -106,7 +106,7 @@
 1. 打开项目后先跑一遍：
    ```bash
    swift test --parallel
-   xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -derivedDataPath /tmp/acmind-dd build
+   xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -derivedDataPath "$TMPDIR/acmind-dd" build
    ```
 2. 启动真实 App，先确认：
    - 是否还会出现启动卡死
@@ -135,7 +135,7 @@
 
 最后一次已知可用验证：
 - `swift test --parallel`
-- `xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -derivedDataPath /tmp/acmind-dd build`
+- `xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -derivedDataPath "$TMPDIR/acmind-dd" build`
 
 最近一次真实窗口检查：
 - `状态` 窗口可正常打开

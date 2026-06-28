@@ -33,6 +33,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     case home = "home"
     case agent = "agent"
     case inbox = "inbox"
+    case screenshot = "screenshot"
+    case screenshotHistory = "screenshotHistory"
     case clipboard = "clipboard"
     case schedule = "schedule"
     case workbench = "workbench"
@@ -45,7 +47,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public static var coreWorkflow: [SidebarItem] {
-        [.home, .agent, .inbox, .schedule, .workbench]
+        [.home, .agent, .inbox, .screenshot, .screenshotHistory, .schedule, .workbench]
     }
 
     public static var companionCapabilities: [SidebarItem] {
@@ -61,7 +63,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     }
 
     public static var shortcutItems: [SidebarItem] {
-        [.home, .agent, .inbox, .schedule, .workbench, .dynamicContinent, .voiceEntry, .systemStatus, .modelManagement, .settings]
+        [.home, .agent, .inbox, .screenshot, .screenshotHistory, .schedule, .workbench, .dynamicContinent, .voiceEntry, .systemStatus, .modelManagement, .settings]
     }
 
     public var displayName: String {
@@ -69,6 +71,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "工作台"
         case .agent: return "Agent"
         case .inbox: return "收集箱"
+        case .screenshot: return "截图"
+        case .screenshotHistory: return "截图历史"
         case .clipboard: return "剪贴板 & 手机同步"
         case .schedule: return "日程"
         case .workbench: return "工具台"
@@ -85,6 +89,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "工作"
         case .agent: return "Agent"
         case .inbox: return "收集"
+        case .screenshot: return "面板"
+        case .screenshotHistory: return "历史"
         case .clipboard: return "同步"
         case .schedule: return "日程"
         case .workbench: return "工具"
@@ -103,6 +109,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "前往工作台"
         case .agent: return "前往 Agent"
         case .inbox: return "前往收集箱"
+        case .screenshot: return "打开截图查看"
+        case .screenshotHistory: return "前往截图历史"
         case .clipboard: return "前往收集箱"
         case .schedule: return "前往日程"
         case .workbench: return "前往工具台"
@@ -119,6 +127,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "house.fill"
         case .agent: return "bubble.left.fill"
         case .inbox: return "tray.fill"
+        case .screenshot: return "camera.viewfinder"
+        case .screenshotHistory: return "camera.viewfinder"
         case .clipboard: return "doc.on.clipboard"
         case .schedule: return "calendar"
         case .workbench: return "square.grid.2x2"
@@ -135,6 +145,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return KeyboardShortcut(key: "1", modifiers: [.command])
         case .agent: return KeyboardShortcut(key: "2", modifiers: [.command])
         case .inbox: return KeyboardShortcut(key: "3", modifiers: [.command])
+        case .screenshot: return nil
+        case .screenshotHistory: return KeyboardShortcut(key: "8", modifiers: [.command, .shift])
         case .clipboard: return nil
         case .schedule: return KeyboardShortcut(key: "4", modifiers: [.command])
         case .workbench: return KeyboardShortcut(key: "5", modifiers: [.command])
@@ -157,6 +169,10 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var group: Group {
         switch self {
         case .home, .agent, .inbox, .clipboard, .schedule, .workbench:
+            return .coreWorkflow
+        case .screenshot:
+            return .coreWorkflow
+        case .screenshotHistory:
             return .coreWorkflow
         case .dynamicContinent, .voiceEntry:
             return .companionCapabilities

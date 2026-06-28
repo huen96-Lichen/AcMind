@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct CurrentFocusCard: View {
-    let model: WorkbenchV2MockData.CurrentFocus
+    let model: WorkbenchV2DashboardData.CurrentFocus
     let layout: WorkbenchV2ResolvedLayout
     let backgroundImage: NSImage
     let actions: WorkbenchV2CurrentFocusActions
@@ -452,20 +452,21 @@ private struct WorkbenchV2HeroActionButtonStyle: ButtonStyle {
     }
 }
 
+#if DEBUG
 struct CurrentFocusCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             CurrentFocusCard(
-                model: WorkbenchV2MockData.preview().currentFocus,
+                model: WorkbenchV2DashboardData.preview().currentFocus,
                 layout: WorkbenchV2Layout.resolve(for: CGSize(width: 927, height: 240)),
                 backgroundImage: WorkbenchV2HeroBackgroundStore.makeDefaultBackgroundImage(),
-                actions: .default
+                actions: .previewOnly
             )
             CurrentFocusCard(
                 model: .init(
                     state: .warning,
                     title: "暂无聚焦",
-                    summary: "空状态用于验证 HTML 原型前的占位结构。",
+                    summary: "当前暂无聚焦内容，可稍后再返回查看。",
                     primaryMetricLabel: "主线",
                     primaryMetricValue: "-",
                     secondaryMetricLabel: "阶段",
@@ -475,10 +476,11 @@ struct CurrentFocusCard_Previews: PreviewProvider {
                 ),
                 layout: WorkbenchV2Layout.resolve(for: CGSize(width: 927, height: 240)),
                 backgroundImage: WorkbenchV2HeroBackgroundStore.makeDefaultBackgroundImage(),
-                actions: .default
+                actions: .previewOnly
             )
         }
         .padding()
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

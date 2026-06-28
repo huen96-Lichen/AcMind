@@ -8,7 +8,7 @@
 
 最近一次验证结果是：
 - `swift test --filter ClipboardPinLayoutTests` 通过，21 个测试全绿
-- `xcodebuild -derivedDataPath /private/tmp/AcMindDerivedData -project AcMind.xcodeproj -scheme AcMind -configuration Debug build` 通过，`BUILD SUCCEEDED`
+- `xcodebuild -derivedDataPath "$TMPDIR/AcMindDerivedData" -project AcMind.xcodeproj -scheme AcMind -configuration Debug build` 通过，`BUILD SUCCEEDED`
 
 ## 已完成
 
@@ -21,11 +21,11 @@
 - 文本预览改成更紧凑的两行/多行控制，整体密度比之前更接近 PinStack 的素材卡。
 
 相关文件：
-- [Features/Native/Shared/MaterialCardShell.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/MaterialCardShell.swift)
-- [Features/Native/Clipboard/ClipboardView.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Clipboard/ClipboardView.swift)
-- [Features/Native/Inbox/Components/InboxItemCard.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Inbox/Components/InboxItemCard.swift)
-- [AcMindKit/Models/ClipboardCardPresentation.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Models/ClipboardCardPresentation.swift)
-- [AcMindKit/Models/MaterialCardGridLayout.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Models/MaterialCardGridLayout.swift)
+- [Features/Native/Shared/MaterialCardShell.swift](../Features/Native/Shared/MaterialCardShell.swift)
+- [Features/Native/Clipboard/ClipboardView.swift](../Features/Native/Clipboard/ClipboardView.swift)
+- [Features/Native/Inbox/Components/InboxItemCard.swift](../Features/Native/Inbox/Components/InboxItemCard.swift)
+- [AcMindKit/Models/ClipboardCardPresentation.swift](../AcMindKit/Models/ClipboardCardPresentation.swift)
+- [AcMindKit/Models/MaterialCardGridLayout.swift](../AcMindKit/Models/MaterialCardGridLayout.swift)
 
 ### 2. Pin 悬浮窗能力
 
@@ -41,11 +41,11 @@
 - Pin 的稳定性不再依赖主窗口是否激活，而是由窗口级保活、空间变化重申和屏幕变化重申共同兜底。
 
 相关文件：
-- [AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift)
-- [AcMindKit/Models/ClipboardPinWindowSizing.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Models/ClipboardPinWindowSizing.swift)
-- [AcMindKit/Models/ClipboardPinWindowSnapshot.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Models/ClipboardPinWindowSnapshot.swift)
-- [AcMindKit/Models/ClipboardPinNotifications.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Models/ClipboardPinNotifications.swift)
-- [App/AppDelegate.swift](/Volumes/White Atlas/03_Projects/AcMind/App/AppDelegate.swift)
+- [AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift](../AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift)
+- [AcMindKit/Models/ClipboardPinWindowSizing.swift](../AcMindKit/Models/ClipboardPinWindowSizing.swift)
+- [AcMindKit/Models/ClipboardPinWindowSnapshot.swift](../AcMindKit/Models/ClipboardPinWindowSnapshot.swift)
+- [AcMindKit/Models/ClipboardPinNotifications.swift](../AcMindKit/Models/ClipboardPinNotifications.swift)
+- [App/AppDelegate.swift](../App/AppDelegate.swift)
 
 ### 3. 主界面交互与导航
 
@@ -55,9 +55,9 @@
 - 副屏场景也不再强依赖主窗口屏幕。
 
 相关文件：
-- [App/ContentView.swift](/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift)
-- [Features/Sidebar/SidebarView.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Sidebar/SidebarView.swift)
-- [App/SidebarItem.swift](/Volumes/White Atlas/03_Projects/AcMind/App/SidebarItem.swift)
+- [App/ContentView.swift](../App/ContentView.swift)
+- [Features/Sidebar/SidebarView.swift](../Features/Sidebar/SidebarView.swift)
+- [App/SidebarItem.swift](../App/SidebarItem.swift)
 
 ### 4. 版本与验证
 
@@ -66,14 +66,14 @@
 - 本次交接的验证口径已经统一到“局部测试 + Xcode 构建”这两条，不再把未复核的真实场景观察当成完成条件。
 
 Debug 输出位置：
-- `/private/tmp/AcMindDerivedData/Build/Products/Debug/AcMind.app/Contents/MacOS/AcMind`
+- `"$TMPDIR/AcMindDerivedData/Build/Products/Debug/AcMind.app/Contents/MacOS/AcMind"`
 
 ## 交接提醒
 
 - 当前工作区有较多未提交改动，这是预期中的进行中状态。
 - 不要回滚不相关文件。
 - 如果新对话继续做 Pin 体验，优先看：
-  - [AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift)
-  - [Features/Native/Clipboard/ClipboardView.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Clipboard/ClipboardView.swift)
-  - [Features/Native/Inbox/Components/InboxItemCard.swift](/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Inbox/Components/InboxItemCard.swift)
-  - [AcMindKitTests/ClipboardPinLayoutTests.swift](/Volumes/White Atlas/03_Projects/AcMind/AcMindKitTests/ClipboardPinLayoutTests.swift)
+  - [AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift](../AcMindKit/Services/UI/ClipboardPin/ClipboardPinWindowManager.swift)
+  - [Features/Native/Clipboard/ClipboardView.swift](../Features/Native/Clipboard/ClipboardView.swift)
+  - [Features/Native/Inbox/Components/InboxItemCard.swift](../Features/Native/Inbox/Components/InboxItemCard.swift)
+  - [AcMindKitTests/ClipboardPinLayoutTests.swift](../AcMindKitTests/ClipboardPinLayoutTests.swift)

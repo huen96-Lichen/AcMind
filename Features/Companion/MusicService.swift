@@ -11,6 +11,7 @@ import ApplicationServices
 import Combine
 import AcMindKit
 import OSLog
+@preconcurrency import ScreenCaptureKit
 import SwiftUI
 import Darwin
 @preconcurrency import Vision
@@ -925,9 +926,9 @@ private enum QishuiMusicNowPlayingProbe {
                 let axWindowFrame = rectValue(of: window, attribute: "AXFrame" as CFString) ?? windowFrame
                 candidates = collectTextCandidates(from: window)
                 if candidates.isEmpty {
-                    candidates = await collectOCRTextCandidates(from: axWindowFrame, logger: logger)
+                    candidates = await collectOCRTextCandidates(from: axWindowFrame, processIdentifier: app.processIdentifier, logger: logger)
                 } else {
-                    let ocrCandidates = await collectOCRTextCandidates(from: axWindowFrame, logger: logger)
+                    let ocrCandidates = await collectOCRTextCandidates(from: axWindowFrame, processIdentifier: app.processIdentifier, logger: logger)
                     candidates.append(contentsOf: ocrCandidates)
                 }
             } else if !didLogMissingAccessibilityThisLaunch {
@@ -937,7 +938,7 @@ private enum QishuiMusicNowPlayingProbe {
         }
 
         if candidates.isEmpty {
-            candidates = await collectOCRTextCandidates(from: windowFrame, logger: logger)
+            candidates = await collectOCRTextCandidates(from: windowFrame, processIdentifier: app.processIdentifier, logger: logger)
         }
 
         if candidates.isEmpty {
@@ -1014,10 +1015,11 @@ private enum QishuiMusicNowPlayingProbe {
 
     private static func collectOCRTextCandidates(
         from windowFrame: CGRect,
+        processIdentifier: pid_t,
         logger: Logger
     ) async -> [Candidate] {
         guard windowFrame.width > 0, windowFrame.height > 0 else { return [] }
-        let image = CGWindowListCreateImage(windowFrame, [.optionOnScreenOnly], kCGNullWindowID, [.bestResolution])
+        let image = await captureWindowImage(processIdentifier: processIdentifier, matching: windowFrame, logger: logger)
 
         guard let image else {
             logger.debug("汽水音乐 OCR capture failed")
@@ -1062,6 +1064,55 @@ private enum QishuiMusicNowPlayingProbe {
                 }
             }
         }
+    }
+
+    private static func captureWindowImage(
+        processIdentifier: pid_t,
+        matching expectedFrame: CGRect,
+        logger: Logger
+    ) async -> CGImage? {
+        do {
+            let content = try await SCShareableContent.current
+            let windows = content.windows.filter { window in
+                window.owningApplication?.processID == processIdentifier && window.isOnScreen
+            }
+            guard let targetWindow = windows.min(by: {
+                windowMatchScore($0.frame, expectedFrame) < windowMatchScore($1.frame, expectedFrame)
+            }) else {
+                logger.debug("汽水音乐 ScreenCaptureKit window not found")
+                return nil
+            }
+
+            let scale = NSScreen.screens.first(where: { $0.frame.intersects(expectedFrame) })?.backingScaleFactor ?? 2
+            let configuration = SCStreamConfiguration()
+            configuration.width = max(1, Int(targetWindow.frame.width * scale))
+            configuration.height = max(1, Int(targetWindow.frame.height * scale))
+            configuration.scalesToFit = true
+            configuration.showsCursor = false
+
+            let filter = SCContentFilter(desktopIndependentWindow: targetWindow)
+            return try await withCheckedThrowingContinuation { continuation in
+                SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) { image, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else if let image {
+                        continuation.resume(returning: image)
+                    } else {
+                        continuation.resume(throwing: CocoaError(.fileReadUnknown))
+                    }
+                }
+            }
+        } catch {
+            logger.debug("汽水音乐 ScreenCaptureKit capture failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    private static func windowMatchScore(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        abs(lhs.minX - rhs.minX)
+            + abs(lhs.minY - rhs.minY)
+            + abs(lhs.width - rhs.width)
+            + abs(lhs.height - rhs.height)
     }
 
     private static func visibleWindowFrame(for processIdentifier: pid_t) -> CGRect? {

@@ -14,7 +14,7 @@ This file records the current implementation risks and places that still need HT
 
 - Final visual language is not implemented yet.
 - Most token values are fixed scaffold values and may change after the HTML prototype lands.
-- The current charts are static mock data only.
+- The preview chart values are still fixed sample data.
 - Compact layout rules are functional but intentionally conservative.
 
 ## Notes From Runtime Export
@@ -23,4 +23,3 @@ This file records the current implementation risks and places that still need HT
 - Compact export runs at `1180 × 720`.
 - The page is fully non-scrolling at the default size.
 - The chart and card heights are still tuned for structure, not final design.
-

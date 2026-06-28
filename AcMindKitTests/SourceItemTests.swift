@@ -9,4 +9,10 @@ final class SourceItemTests: XCTestCase {
         XCTAssertTrue(agentItem.isAgentGenerated)
         XCTAssertFalse(manualItem.isAgentGenerated)
     }
+
+    func testSourceOriginKeepsScreenshotOcrAsDistinctOrigin() {
+        XCTAssertEqual(SourceOrigin(collectionSource: .screenshotOCR), .screenshotOCR)
+        XCTAssertEqual(SourceOrigin.screenshotOCR.displayName, "截图 OCR")
+        XCTAssertTrue(SourceOrigin.allCases.contains(.screenshotOCR))
+    }
 }

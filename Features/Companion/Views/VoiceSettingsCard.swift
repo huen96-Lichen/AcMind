@@ -10,7 +10,7 @@ struct VoiceSettingsCard: View {
         CompanionCapabilityCard(
             iconName: "mic.fill",
             iconColor: .purple,
-            title: "说入法入口",
+            title: "说入法",
             description: "长按 Fn 唤起，把口语清洗或翻译成可直接使用的文稿。",
             isEnabled: isEnabled,
             isGlobalEnabled: isGlobalEnabled,

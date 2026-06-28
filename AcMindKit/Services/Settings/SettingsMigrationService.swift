@@ -148,7 +148,7 @@ public actor SettingsMigrationService {
             return legacyMode.asVoicePolishMode.rawValue
         }
 
-        return VoicePolishMode.light.rawValue
+        return rawValue
     }
 
     private var legacyLocalPreferenceKeys: [String] {

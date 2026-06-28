@@ -5,38 +5,70 @@ struct WorkbenchV2CurrentFocusActions {
     let continueWork: () -> Void
     let viewDetails: () -> Void
     let selectBackground: () -> Void
-
-    static var `default`: WorkbenchV2CurrentFocusActions {
-        WorkbenchV2CurrentFocusActions(
-            continueWork: {},
-            viewDetails: {},
-            selectBackground: {}
-        )
-    }
 }
 
 struct WorkbenchV2QuickActionHandlers {
+    let screenshot: () -> Void
     let quickRecord: () -> Void
     let createTask: () -> Void
     let openInbox: () -> Void
     let startAgent: () -> Void
     let importFiles: () -> Void
     let addSchedule: () -> Void
+}
 
-    static var `default`: WorkbenchV2QuickActionHandlers {
-        WorkbenchV2QuickActionHandlers(
-            quickRecord: {},
-            createTask: {},
-            openInbox: {},
-            startAgent: {},
-            importFiles: {},
-            addSchedule: {}
+@MainActor
+struct WorkbenchV2LiveView: View {
+    @StateObject private var dashboardViewModel: WorkspaceDashboardViewModel
+    @ObservedObject var heroBackgroundStore: WorkbenchV2HeroBackgroundStore
+
+    init(
+        repository: any WorkspaceDashboardRepositoryProtocol,
+        heroBackgroundStore: WorkbenchV2HeroBackgroundStore = .shared
+    ) {
+        _dashboardViewModel = StateObject(wrappedValue: WorkspaceDashboardViewModel(repository: repository))
+        self.heroBackgroundStore = heroBackgroundStore
+    }
+
+    var body: some View {
+        WorkbenchV2View(
+            dashboardData: .live(from: dashboardViewModel.snapshot),
+            debugOverlayEnabled: true,
+            heroBackgroundStore: heroBackgroundStore,
+            currentFocusActions: .init(
+                continueWork: { AppState.shared.navigate(to: .agent) },
+                viewDetails: { AppState.shared.navigate(to: .agent) },
+                selectBackground: {}
+            ),
+            quickActionHandlers: .init(
+                screenshot: { NotificationCenter.default.post(name: Notification.Name("AcMind.captureScreenshot"), object: nil) },
+                quickRecord: { NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil) },
+                createTask: { AppState.shared.navigate(to: .agent) },
+                openInbox: { AppState.shared.navigateToInbox() },
+                startAgent: { AppState.shared.navigate(to: .agent) },
+                importFiles: {
+                    AppState.shared.navigateToInbox()
+                    NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+                },
+                addSchedule: { AppState.shared.navigate(to: .schedule) }
+            )
         )
+        .onAppear { dashboardViewModel.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: .acmindSourceItemsDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .task {
+            while Task.isCancelled == false {
+                try? await Task.sleep(for: .seconds(30))
+                guard Task.isCancelled == false else { return }
+                dashboardViewModel.refresh()
+            }
+        }
     }
 }
 
 struct WorkbenchV2View: View {
-    let mockData: WorkbenchV2MockData
+    let dashboardData: WorkbenchV2DashboardData
     let debugOverlayEnabled: Bool
     @ObservedObject var heroBackgroundStore: WorkbenchV2HeroBackgroundStore
     let currentFocusActions: WorkbenchV2CurrentFocusActions
@@ -47,13 +79,13 @@ struct WorkbenchV2View: View {
 #endif
 
     init(
-        mockData: WorkbenchV2MockData,
+        dashboardData: WorkbenchV2DashboardData,
         debugOverlayEnabled: Bool,
         heroBackgroundStore: WorkbenchV2HeroBackgroundStore = .shared,
-        currentFocusActions: WorkbenchV2CurrentFocusActions = .default,
-        quickActionHandlers: WorkbenchV2QuickActionHandlers = .default
+        currentFocusActions: WorkbenchV2CurrentFocusActions,
+        quickActionHandlers: WorkbenchV2QuickActionHandlers
     ) {
-        self.mockData = mockData
+        self.dashboardData = dashboardData
         self.debugOverlayEnabled = debugOverlayEnabled
         self.heroBackgroundStore = heroBackgroundStore
         self.currentFocusActions = currentFocusActions
@@ -71,21 +103,21 @@ struct WorkbenchV2View: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
-                    WorkbenchHeader(model: mockData.header, layout: layout)
+                    WorkbenchHeader(model: dashboardData.header, layout: layout)
 
                     WorkbenchSummaryStrip(
                         items: [
-                            .init(title: "聚焦", value: mockData.currentFocus.title, tint: WorkbenchV2Tokens.Color.accent),
-                            .init(title: "待办", value: "\(mockData.pendingItems.items.count) 项", tint: WorkbenchV2Tokens.Color.accentOrange),
-                            .init(title: "今日", value: "\(mockData.todayStatus.items.count) 项", tint: WorkbenchV2Tokens.Color.accentGreen),
-                            .init(title: "快捷", value: "\(mockData.quickActions.actions.count) 个", tint: WorkbenchV2Tokens.Color.textSecondary)
+                            .init(title: "聚焦", value: dashboardData.currentFocus.title, tint: WorkbenchV2Tokens.Color.accent),
+                            .init(title: "待办", value: "\(dashboardData.pendingItems.items.count) 项", tint: WorkbenchV2Tokens.Color.accentOrange),
+                            .init(title: "今日", value: "\(dashboardData.todayStatus.items.count) 项", tint: WorkbenchV2Tokens.Color.accentGreen),
+                            .init(title: "快捷", value: "\(dashboardData.quickActions.actions.count) 个", tint: WorkbenchV2Tokens.Color.textSecondary)
                         ],
                         layout: layout
                     )
                     .padding(.top, WorkbenchV2Tokens.Spacing.sm)
 
                     WorkbenchV2MainDashboardGrid(
-                        model: mockData,
+                        model: dashboardData,
                         layout: layout,
                         heroBackgroundStore: heroBackgroundStore,
                         currentFocusActions: resolvedCurrentFocusActions,
@@ -122,7 +154,7 @@ struct WorkbenchV2View: View {
 }
 
 private struct WorkbenchV2MainDashboardGrid: View {
-    let model: WorkbenchV2MockData
+    let model: WorkbenchV2DashboardData
     let layout: WorkbenchV2ResolvedLayout
     let heroBackgroundStore: WorkbenchV2HeroBackgroundStore
     let currentFocusActions: WorkbenchV2CurrentFocusActions
@@ -338,19 +370,37 @@ struct WorkbenchV2EmptyState: View {
 }
 
 extension WorkbenchV2View {
-    init(debugOverlayEnabled: Bool = false) {
-        self.init(mockData: .preview(), debugOverlayEnabled: debugOverlayEnabled)
+#if DEBUG
+    init(
+        previewDashboardData: WorkbenchV2DashboardData,
+        debugOverlayEnabled: Bool,
+        heroBackgroundStore: WorkbenchV2HeroBackgroundStore = .shared
+    ) {
+        self.init(
+            dashboardData: previewDashboardData,
+            debugOverlayEnabled: debugOverlayEnabled,
+            heroBackgroundStore: heroBackgroundStore,
+            currentFocusActions: .previewOnly,
+            quickActionHandlers: .previewOnly
+        )
     }
+
+    init(debugOverlayEnabled: Bool = false) {
+        self.init(previewDashboardData: .preview(), debugOverlayEnabled: debugOverlayEnabled)
+    }
+#endif
 }
 
+#if DEBUG
 struct WorkbenchV2View_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            WorkbenchV2View(mockData: .preview(), debugOverlayEnabled: false)
+            WorkbenchV2View(previewDashboardData: .preview(), debugOverlayEnabled: false)
                 .frame(width: 1500, height: 888)
-            WorkbenchV2View(mockData: .compactWarning(), debugOverlayEnabled: true)
+            WorkbenchV2View(previewDashboardData: .compactWarning(), debugOverlayEnabled: true)
                 .frame(width: 1180, height: 720)
         }
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

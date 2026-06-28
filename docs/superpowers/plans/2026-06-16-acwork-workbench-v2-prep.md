@@ -13,8 +13,8 @@
 ### Task 1: Add WorkbenchV2 constants and feature switch
 
 **Files:**
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/WorkbenchV2Tokens.swift`
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift`
+- Create: `../../../Features/Native/HomeV2/WorkbenchV2Tokens.swift`
+- Modify: `../../../App/ContentView.swift`
 
 - [ ] **Step 1: Define the frozen V2 layout constants**
 
@@ -65,7 +65,7 @@ case .home:
 Run:
 
 ```bash
-xcodebuild -project "/Volumes/White Atlas/03_Projects/AcMind/AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='-' build
+xcodebuild -project "../../../AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='-' build
 ```
 
 Expected: build succeeds.
@@ -75,8 +75,8 @@ Expected: build succeeds.
 ### Task 2: Create isolated V2 layout shell
 
 **Files:**
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/WorkbenchV2View.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/WorkbenchV2Layout.swift`
+- Create: `../../../Features/Native/HomeV2/WorkbenchV2View.swift`
+- Create: `../../../Features/Native/HomeV2/WorkbenchV2Layout.swift`
 
 - [ ] **Step 1: Implement a root `WorkbenchV2View` that uses a fixed 1500×888 content canvas and no root `ScrollView`**
 
@@ -149,7 +149,7 @@ enum WorkbenchV2Layout {
 Run:
 
 ```bash
-xcodebuild -project "/Volumes/White Atlas/03_Projects/AcMind/AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='-' build
+xcodebuild -project "../../../AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='-' build
 ```
 
 Expected: build succeeds with `WorkbenchV2View` compiled into the app.
@@ -159,15 +159,15 @@ Expected: build succeeds with `WorkbenchV2View` compiled into the app.
 ### Task 3: Create mock-only component files
 
 **Files:**
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/WorkbenchHeader.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/CurrentFocusCard.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/PendingItemsCard.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/RecentCollectionCard.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/TodayStatusPanel.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/ActivityTrendCard.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/QuickActionsCard.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Components/DeviceStatusBar.swift`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/Preview/WorkbenchV2MockData.swift`
+- Create: `../../../Features/Native/HomeV2/Components/WorkbenchHeader.swift`
+- Create: `../../../Features/Native/HomeV2/Components/CurrentFocusCard.swift`
+- Create: `../../../Features/Native/HomeV2/Components/PendingItemsCard.swift`
+- Create: `../../../Features/Native/HomeV2/Components/RecentCollectionCard.swift`
+- Create: `../../../Features/Native/HomeV2/Components/TodayStatusPanel.swift`
+- Create: `../../../Features/Native/HomeV2/Components/ActivityTrendCard.swift`
+- Create: `../../../Features/Native/HomeV2/Components/QuickActionsCard.swift`
+- Create: `../../../Features/Native/HomeV2/Components/DeviceStatusBar.swift`
+- Create: `../../../Features/Native/HomeV2/Preview/WorkbenchV2MockData.swift`
 
 - [ ] **Step 1: Define one mock data struct that can initialize every V2 component without global singletons**
 
@@ -208,7 +208,7 @@ enum WorkbenchV2State {
 Run:
 
 ```bash
-rg -n "AppState.shared|ServiceContainer.shared|EnvironmentObject|@EnvironmentObject" "/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2"
+rg -n "AppState.shared|ServiceContainer.shared|EnvironmentObject|@EnvironmentObject" "../../../Features/Native/HomeV2"
 ```
 
 Expected: no matches for global singletons in V2 component files.
@@ -218,8 +218,8 @@ Expected: no matches for global singletons in V2 component files.
 ### Task 4: Add static charts and measurement export for V2
 
 **Files:**
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2/WorkbenchV2Chart.swift`
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind/App/AppDelegate.swift`
+- Create: `../../../Features/Native/HomeV2/WorkbenchV2Chart.swift`
+- Modify: `../../../App/AppDelegate.swift`
 
 - [ ] **Step 1: Define the chart point type for V2 mock trend data**
 
@@ -278,8 +278,8 @@ let frames = AuditRuntimeFrames(
 ### Task 5: Document the V2 structure and verify the build
 
 **Files:**
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/AcWork_0.1.0_WorkbenchV2_Structure.md`
-- Create: `/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/AcWork_0.1.0_WorkbenchV2_Frames.json`
+- Create: `../../refactor/AcWork_0.1.0_WorkbenchV2_Structure.md`
+- Create: `../../refactor/AcWork_0.1.0_WorkbenchV2_Frames.json`
 
 - [ ] **Step 1: Write the structure doc with the fixed canvas, component tree, and responsive rules**
 
@@ -303,26 +303,26 @@ let frames = AuditRuntimeFrames(
 Run:
 
 ```bash
-xcodebuild -project "/Volumes/White Atlas/03_Projects/AcMind/AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='-' build
+xcodebuild -project "../../../AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='-' build
 ```
 
 Then export:
 
 ```bash
-"/Users/lichen/Library/Developer/Xcode/DerivedData/AcMind-aollzkokwuzgdvhjedyzodikxjdb/Build/Products/Debug/AcMind.app/Contents/MacOS/AcMind" --acwork-layout-audit
+"DerivedData/AcMind-aollzkokwuzgdvhjedyzodikxjdb/Build/Products/Debug/AcMind.app/Contents/MacOS/AcMind" --acwork-layout-audit
 ```
 
 Expected output files:
 
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/screenshots/workbench-v2-default-debug.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/refactor/screenshots/workbench-v2-compact-debug.png`
+- `../../refactor/screenshots/workbench-v2-default-debug.png`
+- `../../refactor/screenshots/workbench-v2-compact-debug.png`
 
 - [ ] **Step 4: Verify the new V2 files build cleanly and the legacy home page still exists**
 
 Run:
 
 ```bash
-rg -n "struct WorkspaceHomeView|struct WorkbenchV2View" "/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home" "/Volumes/White Atlas/03_Projects/AcMind/Features/Native/HomeV2"
+rg -n "struct WorkspaceHomeView|struct WorkbenchV2View" "../../../Features/Native/Home" "../../../Features/Native/HomeV2"
 ```
 
 Expected: both implementations are present.

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DeviceStatusBar: View {
-    let model: WorkbenchV2MockData.DeviceStatus
+    let model: WorkbenchV2DashboardData.DeviceStatus
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -48,7 +48,7 @@ struct DeviceStatusBar: View {
         )
     }
 
-    private var visibleItems: [WorkbenchV2MockData.DeviceStatusItem] {
+    private var visibleItems: [WorkbenchV2DashboardData.DeviceStatusItem] {
         if layout.mode == .compact {
             return model.items.filter { item in
                 ["CPU", "内存", "电源", "权限"].contains(item.title)
@@ -60,7 +60,7 @@ struct DeviceStatusBar: View {
 }
 
 private struct WorkbenchV2DeviceStatusMetric: View {
-    let item: WorkbenchV2MockData.DeviceStatusItem
+    let item: WorkbenchV2DashboardData.DeviceStatusItem
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: WorkbenchV2Tokens.Spacing.xs) {
@@ -109,13 +109,15 @@ private struct WorkbenchV2DeviceDetailsButtonStyle: ButtonStyle {
     }
 }
 
+#if DEBUG
 struct DeviceStatusBar_Previews: PreviewProvider {
     static var previews: some View {
         DeviceStatusBar(
-            model: WorkbenchV2MockData.preview().deviceStatus,
+            model: WorkbenchV2DashboardData.preview().deviceStatus,
             layout: WorkbenchV2Layout.resolve(for: CGSize(width: 1235, height: 68))
         )
         .padding()
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

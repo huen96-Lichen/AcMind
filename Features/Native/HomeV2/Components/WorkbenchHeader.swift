@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WorkbenchHeader: View {
-    let model: WorkbenchV2MockData.Header
+    let model: WorkbenchV2DashboardData.Header
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -37,13 +37,15 @@ struct WorkbenchHeader: View {
     }
 }
 
+#if DEBUG
 struct WorkbenchHeader_Previews: PreviewProvider {
     static var previews: some View {
         WorkbenchHeader(
-            model: WorkbenchV2MockData.preview().header,
+            model: WorkbenchV2DashboardData.preview().header,
             layout: WorkbenchV2Layout.resolve(for: CGSize(width: 1235, height: 888))
         )
         .padding()
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

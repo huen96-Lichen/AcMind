@@ -96,6 +96,8 @@ struct DynamicContinentTemplateV2: View {
                 .fill(DynamicContinentDesignTokens.containerBackground)
                 .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 5)
         )
+        .environment(\.colorScheme, .dark)
+        .tint(NotchV2DesignTokens.accentBlue)
         .clipShape(containerShape)
     }
 

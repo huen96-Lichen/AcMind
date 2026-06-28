@@ -32,7 +32,7 @@ struct SystemStatusView: View {
     }
 
     var body: some View {
-        AcWorkShell(
+        WorkspacePageShell(
             title: "状态",
             subtitle: "真实采样 · \(viewModel.lastUpdatedText) · \(viewModel.refreshHint)",
             headerActions: AnyView(dashboardHeaderActions),
@@ -48,13 +48,13 @@ struct SystemStatusView: View {
                 dashboardTrailingRail
             }
         )
+        .onAppear { viewModel.startMonitoring() }
         .onAppear {
-            viewModel.startMonitoring()
             helperInstaller.refreshStatus()
             startFanControlPolling()
         }
+        .onDisappear { viewModel.stopMonitoring() }
         .onDisappear {
-            viewModel.stopMonitoring()
             fanRefreshTask?.cancel()
             fanRefreshTask = nil
         }
@@ -396,7 +396,7 @@ struct SystemStatusView: View {
                                 icon: "internaldrive"
                             )
                             dashboardStatusRow(
-                                title: "说明",
+                                title: "详情",
                                 value: viewModel.diskStateDetail,
                                 tint: .orange,
                                 icon: "text.alignleft"
@@ -938,6 +938,10 @@ struct SystemStatusView: View {
                         dashboardPulsingPlaceholder(icon: "fanblades", color: .blue)
                     }
                 }
+            }
+
+            AppSurfaceCard(title: "进程占用 Top 5", subtitle: "CPU 实时排序", padding: 4, fillHeight: true) {
+                dashboardProcessList(processes: viewModel.snapshot.topProcesses)
             }
 
             AppSurfaceCard(title: "快速操作", subtitle: "短按钮，不拉高卡片", padding: 4) {

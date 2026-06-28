@@ -10,7 +10,7 @@ struct VoiceEntryView: View {
     var body: some View {
         AcWorkShell(
             title: "说入法设置",
-            subtitle: "真实控制语音输入链路：入口、识别、润色、输出、静音检测和连续输入。",
+            subtitle: "在这里管理语音输入链路：触发、识别、润色、输出、静音检测和连续输入。",
             leadingRailWidth: 208,
             trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             leadingRail: {
@@ -81,7 +81,7 @@ struct VoiceEntryView: View {
     private var voiceSummaryRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "入口概览", subtitle: "只读摘要", padding: 14) {
+                AppSurfaceCard(title: "状态概览", subtitle: "只读摘要", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         railSummaryRow(
                             title: "启用",
@@ -172,7 +172,7 @@ struct VoiceEntryView: View {
                         )
                     }
 
-                    Text("语音链路说明")
+                    Text("语音链路")
                         .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
 
@@ -181,7 +181,7 @@ struct VoiceEntryView: View {
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("入口、识别、润色、输出和连续输入都在这里配置。")
+                    Text("触发、识别、润色、输出和连续输入都在这里配置。")
                         .font(.system(size: 12.5))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .lineSpacing(3)
@@ -207,11 +207,11 @@ struct VoiceEntryView: View {
     }
 
     private var summaryGrid: some View {
-        AppSurfaceCard(title: "关键摘要", subtitle: "入口、识别与输出", padding: 14) {
+        AppSurfaceCard(title: "关键摘要", subtitle: "触发、识别与输出", padding: 14) {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(
                     title: "摘要概览",
-                    description: "这些卡片对应说入法真正控制的链路。",
+                    description: "这些卡片对应说入法实际控制的链路。",
                     status: viewModel.companionVoiceEnabled ? "已启用" : "已关闭"
                 )
 
@@ -223,7 +223,7 @@ struct VoiceEntryView: View {
                     spacing: 12
                 ) {
                     MetricCard(
-                        label: "入口",
+                        label: "触发",
                         primaryValue: viewModel.companionVoiceShortcut,
                         trend: viewModel.voiceTriggerMode.displayName,
                         state: SettingsStatusLabelFormatter.binaryState(
@@ -286,15 +286,15 @@ struct VoiceEntryView: View {
 
     private var controlSections: some View {
         VStack(alignment: .leading, spacing: AppSurfaceTokens.Spacing.md) {
-            settingCard(title: "入口与触发", description: "说入法真实入口。已移除的独立问答和翻译入口不再出现在这里。") {
-                toggleRow(title: "启用说入法", description: "控制快捷键入口是否工作。", isOn: persistedBinding(\.companionVoiceEnabled))
+            settingCard(title: "触发与行为", description: "说入法的触发方式和输出行为。") {
+                toggleRow(title: "启用说入法", description: "控制快捷键是否可用。", isOn: persistedBinding(\.companionVoiceEnabled))
                 divider
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("触发快捷键")
                             .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
-                        Text("当前全局入口。")
+                        Text("当前全局触发方式。")
                             .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
@@ -310,7 +310,7 @@ struct VoiceEntryView: View {
                 }
             }
 
-            settingCard(title: "识别与润色", description: "这些字段直接进入 VoiceSettings / SayInputConfiguration。") {
+            settingCard(title: "识别与润色", description: "这些字段会直接参与识别与润色配置。") {
                 pickerRow(title: "ASR 引擎", description: "当前默认语音识别提供方。", selection: persistedBinding(\.voiceDefaultProvider)) {
                     ForEach(asrProviderOptions, id: \.id) { option in
                         Text(option.title).tag(option.id)
@@ -363,12 +363,12 @@ struct VoiceEntryView: View {
                 toggleRow(title: "补全结尾标点", description: "结束时自动补充基础句末标点。", isOn: persistedBinding(\.enablePunctuationAppend))
             }
 
-            settingCard(title: "静音检测与注入", description: "静音检测已经进入 SayInputConfiguration；麦克风设备偏好会在开始录音时自动应用。") {
+            settingCard(title: "静音检测与注入", description: "静音检测已接入；麦克风设备偏好会在开始录音时自动应用。") {
                 toggleRow(title: "启用静音检测", description: "检测长静音后自动停止录音。", isOn: persistedBinding(\.voiceEnableSilenceDetection))
                 divider
                 stepperRow(title: "静音超时", description: "达到该时长后自动停录。", value: persistedBinding(\.voiceSilenceTimeout), range: 1...10, step: 0.5, format: { "\($0.formatted(.number.precision(.fractionLength(1))))s" })
                 divider
-                toggleRow(title: "录音时静音系统音频", description: "录音期间临时静音系统输出，防止扬声器回声影响识别。", isOn: persistedBinding(\.muteSystemAudioDuringRecording))
+                toggleRow(title: "录音时静音系统音频", description: "录音期间静音系统输出，防止扬声器回声影响识别。", isOn: persistedBinding(\.muteSystemAudioDuringRecording))
                 divider
                 pickerRow(title: "注入策略", description: "文本写回焦点输入框的方式。", selection: persistedBinding(\.injectionStrategy)) {
                     ForEach(injectionOptions, id: \.id) { option in
@@ -382,7 +382,7 @@ struct VoiceEntryView: View {
     private var runtimeCard: some View {
         settingCard(title: "当前链路", description: "这张卡展示当前页面真正控制的运行链。") {
             pipelineRow(
-                "快捷键入口",
+                "快捷键触发",
                 SettingsStatusLabelFormatter.binaryState(
                     isEnabled: viewModel.companionVoiceEnabled,
                     enabledText: viewModel.companionVoiceShortcut,
@@ -390,7 +390,7 @@ struct VoiceEntryView: View {
                 )
             )
             divider
-            pipelineRow("悬浮入口", "CompanionVoicePanel")
+            pipelineRow("悬浮面板", "CompanionVoicePanel")
             divider
             pipelineRow("录音协调", "SayInputCoordinator")
             divider
@@ -401,7 +401,7 @@ struct VoiceEntryView: View {
     }
 
     private var statusEntryCard: some View {
-        settingCard(title: "状态入口", description: "完整本机状态集中在主侧边栏的「状态」。") {
+        settingCard(title: "状态概览", description: "完整本机状态集中在主侧边栏的「状态」。") {
             Button("查看状态") {
                 (NSApp.delegate as? AppDelegate)?.showSystemStatus()
             }

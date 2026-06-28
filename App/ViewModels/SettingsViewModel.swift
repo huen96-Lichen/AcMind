@@ -92,6 +92,8 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var captureScreenshotCornerRadius: Double = 0
     @Published public var captureScreenshotMaxWidth: Double = 0
     @Published public var captureScreenshotMaxHeight: Double = 0
+    @Published public var screenshotPresets: [ScreenshotPreset] = ScreenshotPreset.defaultPresets
+    @Published public var selectedScreenshotPresetID: String = ScreenshotPreset.defaultPresets.first?.id ?? "default-save"
     @Published public var companionCaptureOpenDetailAfterCapture: Bool = false
     @Published public var companionCaptureShowNotification: Bool = true
     @Published public var voiceInputEnabled: Bool = true
@@ -868,6 +870,8 @@ public final class SettingsViewModel: ObservableObject {
             captureScreenshotCornerRadius: captureScreenshotCornerRadius,
             captureScreenshotMaxWidth: captureScreenshotMaxWidth,
             captureScreenshotMaxHeight: captureScreenshotMaxHeight,
+            screenshotPresets: normalizedScreenshotPresets(),
+            selectedScreenshotPresetID: selectedScreenshotPresetID,
             companionCaptureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
             companionCaptureOpenDetailAfterCapture: companionCaptureOpenDetailAfterCapture,
             companionCaptureShowNotification: companionCaptureShowNotification,
@@ -993,6 +997,8 @@ public final class SettingsViewModel: ObservableObject {
                 captureScreenshotCornerRadius: captureScreenshotCornerRadius,
                 captureScreenshotMaxWidth: captureScreenshotMaxWidth,
                 captureScreenshotMaxHeight: captureScreenshotMaxHeight,
+                screenshotPresets: normalizedScreenshotPresets(),
+                selectedScreenshotPresetID: selectedScreenshotPresetID,
                 companionCaptureAutoSaveToInbox: companionCaptureAutoSaveToInbox,
                 companionCaptureOpenDetailAfterCapture: companionCaptureOpenDetailAfterCapture,
                 companionCaptureShowNotification: companionCaptureShowNotification,
@@ -1084,6 +1090,9 @@ public final class SettingsViewModel: ObservableObject {
         captureScreenshotCornerRadius = preferences.captureScreenshotCornerRadius
         captureScreenshotMaxWidth = preferences.captureScreenshotMaxWidth
         captureScreenshotMaxHeight = preferences.captureScreenshotMaxHeight
+        screenshotPresets = preferences.screenshotPresets.isEmpty ? ScreenshotPreset.defaultPresets : preferences.screenshotPresets
+        selectedScreenshotPresetID = preferences.selectedScreenshotPresetID
+        normalizeSelectedScreenshotPreset()
         companionCaptureAutoSaveToInbox = preferences.companionCaptureAutoSaveToInbox
         companionCaptureOpenDetailAfterCapture = preferences.companionCaptureOpenDetailAfterCapture
         companionCaptureShowNotification = preferences.companionCaptureShowNotification
@@ -1093,6 +1102,108 @@ public final class SettingsViewModel: ObservableObject {
         apiKeyUsesKeychain = preferences.apiKeyUsesKeychain
         aiCallLogEnabled = preferences.aiCallLogEnabled
         errorLogEnabled = preferences.errorLogEnabled
+    }
+
+    public var selectedScreenshotPreset: ScreenshotPreset {
+        screenshotPresets.first(where: { $0.id == selectedScreenshotPresetID })
+            ?? screenshotPresets.first
+            ?? ScreenshotPreset.defaultPresets[0]
+    }
+
+    public func selectScreenshotPreset(id: String) {
+        guard let preset = screenshotPresets.first(where: { $0.id == id }) else { return }
+        selectedScreenshotPresetID = preset.id
+        applyScreenshotPreset(preset)
+    }
+
+    public func applyCurrentScreenshotSettingsToSelectedPreset() {
+        guard let index = screenshotPresets.firstIndex(where: { $0.id == selectedScreenshotPresetID }) else { return }
+        screenshotPresets[index] = makeScreenshotPreset(from: screenshotPresets[index])
+    }
+
+    public func restoreDefaultScreenshotPresets() {
+        let state = SettingsLocalPreferences.restoredDefaultScreenshotPresetState()
+        screenshotPresets = state.presets
+        selectedScreenshotPresetID = state.selectedPresetID
+        applyScreenshotPreset(selectedScreenshotPreset)
+    }
+
+    public func createBlankScreenshotPreset() {
+        let state = SettingsLocalPreferences.createBlankScreenshotPresetState(from: screenshotPresets)
+        screenshotPresets = state.presets
+        selectedScreenshotPresetID = state.selectedPresetID
+        applyScreenshotPreset(selectedScreenshotPreset)
+    }
+
+    public func duplicateSelectedScreenshotPreset() {
+        let state = SettingsLocalPreferences.duplicateSelectedScreenshotPresetState(
+            from: screenshotPresets,
+            selectedPresetID: selectedScreenshotPresetID
+        )
+        screenshotPresets = state.presets
+        selectedScreenshotPresetID = state.selectedPresetID
+        applyScreenshotPreset(selectedScreenshotPreset)
+    }
+
+    public func renameSelectedScreenshotPreset(to newName: String) {
+        screenshotPresets = SettingsLocalPreferences.renameSelectedScreenshotPresetState(
+            from: screenshotPresets,
+            selectedPresetID: selectedScreenshotPresetID,
+            newName: newName
+        )
+    }
+
+    public func updateSelectedScreenshotPresetOutputAction(_ action: ScreenshotPresetOutputAction) {
+        screenshotPresets = SettingsLocalPreferences.updateSelectedScreenshotPresetOutputActionState(
+            from: screenshotPresets,
+            selectedPresetID: selectedScreenshotPresetID,
+            action: action
+        )
+    }
+
+    public func deleteSelectedScreenshotPreset() {
+        let state = SettingsLocalPreferences.deleteSelectedScreenshotPresetState(
+            from: screenshotPresets,
+            selectedPresetID: selectedScreenshotPresetID
+        )
+        screenshotPresets = state.presets
+        selectedScreenshotPresetID = state.selectedPresetID
+        applyScreenshotPreset(selectedScreenshotPreset)
+    }
+
+    private func applyScreenshotPreset(_ preset: ScreenshotPreset) {
+        captureAutoRedactionEnabled = preset.captureAutoRedactionEnabled
+        captureCensorMode = preset.captureCensorMode
+        captureScreenshotCornerRadius = preset.captureScreenshotCornerRadius
+        captureScreenshotMaxWidth = preset.captureScreenshotMaxWidth
+        captureScreenshotMaxHeight = preset.captureScreenshotMaxHeight
+    }
+
+    private func makeScreenshotPreset(from source: ScreenshotPreset) -> ScreenshotPreset {
+        ScreenshotPreset(
+            id: source.id,
+            name: source.name,
+            captureAutoRedactionEnabled: captureAutoRedactionEnabled,
+            captureCensorModeRawValue: captureCensorMode.rawValue,
+            captureScreenshotCornerRadius: captureScreenshotCornerRadius,
+            captureScreenshotMaxWidth: captureScreenshotMaxWidth,
+            captureScreenshotMaxHeight: captureScreenshotMaxHeight,
+            defaultOutputAction: source.defaultOutputAction
+        )
+    }
+
+    private func normalizedScreenshotPresets() -> [ScreenshotPreset] {
+        let presets = screenshotPresets.isEmpty ? ScreenshotPreset.defaultPresets : screenshotPresets
+        return presets.map { preset in
+            preset.id == selectedScreenshotPresetID ? makeScreenshotPreset(from: preset) : preset
+        }
+    }
+
+    private func normalizeSelectedScreenshotPreset() {
+        if screenshotPresets.contains(where: { $0.id == selectedScreenshotPresetID }) == false {
+            selectedScreenshotPresetID = screenshotPresets.first?.id ?? ScreenshotPreset.defaultPresets.first?.id ?? "default-save"
+        }
+        applyScreenshotPreset(selectedScreenshotPreset)
     }
 
     private static func encodeFrontmatterTemplate(_ template: [String: String]) -> String {

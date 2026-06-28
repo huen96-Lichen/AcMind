@@ -70,6 +70,34 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertNil(summary.errorMessage)
     }
 
+    func testLoadingDescriptorDoesNotClaimRuntimeIsActive() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let pluginDirectory = pluginRoot.appendingPathComponent("metadata-only", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "metadata-only",
+            name: "Metadata Only",
+            version: "1.0.0",
+            capabilities: [.customASR],
+            entryPoint: "main.swift",
+            configPath: pluginDirectory.appendingPathComponent("plugin.json").path
+        )
+        try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        try await manager.loadPlugin(at: pluginDirectory)
+
+        let status = await manager.getPluginStatus(id: descriptor.id)
+        let activeCount = await manager.getActivePluginCount()
+        let plugins = await manager.getAllPlugins()
+        let asrPlugins = await manager.getASRPlugins()
+        XCTAssertEqual(status, .discovered)
+        XCTAssertEqual(activeCount, 0)
+        XCTAssertTrue(plugins.isEmpty)
+        XCTAssertTrue(asrPlugins.isEmpty)
+    }
+
     func testPluginSandboxPolicySnapshotExposesPermissionsAndLimits() async {
         let sandbox = PluginSandbox(
             pluginId: "policy-plugin",
@@ -84,6 +112,20 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertEqual(policy.permissionLabels, ["文件读取", "剪贴板访问"])
         XCTAssertEqual(policy.resourceLimits.memoryMB, 128)
         XCTAssertEqual(policy.resourceLimits.cpuPercent, 10)
+    }
+
+    func testPluginSandboxRejectsSiblingWithMatchingPrefix() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let sandbox = PluginSandbox(pluginId: "trusted", pluginsDirectory: pluginRoot)
+
+        let trustedPath = pluginRoot.appendingPathComponent("trusted/config.json")
+        let siblingPath = pluginRoot.appendingPathComponent("trusted-evil/config.json")
+
+        let trustedAccess = await sandbox.validateAccess(path: trustedPath)
+        let siblingAccess = await sandbox.validateAccess(path: siblingPath)
+        XCTAssertTrue(trustedAccess)
+        XCTAssertFalse(siblingAccess)
     }
 
     private func makePluginRoot() throws -> URL {

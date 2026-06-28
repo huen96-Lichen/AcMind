@@ -88,6 +88,7 @@ struct WorkbenchView: View {
                 onClose: { viewModel.showPendingArchive = false }
             )
         }
+        .background(AppVisualBackdrop())
     }
 
     // MARK: - Sidebar

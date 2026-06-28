@@ -150,6 +150,180 @@ final class SettingsLocalPreferencesTests: XCTestCase {
         XCTAssertNotNil(loaded)
         XCTAssertFalse(loaded!.captureAutoRedactionEnabled)
     }
+
+    func testScreenshotSnapshotFallsBackToDefaultPresetAndHotkeyText() throws {
+        let suiteName = "AcMind.ScreenshotSnapshotTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create test defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let customPreset = ScreenshotPreset(
+            id: "custom-copy",
+            name: "自定义复制",
+            captureAutoRedactionEnabled: false,
+            captureCensorModeRawValue: CensorMode.blur.rawValue,
+            captureScreenshotCornerRadius: 8,
+            captureScreenshotMaxWidth: 1440,
+            captureScreenshotMaxHeight: 900,
+            defaultOutputAction: .copyToClipboard
+        )
+
+        SettingsLocalPreferences(
+            screenshotPresets: [customPreset],
+            selectedScreenshotPresetID: "missing-preset"
+        ).save(to: defaults)
+
+        let snapshot = SettingsLocalPreferences.screenshotSnapshot(
+            from: AppSettings(captureScreenshotHotkey: "⌘⇧4"),
+            defaults: defaults
+        )
+
+        XCTAssertEqual(snapshot.activePreset.id, customPreset.id)
+        XCTAssertEqual(snapshot.activePreset.defaultOutputAction, .copyToClipboard)
+        XCTAssertEqual(snapshot.hotkeyLabel, "全局热键 ⌘⇧4")
+    }
+
+    func testScreenshotSnapshotUsesUnboundLabelWhenHotkeyMissing() throws {
+        let suiteName = "AcMind.ScreenshotSnapshotFallbackTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create test defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let snapshot = SettingsLocalPreferences.screenshotSnapshot(defaults: defaults)
+        XCTAssertEqual(snapshot.hotkeyLabel, "全局热键 未绑定")
+        XCTAssertEqual(snapshot.activePreset.id, ScreenshotPreset.defaultPresets.first?.id)
+    }
+
+    func testSaveAndLoadRoundTripPreservesScreenshotPresets() throws {
+        let suiteName = "AcMind.ScreenshotPresetRoundTripTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create test defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let presets = [
+            ScreenshotPreset(
+                id: "roundtrip-save",
+                name: "Roundtrip Save",
+                captureAutoRedactionEnabled: true,
+                captureCensorModeRawValue: CensorMode.pixelate.rawValue,
+                captureScreenshotCornerRadius: 4,
+                captureScreenshotMaxWidth: 0,
+                captureScreenshotMaxHeight: 0,
+                defaultOutputAction: .saveToInbox
+            ),
+            ScreenshotPreset(
+                id: "roundtrip-copy",
+                name: "Roundtrip Copy",
+                captureAutoRedactionEnabled: false,
+                captureCensorModeRawValue: CensorMode.blur.rawValue,
+                captureScreenshotCornerRadius: 0,
+                captureScreenshotMaxWidth: 1920,
+                captureScreenshotMaxHeight: 1080,
+                defaultOutputAction: .copyToClipboard
+            )
+        ]
+
+        let expected = SettingsLocalPreferences(
+            captureScreenshotEnabled: false,
+            captureAutoRedactionEnabled: false,
+            captureCensorModeRawValue: CensorMode.blur.rawValue,
+            captureScreenshotCornerRadius: 10,
+            captureScreenshotMaxWidth: 1280,
+            captureScreenshotMaxHeight: 720,
+            screenshotPresets: presets,
+            selectedScreenshotPresetID: "roundtrip-copy"
+        )
+
+        expected.save(to: defaults)
+
+        let loaded = SettingsLocalPreferences.load(from: defaults)
+        XCTAssertEqual(loaded?.screenshotPresets, presets)
+        XCTAssertEqual(loaded?.selectedScreenshotPresetID, "roundtrip-copy")
+        XCTAssertEqual(loaded?.captureScreenshotCornerRadius, 10)
+        XCTAssertEqual(loaded?.captureScreenshotMaxWidth, 1280)
+        XCTAssertEqual(loaded?.captureScreenshotMaxHeight, 720)
+    }
+
+    func testDefaultScreenshotPresetsExposeExpectedNamesAndActions() {
+        let presets = ScreenshotPreset.defaultPresets
+        XCTAssertEqual(presets.count, 3)
+        XCTAssertEqual(presets.map(\.name), ["默认保存", "复制优先", "隐私优先"])
+        XCTAssertEqual(presets.map(\.defaultOutputAction), [.saveToInbox, .copyToClipboard, .saveToInbox])
+        XCTAssertEqual(presets[0].captureAutoRedactionEnabled, true)
+        XCTAssertEqual(presets[1].captureAutoRedactionEnabled, false)
+        XCTAssertEqual(presets[2].captureScreenshotCornerRadius, 6)
+    }
+
+    func testBlankScreenshotPresetUsesNeutralDefaults() {
+        let preset = ScreenshotPreset.blankPreset(name: "临时预设")
+        XCTAssertEqual(preset.name, "临时预设")
+        XCTAssertEqual(preset.defaultOutputAction, .saveToInbox)
+        XCTAssertTrue(preset.captureAutoRedactionEnabled == false)
+        XCTAssertEqual(preset.captureCensorMode, .pixelate)
+        XCTAssertEqual(preset.captureScreenshotCornerRadius, 0)
+        XCTAssertEqual(preset.captureScreenshotMaxWidth, 0)
+        XCTAssertEqual(preset.captureScreenshotMaxHeight, 0)
+    }
+
+    func testScreenshotPresetStateHelpersMaintainSelectionAndDefaults() {
+        let customPreset = ScreenshotPreset(
+            id: "custom",
+            name: "自定义预设",
+            captureAutoRedactionEnabled: false,
+            captureCensorModeRawValue: CensorMode.blur.rawValue,
+            captureScreenshotCornerRadius: 8,
+            captureScreenshotMaxWidth: 1440,
+            captureScreenshotMaxHeight: 900,
+            defaultOutputAction: .copyToClipboard
+        )
+
+        let blankName = SettingsLocalPreferences.nextBlankScreenshotPresetName(in: [customPreset])
+        XCTAssertEqual(blankName, "新建预设")
+
+        let restored = SettingsLocalPreferences.restoredDefaultScreenshotPresetState()
+        XCTAssertEqual(restored.presets.map(\.name), ["默认保存", "复制优先", "隐私优先"])
+        XCTAssertEqual(restored.selectedPresetID, "default-save")
+
+        let created = SettingsLocalPreferences.createBlankScreenshotPresetState(from: [customPreset])
+        XCTAssertEqual(created.presets.count, 2)
+        XCTAssertEqual(created.presets.last?.name, "新建预设")
+        XCTAssertEqual(created.selectedPresetID, created.presets.last?.id)
+
+        let duplicated = SettingsLocalPreferences.duplicateSelectedScreenshotPresetState(
+            from: [customPreset],
+            selectedPresetID: customPreset.id
+        )
+        XCTAssertEqual(duplicated.presets.count, 2)
+        XCTAssertEqual(duplicated.presets.last?.name, "自定义预设 副本")
+        XCTAssertEqual(duplicated.selectedPresetID, duplicated.presets.last?.id)
+
+        let deleted = SettingsLocalPreferences.deleteSelectedScreenshotPresetState(
+            from: duplicated.presets,
+            selectedPresetID: duplicated.selectedPresetID
+        )
+        XCTAssertEqual(deleted.presets.count, 1)
+        XCTAssertEqual(deleted.selectedPresetID, customPreset.id)
+
+        let renamed = SettingsLocalPreferences.renameSelectedScreenshotPresetState(
+            from: [customPreset],
+            selectedPresetID: customPreset.id,
+            newName: "  新名字  "
+        )
+        XCTAssertEqual(renamed.first?.name, "新名字")
+
+        let updatedAction = SettingsLocalPreferences.updateSelectedScreenshotPresetOutputActionState(
+            from: [customPreset],
+            selectedPresetID: customPreset.id,
+            action: .pinToDesktop
+        )
+        XCTAssertEqual(updatedAction.first?.defaultOutputAction, .pinToDesktop)
+    }
 }
 
 private final class InMemoryStorageStub: StorageServiceProtocol, @unchecked Sendable {

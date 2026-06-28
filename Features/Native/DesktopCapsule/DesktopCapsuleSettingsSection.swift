@@ -85,9 +85,9 @@ struct DesktopCapsuleSettingsSection: View {
 
             Divider()
 
-            // 可用功能说明
+            // 可用功能
             VStack(alignment: .leading, spacing: 8) {
-                Text("可用功能说明")
+                Text("可用功能")
                     .font(.headline)
 
                 ForEach(CapsuleActionType.allCases) { type in

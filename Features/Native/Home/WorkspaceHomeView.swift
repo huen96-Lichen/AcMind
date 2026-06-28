@@ -127,28 +127,41 @@ struct WorkspaceHomeView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @AppStorage("screenshotQuickStartDismissed") private var screenshotQuickStartDismissed = false
     @StateObject private var viewModel: SystemStatusViewModel
     @StateObject private var dashboardViewModel: WorkspaceDashboardViewModel
     private let permissionManager: PermissionManager
+    private let settingsService: SettingsServiceProtocol
+    @State private var showingScreenshotOptions = false
+    @State private var screenshotSnapshot = SettingsLocalPreferences.screenshotSnapshot()
+    @State private var activeScreenshotPresetID: String = ScreenshotPreset.defaultPresets.first?.id ?? "default-save"
 
     init(
         systemStatusService: SystemStatusService,
         permissionManager: PermissionManager = PermissionManager(),
+        settingsService: SettingsServiceProtocol,
+        storageService: any StorageServiceProtocol,
+        scheduleService: any ScheduleServiceProtocol,
+        agentTaskBoardService: any AgentTaskBoardServiceProtocol,
         dashboardRepository: (any WorkspaceDashboardRepositoryProtocol)? = nil
     ) {
         self.permissionManager = permissionManager
+        self.settingsService = settingsService
         _viewModel = StateObject(wrappedValue: SystemStatusViewModel(service: systemStatusService))
         let resolvedRepository = dashboardRepository ?? LiveWorkspaceDashboardRepository(
             appState: AppState.shared,
-            systemStatusService: systemStatusService
+            systemStatusService: systemStatusService,
+            storageService: storageService,
+            scheduleService: scheduleService,
+            agentTaskBoardService: agentTaskBoardService
         )
         _dashboardViewModel = StateObject(wrappedValue: WorkspaceDashboardViewModel(repository: resolvedRepository))
     }
 
     private var quickActions: [HomeAction] {
         [
+            HomeAction(title: "立即截图", icon: "camera.viewfinder", tint: AppSurfaceTokens.secondaryText, kind: .capture),
             HomeAction(title: "说入法", icon: "mic.fill", tint: AppSurfaceTokens.secondaryText, kind: .voice),
-            HomeAction(title: "采集", icon: "camera.viewfinder", tint: AppSurfaceTokens.secondaryText, kind: .capture),
             HomeAction(title: "收集箱", icon: "tray.full", tint: AppSurfaceTokens.secondaryText, kind: .inbox),
             HomeAction(title: "设置", icon: "gearshape.fill", tint: AppSurfaceTokens.secondaryText, kind: .settings)
         ]
@@ -170,9 +183,13 @@ struct WorkspaceHomeView: View {
                 case .loaded:
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
+                            if shouldShowScreenshotQuickStart {
+                                screenshotQuickStartBanner
+                            }
                             greetingHeader
                             homeOverviewStrip
                             homePrimaryDeck
+                            screenshotCenterStrip
                             overviewRow
                             kpiRow
                             infoRow
@@ -218,13 +235,105 @@ struct WorkspaceHomeView: View {
                     .padding(14)
                 }
             }
-            .background(AppSurfaceBackdrop())
+            .background(AppVisualBackdrop())
         }
         .onAppear {
             viewModel.startMonitoring()
             dashboardViewModel.refresh()
+            refreshScreenshotConfiguration()
         }
         .onDisappear { viewModel.stopMonitoring() }
+        .onReceive(NotificationCenter.default.publisher(for: .acmindSourceItemsDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsDidChange)) { _ in
+            refreshScreenshotConfiguration()
+        }
+        .task {
+            while Task.isCancelled == false {
+                try? await Task.sleep(for: .seconds(30))
+                guard Task.isCancelled == false else { return }
+                dashboardViewModel.refresh()
+            }
+        }
+    }
+
+    private var shouldShowScreenshotQuickStart: Bool {
+        screenshotQuickStartDismissed == false
+    }
+
+    private func dismissScreenshotQuickStart() {
+        screenshotQuickStartDismissed = true
+    }
+
+    private var screenshotQuickStartBanner: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "camera.viewfinder")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.accentOrange)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: DashboardRadius.icon, style: .continuous)
+                        .fill(AppSurfaceTokens.accentOrange.opacity(0.12))
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("截图入口就在这里")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+
+                Text("优先点顶部工具栏的“截图”，或者用首页的“立即截图”；也可以从状态栏菜单进入。")
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button {
+                        dismissScreenshotQuickStart()
+                        showingScreenshotOptions = true
+                    } label: {
+                        Text("立即截图")
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button {
+                        dismissScreenshotQuickStart()
+                        appState.navigate(to: .screenshot)
+                    } label: {
+                        Text("打开截图查看")
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(.top, 2)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                dismissScreenshotQuickStart()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        Circle()
+                            .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("关闭截图入口提示")
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                .stroke(AppSurfaceTokens.accentOrange.opacity(0.28), lineWidth: 1)
+        )
     }
 
     private var homePalette: ProductPanelTokens.Palette {
@@ -245,6 +354,24 @@ struct WorkspaceHomeView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 3) {
+                topActionButton(title: "立即截图", icon: "camera.viewfinder", tint: AppSurfaceTokens.accentOrange) {
+                    dismissScreenshotQuickStart()
+                    showingScreenshotOptions = true
+                }
+                .popover(isPresented: $showingScreenshotOptions) {
+                    ScreenshotOptionsView(
+                        snapshot: screenshotSnapshot,
+                        onSelect: { mode in
+                            postScreenshotCapture(mode: mode)
+                            showingScreenshotOptions = false
+                        },
+                        onSelectScroll: {
+                            postScreenshotCapture(mode: .scroll)
+                            showingScreenshotOptions = false
+                        }
+                    )
+                }
+
                 topActionButton(title: "快速记录", icon: "pencil", tint: AppSurfaceTokens.accentBlue) {
                     NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
                 }
@@ -368,6 +495,173 @@ struct WorkspaceHomeView: View {
 #if DEBUG
             .layoutDebugRegion("RightStatusRail")
 #endif
+        }
+    }
+
+    private var screenshotCenterStrip: some View {
+        DashboardCard(title: "截图中心", subtitle: "模式直达 / 历史回看 / 快捷触发", style: .subtle) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Button {
+                        showingScreenshotOptions = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "camera.viewfinder")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("立即截图")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .frame(maxHeight: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
+                                .stroke(AppSurfaceTokens.accentOrange.opacity(0.32), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showingScreenshotOptions) {
+                        ScreenshotOptionsView(
+                            snapshot: screenshotSnapshot,
+                            onSelect: { mode in
+                                postScreenshotCapture(mode: mode)
+                                showingScreenshotOptions = false
+                            },
+                            onSelectScroll: {
+                                postScreenshotCapture(mode: .scroll)
+                                showingScreenshotOptions = false
+                            }
+                        )
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("先点这里开始截图")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                        Text("也可以走菜单栏、胶囊、随身快捷键。")
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        appState.navigate(to: .settings)
+                    } label: {
+                        screenshotUtilityChip(title: "预设与热键", icon: "gearshape", tint: AppSurfaceTokens.secondaryText)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                HStack(spacing: 8) {
+                    screenshotContextChip(title: "预设", value: screenshotSnapshot.activePreset.name, tint: AppSurfaceTokens.accentBlue)
+                    screenshotContextChip(title: "输出", value: screenshotSnapshot.activePreset.defaultOutputAction.displayName, tint: AppSurfaceTokens.accentGreen)
+                    screenshotContextChip(title: "热键", value: screenshotSnapshot.hotkeyLabel, tint: AppSurfaceTokens.accentOrange)
+                }
+
+                if screenshotSnapshot.presets.isEmpty == false {
+                    HStack(spacing: 8) {
+                        ForEach(screenshotSnapshot.presets.prefix(3)) { preset in
+                            Button {
+                                dismissScreenshotQuickStart()
+                                selectScreenshotPreset(preset)
+                            } label: {
+                                screenshotPresetChip(
+                                    title: preset.name,
+                                    subtitle: preset.defaultOutputAction.displayName,
+                                    isSelected: preset.id == activeScreenshotPresetID,
+                                    tint: preset.id == activeScreenshotPresetID ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.separator
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 6),
+                        GridItem(.flexible(), spacing: 6),
+                        GridItem(.flexible(), spacing: 6),
+                        GridItem(.flexible(), spacing: 6)
+                    ],
+                    spacing: 6
+                ) {
+                    screenshotModeAction(title: "全屏", icon: "rectangle.on.rectangle", mode: .fullscreen, tint: AppSurfaceTokens.accentBlue)
+                    screenshotModeAction(title: "区域", icon: "crop", mode: .area, tint: AppSurfaceTokens.accentPrimary)
+                    screenshotModeAction(title: "窗口", icon: "macwindow", mode: .window, tint: AppSurfaceTokens.accentGreen)
+                    screenshotModeAction(title: "滚动", icon: "scroll", mode: .scroll, tint: AppSurfaceTokens.accentOrange)
+                }
+
+                HStack(spacing: 8) {
+                    Button {
+                        dismissScreenshotQuickStart()
+                        appState.navigate(to: .screenshotHistory)
+                    } label: {
+                        screenshotUtilityChip(title: "打开历史", icon: "camera.viewfinder", tint: AppSurfaceTokens.primaryText)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 0)
+
+                    Text(screenshotSnapshot.hotkeyLabel)
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+
+                if dashboardViewModel.snapshot.recentScreenshotItems.isEmpty == false {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("最近截图")
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.adaptive(minimum: 120), spacing: 6)
+                            ],
+                            alignment: .leading,
+                            spacing: 6
+                        ) {
+                            ForEach(dashboardViewModel.snapshot.recentScreenshotItems, id: \.self) { item in
+                                Button {
+                                    dismissScreenshotQuickStart()
+                                    (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "camera.viewfinder")
+                                            .font(.system(size: 9, weight: .semibold))
+                                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                        Text(item)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                                            .lineLimit(1)
+                                        Spacer(minLength: 0)
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 7)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
+                                            .fill(AppSurfaceTokens.cardBackgroundSoft)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
+                                            .stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .help("继续处理最近截图")
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }
 
@@ -500,7 +794,7 @@ struct WorkspaceHomeView: View {
         case .voice:
             return "打开说入法"
         case .capture:
-            return "快速采集内容"
+            return "打开截图查看 · ⌘⇧4"
         case .inbox:
             return "进入收集箱"
         case .settings:
@@ -1551,14 +1845,14 @@ struct WorkspaceHomeView: View {
     }
 
     private func actionButton(_ action: HomeAction) -> some View {
-        VStack(spacing: 2.5) {
+        VStack(spacing: action.kind == .capture ? 3.5 : 2.5) {
             ZStack {
                 Circle()
-                    .fill(AppSurfaceTokens.cardBackgroundSoft)
-                    .frame(width: 22, height: 22)
+                    .fill(action.kind == .capture ? AppSurfaceTokens.accentOrange.opacity(0.16) : AppSurfaceTokens.cardBackgroundSoft)
+                    .frame(width: action.kind == .capture ? 24 : 22, height: action.kind == .capture ? 24 : 22)
                 Image(systemName: action.icon)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(action.tint)
+                    .font(.system(size: action.kind == .capture ? 10 : 9, weight: .semibold))
+                    .foregroundStyle(action.kind == .capture ? AppSurfaceTokens.accentOrange : action.tint)
             }
 
             Text(action.title)
@@ -1566,18 +1860,169 @@ struct WorkspaceHomeView: View {
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
+
+            if action.kind == .capture {
+                Text("全屏 / 区域 / 窗口 / 滚动")
+                    .font(.system(size: 7.5, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                Text("⌘⇧4")
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
         }
-        .padding(.vertical, 2.25)
-        .frame(maxWidth: .infinity, minHeight: 28)
+        .padding(.vertical, action.kind == .capture ? 4 : 2.25)
+        .frame(maxWidth: .infinity, minHeight: 34)
         .background(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .fill(action.kind == .capture ? AppSurfaceTokens.accentOrange.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
-                .stroke(AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
+                .stroke(action.kind == .capture ? AppSurfaceTokens.accentOrange.opacity(0.55) : AppSurfaceTokens.separator.opacity(0.75), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous))
+    }
+
+    private func screenshotModeAction(title: String, icon: String, mode: ScreenshotMode, tint: Color) -> some View {
+        Button {
+            postScreenshotCapture(mode: mode)
+        } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    Circle()
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                        .frame(width: 22, height: 22)
+                    Image(systemName: icon)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(tint)
+                }
+
+                Text(title)
+                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+
+                Text(mode.displayName)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .lineLimit(1)
+            }
+            .padding(.vertical, 2.25)
+            .frame(maxWidth: .infinity, minHeight: 38)
+            .background(
+                RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
+                    .stroke(tint.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func screenshotUtilityChip(title: String, icon: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
+        )
+    }
+
+    private func screenshotContextChip(title: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(tint.opacity(0.72), lineWidth: 1)
+        )
+    }
+
+    private func screenshotPresetChip(title: String, subtitle: String, isSelected: Bool, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+            Text(subtitle)
+                .font(.system(size: 8.5, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
+                .fill(isSelected ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft.opacity(0.8))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DashboardRadius.control, style: .continuous)
+                .stroke(tint.opacity(isSelected ? 1.0 : 0.5), lineWidth: 1)
+        )
+    }
+
+    private func postScreenshotCapture(mode: ScreenshotMode) {
+        dismissScreenshotQuickStart()
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.captureScreenshot"),
+            object: ["mode": mode.rawValue]
+        )
+    }
+
+    private func refreshScreenshotConfiguration() {
+        Task {
+            let appSettings = await settingsService.getSettings()
+            let snapshot = SettingsLocalPreferences.screenshotSnapshot(from: appSettings)
+
+            await MainActor.run {
+                screenshotSnapshot = snapshot
+                activeScreenshotPresetID = snapshot.activePreset.id
+            }
+        }
+    }
+
+    private func selectScreenshotPreset(_ preset: ScreenshotPreset) {
+        Task {
+            var preferences = SettingsLocalPreferences.loadOrDefault()
+            preferences.screenshotPresets = preferences.screenshotPresets.isEmpty ? ScreenshotPreset.defaultPresets : preferences.screenshotPresets
+            preferences.selectedScreenshotPresetID = preset.id
+            preferences.save()
+            await MainActor.run {
+                refreshScreenshotConfiguration()
+            }
+        }
     }
 
     private func sensorList<T>(_ items: [T], placeholder: String) -> some View where T: SensorDisplayRow {
@@ -1826,7 +2271,7 @@ private struct HomeAction: Identifiable {
             case .voice:
                 NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
             case .capture:
-                NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+                (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
             case .inbox:
                 appState.navigate(to: .inbox)
             case .settings:
@@ -2034,6 +2479,8 @@ struct WorkspaceDashboardSnapshot: Equatable {
     let currentFocus: String
     let nextStep: String
     let pendingItems: [String]
+    let recentItems: [String]
+    let recentScreenshotItems: [String]
     let scheduleItems: [String]
     let systemMetrics: [String]
     let currentPage: String
@@ -2050,50 +2497,142 @@ enum WorkspaceDashboardPhase: Equatable {
 
 @MainActor
 protocol WorkspaceDashboardRepositoryProtocol {
-    func loadSnapshot() -> WorkspaceDashboardSnapshot
+    func loadSnapshot() async -> WorkspaceDashboardSnapshot
 }
 
 @MainActor
 struct LiveWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
     let appState: AppState
     let systemStatusService: SystemStatusService
+    let storageService: any StorageServiceProtocol
+    let scheduleService: any ScheduleServiceProtocol
+    let agentTaskBoardService: any AgentTaskBoardServiceProtocol
 
-    func loadSnapshot() -> WorkspaceDashboardSnapshot {
-        let preview = AcWorkPreviewData.homeSnapshot
+    func loadSnapshot() async -> WorkspaceDashboardSnapshot {
         let systemStatus = systemStatusService.snapshot
+        async let tasksResult = agentTaskBoardService.listTasks(
+            filter: TaskFilter(statuses: [.running, .waiting, .pending, .failed], limit: 8)
+        )
+        async let eventsResult = scheduleService.getEventsForDate(Date())
+        async let sourceItemsResult = storageService.listSourceItems(filter: nil)
+
+        let tasks = (try? await tasksResult) ?? []
+        let events = ((try? await eventsResult) ?? []).filter { $0.status != .cancelled }
+        let scheduleItems = events.map {
+            LiveScheduleItem(
+                title: $0.title,
+                timeRange: $0.displayTimeRange(),
+                endAt: $0.endAt,
+                isTodo: $0.status == .todo
+            )
+        }
+        let sourceItems = ((try? await sourceItemsResult) ?? [])
+            .filter { $0.status != .deleted && $0.status != .archived && $0.status != .exported }
+            .sorted { ($0.updatedAt ?? $0.createdAt) > ($1.updatedAt ?? $1.createdAt) }
+
+        let focus = resolveFocus(tasks: tasks, events: scheduleItems, sourceItems: sourceItems)
+        let pendingItems = buildPendingItems(tasks: tasks, sourceItems: sourceItems)
         return WorkspaceDashboardSnapshot(
             phase: .loaded,
-            nowLabel: preview.nowLabel,
-            currentFocus: preview.currentFocus,
-            nextStep: preview.nextStep,
-            pendingItems: preview.pendingItems,
-            scheduleItems: preview.scheduleItems,
-            systemMetrics: preview.systemMetrics,
+            nowLabel: Self.dateTimeFormatter.string(from: Date()),
+            currentFocus: focus.title,
+            nextStep: focus.nextStep,
+            pendingItems: pendingItems,
+            recentItems: sourceItems.prefix(6).map { displayTitle(for: $0) },
+            recentScreenshotItems: buildScreenshotItems(from: sourceItems),
+            scheduleItems: scheduleItems.prefix(6).map { "\($0.timeRange)  \($0.title)" },
+            systemMetrics: buildSystemMetrics(from: systemStatus),
             currentPage: appState.sidebarSelection.displayName,
             permissionSummary: SystemStatusLabelFormatter.permissionOverviewSummary(systemStatus.permissions),
             unavailableReasons: systemStatus.unavailableReasons
         )
     }
-}
 
-@MainActor
-struct PreviewWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
-    let phase: WorkspaceDashboardPhase
+    private func resolveFocus(
+        tasks: [AgentTask],
+        events: [LiveScheduleItem],
+        sourceItems: [SourceItem]
+    ) -> (title: String, nextStep: String) {
+        if let task = tasks.first(where: { $0.status == .running }) {
+            let nextStep = task.steps.indices.contains(task.currentStepIndex)
+                ? task.steps[task.currentStepIndex].title
+                : "继续当前 Agent 任务"
+            return (task.title, nextStep)
+        }
+        if let event = events.first(where: { $0.isTodo && $0.endAt >= Date() }) {
+            return (event.title, "按 \(event.timeRange) 推进日程")
+        }
+        if let task = tasks.first(where: { $0.status == .waiting || $0.status == .pending || $0.status == .failed }) {
+            let action = task.status == .failed ? "检查失败原因并重试" : "启动这项 Agent 任务"
+            return (task.title, action)
+        }
+        if let item = sourceItems.first {
+            return (displayTitle(for: item), "打开收集箱继续整理")
+        }
+        return ("目前没有进行中的任务", "从快速记录、日程或 Agent 创建下一项工作")
+    }
 
-    func loadSnapshot() -> WorkspaceDashboardSnapshot {
-        let preview = AcWorkPreviewData.homeSnapshot
-        return WorkspaceDashboardSnapshot(
-            phase: phase,
-            nowLabel: preview.nowLabel,
-            currentFocus: preview.currentFocus,
-            nextStep: preview.nextStep,
-            pendingItems: preview.pendingItems,
-            scheduleItems: preview.scheduleItems,
-            systemMetrics: preview.systemMetrics,
-            currentPage: SidebarItem.home.displayName,
-            permissionSummary: "已授权 3 · 未知 0 · 不可用 0",
-            unavailableReasons: []
-        )
+    private func buildPendingItems(tasks: [AgentTask], sourceItems: [SourceItem]) -> [String] {
+        var items = tasks.prefix(4).map { "\($0.status.displayName)：\($0.title)" }
+        if items.count < 6 {
+            items.append(contentsOf: sourceItems.prefix(6 - items.count).map {
+                "\($0.status.displayName)：\(displayTitle(for: $0))"
+            })
+        }
+        return items
+    }
+
+    private func buildScreenshotItems(from sourceItems: [SourceItem]) -> [String] {
+        sourceItems
+            .filter { $0.source == .screenshot || $0.type == .screenshot }
+            .prefix(4)
+            .map { item in
+                let content = displayTitle(for: item)
+                let sourceLabel = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "OCR" : "截图"
+                return "\(sourceLabel) · \(content)"
+            }
+    }
+
+    private func displayTitle(for item: SourceItem) -> String {
+        if let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines), title.isEmpty == false {
+            return title
+        }
+        if let preview = item.previewText?.trimmingCharacters(in: .whitespacesAndNewlines), preview.isEmpty == false {
+            return String(preview.prefix(48))
+        }
+        return "\(item.type.displayName)内容"
+    }
+
+    private func buildSystemMetrics(from snapshot: SystemStatusSnapshot) -> [String] {
+        var metrics: [String] = []
+        if let cpu = snapshot.cpu?.value {
+            metrics.append(String(format: "CPU %.0f%%", cpu))
+        }
+        if snapshot.memoryUsagePercent > 0 {
+            metrics.append(String(format: "内存 %.0f%%", snapshot.memoryUsagePercent))
+        }
+        if let battery = snapshot.battery?.percentage {
+            metrics.append(String(format: "电池 %.0f%%", battery))
+        }
+        if snapshot.diskUsagePercent > 0 {
+            metrics.append(String(format: "磁盘 %.0f%%", snapshot.diskUsagePercent))
+        }
+        return Array(metrics.prefix(4))
+    }
+
+    private static let dateTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private struct LiveScheduleItem {
+        let title: String
+        let timeRange: String
+        let endAt: Date
+        let isTodo: Bool
     }
 }
 
@@ -2102,13 +2641,35 @@ final class WorkspaceDashboardViewModel: ObservableObject {
     @Published private(set) var snapshot: WorkspaceDashboardSnapshot
 
     private let repository: any WorkspaceDashboardRepositoryProtocol
+    private var refreshGeneration = 0
 
     init(repository: any WorkspaceDashboardRepositoryProtocol) {
         self.repository = repository
-        self.snapshot = repository.loadSnapshot()
+        self.snapshot = WorkspaceDashboardSnapshot(
+            phase: .loading,
+            nowLabel: "",
+            currentFocus: "正在读取工作台",
+            nextStep: "等待真实数据加载完成",
+            pendingItems: [],
+            recentItems: [],
+            recentScreenshotItems: [],
+            scheduleItems: [],
+            systemMetrics: [],
+            currentPage: SidebarItem.home.displayName,
+            permissionSummary: "正在读取权限状态",
+            unavailableReasons: []
+        )
+        refresh()
     }
 
     func refresh() {
-        snapshot = repository.loadSnapshot()
+        refreshGeneration += 1
+        let generation = refreshGeneration
+        Task { [weak self] in
+            guard let self else { return }
+            let refreshedSnapshot = await repository.loadSnapshot()
+            guard generation == refreshGeneration else { return }
+            snapshot = refreshedSnapshot
+        }
     }
 }

@@ -10,7 +10,7 @@ struct JSONFormatterPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -19,7 +19,7 @@ struct JSONFormatterPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "格式说明", subtitle: "先说明能力，再进入输入与输出", padding: 16) {
+                        AppSurfaceCard(title: "格式概览", subtitle: "先了解能力，再进入输入与输出", padding: 16) {
                             introCard
                         }
 
@@ -289,7 +289,7 @@ struct Base64CodecPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -298,7 +298,7 @@ struct Base64CodecPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "编解码说明", subtitle: "文本和 Base64 之间来回转换", padding: 16) {
+                        AppSurfaceCard(title: "编解码流程", subtitle: "文本和 Base64 之间来回转换", padding: 16) {
                             introCard
                         }
 
@@ -583,7 +583,7 @@ struct MarkdownCleanerPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -592,7 +592,7 @@ struct MarkdownCleanerPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "整理说明", subtitle: "先收拢草稿，再输出干净文本", padding: 16) {
+                        AppSurfaceCard(title: "整理流程", subtitle: "先整理原文，再输出干净文本", padding: 16) {
                             introCard
                         }
 
@@ -637,7 +637,7 @@ struct MarkdownCleanerPanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("适合把剪贴板里的 Markdown 草稿快速收拾一下。")
+            Text("适合把剪贴板里的 Markdown 初稿快速整理一下。")
                 .font(.body)
 
             Text("会保留代码块内容，减少连着的空行，并清掉尾随空格。")
@@ -898,7 +898,7 @@ struct TextComparePanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -907,7 +907,7 @@ struct TextComparePanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "对比说明", subtitle: "逐行比较两段文本", padding: 16) {
+                        AppSurfaceCard(title: "对比流程", subtitle: "逐行比较两段文本", padding: 16) {
                             introCard
                         }
 
@@ -1760,7 +1760,7 @@ struct SRTTFCPXMLPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header

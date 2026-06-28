@@ -78,7 +78,7 @@ struct ClipboardView: View {
                 clipboardSummaryRail
             }
         )
-        .background(AppSurfaceBackdrop())
+        .background(AppVisualBackdrop())
         .onAppear {
             refreshPinWindowCount()
         }

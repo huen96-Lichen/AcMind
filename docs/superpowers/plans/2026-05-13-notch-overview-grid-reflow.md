@@ -13,7 +13,7 @@
 ### Task 1: Lock the overview page to a fixed equal-height grid
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2OverviewPage.swift`
+- Modify: `AcMind_V2.0/Features/Companion/NotchV2OverviewPage.swift`
 
 - [ ] **Step 1: Rework the overview root layout to use one fixed-height row**
 
@@ -39,7 +39,7 @@ HStack(alignment: .top, spacing: 20) {
 
 Run:
 ```bash
-xcodebuild -scheme AcMind -project "/Volumes/White Atlas/03_Projects/AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
+xcodebuild -scheme AcMind -project "AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
 ```
 Expected: the build reaches SwiftUI compilation for `NotchV2OverviewPage.swift` without layout-related compile errors.
 
@@ -53,8 +53,8 @@ git commit -m "feat: lock overview page to equal-height three-column grid"
 ### Task 2: Compress the left and right summary cards to match the shared baseline
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2OverviewPage.swift`
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2Card.swift` if the default card padding or header spacing needs to be tightened further
+- Modify: `AcMind_V2.0/Features/Companion/NotchV2OverviewPage.swift`
+- Modify: `AcMind_V2.0/Features/Companion/NotchV2Card.swift` if the default card padding or header spacing needs to be tightened further
 
 - [ ] **Step 1: Make the schedule card a full-height summary module with bottom-aligned “查看全部”**
 
@@ -84,7 +84,7 @@ NotchV2Card(title: "Agent", subtitle: "在线", symbol: "bubble.left.and.bubble.
 
 Run:
 ```bash
-xcodebuild -scheme AcMind -project "/Volumes/White Atlas/03_Projects/AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
+xcodebuild -scheme AcMind -project "AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
 ```
 Expected: `BUILD SUCCEEDED`.
 
@@ -98,7 +98,7 @@ git commit -m "feat: tighten overview summary cards"
 ### Task 3: Rebuild the center column as a compact three-part stack
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2OverviewPage.swift`
+- Modify: `AcMind_V2.0/Features/Companion/NotchV2OverviewPage.swift`
 
 - [ ] **Step 1: Replace the center column with an explicit three-part stack**
 
@@ -163,7 +163,7 @@ NotchV2Card(title: nil, subtitle: nil, symbol: nil, padding: 14) {
 
 Run:
 ```bash
-xcodebuild -scheme AcMind -project "/Volumes/White Atlas/03_Projects/AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
+xcodebuild -scheme AcMind -project "AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
 ```
 Expected: `BUILD SUCCEEDED`.
 
@@ -177,9 +177,9 @@ git commit -m "feat: compress overview center column"
 ### Task 4: Verify the tabs and playback bridge stay independent
 
 **Files:**
-- Inspect only: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2MusicPage.swift`
-- Inspect only: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2AgentPage.swift`
-- Inspect only: `/Volumes/White Atlas/03_Projects/AcMind_V2.0/Features/Companion/NotchV2ViewModel.swift`
+- Inspect only: `AcMind_V2.0/Features/Companion/NotchV2MusicPage.swift`
+- Inspect only: `AcMind_V2.0/Features/Companion/NotchV2AgentPage.swift`
+- Inspect only: `AcMind_V2.0/Features/Companion/NotchV2ViewModel.swift`
 
 - [ ] **Step 1: Confirm the music tab still uses the dedicated music page**
 
@@ -207,7 +207,7 @@ func playPause() {
 
 Run:
 ```bash
-xcodebuild -scheme AcMind -project "/Volumes/White Atlas/03_Projects/AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
+xcodebuild -scheme AcMind -project "AcMind_V2.0/AcMind.xcodeproj" -configuration Debug build
 ```
 Expected: `BUILD SUCCEEDED`.
 

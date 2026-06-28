@@ -79,14 +79,14 @@ struct BatchDownloadPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "批量下载说明", subtitle: "先确认资源类型，再进入下载和结果", padding: 16) {
+                        AppSurfaceCard(title: "批量下载流程", subtitle: "先确认资源类型，再进入下载和结果", padding: 16) {
                             introCard
                         }
 
@@ -481,14 +481,14 @@ struct VideoDownloadPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "视频下载说明", subtitle: "确认格式、地址和保存目录", padding: 16) {
+                        AppSurfaceCard(title: "视频下载流程", subtitle: "确认格式、地址和保存目录", padding: 16) {
                             introCard
                         }
 
@@ -856,9 +856,9 @@ struct ModelManagementPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
-            AcWorkShell(
+            WorkspacePageShell(
                 title: "模型管理",
                 subtitle: "管理应用里真实可用的模型。",
                 headerActions: AnyView(
@@ -1004,10 +1004,10 @@ struct ModelManagementPanel: View {
                 if shouldShowSection(.voiceClone) {
                     modelListSection(
                         title: "语音克隆",
-                        description: "语音克隆功能暂未开放",
+                        description: "语音克隆功能当前尚未提供",
                         count: 0
                     ) {
-                        emptyState(title: "暂无语音克隆模型", subtitle: "语音克隆功能暂未开放。")
+                        emptyState(title: "暂无可用的语音克隆模型", subtitle: "语音克隆功能当前尚未提供。")
                     }
                 }
             }
@@ -1057,10 +1057,10 @@ struct ModelManagementPanel: View {
                     AppSurfaceCard(title: "详细字段", subtitle: "域、形态、可用性与标签", padding: 12) {
                         detailFacts(item)
                     }
-                    AppSurfaceCard(title: "可用操作", subtitle: "默认项、启用和设置入口", padding: 12) {
+                    AppSurfaceCard(title: "可用操作", subtitle: "默认项、启用状态与设置", padding: 12) {
                         detailActions(item)
                     }
-                    AppSurfaceCard(title: "简介", subtitle: "更长的状态说明", padding: 12) {
+                    AppSurfaceCard(title: "简介", subtitle: "更完整的条目信息", padding: 12) {
                         detailNotes(item)
                     }
                 } else {
@@ -1417,7 +1417,7 @@ struct ModelManagementPanel: View {
                 return "云端语音识别。"
             }
         case .voiceClone:
-            return "语音克隆功能暂未开放。"
+            return "语音克隆功能当前尚未提供。"
         case .localModel:
             return "管理本地 AI 与本地 ASR。"
         }
@@ -2094,9 +2094,9 @@ final class ModelManagementViewModel: ObservableObject {
         case .parakeet:
             return "~600 MB"
         case .openAI, .aliCloud, .doubao, .mimoASR:
-            return "接口"
+            return "在线接口"
         case .googleCloud, .groq, .freeModel:
-            return "暂未开放"
+            return "未提供"
         }
     }
 
@@ -2123,11 +2123,11 @@ final class ModelManagementViewModel: ObservableObject {
         case .mimoASR:
             return "MiMo 云端识别。"
         case .googleCloud:
-            return "Google Cloud 语音能力暂未开放。"
+            return "Google Cloud 语音能力当前尚未提供。"
         case .groq:
-            return "Groq Whisper 通道暂未开放。"
+            return "Groq Whisper 通道当前尚未提供。"
         case .freeModel:
-            return "免费模型通道暂未开放。"
+            return "免费模型通道当前尚未提供。"
         }
     }
 
@@ -2237,14 +2237,14 @@ struct APITestPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "接口测试说明", subtitle: "先选择提供商，再运行检查", padding: 16) {
+                        AppSurfaceCard(title: "接口测试流程", subtitle: "先选择提供商，再运行检查", padding: 16) {
                             introCard
                         }
 

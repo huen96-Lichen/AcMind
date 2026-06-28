@@ -16,6 +16,10 @@ import ScreenCaptureKit
 /// 7. OCR 文本提取
 public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     private static let logger = AcMindLogger(category: .capture)
+    public static let screenshotModeMetadataKey = "screenshotMode"
+    public static let screenshotPresetIDMetadataKey = "screenshotPresetID"
+    public static let screenshotPresetNameMetadataKey = "screenshotPresetName"
+    public static let screenshotPresetOutputActionMetadataKey = "screenshotPresetOutputAction"
     
     // MARK: - Dependencies
     
@@ -65,15 +69,19 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             image = try await captureArea()
         case .window:
             image = try await captureWindow()
+        case .scroll:
+            image = try await captureVisibleScrollScreenshot()
         }
 
         let preparedImage = await prepareCapturedScreenshot(image, preferences: preferences)
         let finalImage = await finalizeCapturedScreenshot(preparedImage, preferences: preferences)
+        let timestamp = captureTimestampString()
+        let selectedPreset = Self.activeScreenshotPreset(from: preferences)
         
         // 保存图片到 AssetStore
         let assetFile = try await assetStore.saveImage(
             finalImage,
-            fileName: "screenshot_\(Date().timeIntervalSince1970).png"
+            fileName: Self.screenshotFileName(mode: mode, timestamp: timestamp)
         )
         
         // 创建 SourceItem
@@ -81,9 +89,10 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
             type: .screenshot,
             source: .screenshot,
             status: .captured,
-            title: "截图 \(formatDate())",
-            previewText: "截图 \(formatDate())",
-            assetFileIds: [assetFile.id]
+            title: Self.screenshotTitle(mode: mode, dateText: formatDate()),
+            previewText: Self.screenshotTitle(mode: mode, dateText: formatDate()),
+            assetFileIds: [assetFile.id],
+            metadata: Self.screenshotMetadata(mode: mode, preset: selectedPreset)
         )
         
         try await storage.insertSourceItem(sourceItem)
@@ -102,32 +111,22 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
     }
 
     public func captureScrollingScreenshot() async throws -> CaptureResult {
-        let preferences = SettingsLocalPreferences.loadOrDefault()
-        guard preferences.captureScreenshotEnabled else {
-            throw CaptureError.serviceUnavailable("截图捕获已在设置中关闭")
-        }
+        try await captureScreenshot(mode: .scroll)
+    }
 
-        let image = try await captureVisibleScrollScreenshot()
-        let preparedImage = await prepareCapturedScreenshot(image, preferences: preferences)
-        let finalImage = await finalizeCapturedScreenshot(preparedImage, preferences: preferences)
+    public static func screenshotMetadata(mode: ScreenshotMode, preset: ScreenshotPreset) -> [String: String] {
+        [
+            Self.screenshotModeMetadataKey: mode.rawValue,
+            Self.screenshotPresetIDMetadataKey: preset.id,
+            Self.screenshotPresetNameMetadataKey: preset.name,
+            Self.screenshotPresetOutputActionMetadataKey: preset.defaultOutputAction.rawValue
+        ]
+    }
 
-        let assetFile = try await assetStore.saveImage(
-            finalImage,
-            fileName: "scrollshot_\(Date().timeIntervalSince1970).png"
-        )
-
-        let sourceItem = SourceItem(
-            type: .screenshot,
-            source: .screenshot,
-            status: .captured,
-            title: "滚动截图 \(formatDate())",
-            previewText: "滚动截图 \(formatDate())",
-            assetFileIds: [assetFile.id]
-        )
-
-        try await storage.insertSourceItem(sourceItem)
-
-        return CaptureResult(sourceItem: sourceItem, assetFiles: [assetFile])
+    public static func activeScreenshotPreset(from preferences: SettingsLocalPreferences) -> ScreenshotPreset {
+        preferences.screenshotPresets.first(where: { $0.id == preferences.selectedScreenshotPresetID })
+            ?? preferences.screenshotPresets.first
+            ?? ScreenshotPreset.defaultPresets.first!
     }
     
     private func captureFullscreen() async throws -> NSImage {
@@ -235,6 +234,18 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
                 await ScrollCaptureService.shared.startCapture(captureRect: screen.visibleFrame, screen: screen)
             }
         }
+    }
+
+    private func captureTimestampString() -> String {
+        String(Int(Date().timeIntervalSince1970))
+    }
+
+    static func screenshotFileName(mode: ScreenshotMode, timestamp: String) -> String {
+        mode == .scroll ? "scrollshot_\(timestamp).png" : "screenshot_\(timestamp).png"
+    }
+
+    static func screenshotTitle(mode: ScreenshotMode, dateText: String) -> String {
+        (mode == .scroll ? "滚动截图 " : "截图 ") + dateText
     }
 
     private func captureScreenshotImage(
@@ -609,7 +620,7 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         await MainActor.run {
             let alert = NSAlert()
             alert.messageText = "需要屏幕录制权限"
-            alert.informativeText = "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcWork 权限"
+            alert.informativeText = "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcMind 权限"
             alert.addButton(withTitle: "打开设置")
             alert.addButton(withTitle: "取消")
             
@@ -675,7 +686,7 @@ public enum CaptureError: Error, LocalizedError {
     public var recoverySuggestion: String? {
         switch self {
         case .permissionDenied:
-            return "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcWork 权限"
+            return "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcMind 权限"
         case .captureFailed:
             return "请重试或尝试其他截图模式"
         case .downloadFailed:

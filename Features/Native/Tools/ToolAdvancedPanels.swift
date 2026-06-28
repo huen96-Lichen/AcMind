@@ -112,7 +112,7 @@ struct DocumentConverterPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -121,7 +121,7 @@ struct DocumentConverterPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "转换说明", subtitle: "先给出解析策略，再进入文件与结果", padding: 16) {
+                        AppSurfaceCard(title: "转换流程", subtitle: "先给出解析策略，再进入文件与结果", padding: 16) {
                             introCard
                         }
 
@@ -514,7 +514,7 @@ struct OCRPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -523,7 +523,7 @@ struct OCRPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "识别说明", subtitle: "支持文件和剪贴板输入", padding: 16) {
+                        AppSurfaceCard(title: "识别流程", subtitle: "支持文件和剪贴板输入", padding: 16) {
                             introCard
                         }
 
@@ -816,7 +816,7 @@ struct ImageProcessingPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -825,7 +825,7 @@ struct ImageProcessingPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "处理说明", subtitle: "先确认输入，再选择输出形式", padding: 16) {
+                        AppSurfaceCard(title: "处理流程", subtitle: "先确认输入，再选择输出形式", padding: 16) {
                             introCard
                         }
 
@@ -837,7 +837,7 @@ struct ImageProcessingPanel: View {
                             optionsCard
                         }
 
-                        AppSurfaceCard(title: "输出预览", subtitle: "结果可直接查看和打开", padding: 16) {
+                        AppSurfaceCard(title: "输出结果", subtitle: "结果可直接查看和打开", padding: 16) {
                             outputCard
                         }
                     }
@@ -1002,7 +1002,7 @@ struct ImageProcessingPanel: View {
     private var outputCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("输出预览")
+                Text("输出结果")
                     .font(.headline)
 
                 Spacer()
@@ -1030,7 +1030,7 @@ struct ImageProcessingPanel: View {
                     .background(AppSurfaceTokens.primaryText.opacity(0.02))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                Text("处理后会显示预览图。")
+                Text("处理后会显示结果图。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 240)
@@ -1329,7 +1329,7 @@ struct BatchRenamePanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(spacing: 0) {
                 header
@@ -1338,7 +1338,7 @@ struct BatchRenamePanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "重命名说明", subtitle: "先预览，再执行", padding: 16) {
+                        AppSurfaceCard(title: "改名流程", subtitle: "先查看结果，再执行", padding: 16) {
                             introCard
                         }
 
@@ -1350,7 +1350,7 @@ struct BatchRenamePanel: View {
                             rulesCard
                         }
 
-                        AppSurfaceCard(title: "预览", subtitle: "确认改名结果后再执行", padding: 16) {
+                        AppSurfaceCard(title: "改名结果", subtitle: "确认改名结果后再执行", padding: 16) {
                             previewCard
                         }
                     }
@@ -1368,7 +1368,7 @@ struct BatchRenamePanel: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("对文件夹中的一级项目批量改名，支持前缀、后缀、替换和预览。")
+                Text("对文件夹中的一级项目批量改名，支持前缀、后缀、替换和结果查看。")
                     .font(.caption)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -1387,7 +1387,7 @@ struct BatchRenamePanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("只处理所选文件夹的一级条目，先预览再执行。")
+            Text("只处理所选文件夹的一级条目，先查看结果再执行。")
                 .font(.body)
 
             Text("这样能尽量避免误改和路径连锁反应。")
@@ -1422,7 +1422,7 @@ struct BatchRenamePanel: View {
                 Button {
                     viewModel.refreshPreview()
                 } label: {
-                    Label("刷新预览", systemImage: "arrow.clockwise")
+                    Label("刷新结果", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.folderURL == nil)
@@ -1507,10 +1507,10 @@ struct BatchRenamePanel: View {
                 .toggleStyle(.switch)
 
             HStack {
-                Button {
-                    viewModel.refreshPreview()
-                } label: {
-                    Label("应用到预览", systemImage: "wand.and.stars")
+                    Button {
+                        viewModel.refreshPreview()
+                    } label: {
+                        Label("更新结果", systemImage: "wand.and.stars")
                 }
                 .buttonStyle(.bordered)
 
@@ -1522,7 +1522,7 @@ struct BatchRenamePanel: View {
     private var previewCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("预览")
+                Text("结果")
                     .font(.headline)
 
                 Spacer()
@@ -1622,7 +1622,7 @@ final class BatchRenameViewModel: ObservableObject {
                 return RenamePreviewItem(originalURL: url, proposedURL: proposed, isDirectory: isDirectory == true)
             }
 
-            statusText = previewItems.isEmpty ? ToolStatusLabelFormatter.emptyState("文件夹") : ToolStatusLabelFormatter.completed("生成预览")
+            statusText = previewItems.isEmpty ? ToolStatusLabelFormatter.emptyState("文件夹") : ToolStatusLabelFormatter.completed("生成结果")
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -1643,7 +1643,7 @@ final class BatchRenameViewModel: ObservableObject {
 
         let targetPaths = Set(previewItems.map(\.proposedURL.path))
         if targetPaths.count != previewItems.count {
-            errorMessage = "预览中存在重复目标名称，请先调整规则"
+            errorMessage = "结果中存在重复目标名称，请先调整规则"
             statusText = ToolStatusLabelFormatter.conflictState("命名")
             ToastManager.shared.show(.error, ToolStatusLabelFormatter.duplicateTargetNames())
             return
@@ -1761,7 +1761,7 @@ struct SRTToFCPXMLPanel: View {
 
     var body: some View {
         ZStack {
-            AppSurfaceBackdrop()
+            AppVisualBackdrop()
 
             VStack(alignment: .leading, spacing: 16) {
                 AppSurfaceCard(title: "SRT → FCPXML 转换器", subtitle: "把字幕稿转换成可直接导入剪辑的软件格式", padding: 16) {

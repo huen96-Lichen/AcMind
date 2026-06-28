@@ -199,7 +199,7 @@ struct DynamicContinentConfigView: View {
     private var dynamicContinentStatusRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "权限", subtitle: "调试可见", padding: 14) {
+                AppSurfaceCard(title: "权限", subtitle: "高级信息", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         railRow(title: "EventKit", value: calendarPermissionText)
                         railRow(title: "麦克风", value: permissionManager.statuses[.microphone]?.displayName ?? "未知")
@@ -207,7 +207,7 @@ struct DynamicContinentConfigView: View {
                     }
                 }
 
-                AppSurfaceCard(title: "调试", subtitle: "实时状态", padding: 14) {
+                AppSurfaceCard(title: "运行状态", subtitle: "实时信息", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         railRow(title: "热区", value: viewModel.hoverExpandDelay.formatted(.number.precision(.fractionLength(1))))
                         railRow(title: "收起宽度", value: "\(Int(viewModel.nonNotchCollapsedWidth))")
@@ -298,13 +298,13 @@ struct DynamicContinentConfigView: View {
 
     private var overviewAppearancePage: some View {
         VStack(alignment: .leading, spacing: 16) {
-            AppSurfaceCard(title: "灵动大陆", subtitle: "当前配置与预览概览", padding: 14) {
+            AppSurfaceCard(title: "灵动大陆", subtitle: "当前配置与示意", padding: 14) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("灵动大陆正在作为伴随能力的主配置中心运行。")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
-                        Text("这里集中管理启用、展开、HUD、模块可见性和调试入口。")
+                        Text("这里集中管理启用、展开、HUD、模块可见性和快捷入口。")
                             .font(.system(size: 11.5))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -347,7 +347,7 @@ struct DynamicContinentConfigView: View {
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {
-                AppSurfaceCard(title: "配置到预览", subtitle: "每次修改都会同步刷新这里的示意区", padding: 14) {
+                AppSurfaceCard(title: "配置与示意", subtitle: "每次修改都会同步刷新这里的示意区", padding: 14) {
                     VStack(alignment: .leading, spacing: LocalTokens.previewCardGap) {
                         HStack(spacing: LocalTokens.previewCardGap) {
                             previewSurfaceCard(
@@ -411,7 +411,7 @@ struct DynamicContinentConfigView: View {
                         }
                     }
                 }
-                summaryBlock(title: "状态入口", icon: "desktopcomputer", color: .blue) {
+                summaryBlock(title: "状态概览", icon: "desktopcomputer", color: .blue) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("完整本机状态已集中到主侧边栏的「状态」。")
                             .font(.system(size: 11))
@@ -883,13 +883,13 @@ struct DynamicContinentConfigView: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Spacer()
-                            Text("短时状态层")
+                            Text("轻量状态层")
                                 .font(.system(size: 11, weight: .medium))
                         }
                     }
                 }
 
-                summaryBlock(title: "状态入口", icon: "desktopcomputer", color: .blue) {
+                summaryBlock(title: "状态概览", icon: "desktopcomputer", color: .blue) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("完整本机状态已集中到主侧边栏的「状态」。")
                             .font(.system(size: 11))
@@ -988,7 +988,7 @@ struct DynamicContinentConfigView: View {
 
                 AppSurfaceCard(padding: 0) {
                     VStack(alignment: .leading, spacing: 0) {
-                        compactToggleRow("调试模式", isOn: $viewModel.debugMode)
+                        compactToggleRow("高级模式", isOn: $viewModel.debugMode)
                         Divider()
                         compactToggleRow("显示性能指标", isOn: $viewModel.showPerformanceMetrics)
                     }

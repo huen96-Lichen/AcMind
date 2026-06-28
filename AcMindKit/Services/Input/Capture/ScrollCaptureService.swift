@@ -323,11 +323,143 @@ public final class ScrollCaptureService: @unchecked Sendable {
     
     private func detectHeader(current: CGImage, previous: CGImage, shiftPx: Int) {
         guard current.width == previous.width, current.height == previous.height, shiftPx > 5 else {
+            headerHeight = 0
             headerDetectionDone = true
             return
         }
-        
+
+        headerHeight = Self.detectedFrozenHeaderHeight(current: current, previous: previous, shiftPx: shiftPx)
+        state.frozenTopHeight = CGFloat(headerHeight) / backingScale
         headerDetectionDone = true
+    }
+
+    static func detectedFrozenHeaderHeight(current: CGImage, previous: CGImage, shiftPx: Int) -> Int {
+        guard current.width == previous.width,
+              current.height == previous.height,
+              current.width > 0,
+              current.height > 0,
+              shiftPx > 5,
+              let currentBuffer = rgbaBuffer(from: current),
+              let previousBuffer = rgbaBuffer(from: previous)
+        else {
+            return 0
+        }
+
+        let width = current.width
+        let height = current.height
+        let maxScanRows = min(height / 2, max(96, min(512, shiftPx * 3)))
+        guard maxScanRows >= 8 else { return 0 }
+
+        var stableRows = 0
+        var unstableRowsAfterStable = 0
+        let sampleStride = max(1, width / 96)
+
+        for y in 0..<maxScanRows {
+            let diff = averageRowDifference(
+                current: currentBuffer,
+                previous: previousBuffer,
+                width: width,
+                y: y,
+                sampleStride: sampleStride
+            )
+
+            if diff <= 3.0 {
+                if unstableRowsAfterStable == 0 {
+                    stableRows += 1
+                } else {
+                    break
+                }
+            } else if stableRows > 0 {
+                unstableRowsAfterStable += 1
+                if unstableRowsAfterStable >= 3 {
+                    break
+                }
+            } else {
+                break
+            }
+        }
+
+        let minimumHeaderRows = max(8, min(32, shiftPx / 2))
+        guard stableRows >= minimumHeaderRows else { return 0 }
+
+        // If almost the whole scanned region is stable, this is likely a no-op/failed scroll
+        // comparison rather than a real frozen header.
+        let scannedStabilityRatio = Double(stableRows) / Double(maxScanRows)
+        if scannedStabilityRatio > 0.85 {
+            let shiftedBodyRow = min(height - 1, max(stableRows + 4, shiftPx + 4))
+            let bodyDiff = averageRowDifference(
+                current: currentBuffer,
+                previous: previousBuffer,
+                width: width,
+                y: shiftedBodyRow,
+                sampleStride: sampleStride
+            )
+            if bodyDiff <= 3.0 {
+                return 0
+            }
+        }
+
+        return stableRows
+    }
+
+    private struct RGBABuffer {
+        var data: [UInt8]
+        var bytesPerRow: Int
+    }
+
+    private static func rgbaBuffer(from image: CGImage) -> RGBABuffer? {
+        let width = image.width
+        let height = image.height
+        let bytesPerRow = width * 4
+        var data = [UInt8](repeating: 0, count: bytesPerRow * height)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+
+        let didDraw = data.withUnsafeMutableBytes { rawBuffer -> Bool in
+            guard let baseAddress = rawBuffer.baseAddress else { return false }
+            guard let context = CGContext(
+                data: baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: bitmapInfo
+            ) else { return false }
+
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+
+        guard didDraw else { return nil }
+        return RGBABuffer(data: data, bytesPerRow: bytesPerRow)
+    }
+
+    private static func averageRowDifference(
+        current: RGBABuffer,
+        previous: RGBABuffer,
+        width: Int,
+        y: Int,
+        sampleStride: Int
+    ) -> Double {
+        var total = 0
+        var samples = 0
+        let rowOffsetCurrent = y * current.bytesPerRow
+        let rowOffsetPrevious = y * previous.bytesPerRow
+
+        var x = 0
+        while x < width {
+            let indexCurrent = rowOffsetCurrent + x * 4
+            let indexPrevious = rowOffsetPrevious + x * 4
+            total += abs(Int(current.data[indexCurrent]) - Int(previous.data[indexPrevious]))
+            total += abs(Int(current.data[indexCurrent + 1]) - Int(previous.data[indexPrevious + 1]))
+            total += abs(Int(current.data[indexCurrent + 2]) - Int(previous.data[indexPrevious + 2]))
+            samples += 3
+            x += sampleStride
+        }
+
+        guard samples > 0 else { return .greatestFiniteMagnitude }
+        return Double(total) / Double(samples)
     }
     
     private func mergeNewContent(currentFrame: CGImage, offsetPx: Int) {

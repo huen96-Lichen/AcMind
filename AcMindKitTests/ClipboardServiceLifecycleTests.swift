@@ -63,6 +63,20 @@ final class ClipboardServiceLifecycleTests: XCTestCase {
         await service.copyText("Protocol route")
         XCTAssertEqual(NSPasteboard.general.string(forType: .string), "Protocol route")
     }
+
+    func testUnimplementedStorageCapabilityFailsExplicitly() async {
+        let storage: StorageServiceProtocol = ClipboardStorageMock()
+
+        do {
+            _ = try await storage.listClipboardTags()
+            XCTFail("缺失的存储能力不应伪造空结果")
+        } catch let error as UnsupportedServiceCapabilityError {
+            XCTAssertEqual(error.service, "StorageServiceProtocol")
+            XCTAssertEqual(error.operation, "listClipboardTags")
+        } catch {
+            XCTFail("返回了错误的错误类型: \(error)")
+        }
+    }
 }
 
 private final class ClipboardStorageMock: StorageServiceProtocol {

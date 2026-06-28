@@ -12,7 +12,7 @@ final class SystemStatusCleanupTests: XCTestCase {
 
     func testDynamicContinentConfigViewUsesLivePreviewSurfaceBlocks() throws {
         let source = try readSource("Features/Native/DynamicContinent/DynamicContinentConfigView.swift")
-        XCTAssertTrue(source.contains("配置到预览"))
+        XCTAssertTrue(source.contains("配置与示意"))
         XCTAssertTrue(source.contains("previewSurfaceCard("))
         XCTAssertTrue(source.contains("previewStatusStrip"))
         XCTAssertTrue(source.contains("previewContentIDs(for:"))
@@ -105,6 +105,7 @@ final class SystemStatusCleanupTests: XCTestCase {
     func testPrimarySidebarMatchesAcWorkNavigationSections() throws {
         let source = try readSource("Features/Sidebar/SidebarView.swift")
         let appDelegateSource = try readSource("App/AppDelegate.swift")
+        let itemSource = try readSource("AcMindKit/Models/SidebarItem.swift")
         let dynamicContinentSource = try readSource("Features/Native/DynamicContinent/DynamicContinentConfigView.swift")
         XCTAssertTrue(source.contains("sidebarSection(title: SidebarItem.Group.coreWorkflow.displayName"))
         XCTAssertTrue(source.contains("sidebarSection(title: SidebarItem.Group.companionCapabilities.displayName"))
@@ -114,7 +115,14 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("sidebarFooter"))
         XCTAssertTrue(source.contains("SidebarItemRow("))
         XCTAssertTrue(source.contains("SidebarFooterRow(status: footerStatus, isCompact: false)"))
+        XCTAssertTrue(source.contains("case .screenshot:"))
+        XCTAssertTrue(source.contains("ScreenshotGlyph(isSelected: isSelected)"))
+        XCTAssertTrue(source.contains("case .screenshotHistory:"))
+        XCTAssertTrue(source.contains("ScreenshotHistoryGlyph(isSelected: isSelected)"))
+        XCTAssertTrue(source.contains("private struct ScreenshotHistoryGlyph"))
         XCTAssertFalse(source.contains("AppSurfaceCard(title: title, subtitle: subtitle"))
+        XCTAssertTrue(itemSource.contains("case .screenshot: return \"截图\""))
+        XCTAssertTrue(itemSource.contains("case .screenshot: return \"打开截图查看\""))
         XCTAssertTrue(appDelegateSource.contains("showPreferredSurface(for: .home)"))
         XCTAssertTrue(dynamicContinentSource.contains("ForEach(SidebarItem.mainItems, id: \\.rawValue)"))
         XCTAssertTrue(dynamicContinentSource.contains("item == .clipboard ? SidebarItem.inbox.displayName : item.displayName"))
@@ -127,6 +135,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         let contentSource = try readSource("App/ContentView.swift")
         let appStateSource = try readSource("App/AppState.swift")
         let appDelegateSource = try readSource("App/AppDelegate.swift")
+        let screenshotWorkspaceSource = try readSource("Features/Native/Shared/ScreenshotWorkspaceView.swift")
 
         XCTAssertTrue(source.contains("if appState.sidebarCollapsed"))
         XCTAssertTrue(source.contains("expandedSidebar"))
@@ -144,14 +153,28 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("SidebarFooterRow(status: footerStatus, isCompact: true)"))
         XCTAssertTrue(source.contains("if (isHovered || isSelected), let shortcut = item.shortcut"))
         XCTAssertTrue(itemSource.contains("public var compactName: String"))
+        XCTAssertTrue(itemSource.contains("面板"))
+        XCTAssertTrue(itemSource.contains("case .screenshotHistory: return \"历史\""))
         XCTAssertTrue(itemSource.contains("case .clipboard: return \"同步\""))
         XCTAssertTrue(contentSource.contains("appState.sidebarCollapsed ? 84 : AppSurfaceTokens.Layout.sidebarWidth"))
         XCTAssertTrue(source.contains(".accessibilityLabel(\"主侧边栏\")"))
         XCTAssertTrue(source.contains(".accessibilitySortPriority(100)"))
         XCTAssertTrue(source.contains(".accessibilityLabel(\"\\(item.displayName)\\(isSelected ? \"，当前页面\" : \"\")\")"))
         XCTAssertTrue(source.contains("capabilityState: capabilityState(for: item)"))
+        XCTAssertTrue(source.contains("openScreenshotOptions()"))
+        XCTAssertTrue(source.contains("Text(\"截图\")"))
         XCTAssertTrue(appStateSource.contains("public func navigate(to item: SidebarItem)"))
         XCTAssertTrue(appStateSource.contains("public func navigateToInbox(workspace selection: String? = \"all\")"))
+        XCTAssertTrue(contentSource.contains("case .screenshot:"))
+        XCTAssertTrue(contentSource.contains("ScreenshotWorkspaceView(clipboardPinActions: clipboardPinActions)"))
+        XCTAssertTrue(contentSource.contains(".navigationTitle(\"截图查看\")"))
+        XCTAssertTrue(screenshotWorkspaceSource.contains("recentCaptureCard"))
+        XCTAssertTrue(screenshotWorkspaceSource.contains("postScreenshotCapture(mode:"))
+        XCTAssertTrue(screenshotWorkspaceSource.contains("打开胶囊截图"))
+        XCTAssertTrue(screenshotWorkspaceSource.contains("继续处理最近截图"))
+        XCTAssertTrue(screenshotWorkspaceSource.contains("openLatestScreenshotPreviewFromMenu()"))
+        XCTAssertTrue(appDelegateSource.contains("menu.addItem(NSMenuItem(title: \"立即截图\", action: #selector(showScreenshotOptionsFromMenu), keyEquivalent: \"\"))"))
+        XCTAssertTrue(appDelegateSource.contains("captureMenu.addItem(NSMenuItem(title: \"立即截图\", action: #selector(showScreenshotOptionsFromMenu), keyEquivalent: \"\"))"))
         XCTAssertTrue(appDelegateSource.contains("appState.navigate(to: .home)"))
         XCTAssertTrue(appDelegateSource.contains("appState.navigate(to: .inbox)"))
         XCTAssertTrue(appDelegateSource.contains("appState.navigate(to: .agent)"))
@@ -162,36 +185,52 @@ final class SystemStatusCleanupTests: XCTestCase {
 
     func testAcWorkPreviewScenariosProvideDeterministicInboxStates() throws {
         let sharedSource = try readSource("Features/Native/Shared/WorkspaceSharedComponents.swift")
+        let previewDataSource = try readSource("App/DebugAcWorkPreviewData.swift")
         let inboxViewSource = try readSource("Features/Native/Inbox/InboxView.swift")
         let inboxViewModelSource = try readSource("App/ViewModels/InboxViewModel.swift")
         let captureWorkspaceSource = try readSource("Features/Native/Shared/CaptureWorkspaceView.swift")
+        let debugScenarioSource = try readSource("App/DebugAcWorkPreviewScenario.swift")
 
+        XCTAssertTrue(debugScenarioSource.contains("static func resolve(arguments:"))
+        XCTAssertTrue(debugScenarioSource.contains("--acwork-preview="))
+        XCTAssertTrue(debugScenarioSource.contains("--acwork-preview-"))
+        XCTAssertFalse(sharedSource.contains("fromProcessArguments"))
         XCTAssertTrue(sharedSource.contains("enum AcWorkPreviewScenario"))
         XCTAssertTrue(sharedSource.contains("case populated"))
         XCTAssertTrue(sharedSource.contains("case loading"))
         XCTAssertTrue(sharedSource.contains("case empty"))
         XCTAssertTrue(sharedSource.contains("case error"))
-        XCTAssertTrue(sharedSource.contains("--acwork-preview="))
         XCTAssertTrue(sharedSource.contains("AcWorkHomePreviewSnapshot"))
-        XCTAssertTrue(sharedSource.contains("static let fixedNow"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-voice-standup"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-clipboard-link"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-phone-richtext"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-screenshot-ocr"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-agent-code"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-manual-file"))
-        XCTAssertTrue(sharedSource.contains("acwork-preview-video-reference"))
+        XCTAssertFalse(sharedSource.contains("static let fixedNow"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-voice-standup"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-clipboard-link"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-phone-richtext"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-screenshot-ocr"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-agent-code"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-manual-file"))
+        XCTAssertFalse(sharedSource.contains("acwork-preview-video-reference"))
+        XCTAssertTrue(previewDataSource.contains("AcWorkHomePreviewSnapshot"))
+        XCTAssertTrue(previewDataSource.contains("static let fixedNow"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-voice-standup"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-clipboard-link"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-phone-richtext"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-screenshot-ocr"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-agent-code"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-manual-file"))
+        XCTAssertTrue(previewDataSource.contains("acwork-preview-video-reference"))
 
         XCTAssertTrue(inboxViewModelSource.contains("final class InboxCollectedItemRepository"))
         XCTAssertTrue(inboxViewModelSource.contains("private let previewScenario: AcWorkPreviewScenario?"))
         XCTAssertTrue(inboxViewModelSource.contains(".map(CollectedItem.init(sourceItem:))"))
         XCTAssertTrue(inboxViewModelSource.contains("AcWork Preview: 收集箱加载失败"))
-        XCTAssertTrue(inboxViewSource.contains("previewScenario: AcWorkPreviewScenario? = AcWorkPreviewScenario.fromProcessArguments()"))
+        XCTAssertTrue(inboxViewSource.contains("previewScenario: AcWorkPreviewScenario? = nil"))
+        XCTAssertTrue(inboxViewSource.contains("DebugAcWorkPreviewScenario.resolve()"))
         XCTAssertTrue(inboxViewSource.contains("@StateObject private var viewModel: CollectedInboxViewModel"))
-        XCTAssertTrue(inboxViewSource.contains("InboxCollectedItemRepository(previewScenario: previewScenario)"))
+        XCTAssertTrue(inboxViewSource.contains("InboxCollectedItemRepository(previewScenario: resolvedPreviewScenario)"))
         XCTAssertTrue(inboxViewSource.contains("viewModel.phase == .loading"))
         XCTAssertTrue(inboxViewSource.contains("errorState(message: errorMessage)"))
-        XCTAssertTrue(captureWorkspaceSource.contains("previewScenario: AcWorkPreviewScenario? = AcWorkPreviewScenario.fromProcessArguments()"))
+        XCTAssertTrue(captureWorkspaceSource.contains("previewScenario: AcWorkPreviewScenario? = nil"))
+        XCTAssertTrue(captureWorkspaceSource.contains("DebugAcWorkPreviewScenario.resolve()"))
         XCTAssertTrue(captureWorkspaceSource.contains("InboxView("))
         XCTAssertTrue(captureWorkspaceSource.contains("clipboardPinActions: clipboardPinActions"))
         XCTAssertTrue(captureWorkspaceSource.contains("previewScenario: previewScenario"))
@@ -210,7 +249,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(inboxViewSource.contains("minHeight: 188, maxHeight: 188"))
         XCTAssertTrue(inboxViewSource.contains(".flexible(minimum: 240, maximum: 300)"))
         XCTAssertTrue(inboxViewSource.contains("minimumColumnWidth: 240"))
-        XCTAssertTrue(inboxViewSource.contains(".accessibilityHint(\"按 Return 或 Space 打开预览，按 Delete 删除。\")"))
+        XCTAssertTrue(inboxViewSource.contains(".accessibilityHint(\"按 Return 或 Space 打开查看，按 Delete 删除。\")"))
         XCTAssertTrue(inboxViewSource.contains("Label(item.processingStatus.displayName, systemImage: item.processingStatus.accessibilityIconName)"))
         XCTAssertTrue(inboxViewSource.contains(".accessibilityLabel(\"状态：\\(item.processingStatus.displayName)\""))
         XCTAssertTrue(inboxViewSource.contains(".accessibilityLabel(\"清除搜索\")"))
@@ -220,7 +259,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(inboxViewSource.contains("parts.append(\"已加入批量选择\")"))
         XCTAssertTrue(inboxViewSource.contains("viewModel.setViewMode(mode)"))
         XCTAssertTrue(inboxViewSource.contains("viewModel.setDensity("))
-        XCTAssertTrue(inboxViewSource.contains("headerActions: AnyView(addContentMenu)"))
+        XCTAssertTrue(inboxViewSource.contains("headerActions: AnyView(inboxHeaderActions)"))
         XCTAssertTrue(inboxViewSource.contains("Label(\"添加内容\", systemImage: \"plus\")"))
         XCTAssertTrue(inboxViewSource.contains(".companionShowQuickNote"))
         XCTAssertTrue(inboxViewSource.contains(".companionShowCapturePanel"))
@@ -365,21 +404,32 @@ final class SystemStatusCleanupTests: XCTestCase {
 
     func testAgentPreviewWindowCanSwitchTraceModes() throws {
         let source = try readSource("App/AppDelegate.swift")
-        XCTAssertTrue(source.contains("previewSelection = \"quickAsk\""))
-        XCTAssertTrue(source.contains("--agent-preview-tool-call"))
-        XCTAssertTrue(source.contains("--agent-preview-automation"))
+        let commandSource = try readSource("App/DebugPreviewLaunchCommand.swift")
+        let agentViewModelSource = try readSource("App/ViewModels/AgentViewModel.swift")
+        let previewSampleSource = try readSource("App/DebugAgentPreviewSample.swift")
+        XCTAssertTrue(commandSource.contains("sidebarSelection = \"quickAsk\""))
+        XCTAssertTrue(commandSource.contains("--agent-preview-tool-call"))
+        XCTAssertTrue(commandSource.contains("--agent-preview-automation"))
         XCTAssertTrue(source.contains("previewSidebarSelection"))
         XCTAssertTrue(source.contains("shouldLoadDashboardData: false"))
+        XCTAssertTrue(source.contains("DebugAgentPreviewSample.makeViewModel()"))
+        XCTAssertFalse(source.contains("ProcessInfo.processInfo.arguments.contains(\"--agent-preview-tool-call\")"))
+        XCTAssertFalse(agentViewModelSource.contains("static func previewSample()"))
+        XCTAssertTrue(previewSampleSource.contains("enum DebugAgentPreviewSample"))
+        XCTAssertTrue(previewSampleSource.contains("static func makeViewModel() -> AgentViewModel"))
+        XCTAssertTrue(previewSampleSource.contains("日报自动化"))
     }
 
     func testAgentViewModelLoadsTaskBoardWithDashboardData() throws {
         let source = try readSource("App/ViewModels/AgentViewModel.swift")
+        let previewSampleSource = try readSource("App/DebugAgentPreviewSample.swift")
         XCTAssertTrue(source.contains("async let taskBoardTask = loadAgentTasks(filter: nil)"))
         XCTAssertTrue(source.contains("var taskBoardSummary"))
         XCTAssertTrue(source.contains("var currentWorkSummary"))
         XCTAssertTrue(source.contains("var recentTaskSummaries"))
-        XCTAssertTrue(source.contains("provider: openai"))
-        XCTAssertTrue(source.contains("- 已读取 2 条素材"))
+        XCTAssertFalse(source.contains("static func previewSample()"))
+        XCTAssertTrue(previewSampleSource.contains("provider: openai"))
+        XCTAssertTrue(previewSampleSource.contains("- 已读取 2 条素材"))
     }
 
     func testVoiceEntryOnlyKeepsStatusEntry() throws {
@@ -409,6 +459,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("StatusBadge(text:"))
         XCTAssertTrue(source.contains("scrollContentBackground(.hidden)"))
         XCTAssertTrue(source.contains("listRowBackground(Color.clear)"))
+        XCTAssertTrue(source.contains("打开方式：菜单栏「AcMind -> 截图」、首页「截图」、侧栏「截图」、截图工作区、随身快捷键和胶囊"))
         XCTAssertFalse(source.contains("struct StatusBadge"))
     }
 
@@ -442,12 +493,130 @@ final class SystemStatusCleanupTests: XCTestCase {
 
     func testSettingsPreviewWindowSupportsDebugLaunchers() throws {
         let source = try readSource("App/AppDelegate.swift")
-        XCTAssertTrue(source.contains("--settings-preview"))
-        XCTAssertTrue(source.contains("--settings-preview-narrow"))
-        XCTAssertTrue(source.contains("--settings-preview-export="))
-        XCTAssertTrue(source.contains("showSettingsPreviewWindow()"))
+        let commandSource = try readSource("App/DebugPreviewLaunchCommand.swift")
+
+        XCTAssertTrue(source.contains("DebugPreviewLaunchCommand.resolve()"))
+        XCTAssertTrue(source.contains("handleDebugPreviewLaunch(_ command: DebugPreviewLaunchCommand)"))
+        XCTAssertTrue(source.contains("showSettingsPreviewWindow(options: options)"))
+        XCTAssertTrue(source.contains("DebugPreviewWindowFactory.makeWindow"))
+        XCTAssertTrue(source.contains("DebugPreviewWindowFactory.show(window)"))
+        XCTAssertFalse(source.contains("if ProcessInfo.processInfo.arguments.contains(\"--settings-preview\")"))
+
+        XCTAssertTrue(commandSource.contains("--settings-preview"))
+        XCTAssertTrue(commandSource.contains("--settings-preview-narrow"))
+        XCTAssertTrue(commandSource.contains("--settings-preview-export="))
+        XCTAssertTrue(commandSource.contains("isCompanionSixPagesExport(arguments:"))
+        XCTAssertTrue(commandSource.contains("case settings(SettingsPreviewLaunchOptions)"))
+        XCTAssertTrue(commandSource.contains("case agent(AgentPreviewLaunchOptions)"))
+        XCTAssertTrue(commandSource.contains("case systemStatus(SystemStatusPreviewLaunchOptions)"))
         XCTAssertTrue(source.contains("SettingsView("))
         XCTAssertTrue(source.contains("initialSearchQuery: \"权限\""))
+    }
+
+    func testDebugPreviewWindowsShareFactoryChrome() throws {
+        let source = try readSource("App/AppDelegate.swift")
+        let factorySource = try readSource("App/DebugPreviewWindowFactory.swift")
+
+        XCTAssertTrue(factorySource.contains("enum DebugPreviewWindowFactory"))
+        XCTAssertTrue(factorySource.contains("window.titleVisibility = .hidden"))
+        XCTAssertTrue(factorySource.contains("window.titlebarAppearsTransparent = true"))
+        XCTAssertTrue(factorySource.contains("window.backgroundColor = .clear"))
+        XCTAssertTrue(factorySource.contains("window.center()"))
+        XCTAssertTrue(factorySource.contains("NSApp.activate(ignoringOtherApps: true)"))
+        XCTAssertEqual(source.components(separatedBy: "DebugPreviewWindowFactory.makeWindow").count - 1, 5)
+        XCTAssertEqual(source.components(separatedBy: "DebugPreviewWindowFactory.show(window)").count - 1, 5)
+    }
+
+    func testDebugScreenshotExportsShareRenderer() throws {
+        let appDelegateSource = try readSource("App/AppDelegate.swift")
+        let acWorkExporterSource = try readSource("App/DebugAcWorkAuditExporter.swift")
+        let companionExporterSource = try readSource("App/DebugCompanionScreenshotExporter.swift")
+        let rendererSource = try readSource("App/DebugScreenshotRenderer.swift")
+        let projectSource = try readSource("AcMind.xcodeproj/project.pbxproj")
+
+        XCTAssertTrue(rendererSource.contains("enum DebugScreenshotRenderer"))
+        XCTAssertTrue(rendererSource.contains("bitmapImageRepForCachingDisplay"))
+        XCTAssertTrue(rendererSource.contains("representation(using: .png"))
+        XCTAssertTrue(rendererSource.contains("LayoutDebugStore.shared.isOverlayVisible"))
+        XCTAssertTrue(appDelegateSource.contains("DebugScreenshotRenderer.exportHostingView"))
+        XCTAssertEqual(appDelegateSource.components(separatedBy: "DebugScreenshotRenderer.exportView").count - 1, 0)
+        XCTAssertEqual(acWorkExporterSource.components(separatedBy: "DebugScreenshotRenderer.exportView").count - 1, 1)
+        XCTAssertEqual(companionExporterSource.components(separatedBy: "DebugScreenshotRenderer.exportView").count - 1, 0)
+        XCTAssertFalse(appDelegateSource.contains("bitmapImageRepForCachingDisplay"))
+        XCTAssertFalse(appDelegateSource.contains("representation(using: .png"))
+        XCTAssertTrue(projectSource.contains("DebugScreenshotRenderer.swift in Sources"))
+    }
+
+    func testDebugExportCommandsShareTerminatingRunner() throws {
+        let source = try readSource("App/AppDelegate.swift")
+
+        XCTAssertTrue(source.contains("private func runTerminatingDebugExport("))
+        XCTAssertEqual(source.components(separatedBy: "runTerminatingDebugExport(").count - 1, 7)
+        XCTAssertEqual(source.components(separatedBy: "NSApp.terminate(nil)").count - 1, 1)
+        XCTAssertTrue(source.contains("logger.error(\"\\(failureMessage): \\(error.localizedDescription)\", file: \"AppDelegate\")"))
+        XCTAssertTrue(source.contains("print(\"[\\(prefix)] export failed: \\(error.localizedDescription)\")"))
+        XCTAssertTrue(source.contains("failureMessage: \"Failed to export Workbench V2 background verification\""))
+        XCTAssertFalse(source.contains("print(\"[AcWorkAudit] export failed: \\(error.localizedDescription)\")"))
+        XCTAssertFalse(source.contains("print(\"[CompanionExport] export failed: \\(error.localizedDescription)\")"))
+    }
+
+    func testWorkbenchV2AuditExporterIsOutsideAppDelegate() throws {
+        let appDelegateSource = try readSource("App/AppDelegate.swift")
+        let exporterSource = try readSource("App/DebugWorkbenchV2AuditExporter.swift")
+        let projectSource = try readSource("AcMind.xcodeproj/project.pbxproj")
+
+        XCTAssertTrue(appDelegateSource.contains("DebugWorkbenchV2AuditExporter.exportLayoutAudit"))
+        XCTAssertTrue(appDelegateSource.contains("DebugWorkbenchV2AuditExporter.exportBackgroundVerification"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportWorkbenchV2LayoutAudit"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportWorkbenchV2BackgroundVerification"))
+        XCTAssertFalse(appDelegateSource.contains("private func validateWorkbenchV2Frames"))
+        XCTAssertTrue(exporterSource.contains("enum DebugWorkbenchV2AuditExporter"))
+        XCTAssertTrue(exporterSource.contains("static func exportLayoutAudit("))
+        XCTAssertTrue(exporterSource.contains("static func exportBackgroundVerification("))
+        XCTAssertTrue(exporterSource.contains("WorkbenchV17_Validation.txt"))
+        XCTAssertTrue(exporterSource.contains("--acwork-workbench-v2-background-stage="))
+        XCTAssertTrue(projectSource.contains("DebugWorkbenchV2AuditExporter.swift in Sources"))
+    }
+
+    func testAcWorkAuditExporterIsOutsideAppDelegate() throws {
+        let appDelegateSource = try readSource("App/AppDelegate.swift")
+        let exporterSource = try readSource("App/DebugAcWorkAuditExporter.swift")
+        let projectSource = try readSource("AcMind.xcodeproj/project.pbxproj")
+
+        XCTAssertTrue(appDelegateSource.contains("DebugAcWorkAuditExporter.exportPhaseOneScreenshots"))
+        XCTAssertTrue(appDelegateSource.contains("DebugAcWorkAuditExporter.exportLayoutAudit"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportAcWorkPhaseOneScreenshots"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportAcWorkLayoutAudit"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportSelectedScreenshot"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportContentViewScreenshot"))
+        XCTAssertFalse(appDelegateSource.contains("private func previewClipboardPinActions"))
+        XCTAssertTrue(exporterSource.contains("enum DebugAcWorkAuditExporter"))
+        XCTAssertTrue(exporterSource.contains("static func exportPhaseOneScreenshots("))
+        XCTAssertTrue(exporterSource.contains("static func exportLayoutAudit("))
+        XCTAssertTrue(exporterSource.contains("--acwork-export-screenshot="))
+        XCTAssertTrue(exporterSource.contains("AcWork_Workbench_Runtime_Frames.json"))
+        XCTAssertTrue(projectSource.contains("DebugAcWorkAuditExporter.swift in Sources"))
+    }
+
+    func testCompanionScreenshotExporterIsOutsideAppDelegate() throws {
+        let appDelegateSource = try readSource("App/AppDelegate.swift")
+        let exporterSource = try readSource("App/DebugCompanionScreenshotExporter.swift")
+        let launcherSource = try readSource("Features/Companion/NotchV2LauncherPage.swift")
+        let projectSource = try readSource("AcMind.xcodeproj/project.pbxproj")
+
+        XCTAssertTrue(appDelegateSource.contains("DebugCompanionScreenshotExporter.exportSixPageScreenshots"))
+        XCTAssertFalse(appDelegateSource.contains("private func exportCompanionSixPageScreenshots"))
+        XCTAssertFalse(appDelegateSource.contains("private func renderCompanionScreenshot"))
+        XCTAssertFalse(appDelegateSource.contains("private func composeContactSheet"))
+        XCTAssertFalse(appDelegateSource.contains("private struct CompanionScreenshotSpec"))
+        XCTAssertFalse(appDelegateSource.contains("private final class CompanionScreenshotPanelController"))
+        XCTAssertTrue(exporterSource.contains("enum DebugCompanionScreenshotExporter"))
+        XCTAssertTrue(exporterSource.contains("static func exportSixPageScreenshots("))
+        XCTAssertTrue(exporterSource.contains("companion-six-pages-contact-sheet.png"))
+        XCTAssertTrue(exporterSource.contains("CompanionScreenshotPanelController"))
+        XCTAssertTrue(launcherSource.contains("DebugPreviewLaunchCommand.isCompanionSixPagesExport()"))
+        XCTAssertFalse(launcherSource.contains("ProcessInfo.processInfo.arguments.contains(\"--companion-six-pages-export\")"))
+        XCTAssertTrue(projectSource.contains("DebugCompanionScreenshotExporter.swift in Sources"))
     }
 
     func testScheduleDashboardUsesSharedCardShells() throws {
@@ -466,21 +635,41 @@ final class SystemStatusCleanupTests: XCTestCase {
 
     func testMainWindowPrunesPlaceholderAcMindWindows() throws {
         let source = try readSource("App/AppDelegate.swift")
-        XCTAssertTrue(source.contains("prunePlaceholderWindows()"))
-        XCTAssertTrue(source.contains("schedulePlaceholderWindowPrune()"))
+        let prunerSource = try readSource("App/PlaceholderWindowPruner.swift")
+
+        XCTAssertTrue(source.contains("private let placeholderWindowPruner = PlaceholderWindowPruner()"))
+        XCTAssertTrue(source.contains("placeholderWindowPruner.stop()"))
+        XCTAssertTrue(source.contains("placeholderWindowPruner.prune(context: placeholderWindowPruneContext())"))
+        XCTAssertTrue(source.contains("placeholderWindowPruner.schedule"))
         XCTAssertTrue(source.contains("applicationDidBecomeActive"))
         XCTAssertTrue(source.contains("ensureVisibleOnScreenIfNeeded()"))
         XCTAssertTrue(source.contains("NSEvent.mouseLocation"))
         XCTAssertTrue(source.contains("NSScreen.screens.first(where:"))
-        XCTAssertTrue(source.contains("title.isEmpty && isSmallLaunchShell"))
-        XCTAssertTrue(source.contains("title == \"AcMind\" && isSmallLaunchShell"))
-        XCTAssertTrue(source.contains("(title.isEmpty || title == \"AcMind\") && isThinPlaceholder"))
-        XCTAssertTrue(source.contains("AXUIElementCreateApplication"))
-        XCTAssertTrue(source.contains("kAXWindowsAttribute"))
-        XCTAssertTrue(source.contains("kAXCloseButtonAttribute"))
-        XCTAssertTrue(source.contains("kAXPressAction"))
-        XCTAssertTrue(source.contains("window.frame.width <= 520 && window.frame.height <= 420"))
-        XCTAssertTrue(source.contains("window.frame.width >= 800 && window.frame.height <= 120"))
+        XCTAssertFalse(source.contains("AXUIElementCreateApplication"))
+
+        XCTAssertTrue(prunerSource.contains("final class PlaceholderWindowPruner"))
+        XCTAssertTrue(prunerSource.contains("title.isEmpty && isSmallLaunchShell"))
+        XCTAssertTrue(prunerSource.contains("title == \"AcMind\" && isSmallLaunchShell"))
+        XCTAssertTrue(prunerSource.contains("(title.isEmpty || title == \"AcMind\") && isThinPlaceholder"))
+        XCTAssertTrue(prunerSource.contains("AXUIElementCreateApplication"))
+        XCTAssertTrue(prunerSource.contains("kAXWindowsAttribute"))
+        XCTAssertTrue(prunerSource.contains("kAXCloseButtonAttribute"))
+        XCTAssertTrue(prunerSource.contains("kAXPressAction"))
+        XCTAssertTrue(prunerSource.contains("width <= 520 && height <= 420"))
+        XCTAssertTrue(prunerSource.contains("width >= 800 && height <= 120"))
+        XCTAssertTrue(prunerSource.contains("CompanionMenuBarLayout.collapsedMinWidth"))
+    }
+
+    func testMainWindowNeverFallsBackToPreviewServices() throws {
+        let source = try readSource("App/AppDelegate.swift")
+        let serviceContainerSource = try readSource("App/ServiceContainer.swift")
+        XCTAssertTrue(source.contains("guard let serviceContainer else"))
+        XCTAssertTrue(source.contains("showLaunchWindow()"))
+        XCTAssertTrue(source.contains("self.hideLaunchWindow()"))
+        XCTAssertFalse(source.contains("serviceContainer: serviceContainer ?? ServiceContainer.preview()"))
+        XCTAssertTrue(serviceContainerSource.contains("#if DEBUG\n// MARK: - Preview Support"))
+        XCTAssertTrue(serviceContainerSource.contains("public static func preview() -> ServiceContainer"))
+        XCTAssertTrue(serviceContainerSource.contains("private final class PreviewSettingsService"))
     }
 
     func testAppEntryUsesRealSettingsScene() throws {
@@ -564,12 +753,18 @@ final class SystemStatusCleanupTests: XCTestCase {
 
     func testSharedWorkspaceComponentsExposeFoundationContracts() throws {
         let source = try readSource("Features/Native/Shared/WorkspaceSharedComponents.swift")
+        let previewDataSource = try readSource("App/DebugAcWorkPreviewData.swift")
         XCTAssertTrue(source.contains("struct SectionHeaderAction"))
         XCTAssertTrue(source.contains("struct SectionHeader"))
         XCTAssertTrue(source.contains("enum StatusBadgeTone"))
         XCTAssertTrue(source.contains("struct StatusBadge"))
         XCTAssertTrue(source.contains("struct MetricCard"))
         XCTAssertTrue(source.contains("struct StateContainer"))
+        XCTAssertFalse(source.contains("#if DEBUG"))
+        XCTAssertFalse(source.contains("enum AcWorkPreviewData"))
+        XCTAssertFalse(source.contains("static var populatedInboxItems: [SourceItem] { [] }"))
+        XCTAssertTrue(previewDataSource.contains("enum AcWorkPreviewData"))
+        XCTAssertTrue(previewDataSource.contains("static var populatedInboxItems: [SourceItem]"))
         XCTAssertTrue(source.contains("#Preview(\"Shared Components / Wide\")"))
         XCTAssertTrue(source.contains("#Preview(\"Shared Components / Narrow\")"))
     }
@@ -696,6 +891,36 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("minimumWindowHeight: CGFloat = 720"))
     }
 
+    func testMainWindowControllerSurfacesScreenshotToolbarAction() throws {
+        let source = try readSource("App/AppDelegate.swift")
+        XCTAssertTrue(source.contains("private static let toolbarIdentifier = NSToolbar.Identifier(\"MainWindowToolbar\")"))
+        XCTAssertTrue(source.contains("private static let screenshotToolbarItemIdentifier = NSToolbarItem.Identifier(\"MainWindowScreenshotToolbarItem\")"))
+        XCTAssertTrue(source.contains("setupWindowToolbar()"))
+        XCTAssertTrue(source.contains("window.toolbar = toolbar"))
+        XCTAssertTrue(source.contains("window.toolbarStyle = .unifiedCompact"))
+        XCTAssertTrue(source.contains("toolbar.displayMode = .iconOnly"))
+        XCTAssertTrue(source.contains("toolbar.showsBaselineSeparator = false"))
+        XCTAssertTrue(source.contains("toolbarAllowedItemIdentifiers"))
+        XCTAssertTrue(source.contains("toolbarDefaultItemIdentifiers"))
+        XCTAssertTrue(source.contains("openScreenshotToolbarAction"))
+        XCTAssertTrue(source.contains("item.toolTip = \"打开截图查看\""))
+        XCTAssertTrue(source.contains("item.image = NSImage(systemSymbolName: \"camera.viewfinder\""))
+        XCTAssertTrue(source.contains("#selector(openScreenshotToolbarAction)"))
+    }
+
+    func testWorkspaceHomeViewSurfacesScreenshotQuickStartBanner() throws {
+        let source = try readSource("Features/Native/Home/WorkspaceHomeView.swift")
+        XCTAssertTrue(source.contains("@AppStorage(\"screenshotQuickStartDismissed\")"))
+        XCTAssertTrue(source.contains("if shouldShowScreenshotQuickStart"))
+        XCTAssertTrue(source.contains("screenshotQuickStartBanner"))
+        XCTAssertTrue(source.contains("dismissScreenshotQuickStart()"))
+        XCTAssertTrue(source.contains("截图入口就在这里"))
+        XCTAssertTrue(source.contains("优先点顶部工具栏的“截图”"))
+        XCTAssertTrue(source.contains("立即截图"))
+        XCTAssertTrue(source.contains("打开截图查看"))
+        XCTAssertTrue(source.contains("关闭截图入口提示"))
+    }
+
     func testCaptureWorkspaceViewIsOnlyACompatibilityProxy() throws {
         let source = try readSource("Features/Native/Shared/CaptureWorkspaceView.swift")
         XCTAssertFalse(source.contains("enum Mode"))
@@ -740,13 +965,40 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("struct WorkspaceDashboardSnapshot"))
         XCTAssertTrue(source.contains("protocol WorkspaceDashboardRepositoryProtocol"))
         XCTAssertTrue(source.contains("struct LiveWorkspaceDashboardRepository"))
-        XCTAssertTrue(source.contains("struct PreviewWorkspaceDashboardRepository"))
         XCTAssertTrue(source.contains("final class WorkspaceDashboardViewModel"))
         XCTAssertTrue(source.contains("dashboardViewModel.refresh()"))
         XCTAssertTrue(source.contains("dashboardViewModel.snapshot.currentFocus"))
         XCTAssertTrue(source.contains("dashboardViewModel.snapshot.permissionSummary"))
         XCTAssertTrue(source.contains("currentPage: appState.sidebarSelection.displayName"))
         XCTAssertTrue(source.contains("permissionSummary: SystemStatusLabelFormatter.permissionOverviewSummary"))
+    }
+
+    func testPreviewWorkspaceDashboardRepositoryLivesInDebugFile() throws {
+        let workspaceSource = try readSource("Features/Native/Home/WorkspaceHomeView.swift")
+        let debugSource = try readSource("App/DebugWorkspaceDashboardRepository.swift")
+
+        XCTAssertFalse(workspaceSource.contains("struct PreviewWorkspaceDashboardRepository"))
+        XCTAssertTrue(debugSource.contains("struct PreviewWorkspaceDashboardRepository"))
+        XCTAssertTrue(debugSource.contains("AcWorkPreviewData.homeSnapshot"))
+        XCTAssertTrue(debugSource.contains("AcWorkPreviewData.populatedInboxItems"))
+    }
+
+    func testWorkbenchV2DashboardDataIsNotPreviewMockPlumbing() throws {
+        let projectSource = try readSource("AcMind.xcodeproj/project.pbxproj")
+        let dataSource = try readSource("Features/Native/HomeV2/WorkbenchV2DashboardData.swift")
+        let viewSource = try readSource("Features/Native/HomeV2/WorkbenchV2View.swift")
+
+        XCTAssertTrue(projectSource.contains("WorkbenchV2DashboardData.swift"))
+        XCTAssertTrue(projectSource.contains("path = Features/Native/HomeV2/WorkbenchV2DashboardData.swift"))
+        XCTAssertFalse(projectSource.contains("WorkbenchV2MockData.swift"))
+        XCTAssertFalse(projectSource.contains("/* Preview */"))
+        XCTAssertFalse(projectSource.contains("path = Preview"))
+
+        XCTAssertTrue(dataSource.contains("static func live(from snapshot: WorkspaceDashboardSnapshot) -> WorkbenchV2DashboardData"))
+        XCTAssertTrue(dataSource.contains("snapshot.pendingItems"))
+        XCTAssertTrue(dataSource.contains("snapshot.recentItems"))
+        XCTAssertTrue(dataSource.contains("snapshot.systemMetrics"))
+        XCTAssertFalse(viewSource.contains("mockData:"))
     }
 
     func testWorkspacePageShellUsesUnifiedBackdropLayer() throws {

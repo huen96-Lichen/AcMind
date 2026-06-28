@@ -63,7 +63,7 @@ struct NotchV2LightStatusStrip: View {
             )
 
             Text(item.title)
-                .font(.system(size: 8.5, weight: .semibold, design: .rounded))
+                .font(.system(size: 8, weight: .medium, design: .rounded))
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
 
@@ -74,11 +74,11 @@ struct NotchV2LightStatusStrip: View {
                 .truncationMode(.tail)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .scaleEffect(item.highlighted ? 1.02 : 1.0)
         .background(
             RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
-                .fill(item.highlighted ? NotchV2DesignTokens.panelBackground : NotchV2DesignTokens.panelBackground)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.82))
         )
         .overlay(
             RoundedRectangle(cornerRadius: NotchV2DesignTokens.cardRadius, style: .continuous)
@@ -148,7 +148,7 @@ extension NotchV2ViewModel {
                 )
             )
 
-        if playbackState.isPlaying || playbackState.title.isEmpty == false || playbackState.sourceLabel.isEmpty == false || playbackState.bundleIdentifier != nil {
+        if playbackState.isPlaying || playbackState.title.isEmpty == false {
             items.append(
                 NotchV2LightStatusItem(
                     icon: playbackState.isPlaying ? "play.fill" : "pause.fill",
@@ -165,7 +165,7 @@ extension NotchV2ViewModel {
                         source: playbackState.sourceLabel
                     ),
                     accent: playbackState.isPlaying ? NotchV2DesignTokens.accentGreen : NotchV2DesignTokens.secondaryText,
-                    highlighted: playbackState.isPlaying || playbackState.title.isEmpty == false || playbackState.sourceLabel.isEmpty == false || playbackState.bundleIdentifier != nil,
+                    highlighted: playbackState.isPlaying || playbackState.title.isEmpty == false,
                     priority: NotchV2SurfacePriority.music.rawValue
                 )
             )
@@ -273,6 +273,15 @@ struct NotchV2SystemRail: View {
                     statusRow(title: "辅助功能", value: viewModel.accessibilityPermissionStatus.displayName, accent: permissionAccent(for: viewModel.accessibilityPermissionStatus))
 
                     Spacer(minLength: 0)
+
+                    NotchV2StatusPill(
+                        icon: "gearshape",
+                        title: "检查权限与设置",
+                        accent: NotchV2DesignTokens.innerCardBackground,
+                        action: {
+                            viewModel.showMainSettings()
+                        }
+                    )
                 }
             }
         }

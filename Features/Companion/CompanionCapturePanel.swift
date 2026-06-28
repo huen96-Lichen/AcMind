@@ -154,7 +154,7 @@ struct CompanionCapturePanel: View {
                             .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
 
-                    Text("当前所有捕获结果都会自动写入收集箱，这里仅作为状态说明。")
+                    Text("当前所有捕获结果都会自动写入收集箱，这里仅展示当前开关状态。")
                         .font(.system(size: AppSurfaceTokens.Typography.body))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -382,6 +382,7 @@ class CompanionCaptureViewModel: ObservableObject {
     private let captureService: CaptureServiceProtocol
     private let storage: StorageServiceProtocol
     nonisolated(unsafe) private var companionConfigurationObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var captureCompletedObserver: NSObjectProtocol?
     private var destinationChoicePanel: CaptureDestinationChoiceWindowController?
 
     @Published var recentCaptures: [CaptureRecord] = []
@@ -410,11 +411,24 @@ class CompanionCaptureViewModel: ObservableObject {
                 self?.loadCompanionCaptureConfiguration()
             }
         }
+        captureCompletedObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("AcMind.captureCompleted"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard notification.object is CaptureResult else { return }
+            Task { @MainActor [weak self] in
+                self?.loadRecentCaptures()
+            }
+        }
     }
 
     deinit {
         if let companionConfigurationObserver {
             NotificationCenter.default.removeObserver(companionConfigurationObserver)
+        }
+        if let captureCompletedObserver {
+            NotificationCenter.default.removeObserver(captureCompletedObserver)
         }
     }
 
@@ -548,18 +562,19 @@ class CompanionCaptureViewModel: ObservableObject {
                     return
                 }
 
-                let result: CaptureResult
                 switch type {
                 case .screenshot:
-                    result = try await captureService.captureScreenshot(mode: .fullscreen)
+                    triggerUnifiedScreenshotPreview(mode: .fullscreen, type: type)
+                    return
                 case .scrollScreenshot:
-                    result = try await captureService.captureScrollingScreenshot()
+                    triggerUnifiedScreenshotPreview(mode: .scroll, type: type)
+                    return
                 case .clipboard:
                     guard let clipboardResult = try await captureService.captureFromClipboard() else {
                         Self.logger.warning("剪贴板为空")
                         return
                     }
-                    result = clipboardResult
+                    await finishNonScreenshotCapture(result: clipboardResult, type: type)
                 case .selectedText:
                     let context = await ContextCaptureService.shared.captureContext()
                     let selectedText = context.selectedText?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -567,27 +582,16 @@ class CompanionCaptureViewModel: ObservableObject {
                         Self.logger.warning("未检测到选中文本")
                         return
                     }
-                    result = try await captureService.captureFromManualText(selectedText)
+                    let result = try await captureService.captureFromManualText(selectedText)
+                    await finishNonScreenshotCapture(result: result, type: type)
                 case .webpage:
                     guard let url = Self.frontmostBrowserURL() else {
                         Self.logger.warning("未检测到当前网页 URL")
                         return
                     }
-                    result = try await captureService.captureFromWebpage(url: url)
+                    let result = try await captureService.captureFromWebpage(url: url)
+                    await finishNonScreenshotCapture(result: result, type: type)
                 }
-                _ = result
-
-                await handleCaptureCompletion(result: result, type: type)
-
-                // 刷新列表
-                loadRecentCaptures()
-
-                // 发送通知
-                NotificationCenter.default.post(
-                    name: .companionCaptureCompleted,
-                    object: nil,
-                    userInfo: ["type": type]
-                )
             } catch {
                 Self.logger.error("捕获失败: \(error.localizedDescription)")
             }
@@ -643,6 +647,28 @@ class CompanionCaptureViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func triggerUnifiedScreenshotPreview(mode: ScreenshotMode, type: CompanionCaptureType) {
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.captureScreenshot"),
+            object: ["mode": mode.rawValue]
+        )
+        NotificationCenter.default.post(
+            name: .companionCaptureCompleted,
+            object: nil,
+            userInfo: ["type": type]
+        )
+    }
+
+    private func finishNonScreenshotCapture(result: CaptureResult, type: CompanionCaptureType) async {
+        await handleCaptureCompletion(result: result, type: type)
+        loadRecentCaptures()
+        NotificationCenter.default.post(
+            name: .companionCaptureCompleted,
+            object: nil,
+            userInfo: ["type": type]
+        )
     }
 
     private func completionToastMessage(for result: CaptureResult, destination: CompanionCaptureSaveDestination) -> String {

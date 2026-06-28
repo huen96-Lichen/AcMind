@@ -1140,7 +1140,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
 
         let targetPaths = Set(previews.map { $0.proposed.path })
         guard targetPaths.count == previews.count else {
-            return unsupportedToolResult(toolType: .tools, action: "batchRename", message: "预览中存在重复目标名称，请先调整规则")
+            return unsupportedToolResult(toolType: .tools, action: "batchRename", message: "结果中存在重复目标名称，请先调整规则")
         }
 
         for item in previews {

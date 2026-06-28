@@ -133,6 +133,31 @@ struct SidebarView: View {
 
             Spacer(minLength: 0)
 
+            Button {
+                openScreenshotOptions()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 11.5, weight: .semibold))
+                    Text("截图")
+                        .font(.system(size: 11.5, weight: .semibold))
+                }
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.accentOrange.opacity(0.72), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .help("打开截图查看")
+            .accessibilityLabel("打开截图查看")
+
             Button(action: toggleSidebar) {
                 Image(systemName: "sidebar.left")
                     .font(.system(size: 12, weight: .semibold))
@@ -176,6 +201,26 @@ struct SidebarView: View {
             )
             .help("展开侧边栏")
             .accessibilityLabel("展开侧边栏")
+
+            Button {
+                openScreenshotOptions()
+            } label: {
+                Image(systemName: "camera.viewfinder")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 28, height: 28)
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                            .fill(AppSurfaceTokens.cardBackground.opacity(0.76))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                            .stroke(AppSurfaceTokens.accentOrange.opacity(0.72), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("打开截图查看")
+            .accessibilityLabel("打开截图查看")
         }
         .padding(.horizontal, 10)
         .padding(.top, 10)
@@ -200,9 +245,37 @@ struct SidebarView: View {
             }
 
             Spacer(minLength: 0)
+
+            Button {
+                openScreenshotOptions()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 11.5, weight: .semibold))
+                    Text("截图")
+                        .font(.system(size: 11.5, weight: .semibold))
+                }
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("打开截图查看")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+    }
+
+    private func openScreenshotOptions() {
+        (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
     }
 
     private func sidebarSection(title: String, items: [SidebarItem]) -> some View {
@@ -387,6 +460,10 @@ private struct SidebarItemGlyphView: View {
             AgentGlyph(isSelected: isSelected)
         case .inbox:
             InboxGlyph(isSelected: isSelected)
+        case .screenshot:
+            ScreenshotGlyph(isSelected: isSelected)
+        case .screenshotHistory:
+            ScreenshotHistoryGlyph(isSelected: isSelected)
         case .clipboard:
             ClipboardGlyph(isSelected: isSelected)
         case .schedule:
@@ -473,6 +550,57 @@ private struct InboxGlyph: View {
             .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
             Path(roundedRect: CGRect(x: size * 0.30, y: size * 0.58, width: size * 0.40, height: size * 0.12), cornerRadius: 1.4)
                 .fill(color)
+        }
+    }
+}
+
+private struct ScreenshotGlyph: View {
+    let isSelected: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = min(proxy.size.width, proxy.size.height)
+            let color = isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
+
+            Path(roundedRect: CGRect(x: size * 0.16, y: size * 0.22, width: size * 0.68, height: size * 0.52), cornerRadius: size * 0.09)
+                .stroke(color, lineWidth: 1.5)
+
+            Path { path in
+                path.move(to: CGPoint(x: size * 0.30, y: size * 0.40))
+                path.addLine(to: CGPoint(x: size * 0.70, y: size * 0.40))
+                path.move(to: CGPoint(x: size * 0.30, y: size * 0.52))
+                path.addLine(to: CGPoint(x: size * 0.54, y: size * 0.52))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: 1.3, lineCap: .round))
+
+            Circle()
+                .fill(color)
+                .frame(width: size * 0.08, height: size * 0.08)
+                .position(x: size * 0.72, y: size * 0.58)
+        }
+    }
+}
+
+private struct ScreenshotHistoryGlyph: View {
+    let isSelected: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = min(proxy.size.width, proxy.size.height)
+            let color = isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText
+            Path(roundedRect: CGRect(x: size * 0.18, y: size * 0.30, width: size * 0.64, height: size * 0.42), cornerRadius: size * 0.08)
+                .stroke(color, lineWidth: 1.4)
+            Path(roundedRect: CGRect(x: size * 0.30, y: size * 0.22, width: size * 0.20, height: size * 0.12), cornerRadius: size * 0.03)
+                .fill(color.opacity(0.86))
+            Circle()
+                .stroke(color, lineWidth: 1.35)
+                .frame(width: size * 0.20, height: size * 0.20)
+                .position(x: size * 0.50, y: size * 0.51)
+            Path { path in
+                path.move(to: CGPoint(x: size * 0.68, y: size * 0.40))
+                path.addLine(to: CGPoint(x: size * 0.72, y: size * 0.40))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
         }
     }
 }

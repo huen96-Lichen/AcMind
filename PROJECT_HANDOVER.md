@@ -72,8 +72,10 @@ AcMind/
 ├── Resources/                  # 资源文件
 ├── AcMindKitTests/             # 单元测试
 ├── Package.swift               # SPM 配置
-├── AcMind.entitlements         # 应用沙盒权限
-└── build/                      # 构建配置（entitlements plist）
+├── Config/Entitlements/       # 应用与 helper 的签名能力配置
+│   ├── AcMind.entitlements
+│   └── AcMindHelper.entitlements
+└── build/                      # 构建输出目录（不存放源文件）
 ```
 
 ### 3.2 设计模式
@@ -178,8 +180,8 @@ swift test --parallel
 
 ### 7.3 Xcode 项目
 - 项目文件: `AcMind.xcodeproj/project.pbxproj`
-- Entitlements: `AcMind.entitlements`
-- 构建配置: `build/entitlements.mac.plist`
+- Entitlements: `Config/Entitlements/AcMind.entitlements`
+- Helper entitlements: `Config/Entitlements/AcMindHelper.entitlements`
 
 ---
 
@@ -245,7 +247,7 @@ swift test --parallel
 | README | `README.md` |
 | SPM 配置 | `Package.swift` |
 | 变更日志 | `CHANGELOG.md` |
-| 应用权限 | `AcMind.entitlements` |
+| 应用权限 | `Config/Entitlements/AcMind.entitlements` |
 | App 入口 | `App/AcMindApp.swift` |
 | DI 容器 | `App/ServiceContainer.swift` |
 | 全局状态 | `App/AppState.swift` |

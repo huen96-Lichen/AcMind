@@ -36,8 +36,8 @@ struct AcMindCommands: Commands {
         }
 
         CommandGroup(replacing: .newItem) {
-            Button("新建采集") {
-                NotificationCenter.default.post(name: Notification.Name("AcMind.captureScreenshot"), object: nil, userInfo: nil)
+            Button("立即截图") {
+                (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
             }
             .keyboardShortcut("n", modifiers: .command)
 
@@ -71,11 +71,16 @@ struct AcMindCommands: Commands {
             }
         }
 
-        CommandMenu("采集") {
+        CommandMenu("截图") {
             Button("截图") {
-                NotificationCenter.default.post(name: Notification.Name("AcMind.captureScreenshot"), object: nil, userInfo: nil)
+                (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
             }
             .keyboardShortcut("4", modifiers: [.command, .shift])
+
+            Button("截图历史") {
+                appState.selectInboxWorkspace("screenshotHistory")
+                appDelegate?.showMainWindow()
+            }
 
             Button("区域截图") {
                 appDelegate?.captureAreaScreenshot()

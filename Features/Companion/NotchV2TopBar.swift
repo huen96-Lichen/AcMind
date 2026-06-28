@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import AcMindKit
 
 struct NotchV2TopBar: View {
@@ -70,7 +71,7 @@ struct NotchV2TopBar: View {
         .padding(.vertical, 4)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.82))
         )
         .overlay(
             Capsule(style: .continuous)
@@ -114,7 +115,7 @@ struct NotchV2TopBar: View {
                 accent: NotchV2DesignTokens.innerCardBackground,
                 isSelected: viewModel.effectiveSelectedPage == .settings,
                 action: {
-                    viewModel.select(.settings)
+                    openSettingsWindow()
                 }
             )
 
@@ -131,7 +132,7 @@ struct NotchV2TopBar: View {
         .padding(.vertical, 4)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.82))
         )
         .overlay(
             Capsule(style: .continuous)
@@ -158,7 +159,7 @@ struct NotchV2TopBar: View {
                 }
 
                 Button("打开设置") {
-                    viewModel.select(.settings)
+                    openSettingsWindow()
                 }
 
                 Button("收起") {
@@ -178,7 +179,7 @@ struct NotchV2TopBar: View {
         .padding(.vertical, 4)
         .background(
             Capsule(style: .continuous)
-                .fill(NotchV2DesignTokens.panelBackground)
+                .fill(NotchV2DesignTokens.panelBackground.opacity(0.82))
         )
         .overlay(
             Capsule(style: .continuous)
@@ -241,6 +242,10 @@ struct NotchV2TopBar: View {
             accent: accent,
             isSelected: isSelected
         )
+    }
+
+    private func openSettingsWindow() {
+        (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
     }
 
     private var batteryText: String {

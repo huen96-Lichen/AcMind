@@ -13,12 +13,12 @@ enum CompanionLayoutTokens {
 
     static let panelPadding: CGFloat = 12
     static let panelHeaderHeight: CGFloat = 28
-    static let panelCornerRadius: CGFloat = 18
+    static let panelCornerRadius: CGFloat = 16
     static let panelBorderWidth: CGFloat = 0.8
 
     static let cardPadding: CGFloat = 10
     static let cardSpacing: CGFloat = 8
-    static let cardCornerRadius: CGFloat = 13
+    static let cardCornerRadius: CGFloat = 12
 
     static let controlHeightSmall: CGFloat = 24
     static let controlHeightMedium: CGFloat = 30
@@ -26,8 +26,8 @@ enum CompanionLayoutTokens {
 
     static let panelTitleSize: CGFloat = 15
     static let sectionTitleSize: CGFloat = 12
-    static let bodySize: CGFloat = 11
-    static let metadataSize: CGFloat = 10
+    static let bodySize: CGFloat = 12
+    static let metadataSize: CGFloat = 10.5
 
     static let panelHeaderIconBox: CGFloat = 28
     static let panelHeaderIconSize: CGFloat = 13
@@ -554,9 +554,11 @@ struct CompanionToggleRow: View {
 
             Toggle("", isOn: isOn)
                 .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(NotchV2DesignTokens.accentBlue)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 5)
         .background(
             RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius - 3, style: .continuous)
                 .fill(NotchV2DesignTokens.panelBackground.opacity(0.96))
@@ -587,9 +589,10 @@ struct CompanionSliderRow: View {
                     .foregroundStyle(NotchV2DesignTokens.secondaryText)
             }
             Slider(value: value, in: range, step: step)
+                .tint(NotchV2DesignTokens.accentBlue)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius - 3, style: .continuous)
                 .fill(NotchV2DesignTokens.panelBackground.opacity(0.96))
@@ -618,9 +621,12 @@ struct CompanionPickerRow<Option: Hashable & Identifiable & CustomStringConverti
                 }
             }
             .labelsHidden()
+            .pickerStyle(.menu)
+            .tint(NotchV2DesignTokens.primaryText)
+            .foregroundStyle(NotchV2DesignTokens.primaryText)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 5)
         .background(
             RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius - 3, style: .continuous)
                 .fill(NotchV2DesignTokens.panelBackground.opacity(0.96))

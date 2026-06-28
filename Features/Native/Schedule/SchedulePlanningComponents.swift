@@ -38,7 +38,7 @@ struct SchedulePlanningSnapshotCard: View {
                         planningMetric(
                             label: "空闲窗口",
                             value: snapshot.freeWindow.map { scheduleFreeWindowTitle(for: $0) } ?? "未找到",
-                            subtitle: snapshot.freeWindow.map { "\($0.durationMinutes) 分钟" } ?? "今天暂时没有满足条件的空窗"
+                            subtitle: snapshot.freeWindow.map { "\($0.durationMinutes) 分钟" } ?? "今天没有符合条件的空闲窗口"
                         )
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

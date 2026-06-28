@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 
 struct ActivityTrendCard: View {
-    let model: WorkbenchV2MockData.ActivityTrend
+    let model: WorkbenchV2DashboardData.ActivityTrend
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -23,8 +23,8 @@ struct ActivityTrendCard: View {
 }
 
 struct WorkbenchTrendChart: View {
-    let primarySeries: WorkbenchV2MockData.TrendSeries
-    let secondarySeries: WorkbenchV2MockData.TrendSeries
+    let primarySeries: WorkbenchV2DashboardData.TrendSeries
+    let secondarySeries: WorkbenchV2DashboardData.TrendSeries
 
     var body: some View {
         Chart {
@@ -66,10 +66,11 @@ struct WorkbenchTrendChart: View {
     }
 }
 
+#if DEBUG
 struct ActivityTrendCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            ActivityTrendCard(model: WorkbenchV2MockData.preview().activityTrend, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 927, height: 240)))
+            ActivityTrendCard(model: WorkbenchV2DashboardData.preview().activityTrend, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 927, height: 240)))
             ActivityTrendCard(
                 model: .init(
                     state: .empty,
@@ -85,3 +86,4 @@ struct ActivityTrendCard_Previews: PreviewProvider {
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

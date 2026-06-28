@@ -5,13 +5,13 @@ struct NotchV2MusicPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        CompanionPageTemplate.triple(leftWidth: CompanionLayoutTokens.templateAColumnWidth, rightWidth: CompanionLayoutTokens.templateAColumnWidth, left: {
+        NotchV2DashboardLayout(leftColumnWidth: 224, rightColumnWidth: 224) {
             leftColumn
-        }, center: {
+        } centerColumn: {
             centerColumn
-        }, right: {
+        } rightColumn: {
             rightColumn
-        })
+        }
     }
 
     private var leftColumn: some View {
@@ -255,6 +255,10 @@ struct NotchV2MusicPage: View {
             Image(systemName: "music.note.slash")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
+            Text("等待系统媒体")
+                .font(NotchV2DesignTokens.Typography.caption)
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
             Text(emptyStatePlaybackContext)
                 .font(NotchV2DesignTokens.Typography.title)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
@@ -264,6 +268,15 @@ struct NotchV2MusicPage: View {
                 .font(NotchV2DesignTokens.Typography.body)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(2)
+
+            NotchV2StatusPill(
+                icon: "arrow.up.right.square",
+                title: "打开来源播放器",
+                accent: NotchV2DesignTokens.accentBlue,
+                action: {
+                    viewModel.musicService.openMusicApp()
+                }
+            )
         }
         .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
     }
@@ -271,10 +284,10 @@ struct NotchV2MusicPage: View {
     private var emptyStatePlaybackContext: String {
         NowPlayingSourceLabelFormatter.playbackContextLabel(
             isPlaying: false,
-            bundleIdentifier: viewModel.playbackState.bundleIdentifier,
             source: viewModel.playbackState.sourceLabel,
             playingPrefix: "播放中",
-            idlePrefix: "当前没有播放内容"
+            idlePrefix: "当前没有播放内容",
+            fallbackSource: "暂无播放来源"
         )
     }
 
@@ -283,7 +296,17 @@ struct NotchV2MusicPage: View {
     }
 
     private var queueEmptyStateDetail: String {
-        viewModel.hasPlaybackContext ? "当前只检测到播放中的曲目，暂未拿到下一首队列。" : "开始播放后，这里会保留当前曲目和后续队列。"
+        if viewModel.hasPlaybackContext {
+            return "当前只检测到播放中的曲目，暂未拿到下一首队列。"
+        }
+
+        return NowPlayingSourceLabelFormatter.playbackContextLabel(
+            isPlaying: false,
+            source: viewModel.playbackState.sourceLabel,
+            playingPrefix: "队列待同步",
+            idlePrefix: "暂无队列",
+            fallbackSource: "暂无播放来源"
+        )
     }
 
     private func playbackButton(systemName: String, size: CGFloat, isPrimary: Bool = false, action: @escaping () -> Void) -> some View {

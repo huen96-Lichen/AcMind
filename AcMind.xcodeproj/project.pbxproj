@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		08DE15194A8B21CCEFF77141 /* ScheduleServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3F2A4D9FBDA12740C78B52 /* ScheduleServiceTests.swift */; };
 		0DD468BB3560D2BED70F5458 /* StreamingKeyboardWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */; };
+		A10000000000000000000802 /* ScreenshotModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000800 /* ScreenshotModeTests.swift */; };
 		0E43A7A1E470D167AFAD33C9 /* AgentQuickAskServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */; };
 		13368FE91E928A672B830E8E /* SidebarItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FA6BB8339B7405BF83EAEE /* SidebarItemTests.swift */; };
 		15949678016CFF62ADE25EFC /* SayInputCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD44DDB60310419F0B14859C /* SayInputCoordinatorTests.swift */; };
@@ -41,6 +42,7 @@
 		675F80097743C247C75CFE25 /* CompanionConfigurationStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666DF2A5E6AB9F8D58D5C425 /* CompanionConfigurationStoreTests.swift */; };
 		685621FEFC42EE538F8EB563 /* CloudSyncServicePrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB5147E7E0482D28DFA9F8EF /* CloudSyncServicePrivacyTests.swift */; };
 		6A26D6A4B5C3428D22CF06A4 /* CaptureServiceVoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0666ED9ABC891A9E3B498761 /* CaptureServiceVoiceTests.swift */; };
+		A10000000000000000000803 /* ScrollCaptureServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000801 /* ScrollCaptureServiceTests.swift */; };
 		7178571BBD78E5C2010987FB /* TimelineLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F9CDDDACF6297156633ECA /* TimelineLayoutTests.swift */; };
 		73B9A2706D6CB327252F4655 /* ScheduleViewModelSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B676AD629E05CCB0948AAB2 /* ScheduleViewModelSearchTests.swift */; };
 		7A1C6E2A9B4D4F1A8C3E2A12 /* ClipboardCardPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C6E2A9B4D4F1A8C3E2A11 /* ClipboardCardPresentation.swift */; };
@@ -70,6 +72,17 @@
 		A1000000000000000000001E /* SourceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* SourceItem.swift */; };
 		A10000000000000000000020 /* StorageServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* StorageServiceProtocol.swift */; };
 		A10000000000000000000051 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* AppState.swift */; };
+		A100000000000000000007F1 /* PlaceholderWindowPruner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007F0 /* PlaceholderWindowPruner.swift */; };
+		A100000000000000000007F3 /* DebugPreviewLaunchCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007F2 /* DebugPreviewLaunchCommand.swift */; };
+		A100000000000000000007F5 /* DebugPreviewWindowFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007F4 /* DebugPreviewWindowFactory.swift */; };
+		A100000000000000000007F7 /* DebugScreenshotRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007F6 /* DebugScreenshotRenderer.swift */; };
+		A100000000000000000007F9 /* DebugWorkbenchV2AuditExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007F8 /* DebugWorkbenchV2AuditExporter.swift */; };
+		A100000000000000000007FB /* DebugAcWorkAuditExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007FA /* DebugAcWorkAuditExporter.swift */; };
+		A100000000000000000007FD /* DebugCompanionScreenshotExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007FC /* DebugCompanionScreenshotExporter.swift */; };
+		A100000000000000000007FE /* DebugWorkspaceDashboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000007FF /* DebugWorkspaceDashboardRepository.swift */; };
+		A10000000000000000000804 /* DebugAcWorkPreviewScenario.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000805 /* DebugAcWorkPreviewScenario.swift */; };
+		A10000000000000000000806 /* DebugAgentPreviewSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000807 /* DebugAgentPreviewSample.swift */; };
+		A1000000000000000000080C /* DebugAcWorkPreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000080D /* DebugAcWorkPreviewData.swift */; };
 		A10000000000000000000053 /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000052 /* SidebarItem.swift */; };
 		A10000000000000000000055 /* ServiceContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* ServiceContainer.swift */; };
 		A10000000000000000000057 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* AppDelegate.swift */; };
@@ -127,8 +140,10 @@
 			A10000000000000000000156 /* WorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015A /* WorkbenchView.swift */; };
 			A10000000000000000000720 /* WorkbenchV2Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000700 /* WorkbenchV2Tokens.swift */; };
 			A10000000000000000000721 /* WorkbenchV2Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000701 /* WorkbenchV2Layout.swift */; };
-			A10000000000000000000722 /* WorkbenchV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000702 /* WorkbenchV2View.swift */; };
-			A10000000000000000000723 /* WorkbenchHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000703 /* WorkbenchHeader.swift */; };
+		A10000000000000000000722 /* WorkbenchV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000702 /* WorkbenchV2View.swift */; };
+		A10000000000000000000808 /* WorkbenchV2PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000809 /* WorkbenchV2PreviewSupport.swift */; };
+		A1000000000000000000080A /* WorkbenchV2PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000080B /* WorkbenchV2PreviewData.swift */; };
+		A10000000000000000000723 /* WorkbenchHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000703 /* WorkbenchHeader.swift */; };
 			A10000000000000000000724 /* CurrentFocusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000704 /* CurrentFocusCard.swift */; };
 			A10000000000000000000725 /* PendingItemsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000705 /* PendingItemsCard.swift */; };
 			A10000000000000000000726 /* RecentCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000706 /* RecentCollectionCard.swift */; };
@@ -138,7 +153,7 @@
 			A10000000000000000000728 /* ActivityTrendCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000708 /* ActivityTrendCard.swift */; };
 			A10000000000000000000729 /* QuickActionsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000709 /* QuickActionsCard.swift */; };
 			A1000000000000000000072A /* DeviceStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070A /* DeviceStatusBar.swift */; };
-			A1000000000000000000072B /* WorkbenchV2MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070B /* WorkbenchV2MockData.swift */; };
+			A1000000000000000000072B /* WorkbenchV2DashboardData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000070B /* WorkbenchV2DashboardData.swift */; };
 			A10000000000000000000157 /* ToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000015B /* ToolsView.swift */; };
 		A10000000000000000000160 /* VoicePolishMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000171 /* VoicePolishMode.swift */; };
 		A10000000000000000000161 /* PolishPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000172 /* PolishPrompts.swift */; };
@@ -201,6 +216,7 @@
 		A10000000000000000000312 /* AppSurfaceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000311 /* AppSurfaceStyle.swift */; };
 		A10000000000000000000314 /* MaterialCardShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000315 /* MaterialCardShell.swift */; };
 		A10000000000000000000672 /* CaptureWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000673 /* CaptureWorkspaceView.swift */; };
+		A10000000000000000000692 /* ScreenshotWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000693 /* ScreenshotWorkspaceView.swift */; };
 		A1000000000000000000031C /* AcMindAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000031B /* AcMindAppIntents.swift */; };
 		A10000000000000000000413 /* DynamicContinentTemplateV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000411 /* DynamicContinentTemplateV2.swift */; };
 		A10000000000000000000414 /* DynamicContinentPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* DynamicContinentPages.swift */; };
@@ -346,7 +362,6 @@
 		C1000000000000000000000C /* ClipboardTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000B /* ClipboardTag.swift */; };
 		C10000000000000000000010 /* PasteQueuePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000D /* PasteQueuePanel.swift */; };
 		C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000011 /* ClipboardPipelineTests.swift */; };
-		C325242CA1972A1C17A5A079 /* ScreenshotPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C62635322E9D8980DD74CB /* ScreenshotPreviewWindow.swift */; };
 		CB08A0A2158B62699F72F841 /* AgentModelRouterUsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FABD548B129EDD22129002F8 /* AgentModelRouterUsageTests.swift */; };
 		CFBBBBD910CB504C891A7691 /* HotkeyRegistryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400A764CE5538B9155D6BA51 /* HotkeyRegistryStoreTests.swift */; };
 		D6078832E89826C31EC7784E /* ClipboardPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F8AD245807BDDD59B03B9C5 /* ClipboardPreviewView.swift */; };
@@ -403,8 +418,9 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXFileReference section */
-		01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StreamingKeyboardWriterTests.swift; path = AcMindKitTests/StreamingKeyboardWriterTests.swift; sourceTree = SOURCE_ROOT; };
-		058433B8000B2A32C2499B61 /* PermissionManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PermissionManagerTests.swift; path = AcMindKitTests/PermissionManagerTests.swift; sourceTree = SOURCE_ROOT; };
+			01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StreamingKeyboardWriterTests.swift; path = AcMindKitTests/StreamingKeyboardWriterTests.swift; sourceTree = SOURCE_ROOT; };
+			A10000000000000000000800 /* ScreenshotModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ScreenshotModeTests.swift; sourceTree = SOURCE_ROOT; };
+			058433B8000B2A32C2499B61 /* PermissionManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PermissionManagerTests.swift; path = AcMindKitTests/PermissionManagerTests.swift; sourceTree = SOURCE_ROOT; };
 		0666ED9ABC891A9E3B498761 /* CaptureServiceVoiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CaptureServiceVoiceTests.swift; path = AcMindKitTests/CaptureServiceVoiceTests.swift; sourceTree = SOURCE_ROOT; };
 		107A93EE7555D32E3BBA2495 /* MarkdownBuilderNewFeatureTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MarkdownBuilderNewFeatureTests.swift; path = AcMindKitTests/MarkdownBuilderNewFeatureTests.swift; sourceTree = SOURCE_ROOT; };
 		16C29C7BE67FFEC7B209D383 /* ModelManagementSortOptionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ModelManagementSortOptionTests.swift; path = AcMindKitTests/ModelManagementSortOptionTests.swift; sourceTree = SOURCE_ROOT; };
@@ -416,7 +432,6 @@
 		22FA6BB8339B7405BF83EAEE /* SidebarItemTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SidebarItemTests.swift; path = AcMindKitTests/SidebarItemTests.swift; sourceTree = SOURCE_ROOT; };
 		24C046C4CDB063E3EAACE7A9 /* SystemStatusServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SystemStatusServiceTests.swift; path = AcMindKitTests/SystemStatusServiceTests.swift; sourceTree = SOURCE_ROOT; };
 		368289451AF72AECCE215B64 /* ExportServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExportServiceTests.swift; path = AcMindKitTests/ExportServiceTests.swift; sourceTree = SOURCE_ROOT; };
-		37C62635322E9D8980DD74CB /* ScreenshotPreviewWindow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenshotPreviewWindow.swift; path = Features/Companion/ScreenshotPreviewWindow.swift; sourceTree = SOURCE_ROOT; };
 		400A764CE5538B9155D6BA51 /* HotkeyRegistryStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HotkeyRegistryStoreTests.swift; path = AcMindKitTests/HotkeyRegistryStoreTests.swift; sourceTree = SOURCE_ROOT; };
 		40F9CDDDACF6297156633ECA /* TimelineLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimelineLayoutTests.swift; path = AcMindKitTests/TimelineLayoutTests.swift; sourceTree = SOURCE_ROOT; };
 		418ECDEAC9387BD8935E7D9E /* ClipboardPinWindowSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ClipboardPinWindowSizing.swift; path = AcMindKit/Models/ClipboardPinWindowSizing.swift; sourceTree = "<group>"; };
@@ -461,6 +476,17 @@
 		A10000000000000000000052 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
 		A10000000000000000000054 /* ServiceContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceContainer.swift; sourceTree = "<group>"; };
 		A10000000000000000000056 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A100000000000000000007F0 /* PlaceholderWindowPruner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderWindowPruner.swift; sourceTree = "<group>"; };
+		A100000000000000000007F2 /* DebugPreviewLaunchCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugPreviewLaunchCommand.swift; sourceTree = "<group>"; };
+		A100000000000000000007F4 /* DebugPreviewWindowFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugPreviewWindowFactory.swift; sourceTree = "<group>"; };
+		A100000000000000000007F6 /* DebugScreenshotRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugScreenshotRenderer.swift; sourceTree = "<group>"; };
+		A100000000000000000007F8 /* DebugWorkbenchV2AuditExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugWorkbenchV2AuditExporter.swift; sourceTree = "<group>"; };
+		A100000000000000000007FA /* DebugAcWorkAuditExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAcWorkAuditExporter.swift; sourceTree = "<group>"; };
+		A100000000000000000007FC /* DebugCompanionScreenshotExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugCompanionScreenshotExporter.swift; sourceTree = "<group>"; };
+		A100000000000000000007FF /* DebugWorkspaceDashboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugWorkspaceDashboardRepository.swift; sourceTree = "<group>"; };
+		A10000000000000000000805 /* DebugAcWorkPreviewScenario.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAcWorkPreviewScenario.swift; sourceTree = "<group>"; };
+		A10000000000000000000807 /* DebugAgentPreviewSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAgentPreviewSample.swift; sourceTree = "<group>"; };
+		A1000000000000000000080D /* DebugAcWorkPreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAcWorkPreviewData.swift; sourceTree = "<group>"; };
 		A1000000000000000000005A /* VoiceServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceServiceProtocol.swift; sourceTree = "<group>"; };
 		A1000000000000000000005C /* RecordingStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingStatus.swift; sourceTree = "<group>"; };
 		A10000000000000000000069 /* CapsulePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Capsule/CapsulePanel.swift; sourceTree = SOURCE_ROOT; };
@@ -583,6 +609,7 @@
 		A10000000000000000000311 /* AppSurfaceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/AppSurfaceStyle.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000315 /* MaterialCardShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/MaterialCardShell.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000673 /* CaptureWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/CaptureWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000693 /* ScreenshotWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/ScreenshotWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000651 /* WorkspaceSharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Shared/WorkspaceSharedComponents.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000031B /* AcMindAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindAppIntents.swift; sourceTree = "<group>"; };
 		A10000000000000000000411 /* DynamicContinentTemplateV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift; sourceTree = SOURCE_ROOT; };
@@ -601,8 +628,10 @@
 			A10000000000000000000422 /* WorkspaceHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/Home/WorkspaceHomeView.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000700 /* WorkbenchV2Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2Tokens.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000701 /* WorkbenchV2Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2Layout.swift; sourceTree = SOURCE_ROOT; };
-			A10000000000000000000702 /* WorkbenchV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2View.swift; sourceTree = SOURCE_ROOT; };
-			A10000000000000000000703 /* WorkbenchHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/WorkbenchHeader.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000702 /* WorkbenchV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2View.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000809 /* WorkbenchV2PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2PreviewSupport.swift; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000080B /* WorkbenchV2PreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2PreviewData.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000703 /* WorkbenchHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/WorkbenchHeader.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000704 /* CurrentFocusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/CurrentFocusCard.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000705 /* PendingItemsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/PendingItemsCard.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000706 /* RecentCollectionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/RecentCollectionCard.swift; sourceTree = SOURCE_ROOT; };
@@ -611,7 +640,7 @@
 			A10000000000000000000708 /* ActivityTrendCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/ActivityTrendCard.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000709 /* QuickActionsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/QuickActionsCard.swift; sourceTree = SOURCE_ROOT; };
 			A1000000000000000000070A /* DeviceStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Components/DeviceStatusBar.swift; sourceTree = SOURCE_ROOT; };
-			A1000000000000000000070B /* WorkbenchV2MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/Preview/WorkbenchV2MockData.swift; sourceTree = SOURCE_ROOT; };
+			A1000000000000000000070B /* WorkbenchV2DashboardData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2DashboardData.swift; sourceTree = SOURCE_ROOT; };
 			A1000000000000000000070D /* WorkbenchV2HeroBackgroundStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Native/HomeV2/WorkbenchV2HeroBackgroundStore.swift; sourceTree = SOURCE_ROOT; };
 			A10000000000000000000431 /* HotCornerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/HotCornerConfig.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000433 /* HotCornerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/UI/HotCornerManager.swift; sourceTree = SOURCE_ROOT; };
@@ -820,6 +849,17 @@
 				A10000000000000000000000 /* AcMindApp.swift */,
 				A1000000000000000000031B /* AcMindAppIntents.swift */,
 				A10000000000000000000056 /* AppDelegate.swift */,
+				A100000000000000000007F0 /* PlaceholderWindowPruner.swift */,
+				A100000000000000000007F2 /* DebugPreviewLaunchCommand.swift */,
+				A100000000000000000007F4 /* DebugPreviewWindowFactory.swift */,
+				A100000000000000000007F6 /* DebugScreenshotRenderer.swift */,
+				A100000000000000000007F8 /* DebugWorkbenchV2AuditExporter.swift */,
+				A100000000000000000007FA /* DebugAcWorkAuditExporter.swift */,
+				A100000000000000000007FC /* DebugCompanionScreenshotExporter.swift */,
+				A100000000000000000007FF /* DebugWorkspaceDashboardRepository.swift */,
+				A10000000000000000000805 /* DebugAcWorkPreviewScenario.swift */,
+				A10000000000000000000807 /* DebugAgentPreviewSample.swift */,
+				A1000000000000000000080D /* DebugAcWorkPreviewData.swift */,
 				A10000000000000000000050 /* AppState.swift */,
 				A10000000000000000000002 /* ContentView.swift */,
 				A10000000000000000000054 /* ServiceContainer.swift */,
@@ -1254,7 +1294,6 @@
 				A1000000000000000000018E /* CompanionView.swift */,
 				25FBFE4F86258D83AC05CC24 /* Data */,
 				BE4AB2822981A02092F4CE72 /* ScreenshotCaptureView.swift */,
-				37C62635322E9D8980DD74CB /* ScreenshotPreviewWindow.swift */,
 			);
 			path = Companion;
 			sourceTree = "<group>";
@@ -1332,8 +1371,10 @@
 				A10000000000000000000626 /* SystemThermalThrottleTests.swift */,
 				A10000000000000000000516 /* CaptureServiceScreenshotPolicyTests.swift */,
 				A10000000000000000000518 /* DesktopCapsuleConfigTests.swift */,
-				A1000000000000000000051D /* SourceItemTests.swift */,
-				A10000000000000000000679 /* ToolWorkspaceStateTests.swift */,
+			A1000000000000000000051D /* SourceItemTests.swift */,
+			A10000000000000000000800 /* ScreenshotModeTests.swift */,
+			A10000000000000000000801 /* ScrollCaptureServiceTests.swift */,
+			A10000000000000000000679 /* ToolWorkspaceStateTests.swift */,
 				C10000000000000000000011 /* ClipboardPipelineTests.swift */,
 				473B603795DD420662D83F33 /* AIRuntimeServiceLoggingTests.swift */,
 				E79D8188A908184C1622F543 /* AgentMemoryServiceTests.swift */,
@@ -1397,6 +1438,7 @@
 				A10000000000000000000311 /* AppSurfaceStyle.swift */,
 				A10000000000000000000315 /* MaterialCardShell.swift */,
 				A10000000000000000000673 /* CaptureWorkspaceView.swift */,
+				A10000000000000000000693 /* ScreenshotWorkspaceView.swift */,
 				A10000000000000000000651 /* WorkspaceSharedComponents.swift */,
 			);
 			path = Shared;
@@ -1416,10 +1458,12 @@
 				children = (
 					A10000000000000000000700 /* WorkbenchV2Tokens.swift */,
 					A10000000000000000000701 /* WorkbenchV2Layout.swift */,
-					A10000000000000000000702 /* WorkbenchV2View.swift */,
-					A1000000000000000000070D /* WorkbenchV2HeroBackgroundStore.swift */,
+				A10000000000000000000702 /* WorkbenchV2View.swift */,
+				A10000000000000000000809 /* WorkbenchV2PreviewSupport.swift */,
+				A1000000000000000000080B /* WorkbenchV2PreviewData.swift */,
+				A1000000000000000000070D /* WorkbenchV2HeroBackgroundStore.swift */,
+					A1000000000000000000070B /* WorkbenchV2DashboardData.swift */,
 					A10000000000000000000711 /* Components */,
-					A10000000000000000000712 /* Preview */,
 				);
 				path = HomeV2;
 				sourceTree = "<group>";
@@ -1438,14 +1482,6 @@
 					A1000000000000000000070A /* DeviceStatusBar.swift */,
 				);
 				path = Components;
-				sourceTree = "<group>";
-			};
-			A10000000000000000000712 /* Preview */ = {
-				isa = PBXGroup;
-				children = (
-					A1000000000000000000070B /* WorkbenchV2MockData.swift */,
-				);
-				path = Preview;
 				sourceTree = "<group>";
 			};
 		A10000000000000000000438 /* SystemStatus */ = {
@@ -1682,6 +1718,17 @@
 				A10000000000000000000053 /* SidebarItem.swift in Sources */,
 				A10000000000000000000055 /* ServiceContainer.swift in Sources */,
 				A10000000000000000000057 /* AppDelegate.swift in Sources */,
+				A100000000000000000007F1 /* PlaceholderWindowPruner.swift in Sources */,
+				A100000000000000000007F3 /* DebugPreviewLaunchCommand.swift in Sources */,
+				A100000000000000000007F5 /* DebugPreviewWindowFactory.swift in Sources */,
+				A100000000000000000007F7 /* DebugScreenshotRenderer.swift in Sources */,
+				A100000000000000000007F9 /* DebugWorkbenchV2AuditExporter.swift in Sources */,
+				A100000000000000000007FB /* DebugAcWorkAuditExporter.swift in Sources */,
+				A100000000000000000007FD /* DebugCompanionScreenshotExporter.swift in Sources */,
+				A100000000000000000007FE /* DebugWorkspaceDashboardRepository.swift in Sources */,
+				A10000000000000000000804 /* DebugAcWorkPreviewScenario.swift in Sources */,
+				A10000000000000000000806 /* DebugAgentPreviewSample.swift in Sources */,
+				A1000000000000000000080C /* DebugAcWorkPreviewData.swift in Sources */,
 				A1000000000000000000000C /* SidebarView.swift in Sources */,
 				A1000000000000000000051F /* AcMindDesignTokens.swift in Sources */,
 				A1000000000000000000006B /* CapsulePanel.swift in Sources */,
@@ -1753,6 +1800,7 @@
 				A10000000000000000000312 /* AppSurfaceStyle.swift in Sources */,
 				A10000000000000000000314 /* MaterialCardShell.swift in Sources */,
 				A10000000000000000000672 /* CaptureWorkspaceView.swift in Sources */,
+				A10000000000000000000692 /* ScreenshotWorkspaceView.swift in Sources */,
 				A10000000000000000000650 /* WorkspaceSharedComponents.swift in Sources */,
 				A1000000000000000000010C /* AgentViewModel.swift in Sources */,
 				A1000000000000000000010E /* SettingsViewModel.swift in Sources */,
@@ -1762,8 +1810,10 @@
 					A10000000000000000000423 /* WorkspaceHomeView.swift in Sources */,
 					A10000000000000000000720 /* WorkbenchV2Tokens.swift in Sources */,
 					A10000000000000000000721 /* WorkbenchV2Layout.swift in Sources */,
-					A10000000000000000000722 /* WorkbenchV2View.swift in Sources */,
-					A10000000000000000000723 /* WorkbenchHeader.swift in Sources */,
+				A10000000000000000000722 /* WorkbenchV2View.swift in Sources */,
+				A10000000000000000000808 /* WorkbenchV2PreviewSupport.swift in Sources */,
+				A1000000000000000000080A /* WorkbenchV2PreviewData.swift in Sources */,
+				A10000000000000000000723 /* WorkbenchHeader.swift in Sources */,
 					A10000000000000000000724 /* CurrentFocusCard.swift in Sources */,
 					A10000000000000000000725 /* PendingItemsCard.swift in Sources */,
 					A10000000000000000000726 /* RecentCollectionCard.swift in Sources */,
@@ -1772,7 +1822,7 @@
 					A10000000000000000000728 /* ActivityTrendCard.swift in Sources */,
 					A10000000000000000000729 /* QuickActionsCard.swift in Sources */,
 					A1000000000000000000072A /* DeviceStatusBar.swift in Sources */,
-					A1000000000000000000072B /* WorkbenchV2MockData.swift in Sources */,
+					A1000000000000000000072B /* WorkbenchV2DashboardData.swift in Sources */,
 					A1000000000000000000072D /* WorkbenchV2HeroBackgroundStore.swift in Sources */,
 					A10000000000000000000157 /* ToolsView.swift in Sources */,
 				A100000000000000000002B1 /* WebDigestPanel.swift in Sources */,
@@ -1795,7 +1845,6 @@
 				1C0651F25CDCE99CAB905DD8 /* NotchDashboardData.swift in Sources */,
 				7ABC6F686E3AA59291B5F42F /* NotchDashboardDataProvider.swift in Sources */,
 				E173F6B01A6A51857A5161F0 /* ScreenshotCaptureView.swift in Sources */,
-				C325242CA1972A1C17A5A079 /* ScreenshotPreviewWindow.swift in Sources */,
 				D6078832E89826C31EC7784E /* ClipboardPreviewView.swift in Sources */,
 				4AF6EDD68B3A9C2EFA8DEC64 /* TagSelectorView.swift in Sources */,
 			);
@@ -1989,8 +2038,9 @@
 				A1000000000000000000049A /* AppNotificationServiceTests.swift in Sources */,
 				A10000000000000000000517 /* CaptureServiceScreenshotPolicyTests.swift in Sources */,
 				A10000000000000000000519 /* DesktopCapsuleConfigTests.swift in Sources */,
-				A1000000000000000000051C /* SourceItemTests.swift in Sources */,
-				C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */,
+			A1000000000000000000051C /* SourceItemTests.swift in Sources */,
+			A10000000000000000000802 /* ScreenshotModeTests.swift in Sources */,
+			C10000000000000000000012 /* ClipboardPipelineTests.swift in Sources */,
 				E52EA90EFEACB8FC38F284AA /* AIRuntimeServiceLoggingTests.swift in Sources */,
 				E752B2C2E999F8F898D1A5CB /* AgentMemoryServiceTests.swift in Sources */,
 				BE1439C2D977679A297F7EDE /* AgentModelRouterNewFeatureTests.swift in Sources */,
@@ -2026,8 +2076,9 @@
 				73B9A2706D6CB327252F4655 /* ScheduleViewModelSearchTests.swift in Sources */,
 				8A0A3CBBD1F6B1DE93A8807E /* SettingsServiceInitTests.swift in Sources */,
 				13368FE91E928A672B830E8E /* SidebarItemTests.swift in Sources */,
-				0DD468BB3560D2BED70F5458 /* StreamingKeyboardWriterTests.swift in Sources */,
-				21A69308863F294061C2F55D /* SystemStatusCleanupTests.swift in Sources */,
+			0DD468BB3560D2BED70F5458 /* StreamingKeyboardWriterTests.swift in Sources */,
+			A10000000000000000000803 /* ScrollCaptureServiceTests.swift in Sources */,
+			21A69308863F294061C2F55D /* SystemStatusCleanupTests.swift in Sources */,
 				9719E7809C15EB189D3D2C3C /* SystemStatusMetricsTests.swift in Sources */,
 				AEA80E030DCD2FF81B38E3D3 /* SystemStatusServiceTests.swift in Sources */,
 				7178571BBD78E5C2010987FB /* TimelineLayoutTests.swift in Sources */,

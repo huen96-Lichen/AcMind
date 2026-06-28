@@ -91,7 +91,7 @@ struct CompanionShortcutPanel: View {
                     .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                Text("启用状态、快捷键文本和说明都来自设置存储，不再依赖示例数据。")
+                    Text("启用状态、快捷键文本和备注都来自设置存储，不再显示占位内容。")
                     .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -184,7 +184,7 @@ struct ShortcutRow: View {
                 }
 
                 if shortcut.isEditable {
-                    TextField("说明", text: $shortcut.description)
+                    TextField("备注", text: $shortcut.description)
                         .textFieldStyle(.plain)
                         .font(.system(size: AppSurfaceTokens.Typography.caption))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)

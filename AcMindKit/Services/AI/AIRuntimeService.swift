@@ -550,7 +550,8 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
 
     // MARK: - Test Support
 
-    func installTestProvider(id: String, provider: any AIProvider, modelId: String = "mock-model") {
+#if DEBUG
+    func installTestProvider(id: String, provider: any AIProvider, modelId: String = "test-model") {
         providers[id] = provider
         if configs.contains(where: { $0.id == id }) == false {
             configs.append(
@@ -568,4 +569,5 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             defaultProviderId = id
         }
     }
+#endif
 }

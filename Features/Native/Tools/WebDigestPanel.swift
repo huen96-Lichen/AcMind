@@ -17,7 +17,7 @@ struct WebDigestPanel: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    AppSurfaceCard(title: "轻量网页精读", subtitle: "解析正文并生成 Markdown 草稿", padding: 16) {
+                    AppSurfaceCard(title: "轻量网页精读", subtitle: "解析正文并生成 Markdown 初稿", padding: 16) {
                         introCard
                     }
                     AppSurfaceCard(title: "URL 输入", subtitle: "输入网页地址后直接生成", padding: 16) {
@@ -31,7 +31,7 @@ struct WebDigestPanel: View {
             }
         }
         .frame(width: 760, height: 640)
-        .background(AppSurfaceBackdrop())
+        .background(AppVisualBackdrop())
     }
 
     private var header: some View {

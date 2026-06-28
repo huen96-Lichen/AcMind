@@ -41,7 +41,7 @@ struct ToolsView: View {
         }) { route in
             toolSheet(for: route)
         }
-        .background(AppSurfaceBackdrop())
+        .background(AppVisualBackdrop())
         .background(searchKeyboardShortcut)
     }
 
@@ -55,7 +55,7 @@ struct ToolsView: View {
                     reviewSummary: viewModel.recentTools.isEmpty ? "暂无结果" : ToolWorkspaceFlow.reviewSummary(recentCount: viewModel.recentTools.count)
                 )
 
-                AcSection(title: "工具概览", subtitle: "固定外壳下的轻量摘要", padding: 14) {
+                AppSurfaceCard(title: "工具概览", subtitle: "固定外壳下的轻量摘要", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         railSummaryRow(title: "工具总数", value: "\(viewModel.filteredTools.count)")
                         railSummaryRow(title: "最近使用", value: "\(viewModel.recentTools.count)")
@@ -63,7 +63,7 @@ struct ToolsView: View {
                     }
                 }
 
-                AcSection(title: "分类筛选", subtitle: "竖排快捷入口", padding: 14) {
+                AppSurfaceCard(title: "分类筛选", subtitle: "竖排切换区", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(ToolCategory.allCases) { category in
                             Button {
@@ -95,8 +95,36 @@ struct ToolsView: View {
     private var toolDetailRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                AppSurfaceCard(title: "最近使用", subtitle: "可恢复的工具历史", padding: 14) {
+                    RecentToolsSection(
+                        recentTools: viewModel.recentTools,
+                        canRestoreRecentTools: viewModel.canRestoreRecentTools,
+                        onToolTap: { recent in
+                            viewModel.openRecentTool(recent)
+                        },
+                        onClear: {
+                            viewModel.clearRecentTools()
+                        },
+                        onRestore: {
+                            viewModel.restoreRecentTools()
+                        }
+                    )
+                }
+
+                AppSurfaceCard(title: "最近控制", subtitle: "历史操作管理", padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        railSummaryRow(title: "历史数量", value: "\(viewModel.recentTools.count)")
+                        railSummaryRow(title: "可恢复", value: viewModel.canRestoreRecentTools ? "是" : "否")
+                        Button("清空最近") {
+                            viewModel.clearRecentTools()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.recentTools.isEmpty)
+                    }
+                }
+
                 if let selectedTool {
-                    AppSurfaceCard(title: "工具详情", subtitle: "当前选中的具体工具", padding: 14) {
+                    AppSurfaceCard(title: "工具信息", subtitle: "当前选中的工具", padding: 14) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .top, spacing: 10) {
                                 ZStack {
@@ -140,11 +168,11 @@ struct ToolsView: View {
                         }
                     }
                 } else {
-                    AppSurfaceCard(title: "工具详情", subtitle: "选择一个工具后显示具体信息", padding: 14) {
+                    AppSurfaceCard(title: "工具信息", subtitle: "选择一个工具后显示信息", padding: 14) {
                         AcEmptyState(
                             icon: "wrench.and.screwdriver",
                             title: "尚未选择工具",
-                            message: "从中间列表里打开一个工具，右侧会只显示这个工具的具体信息。"
+                            message: "从中间列表里打开一个工具，右侧会只显示这个工具的信息。"
                         )
                     }
                 }
@@ -211,9 +239,16 @@ struct ToolsView: View {
     private var toolsGrid: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                let activeStage = ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute)
+                ToolStageHeader(
+                    title: "工具工作流",
+                    subtitle: "\(ToolWorkspaceFlow.selectionSummary(filteredCount: viewModel.filteredTools.count)) · \(ToolWorkspaceFlow.configurationSummary(activeToolRoute: viewModel.activeToolRoute)) · \(viewModel.recentTools.isEmpty ? "暂无结果" : ToolWorkspaceFlow.reviewSummary(recentCount: viewModel.recentTools.count))",
+                    stage: activeStage
+                )
+
                 toolsOverviewCard
 
-                AppSurfaceCard(title: "工具总览", subtitle: "搜索、筛选与快速入口都放在同一层", padding: 16) {
+                AppSurfaceCard(title: "工具概览", subtitle: "搜索、筛选与常用操作都放在同一层", padding: 16) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
                             overviewMetric(title: "当前分类", value: viewModel.selectedCategory.displayName)
@@ -233,11 +268,7 @@ struct ToolsView: View {
                     )
                     .padding(.top, 4)
                 } else {
-                    AppSurfaceCard(
-                        title: "精选工具",
-                        subtitle: viewModel.selectedCategory.displayName,
-                        padding: 16
-                    ) {
+                    AppSurfaceCard(title: "结果区", subtitle: viewModel.selectedCategory.displayName, padding: 16) {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                             ForEach(viewModel.filteredTools) { tool in
                                 ToolCard(tool: tool) {
@@ -254,7 +285,7 @@ struct ToolsView: View {
     }
 
     private var toolsOverviewCard: some View {
-        AppSurfaceCard(title: "工具台概览", subtitle: "入口矩阵 + 结果区", padding: 16) {
+        AppSurfaceCard(title: "工具台概览", subtitle: "工具矩阵与结果区", padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 AppSurfaceSummaryStrip(chips: [
                     AppSurfaceSummaryChip(
@@ -277,10 +308,10 @@ struct ToolsView: View {
                 HStack(spacing: 10) {
                     overviewMetric(title: "工作阶段", value: ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute).title, tint: AppSurfaceTokens.accentBlue)
                     overviewMetric(title: "筛选状态", value: viewModel.searchQuery.isEmpty ? "未搜索" : "已搜索", tint: viewModel.searchQuery.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
-                    overviewMetric(title: "详情面板", value: selectedTool == nil ? "未选中" : "已打开", tint: selectedTool == nil ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentGreen)
+                    overviewMetric(title: "选中状态", value: selectedTool == nil ? "未选中" : "已打开", tint: selectedTool == nil ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentGreen)
                 }
 
-                Text("顶部先把当前分类、命中数和最近使用亮出来，下面仍然保持原来的工具网格与详情区。")
+                Text("顶部先把当前分类、命中数和最近使用亮出来，下面仍然保持原来的工具网格与结果区。")
                     .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(2)
@@ -868,6 +899,14 @@ class ToolsViewModel: ObservableObject {
     func openTool(_ tool: Tool) {
         activeToolRoute = tool.route
         recordRecentTool(tool)
+    }
+
+    func openRecentTool(_ recentTool: RecentTool) {
+        if let tool = tools.first(where: { $0.id == recentTool.toolId || $0.route == recentTool.route }) {
+            openTool(tool)
+        } else {
+            activeToolRoute = recentTool.route
+        }
     }
 
     private func recordRecentTool(_ tool: Tool) {

@@ -122,6 +122,7 @@ public enum CollectionSource: String, Codable, Sendable, Hashable, CaseIterable 
     case clipboard
     case phoneSync
     case voice
+    case screenshot
     case screenshotOCR
     case agent
     case manual
@@ -129,6 +130,24 @@ public enum CollectionSource: String, Codable, Sendable, Hashable, CaseIterable 
     case file
     case capsule
     case imported
+}
+
+public extension CollectionSource {
+    var displayName: String {
+        switch self {
+        case .clipboard: return "剪贴板"
+        case .phoneSync: return "手机同步"
+        case .voice: return "语音"
+        case .screenshot: return "截图"
+        case .screenshotOCR: return "截图 OCR"
+        case .agent: return "Agent"
+        case .manual: return "手动录入"
+        case .webpage: return "网页"
+        case .file: return "文件"
+        case .capsule: return "灵动大陆"
+        case .imported: return "导入"
+        }
+    }
 }
 
 public enum ProcessingStatus: String, Codable, Sendable, Hashable, CaseIterable {
@@ -450,7 +469,7 @@ public extension CollectedItem {
             previewText: item.previewText ?? item.transcript ?? item.ocrText,
             content: CollectedContent(sourceItem: item, contentType: contentType),
             contentType: contentType,
-            source: CollectionSource(sourceOrigin: item.source, metadata: item.metadata),
+            source: CollectionSource(sourceItem: item),
             sourceApplication: item.sourceApp,
             sourceDevice: item.metadata["sourceDevice"],
             originalURL: item.originalUrl,
@@ -558,6 +577,7 @@ private extension CollectionSource {
         case .clipboard: return "剪贴板"
         case .phoneSync: return "手机同步"
         case .voice: return "语音"
+        case .screenshot: return "截图"
         case .screenshotOCR: return "截图 OCR"
         case .agent: return "Agent"
         case .manual: return "手动录入"
@@ -689,8 +709,10 @@ public extension SourceOrigin {
             self = .clipboard
         case .voice:
             self = .voice
-        case .screenshotOCR:
+        case .screenshot:
             self = .screenshot
+        case .screenshotOCR:
+            self = .screenshotOCR
         case .agent:
             self = .agent
         case .manual:
@@ -792,6 +814,7 @@ public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
     case clipboard
     case agent
     case screenshot
+    case screenshotOCR
     case webpage
     case file
     case voice
@@ -799,7 +822,7 @@ public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
     case imported
 
     public static var allCases: [SourceOrigin] {
-        [.manual, .clipboard, .agent, .screenshot, .webpage, .file, .voice, .capsule, .imported]
+        [.manual, .clipboard, .agent, .screenshot, .screenshotOCR, .webpage, .file, .voice, .capsule, .imported]
     }
 
     public var displayName: String {
@@ -808,6 +831,7 @@ public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
         case .clipboard: return "剪贴板"
         case .agent: return "Agent"
         case .screenshot: return "截图"
+        case .screenshotOCR: return "截图 OCR"
         case .webpage: return "网页"
         case .file: return "文件"
         case .voice: return "语音"
@@ -938,6 +962,17 @@ public extension CollectedContentType {
 }
 
 public extension CollectionSource {
+    init(sourceItem item: SourceItem) {
+        if item.source == .screenshot {
+            self = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? .screenshotOCR
+                : .screenshot
+            return
+        }
+
+        self.init(sourceOrigin: item.source, metadata: item.metadata)
+    }
+
     init(sourceOrigin: SourceOrigin, metadata: [String: String]) {
         if metadata["sourceDevice"] == "iPhone" || metadata["sourceKind"] == "phoneSync" {
             self = .phoneSync
@@ -952,6 +987,8 @@ public extension CollectionSource {
         case .agent:
             self = .agent
         case .screenshot:
+            self = .screenshot
+        case .screenshotOCR:
             self = .screenshotOCR
         case .webpage:
             self = .webpage

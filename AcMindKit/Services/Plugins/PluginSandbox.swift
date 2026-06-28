@@ -59,11 +59,13 @@ public actor PluginSandbox {
         pluginId: String,
         permissions: Set<PluginPermission> = [.fileRead],
         maxMemoryMB: Int = 256,
-        maxCPUPercent: Int = 25
+        maxCPUPercent: Int = 25,
+        pluginsDirectory: URL? = nil
     ) {
         self.pluginId = pluginId
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AcMind/Plugins/\(pluginId)")
+        let root = pluginsDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("AcMind/Plugins")
+        let base = root.appendingPathComponent(pluginId, isDirectory: true)
         self.allowedPaths = [base]
         self.grantedPermissions = permissions
         self.maxMemoryMB = maxMemoryMB
@@ -71,7 +73,11 @@ public actor PluginSandbox {
     }
 
     public func validateAccess(path: URL) -> Bool {
-        return allowedPaths.contains { path.path.hasPrefix($0.path) }
+        let candidate = path.standardizedFileURL.resolvingSymlinksInPath().path
+        return allowedPaths.contains { allowedPath in
+            let allowed = allowedPath.standardizedFileURL.resolvingSymlinksInPath().path
+            return candidate == allowed || candidate.hasPrefix(allowed + "/")
+        }
     }
 
     public func hasPermission(_ permission: PluginPermission) -> Bool {

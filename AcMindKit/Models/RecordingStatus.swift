@@ -151,15 +151,24 @@ public enum ScreenshotMode: String, Sendable, Hashable, Equatable {
     case fullscreen = "fullscreen"
     case area = "area"
     case window = "window"
+    case scroll = "scroll"
+
+    public var displayName: String {
+        switch self {
+        case .fullscreen: return "全屏"
+        case .area: return "区域"
+        case .window: return "窗口"
+        case .scroll: return "滚动"
+        }
+    }
     
     public init?(rawValue: String) {
         switch rawValue {
         case "fullscreen": self = .fullscreen
         case "area": self = .area
         case "window": self = .window
+        case "scroll": self = .scroll
         default: return nil
         }
     }
 }
-
-

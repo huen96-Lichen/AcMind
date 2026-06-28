@@ -21,6 +21,7 @@ struct ShortcutKeycap: View {
     }
 }
 
+#if DEBUG
 struct ShortcutKeycapView_Previews: PreviewProvider {
     static var previews: some View {
         HStack(spacing: 4) {
@@ -32,3 +33,4 @@ struct ShortcutKeycapView_Previews: PreviewProvider {
         .background(AppSurfaceBackdrop())
     }
 }
+#endif

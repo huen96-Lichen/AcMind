@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct QuickActionsCard: View {
-    let model: WorkbenchV2MockData.QuickActions
+    let model: WorkbenchV2DashboardData.QuickActions
     let layout: WorkbenchV2ResolvedLayout
     let actions: WorkbenchV2QuickActionHandlers
 
@@ -47,6 +47,15 @@ struct QuickActionsCard: View {
                                         .minimumScaleFactor(0.82)
                                         .multilineTextAlignment(.leading)
                                         .fixedSize(horizontal: false, vertical: true)
+
+                                    if action.subtitle.isEmpty == false {
+                                        Text(action.subtitle)
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.85)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             } else {
@@ -69,6 +78,16 @@ struct QuickActionsCard: View {
                                         .fixedSize(horizontal: false, vertical: true)
 
                                     Spacer(minLength: 0)
+                                }
+
+                                if action.subtitle.isEmpty == false {
+                                    Text(action.subtitle)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(.top, 2)
                                 }
                             }
                         }
@@ -107,17 +126,17 @@ struct QuickActionsCard: View {
     private func actionHandler(for index: Int) -> () -> Void {
         switch index {
         case 0:
-            return actions.quickRecord
+            return actions.screenshot
         case 1:
-            return actions.createTask
+            return actions.quickRecord
         case 2:
-            return actions.openInbox
+            return actions.createTask
         case 3:
-            return actions.startAgent
+            return actions.openInbox
         case 4:
-            return actions.importFiles
+            return actions.startAgent
         case 5:
-            return actions.addSchedule
+            return actions.importFiles
         default:
             return {}
         }
@@ -142,13 +161,15 @@ private struct WorkbenchV2QuickActionButtonStyle: ButtonStyle {
     }
 }
 
+#if DEBUG
 struct QuickActionsCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            QuickActionsCard(model: WorkbenchV2MockData.preview().quickActions, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)), actions: .default)
-            QuickActionsCard(model: .init(state: .empty, title: "快捷动作", actions: []), layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)), actions: .default)
+            QuickActionsCard(model: WorkbenchV2DashboardData.preview().quickActions, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)), actions: .previewOnly)
+            QuickActionsCard(model: .init(state: .empty, title: "快捷动作", actions: []), layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)), actions: .previewOnly)
         }
         .padding()
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

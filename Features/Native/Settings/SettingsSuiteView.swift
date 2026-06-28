@@ -26,7 +26,7 @@ enum SettingsSuiteSection: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .general: return "主题、语言、启动行为"
-        case .agent: return "随身入口、说入法、快捷方式"
+        case .agent: return "随身能力、说入法、快捷方式"
         case .processing: return "收集、清洗、摘录和转写"
         case .knowledge: return "Vault、目录、冲突策略"
         case .tools: return "截图、OCR、剪贴板、监听"
@@ -111,7 +111,7 @@ struct SettingsSuiteView: View {
                         enabledText: "已启用",
                         disabledText: "未启用"
                     ),
-                    subtitle: "说入法入口",
+                    subtitle: "说入法状态",
                     icon: "sparkles",
                     tint: AppSurfaceTokens.secondaryText
                 )
@@ -240,7 +240,7 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "快捷摘要", subtitle: "常用入口") {
+            settingsCard(title: "快捷摘要", subtitle: "常用能力") {
                 VStack(spacing: 10) {
                     settingsRow(key: "主窗口", value: "⌘0")
                     settingsRow(key: "灵动大陆", value: "⌘⇧Space")
@@ -254,9 +254,9 @@ struct SettingsSuiteView: View {
         VStack(spacing: 16) {
             settingsCard(title: "Agent 空间", subtitle: "执行中枢与待命状态") {
                 VStack(alignment: .leading, spacing: 14) {
-                    Toggle("启用说入法入口", isOn: $viewModel.companionVoiceEnabled)
+                    Toggle("启用说入法", isOn: $viewModel.companionVoiceEnabled)
                     Toggle("启用快捷指令", isOn: $viewModel.companionShortcutsEnabled)
-                    Toggle("启用截图入口", isOn: $viewModel.companionCaptureEnabled)
+                    Toggle("启用截图", isOn: $viewModel.companionCaptureEnabled)
                     Toggle("默认展开灵动大陆", isOn: $viewModel.companionCapsuleExpanded)
                 }
             }
@@ -360,7 +360,7 @@ struct SettingsSuiteView: View {
             settingsCard(title: "工具集", subtitle: "截图、OCR、监听与语音") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("自动监听剪贴板", isOn: $viewModel.autoCaptureClipboard)
-                    Text("截图自动打码和敏感信息检测已经接入实际捕获流程；滚动截图仍在继续补齐。")
+                    Text("截图自动打码和敏感信息检测已经接入实际捕获流程；滚动截图也已并入统一截图模式。")
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Button("打开桌面小胶囊设置") {
@@ -448,7 +448,7 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "状态入口", subtitle: "完整本机状态已集中到主侧边栏的「状态」") {
+            settingsCard(title: "状态概览", subtitle: "完整本机状态已集中到主侧边栏的「状态」") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("这里不再展示诊断看板，只保留跳转。")
                         .font(.system(size: 12))

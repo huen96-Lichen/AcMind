@@ -11,33 +11,18 @@ struct NotchV2LauncherPage: View {
         GeometryReader { proxy in
             let contentWidth = max(0, proxy.size.width - (CompanionLayoutTokens.pageHorizontalPadding * 2))
 
-            CompanionPanel(
-                title: "快捷启动",
-                subtitle: "先搜，再点",
-                symbol: "square.grid.2x2",
-                fillHeight: true
-            ) {
-                VStack(alignment: .leading, spacing: CompanionLayoutTokens.panelSpacing) {
-                    toolbarRow
+            VStack(alignment: .leading, spacing: 6) {
+                toolbarRow
 
-                    CompanionSectionHeader(
-                        title: "常用应用",
-                        subtitle: "拖入置顶，最多 10 个",
-                        symbol: "pin"
-                    )
-                    favoriteSection
+                compactSectionLabel(title: "常用应用", detail: "拖入置顶，最多 10 个")
+                favoriteSection
 
-                    CompanionDivider()
+                CompanionDivider()
 
-                    CompanionSectionHeader(
-                        title: "所有应用",
-                        subtitle: "点击打开，支持搜索 · \(launcherStore.appCountText)",
-                        symbol: "app"
-                    )
-                    allAppsSection(contentWidth: contentWidth)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                compactSectionLabel(title: "所有应用", detail: launcherStore.appCountText)
+                allAppsSection(contentWidth: contentWidth)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(.horizontal, CompanionLayoutTokens.pageHorizontalPadding)
             .padding(.top, CompanionLayoutTokens.pageVerticalPadding)
             .padding(.bottom, CompanionLayoutTokens.pageVerticalPadding)
@@ -64,8 +49,6 @@ struct NotchV2LauncherPage: View {
         HStack(spacing: 8) {
             searchField
 
-            Spacer(minLength: 0)
-
             if let statusMessage = launcherStore.statusMessage, statusMessage.isEmpty == false {
                 Text(statusMessage)
                     .font(.system(size: CompanionLayoutTokens.metadataSize, weight: .medium, design: .rounded))
@@ -77,7 +60,7 @@ struct NotchV2LauncherPage: View {
 
             moreMenu
         }
-        .frame(height: LauncherTokens.compactControlHeight)
+        .frame(height: CompanionLayoutTokens.controlHeightSmall)
     }
 
     private var searchField: some View {
@@ -91,7 +74,8 @@ struct NotchV2LauncherPage: View {
                 searchIsFocused = true
             }
         )
-        .frame(maxWidth: LauncherTokens.searchFieldWidth * 1.2, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .layoutPriority(1)
     }
 
     private var moreMenu: some View {
@@ -186,10 +170,24 @@ struct NotchV2LauncherPage: View {
                     }
                     .padding(.vertical, 2)
                 }
-                .frame(height: LauncherTokens.favoriteRowHeight + 10)
+                .frame(height: LauncherTokens.favoriteRowHeight + 2)
             }
         }
-        .frame(height: launcherStore.favoriteApps.isEmpty ? 50 : LauncherTokens.favoriteRowHeight + 10)
+        .frame(height: launcherStore.favoriteApps.isEmpty ? 42 : LauncherTokens.favoriteRowHeight + 2)
+    }
+
+    private func compactSectionLabel(title: String, detail: String) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: CompanionLayoutTokens.sectionTitleSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+            Spacer(minLength: 0)
+            Text(detail)
+                .font(.system(size: CompanionLayoutTokens.metadataSize, weight: .medium, design: .rounded))
+                .foregroundStyle(NotchV2DesignTokens.secondaryText)
+                .lineLimit(1)
+        }
+        .frame(height: 16)
     }
 
     private func allAppsSection(contentWidth: CGFloat) -> some View {
@@ -563,20 +561,20 @@ enum LauncherTokens {
     static let bottomPadding: CGFloat = 8
 
     static let favoriteHeaderHeight: CGFloat = 22
-    static let favoriteRowHeight: CGFloat = 50
-    static let favoriteIconSize: CGFloat = 34
-    static let favoriteItemWidth: CGFloat = 64
-    static let favoriteItemHeight: CGFloat = 50
-    static let favoriteItemSpacing: CGFloat = 12
+    static let favoriteRowHeight: CGFloat = 54
+    static let favoriteIconSize: CGFloat = 38
+    static let favoriteItemWidth: CGFloat = 78
+    static let favoriteItemHeight: CGFloat = 54
+    static let favoriteItemSpacing: CGFloat = 10
     static let favoriteMaximumCount: Int = 10
 
     static let sectionSpacing: CGFloat = 8
     static let dividerHeight: CGFloat = 1
 
     static let allAppsHeaderHeight: CGFloat = 18
-    static let allAppsIconSize: CGFloat = 26
-    static let allAppsItemWidth: CGFloat = 58
-    static let allAppsItemHeight: CGFloat = 42
+    static let allAppsIconSize: CGFloat = 36
+    static let allAppsItemWidth: CGFloat = 84
+    static let allAppsItemHeight: CGFloat = 54
     static let allAppsColumnSpacing: CGFloat = 8
     static let allAppsRowSpacing: CGFloat = 2
 
@@ -803,7 +801,8 @@ final class NotchV2LauncherStore: ObservableObject {
         let favoriteSnapshot = favoriteIDs
         let sortSnapshot = sortOption
 
-        if ProcessInfo.processInfo.arguments.contains("--companion-six-pages-export") {
+#if DEBUG
+        if DebugPreviewLaunchCommand.isCompanionSixPagesExport() {
             let scanned = Self.scanInstalledApplications()
             installedApps = Self.merge(scanned, customApps: customAppsSnapshot, usageRecords: usageSnapshot)
             customApps = customAppsSnapshot
@@ -817,6 +816,7 @@ final class NotchV2LauncherStore: ObservableObject {
             persistState()
             return
         }
+#endif
 
         loadTask = Task.detached(priority: .utility) {
             let scanned = Self.scanInstalledApplications()

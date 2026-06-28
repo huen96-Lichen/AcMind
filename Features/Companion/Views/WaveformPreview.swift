@@ -5,7 +5,7 @@ struct WaveformPreview: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            Text("预览效果")
+            Text("效果示意")
                 .font(.headline)
             
             ZStack {

@@ -33,9 +33,7 @@ public final class SystemHardwareAccess {
 
     public func makeDefaultTransport() -> any SystemHardwareTransport {
         if let helper = helperProvider(), helper.isAvailable {
-            if helper.refreshFanControlStates().isEmpty == false {
-                return helper
-            }
+            return helper
         }
 
         if let local = localProvider(), local.isAvailable {

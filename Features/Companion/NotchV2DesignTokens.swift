@@ -4,12 +4,13 @@ import AcMindKit
 
 // Notch 暗色模式 Token，值与 AcMindDesignTokens.Notch 保持同步
 enum NotchV2DesignTokens {
-    static let rootBackground = Color(red: 0.03, green: 0.03, blue: 0.035)
-    static let panelBackground = Color(red: 0.055, green: 0.055, blue: 0.07)
-    static let innerCardBackground = Color(red: 0.08, green: 0.08, blue: 0.095)
-    static let innerCardActive = Color(red: 0.10, green: 0.10, blue: 0.12)
-    static let panelBorder = Color.white.opacity(0.06)
-    static let innerBorder = Color.white.opacity(0.08)
+    static let rootBackground = Color(red: 0.025, green: 0.025, blue: 0.03)
+    static let panelBackground = Color(red: 0.065, green: 0.065, blue: 0.078)
+    static let innerCardBackground = Color(red: 0.10, green: 0.10, blue: 0.115)
+    static let panelCardBackground = Color(red: 0.118, green: 0.118, blue: 0.133)
+    static let innerCardActive = Color(red: 0.135, green: 0.135, blue: 0.155)
+    static let panelBorder = Color.white.opacity(0.10)
+    static let innerBorder = Color.white.opacity(0.12)
     static let backdropGradientTop = Color(red: 0.04, green: 0.04, blue: 0.06)
     static let backdropGradientBottom = Color(red: 0.015, green: 0.015, blue: 0.02)
     static let accentPurple = Color(nsColor: .systemBlue)
@@ -18,9 +19,9 @@ enum NotchV2DesignTokens {
     static let accentGreen = Color(nsColor: .systemGreen)
     static let accentBlue = Color(nsColor: .systemBlue)
     static let primaryText = Color.white.opacity(0.95)
-    static let secondaryText = Color.white.opacity(0.72)
-    static let tertiaryText = Color.white.opacity(0.52)
-    static let weakText = Color.white.opacity(0.35)
+    static let secondaryText = Color.white.opacity(0.80)
+    static let tertiaryText = Color.white.opacity(0.64)
+    static let weakText = Color.white.opacity(0.50)
     static let islandBackground = rootBackground
     static let islandBackgroundSoft = Color(red: 0.04, green: 0.04, blue: 0.045)
     static let cardBackground = panelBackground
@@ -47,7 +48,7 @@ enum NotchV2DesignTokens {
     static let notchSafeZoneY: CGFloat = 0
     static let notchSafeZoneWidth: CGFloat = 236
     static let notchSafeZoneHeight: CGFloat = 30
-    static let cardRadius: CGFloat = 18
+    static let cardRadius: CGFloat = 14
     static let rightCardRadius: CGFloat = 14
     static let largeRadius: CGFloat = 24
     static let islandBottomRadius: CGFloat = 14
@@ -62,9 +63,9 @@ enum NotchV2DesignTokens {
 
     enum Typography {
         static let title = Font.system(size: 14, weight: .semibold, design: .rounded)
-        static let body = Font.system(size: 11, weight: .medium, design: .rounded)
-        static let caption = Font.system(size: 9.5, weight: .medium, design: .rounded)
-        static let footnote = Font.system(size: 8, weight: .regular, design: .rounded)
+        static let body = Font.system(size: 12, weight: .medium, design: .rounded)
+        static let caption = Font.system(size: 10.5, weight: .medium, design: .rounded)
+        static let footnote = Font.system(size: 9.5, weight: .regular, design: .rounded)
     }
 }
 

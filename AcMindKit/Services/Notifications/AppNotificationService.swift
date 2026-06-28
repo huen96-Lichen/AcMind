@@ -68,6 +68,10 @@ public enum AppNotificationFocusClassifier {
         }
 
         let normalizedName = applicationName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let normalizedName, knownMainApplicationNames.contains(normalizedName) {
+            return true
+        }
+
         return normalizedName == mainApplicationName
     }
 
@@ -89,6 +93,11 @@ public enum AppNotificationFocusClassifier {
             ?? info?["CFBundleName"] as? String
             ?? info?[kCFBundleNameKey as String] as? String
     }
+
+    private static let knownMainApplicationNames: Set<String> = [
+        "AcMind",
+        "AcWork"
+    ]
 }
 
 public struct AppNotificationPlan: Sendable, Equatable {

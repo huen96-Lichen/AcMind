@@ -161,14 +161,21 @@ public actor PluginManager {
         pluginStatuses[descriptor.id] = .loading
         discoveredDescriptors[descriptor.id] = descriptor
 
-        let sandbox = PluginSandbox(pluginId: descriptor.id)
+        let sandbox = PluginSandbox(pluginId: descriptor.id, pluginsDirectory: pluginsDirectory)
         guard await sandbox.validateAccess(path: url) else {
             pluginStatuses[descriptor.id] = .error
             pluginErrors[descriptor.id] = "路径不在沙盒允许范围内"
             throw PluginError.sandboxViolation
         }
 
-        pluginStatuses[descriptor.id] = .active
+        // A descriptor on disk is metadata, not an executable Plugin instance.
+        // AcMind currently has no dynamic entry-point loader, so claiming the
+        // plugin is active here would make the management UI report a capability
+        // that cannot actually be called. Runtime plugins become active only via
+        // register(plugin:), where a concrete Plugin is activated and registered
+        // in the capability maps below.
+        pluginStatuses[descriptor.id] = .discovered
+        pluginErrors.removeValue(forKey: descriptor.id)
     }
 
     public func unloadPlugin(id: String) async throws {
@@ -203,7 +210,7 @@ public actor PluginManager {
     // MARK: - Register/Unregister
 
     public func register(plugin: Plugin) async throws {
-        let sandbox = PluginSandbox(pluginId: plugin.id)
+        let sandbox = PluginSandbox(pluginId: plugin.id, pluginsDirectory: pluginsDirectory)
         let pluginURL = pluginsDirectory.appendingPathComponent(plugin.id)
         guard await sandbox.validateAccess(path: pluginURL) else {
             throw PluginError.sandboxViolation
@@ -249,7 +256,7 @@ public actor PluginManager {
     public func getManagementSummaries() async -> [PluginManagementSummary] {
         var summaries: [PluginManagementSummary] = []
         for descriptor in discoveredDescriptors.values {
-            let sandbox = PluginSandbox(pluginId: descriptor.id)
+            let sandbox = PluginSandbox(pluginId: descriptor.id, pluginsDirectory: pluginsDirectory)
             let policy = await sandbox.policySnapshot()
             summaries.append(
                 PluginManagementSummary(
@@ -268,7 +275,7 @@ public actor PluginManager {
         }
 
         for plugin in plugins.values where discoveredDescriptors[plugin.id] == nil {
-            let sandbox = PluginSandbox(pluginId: plugin.id)
+            let sandbox = PluginSandbox(pluginId: plugin.id, pluginsDirectory: pluginsDirectory)
             let policy = await sandbox.policySnapshot()
             summaries.append(
                 PluginManagementSummary(

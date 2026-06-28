@@ -46,6 +46,7 @@ private final class VoiceServiceMock: @unchecked Sendable, VoiceServiceProtocol 
     func getRecordingStatus() async -> RecordingStatus { .idle }
     func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws {}
     func stopRealtimeTranscription() async throws -> String { "" }
+    var isRealtimeActive: Bool { get async { false } }
 
     func triggerStatus(_ status: RecordingStatus) async {
         statusHandler?(status)

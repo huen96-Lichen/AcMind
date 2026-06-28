@@ -20,17 +20,22 @@ struct InboxView: View {
     @State private var refreshTask: Task<Void, Never>?
     @FocusState private var focusTarget: FocusTarget?
 
-    init(clipboardPinActions: ClipboardPinActions, previewScenario: AcWorkPreviewScenario? = AcWorkPreviewScenario.fromProcessArguments()) {
+    init(clipboardPinActions: ClipboardPinActions, previewScenario: AcWorkPreviewScenario? = nil) {
         self.clipboardPinActions = clipboardPinActions
-        _viewModel = StateObject(wrappedValue: CollectedInboxViewModel(repository: InboxCollectedItemRepository(previewScenario: previewScenario)))
+#if DEBUG
+        let resolvedPreviewScenario = previewScenario ?? DebugAcWorkPreviewScenario.resolve()
+#else
+        let resolvedPreviewScenario = previewScenario
+#endif
+        _viewModel = StateObject(wrappedValue: CollectedInboxViewModel(repository: InboxCollectedItemRepository(previewScenario: resolvedPreviewScenario)))
         _workflowCoordinator = StateObject(wrappedValue: CollectedItemWorkflowCoordinator())
     }
 
     var body: some View {
         AcWorkShell(
-            title: "收集箱",
-            subtitle: "\(viewModel.items.count) 条内容",
-            headerActions: AnyView(addContentMenu),
+            title: inboxWorkspaceTitle,
+            subtitle: inboxWorkspaceSubtitle,
+            headerActions: AnyView(inboxHeaderActions),
             leadingRailWidth: AppSurfaceTokens.Layout.leadingRailWidth,
             trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             usesResponsiveInspector: true,
@@ -74,8 +79,11 @@ struct InboxView: View {
         .background(AppSurfaceBackdrop())
         .onAppear {
             focusTarget = .content
-            appState.inboxWorkspaceSelection = "all"
+            applyWorkspaceSelection(appState.inboxWorkspaceSelection)
             scheduleRefresh()
+        }
+        .onChange(of: appState.inboxWorkspaceSelection) { _, newValue in
+            applyWorkspaceSelection(newValue)
         }
         .onChange(of: appState.pendingInboxDetailSourceItemID) { _, _ in
             scheduleRefresh()
@@ -223,7 +231,7 @@ struct InboxView: View {
                                         density: viewModel.density,
                                         isSelected: viewModel.selectedItemID == item.id,
                                         isBatchSelected: viewModel.selectedItemIDs.contains(item.id),
-                                        onSelect: { viewModel.select(item.id) },
+                                        onSelect: { selectItem(item) },
                                         onToggleBatch: { viewModel.toggleBatchSelection(item.id) },
                                         onPinToggle: { Task { item.isPinned ? await viewModel.unpin(item.id) : await viewModel.pin(item.id) } },
                                         onFavoriteToggle: { Task { await viewModel.setFavorite(item.id, isFavorite: !item.isFavorite) } },
@@ -244,7 +252,7 @@ struct InboxView: View {
                                         density: viewModel.density,
                                         isSelected: viewModel.selectedItemID == item.id,
                                         isBatchSelected: viewModel.selectedItemIDs.contains(item.id),
-                                        onSelect: { viewModel.select(item.id) },
+                                        onSelect: { selectItem(item) },
                                         onToggleBatch: { viewModel.toggleBatchSelection(item.id) },
                                         onPinToggle: { Task { item.isPinned ? await viewModel.unpin(item.id) : await viewModel.pin(item.id) } },
                                         onFavoriteToggle: { Task { await viewModel.setFavorite(item.id, isFavorite: !item.isFavorite) } },
@@ -275,8 +283,12 @@ struct InboxView: View {
     }
 
     private var inboxOverviewCard: some View {
-        AppSurfaceCard(title: "收集概览", subtitle: "摘要卡 + 列表区", padding: 14) {
+        AppSurfaceCard(title: inboxWorkspaceTitle, subtitle: inboxWorkspaceSubtitle, padding: 14) {
             VStack(alignment: .leading, spacing: 12) {
+                if appState.inboxWorkspaceSelection == "screenshotHistory" {
+                    screenshotWorkspaceBanner
+                }
+
                 LazyVGrid(
                     columns: [
                         GridItem(.flexible(), spacing: 10),
@@ -310,6 +322,32 @@ struct InboxView: View {
                     )
                 }
 
+                HStack(spacing: 8) {
+                    filterChip(
+                        title: "截图历史",
+                        icon: "camera.viewfinder",
+                        isSelected: viewModel.filterState.quickFilter == .screenshotHistory
+                    ) {
+                        updateFilter { $0.quickFilter = .screenshotHistory }
+                    }
+
+                    filterChip(
+                        title: "待整理",
+                        icon: "clock",
+                        isSelected: viewModel.filterState.quickFilter == .pending
+                    ) {
+                        updateFilter { $0.quickFilter = .pending }
+                    }
+
+                    filterChip(
+                        title: "最近更新",
+                        icon: "clock.arrow.circlepath",
+                        isSelected: viewModel.filterState.quickFilter == .recent
+                    ) {
+                        updateFilter { $0.quickFilter = .recent }
+                    }
+                }
+
                 Text("列表主体保持高效浏览，顶部只负责概览与状态解释。")
                     .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -317,6 +355,56 @@ struct InboxView: View {
         }
         .padding(.horizontal, AppSurfaceTokens.Spacing.lg)
         .padding(.top, AppSurfaceTokens.Spacing.lg)
+    }
+
+    private var screenshotWorkspaceBanner: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.accentBlue)
+                        Text("截图历史工作区")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                    }
+                    Text("只看截图与截图 OCR 结果，保留 Pin、查看和后续整理入口。")
+                        .font(.system(size: AppSurfaceTokens.Typography.caption))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                }
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 8) {
+                    Button("继续处理最近截图") {
+                        (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button("返回收集箱") {
+                        appState.selectInboxWorkspace("all")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            HStack(spacing: 8) {
+                inboxSummaryChip(title: "截图", value: "\(viewModel.count(for: .screenshot)) 条", tint: AppSurfaceTokens.accentBlue)
+                inboxSummaryChip(title: "OCR", value: "\(viewModel.count(for: .screenshotOCR)) 条", tint: AppSurfaceTokens.accentGreen)
+                inboxSummaryChip(title: "合计", value: "\(viewModel.count(for: .screenshotHistory)) 条", tint: AppSurfaceTokens.accentOrange)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.accentBlue.opacity(0.20), lineWidth: 1)
+        )
     }
 
     private func inboxSummaryChip(title: String, value: String, tint: Color) -> some View {
@@ -356,29 +444,47 @@ struct InboxView: View {
         )
     }
 
-    private var addContentMenu: some View {
-        Menu {
-            Button {
-                NotificationCenter.default.post(name: .companionShowQuickNote, object: nil)
+    @ViewBuilder
+    private var inboxHeaderActions: some View {
+        if appState.inboxWorkspaceSelection == "screenshotHistory" {
+            Menu {
+                Button("返回收集箱") {
+                    appState.selectInboxWorkspace("all")
+                }
+
+                Button("继续处理最近截图") {
+                    (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
+                }
             } label: {
-                Label("快速记录", systemImage: "square.and.pencil")
+                Label("截图历史", systemImage: "camera.viewfinder")
+                    .font(.system(size: 12, weight: .semibold))
             }
-            Button {
-                NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+            .menuStyle(.borderlessButton)
+            .accessibilityLabel("截图历史操作")
+        } else {
+            Menu {
+                Button {
+                    NotificationCenter.default.post(name: .companionShowQuickNote, object: nil)
+                } label: {
+                    Label("快速记录", systemImage: "square.and.pencil")
+                }
+                Button {
+                    NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+                } label: {
+                    Label("截图或文件", systemImage: "viewfinder")
+                }
+                Button {
+                    NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+                } label: {
+                    Label("语音记录", systemImage: "mic")
+                }
             } label: {
-                Label("截图或文件", systemImage: "viewfinder")
+                Label("添加内容", systemImage: "plus")
+                    .font(.system(size: 12, weight: .semibold))
             }
-            Button {
-                NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
-            } label: {
-                Label("语音记录", systemImage: "mic")
-            }
-        } label: {
-            Label("添加内容", systemImage: "plus")
-                .font(.system(size: 12, weight: .semibold))
+            .menuStyle(.borderlessButton)
+            .accessibilityLabel("添加收集内容")
         }
-        .menuStyle(.borderlessButton)
-        .accessibilityLabel("添加收集内容")
     }
 
     private var inboxControlBar: some View {
@@ -575,7 +681,47 @@ struct InboxView: View {
     }
 
     private func clearFilters() {
-        Task { await viewModel.updateFilter(InboxFilterState()) }
+        if appState.inboxWorkspaceSelection == "screenshotHistory" {
+            Task { await viewModel.updateFilter(InboxFilterState(quickFilter: .screenshotHistory)) }
+        } else {
+            Task { await viewModel.updateFilter(InboxFilterState()) }
+        }
+    }
+
+    private var inboxWorkspaceTitle: String {
+        switch appState.inboxWorkspaceSelection {
+        case "screenshotHistory":
+            return "截图历史"
+        default:
+            return "收集箱"
+        }
+    }
+
+    private var inboxWorkspaceSubtitle: String {
+        switch appState.inboxWorkspaceSelection {
+        case "screenshotHistory":
+            return "只看截图与截图 OCR 结果"
+        default:
+            return "\(viewModel.items.count) 条内容"
+        }
+    }
+
+    private func applyWorkspaceSelection(_ selection: String?) {
+        switch selection {
+        case "screenshotHistory":
+            updateFilter { $0.quickFilter = .screenshotHistory }
+        default:
+            if viewModel.filterState.quickFilter == .screenshotHistory {
+                updateFilter { $0.quickFilter = .all }
+            }
+        }
+    }
+
+    private func selectItem(_ item: CollectedItem) {
+        viewModel.select(item.id)
+        if appState.inboxWorkspaceSelection == "screenshotHistory" {
+            showKeyboardPreview = true
+        }
     }
 
     private func ensureKeyboardSelection() {
@@ -717,7 +863,7 @@ private struct CollectedInboxFilterRail: View {
     let onUpdateFilter: (@escaping (inout InboxFilterState) -> Void) -> Void
     let onClearFilters: () -> Void
 
-    private let sourceFilters: [CollectionSource] = [.clipboard, .phoneSync, .voice, .screenshotOCR, .agent, .manual]
+    private let sourceFilters: [CollectionSource] = [.clipboard, .phoneSync, .voice, .screenshot, .screenshotOCR, .agent, .manual]
     private let contentTypeFilters: [CollectedContentType] = [.text, .link, .image, .file, .code, .richText, .video]
     private let statusFilters: [ProcessingStatus] = [.pending, .refined, .archived, .exported]
 
@@ -833,6 +979,8 @@ private struct CollectedInboxFilterRail: View {
             return items.count
         case .pending:
             return items.filter { $0.processingStatus == .pending || $0.processingStatus == .captured }.count
+        case .screenshotHistory:
+            return items.filter { $0.source == .screenshot || $0.source == .screenshotOCR }.count
         case .pinned:
             return items.filter(\.isPinned).count
         case .favorites:
@@ -1180,7 +1328,7 @@ private struct CollectedInboxQuickPreview: View {
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                         .lineLimit(2)
 
-                    Text("\(item.source.displayName) · \(item.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                    Text(quickPreviewSubtitle)
                         .font(.system(size: 12))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -1194,7 +1342,7 @@ private struct CollectedInboxQuickPreview: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.escape, modifiers: [])
-                .accessibilityLabel("关闭快速预览")
+                .accessibilityLabel("关闭查看")
             }
             .padding(18)
 
@@ -1218,7 +1366,17 @@ private struct CollectedInboxQuickPreview: View {
         }
         .frame(minWidth: 560, idealWidth: 680, minHeight: 420, idealHeight: 520)
         .background(AppSurfaceBackdrop())
-        .accessibilityLabel("收集箱快速预览")
+        .accessibilityLabel("收集箱查看")
+    }
+
+    private var quickPreviewSubtitle: String {
+        [
+            item.source.displayName,
+            item.screenshotModeLabel,
+            item.createdAt.formatted(date: .abbreviated, time: .shortened)
+        ]
+        .compactMap { $0 }
+        .joined(separator: " · ")
     }
 }
 
@@ -1668,7 +1826,7 @@ private struct CollectedInboxInspector: View {
 
             AppSurfaceCard(title: "下一步", subtitle: "Inspector 将承接内容去向", padding: 14) {
                 VStack(alignment: .leading, spacing: 8) {
-                    guidanceLine("选择内容后可查看完整预览、来源和标签。")
+                    guidanceLine("选择内容后可查看完整信息、来源和标签。")
                     guidanceLine("剪贴板内容可保存到收集箱或加入粘贴队列。")
                     guidanceLine("任务、日程、知识库和 Markdown 去向已接通，可从内容详情直接执行。")
                 }
@@ -1691,7 +1849,7 @@ private struct CollectedInboxInspector: View {
 
     private func selectedInspector(for item: CollectedItem) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            AppSurfaceCard(title: "内容预览", subtitle: item.source.displayName, padding: 14) {
+            AppSurfaceCard(title: "内容详情", subtitle: item.source.displayName, padding: 14) {
                 VStack(alignment: .leading, spacing: 12) {
                     if item.supportsThumbnail {
                         CollectedItemThumbnailView(item: item, height: 180, cornerRadius: 12)
@@ -1709,6 +1867,12 @@ private struct CollectedInboxInspector: View {
             AppSurfaceCard(title: "元信息", subtitle: "来源、设备和标签", padding: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     metricRow(title: "来源", value: item.source.displayName)
+                    if let screenshotModeLabel = item.screenshotModeLabel {
+                        metricRow(title: "截图模式", value: screenshotModeLabel)
+                    }
+                    if let screenshotPresetLabel = item.screenshotPresetLabel {
+                        metricRow(title: "截图预设", value: screenshotPresetLabel)
+                    }
                     metricRow(title: "应用", value: item.sourceApplication?.nilIfEmpty ?? "未知")
                     metricRow(title: "设备", value: item.sourceDevice?.nilIfEmpty ?? "本机")
                     metricRow(title: "创建", value: item.createdAt.formatted(date: .abbreviated, time: .shortened))
@@ -1961,7 +2125,7 @@ private struct CollectedInboxItemCard: View {
         .onHover { isHovered = $0 }
         .contextMenu { menuItems }
         .accessibilityLabel(accessibilityTitle)
-        .accessibilityHint("按 Return 或 Space 打开预览，按 Delete 删除。")
+        .accessibilityHint("按 Return 或 Space 打开查看，按 Delete 删除。")
     }
 
     private var gridBody: some View {
@@ -2002,12 +2166,19 @@ private struct CollectedInboxItemCard: View {
 
                     statusPill
 
+                    if let screenshotModeLabel = item.screenshotModeLabel {
+                        screenshotModePill(screenshotModeLabel)
+                    }
+                    if let screenshotPresetLabel = item.screenshotPresetLabel {
+                        screenshotPresetPill(screenshotPresetLabel)
+                    }
+
                     Spacer(minLength: 0)
 
                     actionButtons
                 }
 
-                Text(previewText.isEmpty ? "无预览内容" : previewText)
+                Text(previewText.isEmpty ? "暂无内容" : previewText)
                     .font(.system(size: 12))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(2)
@@ -2034,6 +2205,13 @@ private struct CollectedInboxItemCard: View {
                 .foregroundStyle(AppSurfaceTokens.primaryText)
 
             statusPill
+
+            if let screenshotModeLabel = item.screenshotModeLabel {
+                screenshotModePill(screenshotModeLabel)
+            }
+            if let screenshotPresetLabel = item.screenshotPresetLabel {
+                screenshotPresetPill(screenshotPresetLabel)
+            }
 
             Spacer(minLength: 0)
 
@@ -2090,7 +2268,7 @@ private struct CollectedInboxItemCard: View {
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(previewText.isEmpty ? "无预览内容" : previewText)
+                Text(previewText.isEmpty ? "暂无内容" : previewText)
                     .font(item.contentType == .code ? .system(size: 12, design: .monospaced) : .system(size: 12))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(item.contentType == .text ? 5 : 3)
@@ -2193,6 +2371,26 @@ private struct CollectedInboxItemCard: View {
             .accessibilityLabel("状态：\(item.processingStatus.displayName)")
     }
 
+    private func screenshotModePill(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(AppSurfaceTokens.cardBackground.opacity(0.72)))
+            .accessibilityLabel("截图模式：\(title)")
+    }
+
+    private func screenshotPresetPill(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(AppSurfaceTokens.cardBackground.opacity(0.72)))
+            .accessibilityLabel("截图预设：\(title)")
+    }
+
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.09) : AppSurfaceTokens.cardBackgroundSoft)
@@ -2263,6 +2461,7 @@ private extension InboxQuickFilter {
         switch self {
         case .all: return "全部"
         case .pending: return "待整理"
+        case .screenshotHistory: return "截图历史"
         case .pinned: return "Pin"
         case .favorites: return "收藏"
         case .recent: return "最近更新"
@@ -2273,6 +2472,7 @@ private extension InboxQuickFilter {
         switch self {
         case .all: return "tray"
         case .pending: return "clock"
+        case .screenshotHistory: return "camera.viewfinder"
         case .pinned: return "pin"
         case .favorites: return "star"
         case .recent: return "clock.arrow.circlepath"
@@ -2343,26 +2543,12 @@ private extension CollectedContentType {
 }
 
 private extension CollectionSource {
-    var displayName: String {
-        switch self {
-        case .clipboard: return "剪贴板"
-        case .phoneSync: return "手机同步"
-        case .voice: return "说入法"
-        case .screenshotOCR: return "截图 OCR"
-        case .agent: return "Agent"
-        case .manual: return "手动添加"
-        case .webpage: return "网页"
-        case .file: return "文件"
-        case .capsule: return "灵动大陆"
-        case .imported: return "导入"
-        }
-    }
-
     var iconName: String {
         switch self {
         case .clipboard: return "doc.on.clipboard"
         case .phoneSync: return "iphone"
         case .voice: return "mic"
+        case .screenshot: return "camera.viewfinder"
         case .screenshotOCR: return "camera.viewfinder"
         case .agent: return "sparkles"
         case .manual: return "square.and.pencil"
@@ -2486,6 +2672,21 @@ private extension CollectedItem {
         linkURL?.host?.replacingOccurrences(of: "^www\\.", with: "", options: .regularExpression)
     }
 
+    var screenshotModeLabel: String? {
+        guard source == .screenshot,
+              let rawValue = metadata[CaptureService.screenshotModeMetadataKey],
+              let mode = ScreenshotMode(rawValue: rawValue) else {
+            return nil
+        }
+
+        return "\(mode.displayName)截图"
+    }
+
+    var screenshotPresetLabel: String? {
+        guard source == .screenshot else { return nil }
+        return metadata[CaptureService.screenshotPresetNameMetadataKey]?.nilIfEmpty
+    }
+
     var faviconURL: URL? {
         guard let linkURL, let scheme = linkURL.scheme, let host = linkURL.host else { return nil }
         var components = URLComponents()
@@ -2545,15 +2746,15 @@ private extension CollectedItem {
         case .text(let text), .audio(let text):
             return text?.nilIfEmpty ?? "暂无文本内容"
         case .link(let urlString, let title):
-            return [title, urlString].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "暂无链接预览"
+            return [title, urlString].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "暂无链接信息"
         case .image(_, let caption), .video(_, let caption):
-            return caption?.nilIfEmpty ?? "暂无媒体说明"
+            return caption?.nilIfEmpty ?? "暂无媒体信息"
         case .file(let path, let name), .document(let path, let name):
-            return [name, path].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "暂无文件预览"
+            return [name, path].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "暂无文件信息"
         case .code(let language, let text):
             return [language, text].compactMap { $0?.nilIfEmpty }.joined(separator: "\n\n").nilIfEmpty ?? "暂无代码内容"
         case .richText(_, let plainText), .unknown(let plainText):
-            return plainText?.nilIfEmpty ?? "暂无预览内容"
+            return plainText?.nilIfEmpty ?? "暂无内容"
         }
     }
 }

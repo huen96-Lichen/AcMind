@@ -1,5 +1,5 @@
 import Foundation
-import SwiftUI
+@preconcurrency import SwiftUI
 import AcMindKit
 
 struct NotchV2SettingsPage: View {
@@ -18,7 +18,7 @@ struct NotchV2SettingsPage: View {
 
     private var behaviorCard: some View {
         CompanionPanel(title: "展开与行为", subtitle: "先开总开关，再调展开节奏", symbol: "arrow.up.left.and.arrow.down.right") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 compactToggleRow(
                     title: "启用灵动大陆",
                     isOn: boolBinding(get: { viewModel.displaySettings.isEnabled }, set: viewModel.setDisplayEnabled(_:))
@@ -52,7 +52,7 @@ struct NotchV2SettingsPage: View {
 
     private var layoutCard: some View {
         CompanionPanel(title: "页面布局", subtitle: "少一点层级，扫起来更快", symbol: "square.grid.2x2") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 pickerRow(
                     title: "顶部高度模式",
                     selection: binding(
@@ -160,13 +160,13 @@ struct NotchV2SettingsPage: View {
             .menuStyle(.borderlessButton)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                 .fill(NotchV2DesignTokens.panelBackground.opacity(0.96))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                 .stroke(NotchV2DesignTokens.separator.opacity(0.40), lineWidth: 1)
         )
     }
@@ -297,7 +297,7 @@ struct NotchV2SettingsPage: View {
         CompanionSliderRow(title: title, valueText: valueText, range: range, step: step, value: binding)
     }
 
-    private func pickerRow<T: CaseIterable & Hashable & Identifiable & CustomStringConvertible>(
+    private func pickerRow<T: CaseIterable & Hashable & Identifiable & CustomStringConvertible & Sendable>(
         title: String,
         selection: Binding<T>,
         options: T.AllCases
@@ -318,7 +318,7 @@ struct NotchV2SettingsPage: View {
         disabledLabel: String,
         canMoveUp: Bool,
         canMoveDown: Bool,
-        toggle: @escaping (Bool) -> Void,
+        toggle: @escaping @MainActor (Bool) -> Void,
         moveUp: @escaping () -> Void,
         moveDown: @escaping () -> Void
     ) -> some View {
@@ -339,10 +339,10 @@ struct NotchV2SettingsPage: View {
                     moveButton(systemImage: "arrow.down", enabled: canMoveDown, action: moveDown)
                 }
 
-                Toggle(isEnabled ? enabledLabel : disabledLabel, isOn: Binding(
-                    get: { isEnabled },
-                    set: toggle
-                ))
+                Toggle(
+                    isEnabled ? enabledLabel : disabledLabel,
+                    isOn: boolBinding(get: { isEnabled }, set: toggle)
+                )
                 .labelsHidden()
             }
         }
@@ -392,11 +392,11 @@ struct NotchV2SettingsPage: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                 .fill(NotchV2DesignTokens.cardBackgroundStrong.opacity(0.84))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                 .stroke(NotchV2DesignTokens.separator.opacity(0.48), lineWidth: 1)
         )
     }
@@ -423,15 +423,48 @@ struct NotchV2SettingsPage: View {
         .disabled(enabled == false)
     }
 
-    private func boolBinding(get: @escaping () -> Bool, set: @escaping (Bool) -> Void) -> Binding<Bool> {
-        Binding(get: get, set: set)
+    private func boolBinding(
+        get: @escaping @MainActor () -> Bool,
+        set: @escaping @MainActor (Bool) -> Void
+    ) -> Binding<Bool> {
+        actorBinding(get: get, set: set)
     }
 
-    private func doubleBinding(get: @escaping () -> Double, set: @escaping (Double) -> Void) -> Binding<Double> {
-        Binding(get: get, set: set)
+    private func doubleBinding(
+        get: @escaping @MainActor () -> Double,
+        set: @escaping @MainActor (Double) -> Void
+    ) -> Binding<Double> {
+        actorBinding(get: get, set: set)
     }
 
-    private func binding<Value>(get: @escaping () -> Value, set: @escaping (Value) -> Void) -> Binding<Value> {
-        Binding(get: get, set: set)
+    private func binding<Value: Sendable>(
+        get: @escaping @MainActor () -> Value,
+        set: @escaping @MainActor (Value) -> Void
+    ) -> Binding<Value> {
+        actorBinding(get: get, set: set)
+    }
+
+    private func actorBinding<Value: Sendable>(
+        get: @escaping @MainActor () -> Value,
+        set: @escaping @MainActor (Value) -> Void
+    ) -> Binding<Value> {
+        let box = MainActorBindingBox(get: get, set: set)
+        return Binding(
+            get: { MainActor.assumeIsolated { box.get() } },
+            set: { value in MainActor.assumeIsolated { box.set(value) } }
+        )
+    }
+}
+
+private final class MainActorBindingBox<Value: Sendable>: @unchecked Sendable {
+    let get: @MainActor () -> Value
+    let set: @MainActor (Value) -> Void
+
+    init(
+        get: @escaping @MainActor () -> Value,
+        set: @escaping @MainActor (Value) -> Void
+    ) {
+        self.get = get
+        self.set = set
     }
 }

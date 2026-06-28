@@ -171,7 +171,19 @@ struct CompanionVoicePanel: View {
 
             ScrollView {
                 if viewModel.hasResult {
-                    AppSurfaceTextEditorShell(text: $viewModel.editableText, minHeight: 188, font: .system(size: AppSurfaceTokens.Typography.bodyLarge))
+                    TextEditor(text: $viewModel.editableText)
+                        .font(.system(size: AppSurfaceTokens.Typography.bodyLarge))
+                        .scrollContentBackground(.hidden)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, minHeight: 188, alignment: .topLeading)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                                .fill(AppSurfaceTokens.cardBackground)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
+                                .stroke(AppSurfaceTokens.separator.opacity(0.35), lineWidth: 1)
+                        )
                 } else if viewModel.isRealtimeMode && !viewModel.realtimeText.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("实时转写")

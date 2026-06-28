@@ -79,7 +79,7 @@ struct ScheduleDashboardView: View {
                 scheduleRightRail
             }
         )
-        .background(AppSurfaceBackdrop())
+        .background(AppVisualBackdrop())
         .sheet(isPresented: $viewModel.isCreatingEvent) {
             ScheduleEventEditorSheet(viewModel: viewModel)
         }
@@ -376,7 +376,7 @@ struct ScheduleDashboardView: View {
     private var scheduleRightRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                AppSurfaceCard(title: "今日摘要", subtitle: "快速查看当前状态", padding: 12) {
+                AppSurfaceCard(title: "今日摘要", subtitle: "当前状态一览", padding: 12) {
                     VStack(alignment: .leading, spacing: 8) {
                         dashboardTopBadge(icon: "calendar", title: viewModel.viewTitle, tint: AppSurfaceTokens.accentBlue)
                         dashboardTopBadge(icon: "clock", title: "\(viewModel.todayEventCount) 项待办", tint: AppSurfaceTokens.accentGreen)

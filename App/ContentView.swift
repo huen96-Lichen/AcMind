@@ -37,9 +37,8 @@ struct ContentView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            AcSidebar()
-                .frame(width: appState.sidebarCollapsed ? 84 : AppSurfaceTokens.Layout.sidebarWidth, alignment: .topLeading)
-                .frame(maxHeight: .infinity, alignment: .topLeading)
+            SidebarView()
+                .frame(width: appState.sidebarCollapsed ? 84 : AppSurfaceTokens.Layout.sidebarWidth)
                 .layoutPriority(1)
 #if DEBUG
                 .layoutDebugRegion("PrimarySidebarPanel")
@@ -167,10 +166,16 @@ struct MainContent: View {
         Group {
             switch selectedItem {
             case .home:
+                let dashboardRepository = workspaceDashboardRepository ?? LiveWorkspaceDashboardRepository(
+                    appState: AppState.shared,
+                    systemStatusService: serviceContainer.systemStatusService,
+                    storageService: serviceContainer.storageService,
+                    scheduleService: serviceContainer.scheduleService,
+                    agentTaskBoardService: serviceContainer.agentTaskBoardService
+                )
                 if useWorkbenchV2 {
-                    WorkbenchV2View(
-                        mockData: WorkbenchV2MockData.preview(),
-                        debugOverlayEnabled: true,
+                    WorkbenchV2LiveView(
+                        repository: dashboardRepository,
                         heroBackgroundStore: workbenchV2HeroBackgroundStore
                     )
                         .navigationTitle("工作台")
@@ -178,7 +183,11 @@ struct MainContent: View {
                     WorkspaceHomeView(
                         systemStatusService: serviceContainer.systemStatusService,
                         permissionManager: serviceContainer.permissionManager,
-                        dashboardRepository: workspaceDashboardRepository
+                        settingsService: serviceContainer.settingsService,
+                        storageService: serviceContainer.storageService,
+                        scheduleService: serviceContainer.scheduleService,
+                        agentTaskBoardService: serviceContainer.agentTaskBoardService,
+                        dashboardRepository: dashboardRepository
                     )
                         .navigationTitle("工作台")
                 }
@@ -193,11 +202,17 @@ struct MainContent: View {
                 AgentDashboardView()
                     .navigationTitle("Agent")
             case .clipboard:
-                InboxView(clipboardPinActions: clipboardPinActions, previewScenario: inboxPreviewScenario)
+                InboxView(clipboardPinActions: clipboardPinActions)
                     .navigationTitle("收集箱")
             case .inbox:
                 InboxView(clipboardPinActions: clipboardPinActions, previewScenario: inboxPreviewScenario)
                     .navigationTitle("收集箱")
+            case .screenshot:
+                ScreenshotWorkspaceView(clipboardPinActions: clipboardPinActions)
+                    .navigationTitle("截图查看")
+            case .screenshotHistory:
+                InboxView(clipboardPinActions: clipboardPinActions, previewScenario: inboxPreviewScenario)
+                    .navigationTitle("截图历史")
             case .schedule:
                 ScheduleDashboardView()
                     .navigationTitle("日程")
@@ -214,7 +229,7 @@ struct MainContent: View {
                 ModelManagementPanel()
                     .navigationTitle("模型")
             case .settings:
-                SettingsView()
+                SettingsView(cloudSyncService: serviceContainer.cloudSyncService)
                     .navigationTitle("设置")
             }
         }

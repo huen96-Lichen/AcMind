@@ -448,6 +448,7 @@ public enum ServiceContainerError: Error, LocalizedError {
     }
 }
 
+#if DEBUG
 // MARK: - Preview Support
 
 extension ServiceContainer {
@@ -534,3 +535,4 @@ private final class PreviewAgentTaskBoardService: AgentTaskBoardServiceProtocol,
     func updateStep(taskId: String, step: TaskStep) async throws {}
     func archiveTask(id: String) async throws {}
 }
+#endif

@@ -6,9 +6,9 @@
 
 | 项目 | 当前值 | 来源文件 |
 |---|---|---|
-| 默认窗口宽度 | 1500 | `/Volumes/White Atlas/03_Projects/AcMind/App/AcMindApp.swift:11-18` |
-| 默认窗口高度 | 920 | `/Volumes/White Atlas/03_Projects/AcMind/App/AcMindApp.swift:11-18` |
-| 最小窗口宽度 | 1180 | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift:70-81`，`/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift:74-79`，`/Volumes/White Atlas/03_Projects/AcMind/App/AppDelegate.swift:2515-2520` |
+| 默认窗口宽度 | 1500 | `../../App/AcMindApp.swift:11-18` |
+| 默认窗口高度 | 920 | `../../App/AcMindApp.swift:11-18` |
+| 最小窗口宽度 | 1180 | `../../Features/Native/Shared/AppSurfaceStyle.swift:70-81`，`../../App/ContentView.swift:74-79`，`../../App/AppDelegate.swift:2515-2520` |
 | 最小窗口高度 | 720 | 同上 |
 | 最大窗口宽度 | 未显式设置 | 未设置 `maxWidth` / `windowResizability` |
 | 最大窗口高度 | 未显式设置 | 未设置 `maxHeight` / `windowResizability` |
@@ -46,7 +46,7 @@
 
 ## 运行时框架数据
 
-`/Volumes/White Atlas/03_Projects/AcMind/docs/audit/AcWork_Workbench_Runtime_Frames.json`
+`AcWork_Workbench_Runtime_Frames.json`
 
 核心数据如下：
 
@@ -72,12 +72,12 @@
 
 已导出到：
 
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-min-normal.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-min-debug.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-default-normal.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-default-debug.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-1440x960-normal.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-1440x960-debug.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-1728x1117-normal.png`
-- `/Volumes/White Atlas/03_Projects/AcMind/docs/audit/screenshots/workbench-1728x1117-debug.png`
+- `screenshots/workbench-min-normal.png`
+- `screenshots/workbench-min-debug.png`
+- `screenshots/workbench-default-normal.png`
+- `screenshots/workbench-default-debug.png`
+- `screenshots/workbench-1440x960-normal.png`
+- `screenshots/workbench-1440x960-debug.png`
+- `screenshots/workbench-1728x1117-normal.png`
+- `screenshots/workbench-1728x1117-debug.png`
 

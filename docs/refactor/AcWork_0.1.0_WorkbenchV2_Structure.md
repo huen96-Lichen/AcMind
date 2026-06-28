@@ -33,7 +33,7 @@ Design rules used for this phase:
 | `DeviceStatusBar` | `Features/Native/HomeV2/Components/DeviceStatusBar.swift` | `WorkbenchV2View` | Bottom status strip |
 | `WorkbenchV2Card` | `Features/Native/HomeV2/WorkbenchV2View.swift` | Shared base | Reusable card shell |
 | `WorkbenchV2EmptyState` | `Features/Native/HomeV2/WorkbenchV2View.swift` | Shared base | Empty state block |
-| `WorkbenchTrendChart` | `Features/Native/HomeV2/Components/ActivityTrendCard.swift` | `ActivityTrendCard` | Mock chart preview |
+| `WorkbenchTrendChart` | `Features/Native/HomeV2/Components/ActivityTrendCard.swift` | `ActivityTrendCard` | Chart preview / export |
 
 ## Layout Skeleton
 
@@ -107,6 +107,5 @@ Captured export file:
 - `WorkbenchV2View` uses `GeometryReader` only to resolve static frames and drive the debug overlay.
 - `LayoutDebugOverlay` is compiled only in `DEBUG`.
 - The legacy `WorkspaceHomeView` remains intact and is still the production fallback.
-- The V2 page currently uses mock data only.
+- The live V2 shell now consumes dashboard data; debug exports still use sample fixtures.
 - The chart card uses `Charts` with `catmullRom` interpolation to avoid hard line joins.
-

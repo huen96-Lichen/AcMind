@@ -134,23 +134,11 @@ final class DesktopCapsuleViewModel: ObservableObject {
             return
         }
 
-        // 隐藏胶囊
         panelController.hide()
-
-        do {
-            let result = try await captureService.captureScreenshot(mode: .fullscreen)
-            Self.logger.info("截图成功: \(result.sourceItem.id)")
-
-            // 重新显示胶囊
-            await MainActor.run {
-                self.panelController.show(at: nil)
-            }
-        } catch {
-            Self.logger.error("截图失败: \(error)")
-            await MainActor.run {
-                self.panelController.show(at: nil)
-            }
-        }
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.captureScreenshot"),
+            object: ["mode": ScreenshotMode.fullscreen.rawValue]
+        )
     }
 
     private func executeScrollScreenshot() async {
@@ -160,20 +148,10 @@ final class DesktopCapsuleViewModel: ObservableObject {
         }
 
         panelController.hide()
-
-        do {
-            let result = try await captureService.captureScrollingScreenshot()
-            Self.logger.info("滚动截图成功: \(result.sourceItem.id)")
-
-            await MainActor.run {
-                self.panelController.show(at: nil)
-            }
-        } catch {
-            Self.logger.error("滚动截图失败: \(error)")
-            await MainActor.run {
-                self.panelController.show(at: nil)
-            }
-        }
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.captureScreenshot"),
+            object: ["mode": ScreenshotMode.scroll.rawValue]
+        )
     }
 
     private func executeVoiceNote() async {

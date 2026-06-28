@@ -6,24 +6,24 @@
 
 | 组件名称 | Swift 文件路径 | 父级组件 | 固定尺寸 | GeometryReader | ScrollView | 重复组件或重复菜单 |
 |---|---|---|---|---|---|---|
-| `AcMindApp` | `/Volumes/White Atlas/03_Projects/AcMind/App/AcMindApp.swift` | 无，应用入口 | 否 | 否 | 否 | 否 |
-| `MainWindowController` | `/Volumes/White Atlas/03_Projects/AcMind/App/AppDelegate.swift` | `AppDelegate` | 是，窗口默认 1500×920 | 否 | 否 | 否 |
-| `ContentView` | `/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift` | `MainWindowController` | 是，根视图最小 1180×720 | 否 | 否 | 否 |
-| `AcSidebar` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift` | `ContentView` | 否 | 否 | 否 | 否 |
-| `SidebarView` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Sidebar/SidebarView.swift` | `AcSidebar` | 是，宽度 216 / 折叠 84 | 否 | 是 | 否。`SidebarItem` 数据源没有重复追加 |
-| `SidebarItemRow` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Sidebar/SidebarView.swift` | `SidebarView` | 否，行高由内容+padding 决定 | 否 | 否 | 否 |
-| `SidebarCompactItemRow` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Sidebar/SidebarView.swift` | `SidebarView` | 否，折叠态菜单项 | 否 | 否 | 否 |
-| `MainContent` | `/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift` | `ContentView` | 否 | 否 | 否 | 否 |
-| `WorkspaceHomeView` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `MainContent(.home)` | 否 | 是 | 是 | 否 |
-| `greetingHeader` / `TopToolbar` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否，实际由内容撑开 | 否 | 否 | 否 |
-| `homePrimaryDeck` / `WorkOverviewCard` / `RightStatusRail` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否，左卡和右栏为并排自适应布局 | 否 | 否 | 否 |
-| `overviewRow` / `RuntimeOverviewCard` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
-| `kpiRow` / `MetricsGrid` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
-| `summaryFooter` / `BottomSummary` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
-| `workspaceClosingBoard` / `CurrentRhythm` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
-| `AcWorkShell` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift` | 共享壳层组件 | 否 | 是 | 否 | 否。它和 `ContentView` 共享同一套调试标签，但当前首页路径未直接使用它 |
-| `AcPageToolbar` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift` | `AcWorkShell` | 否 | 否 | 否 | 否 |
-| `LayoutDebugOverlay` | `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift` | Debug 运行层 | 否 | 否 | 否 | 否 |
+| `AcMindApp` | `../../App/AcMindApp.swift` | 无，应用入口 | 否 | 否 | 否 | 否 |
+| `MainWindowController` | `../../App/AppDelegate.swift` | `AppDelegate` | 是，窗口默认 1500×920 | 否 | 否 | 否 |
+| `ContentView` | `../../App/ContentView.swift` | `MainWindowController` | 是，根视图最小 1180×720 | 否 | 否 | 否 |
+| `AcSidebar` | `../../Features/Native/Shared/AppSurfaceStyle.swift` | `ContentView` | 否 | 否 | 否 | 否 |
+| `SidebarView` | `../../Features/Sidebar/SidebarView.swift` | `AcSidebar` | 是，宽度 216 / 折叠 84 | 否 | 是 | 否。`SidebarItem` 数据源没有重复追加 |
+| `SidebarItemRow` | `../../Features/Sidebar/SidebarView.swift` | `SidebarView` | 否，行高由内容+padding 决定 | 否 | 否 | 否 |
+| `SidebarCompactItemRow` | `../../Features/Sidebar/SidebarView.swift` | `SidebarView` | 否，折叠态菜单项 | 否 | 否 | 否 |
+| `MainContent` | `../../App/ContentView.swift` | `ContentView` | 否 | 否 | 否 | 否 |
+| `WorkspaceHomeView` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `MainContent(.home)` | 否 | 是 | 是 | 否 |
+| `greetingHeader` / `TopToolbar` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否，实际由内容撑开 | 否 | 否 | 否 |
+| `homePrimaryDeck` / `WorkOverviewCard` / `RightStatusRail` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否，左卡和右栏为并排自适应布局 | 否 | 否 | 否 |
+| `overviewRow` / `RuntimeOverviewCard` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
+| `kpiRow` / `MetricsGrid` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
+| `summaryFooter` / `BottomSummary` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
+| `workspaceClosingBoard` / `CurrentRhythm` | `../../Features/Native/Home/WorkspaceHomeView.swift` | `WorkspaceHomeView` | 否 | 否 | 否 | 否 |
+| `AcWorkShell` | `../../Features/Native/Shared/AppSurfaceStyle.swift` | 共享壳层组件 | 否 | 是 | 否 | 否。它和 `ContentView` 共享同一套调试标签，但当前首页路径未直接使用它 |
+| `AcPageToolbar` | `../../Features/Native/Shared/AppSurfaceStyle.swift` | `AcWorkShell` | 否 | 否 | 否 | 否 |
+| `LayoutDebugOverlay` | `../../Features/Native/Shared/AppSurfaceStyle.swift` | Debug 运行层 | 否 | 否 | 否 | 否 |
 
 ## 菜单与重复性核对
 
@@ -34,9 +34,9 @@
 
 ## 关键来源
 
-- 侧栏固定宽度与滚动容器：`/Volumes/White Atlas/03_Projects/AcMind/Features/Sidebar/SidebarView.swift:17-28`
-- 首页滚动根与调试标签：`/Volumes/White Atlas/03_Projects/AcMind/App/ContentView.swift:35-80`
-- 首页实际区块：`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Home/WorkspaceHomeView.swift:167-185`、`:234-370`、`:638-903`
-- 共享调试壳：`/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift:16-150`、`:165-270`
-- 菜单枚举：`/Volumes/White Atlas/03_Projects/AcMind/AcMindKit/Models/SidebarItem.swift:32-174`
+- 侧栏固定宽度与滚动容器：`../../Features/Sidebar/SidebarView.swift:17-28`
+- 首页滚动根与调试标签：`../../App/ContentView.swift:35-80`
+- 首页实际区块：`../../Features/Native/Home/WorkspaceHomeView.swift:167-185`、`:234-370`、`:638-903`
+- 共享调试壳：`../../Features/Native/Shared/AppSurfaceStyle.swift:16-150`、`:165-270`
+- 菜单枚举：`../../AcMindKit/Models/SidebarItem.swift:32-174`
 

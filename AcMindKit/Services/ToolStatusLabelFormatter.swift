@@ -236,7 +236,7 @@ public enum ToolStatusLabelFormatter {
     }
 
     public static func duplicateTargetNames() -> String {
-        "预览中存在重复目标名称"
+        "结果中存在重复目标名称"
     }
 
     public static func batchRenameCompleted() -> String {

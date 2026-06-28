@@ -106,13 +106,13 @@ struct NotchV2Card<Content: View>: View {
     private var backgroundFill: AnyShapeStyle {
         switch style {
         case .default:
-            return AnyShapeStyle(NotchV2DesignTokens.panelBackground)
+            return AnyShapeStyle(NotchV2DesignTokens.panelBackground.opacity(0.82))
         case .music(_):
-            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
+            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
         case .agent:
-            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
+            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.88))
         case .timeline:
-            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.96))
+            return AnyShapeStyle(NotchV2DesignTokens.innerCardBackground.opacity(0.92))
         }
     }
 
@@ -158,7 +158,7 @@ struct NotchV2Card<Content: View>: View {
                     lineWidth: 0.75
                 )
         )
-        .shadow(color: cardAccent?.opacity(0.02) ?? .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .shadow(color: cardAccent?.opacity(0.06) ?? .black.opacity(0.12), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -211,7 +211,30 @@ struct NotchV2ActionButton: View {
     }
 
     var body: some View {
-        CompanionActionButton(icon: icon, title: title, accent: accent, isSelected: isSelected, action: action)
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(accent)
+
+                Text(title)
+                    .font(NotchV2DesignTokens.Typography.caption.weight(.semibold))
+                    .foregroundStyle(NotchV2DesignTokens.primaryText)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(10)
+            .frame(minHeight: 68, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(isSelected ? accent.opacity(0.14) : NotchV2DesignTokens.innerCardBackground.opacity(0.88))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(isSelected ? accent.opacity(0.28) : NotchV2DesignTokens.separator.opacity(0.20), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -248,7 +271,26 @@ struct NotchV2StatusPill: View {
     }
 
     private var pillContent: some View {
-        CompanionStatusPill(icon: icon, title: title, accent: accent, isSelected: isSelected, action: action)
+        HStack(spacing: 5) {
+            if let icon {
+                NotchV2Glyph(symbol: icon, role: .pill, tint: NotchV2DesignTokens.primaryText, isActive: isSelected)
+            }
+            Text(title)
+                .font(.system(size: CompanionLayoutTokens.metadataSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(
+            Capsule(style: .continuous)
+                .fill(isSelected ? accent.opacity(1.0) : accent.opacity(0.92))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(isSelected ? Color.white.opacity(0.16) : Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .scaleEffect(isSelected ? 1.02 : 1.0)
     }
 }
 

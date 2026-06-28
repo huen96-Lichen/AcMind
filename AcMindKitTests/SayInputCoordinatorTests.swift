@@ -435,14 +435,14 @@ final class SayInputCoordinatorTests: XCTestCase {
             clipboard: clipboard
         )
 
-        var realtimeCallbacks: [String] = []
+        let realtimeCallbacks = LockedStringRecorder()
         coordinator.onRealtimeTranscriptUpdate = { text in
             realtimeCallbacks.append(text)
         }
 
         try await coordinator.startRecording()
         XCTAssertTrue(voiceService.realtimeStarted)
-        XCTAssertEqual(realtimeCallbacks, ["实时转写的结果"])
+        XCTAssertEqual(realtimeCallbacks.values, ["实时转写的结果"])
 
         let outcome = try await coordinator.stopRecording(
             configuration: SayInputConfiguration(
@@ -552,6 +552,23 @@ final class SayInputCoordinatorTests: XCTestCase {
     }
 }
 
+private final class LockedStringRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [String] = []
+
+    var values: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+
+    func append(_ value: String) {
+        lock.lock()
+        storage.append(value)
+        lock.unlock()
+    }
+}
+
 private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable {
     private var stopRecordingResults: [String]
     private let polishedTextProvider: (String) -> String
@@ -604,6 +621,8 @@ private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable 
         }
         return stopRecordingResults.removeFirst()
     }
+
+    func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) async {}
 
     func transcribe(audioURL: URL) async throws -> String {
         ""
@@ -675,6 +694,10 @@ private final class VoiceServiceStub: VoiceServiceProtocol, @unchecked Sendable 
     func stopRealtimeTranscription() async throws -> String {
         realtimeStopped = true
         return realtimeFinalText ?? ""
+    }
+
+    var isRealtimeActive: Bool {
+        get async { realtimeStarted && realtimeStopped == false }
     }
 }
 

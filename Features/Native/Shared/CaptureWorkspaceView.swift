@@ -6,10 +6,14 @@ struct CaptureWorkspaceView: View {
 
     init(
         clipboardPinActions: ClipboardPinActions,
-        previewScenario: AcWorkPreviewScenario? = AcWorkPreviewScenario.fromProcessArguments()
+        previewScenario: AcWorkPreviewScenario? = nil
     ) {
         self.clipboardPinActions = clipboardPinActions
+#if DEBUG
+        self.previewScenario = previewScenario ?? DebugAcWorkPreviewScenario.resolve()
+#else
         self.previewScenario = previewScenario
+#endif
     }
 
     var body: some View {

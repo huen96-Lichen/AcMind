@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PendingItemsCard: View {
-    let model: WorkbenchV2MockData.PendingItems
+    let model: WorkbenchV2DashboardData.PendingItems
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -37,10 +37,11 @@ struct PendingItemsCard: View {
     }
 }
 
+#if DEBUG
 struct PendingItemsCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            PendingItemsCard(model: WorkbenchV2MockData.preview().pendingItems, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 360, height: 200)))
+            PendingItemsCard(model: WorkbenchV2DashboardData.preview().pendingItems, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 360, height: 200)))
             PendingItemsCard(
                 model: .init(state: .empty, title: "待处理", items: []),
                 layout: WorkbenchV2Layout.resolve(for: CGSize(width: 360, height: 200))
@@ -50,3 +51,4 @@ struct PendingItemsCard_Previews: PreviewProvider {
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

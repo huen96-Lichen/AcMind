@@ -172,7 +172,7 @@ struct DynamicContinentSchedulePage: View {
         VStack(alignment: .leading, spacing: 8) {
             if let item = currentEvent {
                 Text(item.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(NotchV2DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(NotchV2DesignTokens.primaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -318,7 +318,7 @@ struct DynamicContinentSchedulePage: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                         .fill(NotchV2DesignTokens.innerCardBackground.opacity(0.94))
                 )
             }
@@ -395,13 +395,13 @@ struct DynamicContinentSystemStatusPage: View {
     @ObservedObject var viewModel: NotchV2ViewModel
 
     var body: some View {
-        CompanionPageTemplate.triple(leftWidth: CompanionLayoutTokens.templateAColumnWidth, rightWidth: CompanionLayoutTokens.templateAColumnWidth, left: {
+        NotchV2DashboardLayout(leftColumnWidth: 176, rightColumnWidth: 176) {
             leftColumn
-        }, center: {
+        } centerColumn: {
             centerColumn
-        }, right: {
+        } rightColumn: {
             rightColumn
-        })
+        }
     }
 
     private var leftColumn: some View {
@@ -430,6 +430,7 @@ struct DynamicContinentSystemStatusPage: View {
     private var centerColumn: some View {
         CompanionPanel(title: "核心摘要", symbol: "cpu", fillHeight: true) {
             let columns = [
+                GridItem(.flexible(), spacing: 8),
                 GridItem(.flexible(), spacing: 8),
                 GridItem(.flexible(), spacing: 8)
             ]
@@ -499,13 +500,13 @@ struct DynamicContinentSystemStatusPage: View {
     }
 
     private func statusMetricTile(title: String, value: String, detail: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
             Text(value)
-                .font(.system(size: 17, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.title.weight(.semibold))
                 .foregroundStyle(color)
                 .lineLimit(1)
             if detail.isEmpty == false {
@@ -516,10 +517,10 @@ struct DynamicContinentSystemStatusPage: View {
                     .truncationMode(.tail)
             }
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                 .fill(NotchV2DesignTokens.innerCardBackground)
         )
     }
@@ -536,18 +537,18 @@ struct DynamicContinentSystemStatusPage: View {
     }
 
     private var fanControlTile: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 3) {
             Text("当前设备风扇转速")
                 .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
 
             Text(viewModel.systemFanSummary)
-                .font(.system(size: 17, weight: .semibold))
+                .font(NotchV2DesignTokens.Typography.title.weight(.semibold))
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 ForEach(viewModel.systemFanControlPresets) { preset in
                     NotchV2SegmentedPill(
                         title: preset.rawValue,
@@ -557,16 +558,17 @@ struct DynamicContinentSystemStatusPage: View {
                     }
                 }
             }
+            .fixedSize()
 
             Text(viewModel.systemFanDetail)
                 .font(NotchV2DesignTokens.Typography.caption)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(1)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
+        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CompanionLayoutTokens.cardCornerRadius, style: .continuous)
                 .fill(NotchV2DesignTokens.innerCardBackground)
         )
     }

@@ -3,6 +3,20 @@ import Combine
 import CoreGraphics
 import AppKit
 
+public struct UnsupportedServiceCapabilityError: LocalizedError, Sendable, Equatable {
+    public let service: String
+    public let operation: String
+
+    public init(service: String, operation: String) {
+        self.service = service
+        self.operation = operation
+    }
+
+    public var errorDescription: String? {
+        "\(service) 未实现 \(operation) 能力"
+    }
+}
+
 // MARK: - StorageServiceProtocol
 
 public protocol StorageServiceProtocol: Sendable {
@@ -457,6 +471,7 @@ public enum CollectedItemRepositoryError: LocalizedError, Equatable {
 public enum InboxQuickFilter: String, Codable, Sendable, Hashable, CaseIterable {
     case all
     case pending
+    case screenshotHistory
     case pinned
     case favorites
     case recent
@@ -541,6 +556,7 @@ public struct InboxFilterState: Sendable, Equatable {
 
     public var repositoryFilter: CollectedItemFilter {
         var resolvedStatuses = statuses
+        var resolvedSources = sources
         var pinnedOnly = false
         var favoriteOnly = false
 
@@ -550,6 +566,9 @@ public struct InboxFilterState: Sendable, Equatable {
         case .pending:
             resolvedStatuses.insert(.pending)
             resolvedStatuses.insert(.captured)
+        case .screenshotHistory:
+            resolvedSources.insert(.screenshot)
+            resolvedSources.insert(.screenshotOCR)
         case .pinned:
             pinnedOnly = true
         case .favorites:
@@ -560,7 +579,7 @@ public struct InboxFilterState: Sendable, Equatable {
 
         return CollectedItemFilter(
             searchQuery: searchQuery,
-            sources: sources,
+            sources: resolvedSources,
             contentTypes: contentTypes,
             statuses: resolvedStatuses,
             pinnedOnly: pinnedOnly,
@@ -751,6 +770,7 @@ public final class CollectedInboxViewModel: ObservableObject {
         switch quickFilter {
         case .all: return allItems.count
         case .pending: return allItems.filter { $0.processingStatus == .pending || $0.processingStatus == .captured }.count
+        case .screenshotHistory: return allItems.filter { $0.source == .screenshot || $0.source == .screenshotOCR }.count
         case .pinned: return allItems.filter(\.isPinned).count
         case .favorites: return allItems.filter(\.isFavorite).count
         case .recent:
@@ -988,18 +1008,22 @@ public final class CollectedInboxViewModel: ObservableObject {
 public extension StorageServiceProtocol {
     func setup() async throws {}
 
-    func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws {}
-    func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? { nil }
-    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] { [] }
-    func deleteScheduledAgentTask(id: String) async throws {}
+    func insertScheduledAgentTask(_ task: ScheduledAgentTask) async throws { throw unsupportedStorageCapability("insertScheduledAgentTask") }
+    func getScheduledAgentTask(id: String) async throws -> ScheduledAgentTask? { throw unsupportedStorageCapability("getScheduledAgentTask") }
+    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] { throw unsupportedStorageCapability("listScheduledAgentTasks") }
+    func deleteScheduledAgentTask(id: String) async throws { throw unsupportedStorageCapability("deleteScheduledAgentTask") }
 
-    func insertClipboardTag(_ tag: ClipboardTag) async throws {}
-    func listClipboardTags() async throws -> [ClipboardTag] { [] }
-    func deleteClipboardTag(id: String) async throws {}
-    func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem] { [] }
-    func addTagToClipboardItem(itemId: String, tagName: String) async throws {}
-    func removeTagFromClipboardItem(itemId: String, tagName: String) async throws {}
-    func deleteSetting(key: String) async throws {}
+    func insertClipboardTag(_ tag: ClipboardTag) async throws { throw unsupportedStorageCapability("insertClipboardTag") }
+    func listClipboardTags() async throws -> [ClipboardTag] { throw unsupportedStorageCapability("listClipboardTags") }
+    func deleteClipboardTag(id: String) async throws { throw unsupportedStorageCapability("deleteClipboardTag") }
+    func listClipboardItemsByTag(_ tagName: String, limit: Int?) async throws -> [ClipboardItem] { throw unsupportedStorageCapability("listClipboardItemsByTag") }
+    func addTagToClipboardItem(itemId: String, tagName: String) async throws { throw unsupportedStorageCapability("addTagToClipboardItem") }
+    func removeTagFromClipboardItem(itemId: String, tagName: String) async throws { throw unsupportedStorageCapability("removeTagFromClipboardItem") }
+    func deleteSetting(key: String) async throws { throw unsupportedStorageCapability("deleteSetting") }
+
+    private func unsupportedStorageCapability(_ operation: String) -> UnsupportedServiceCapabilityError {
+        UnsupportedServiceCapabilityError(service: "StorageServiceProtocol", operation: operation)
+    }
 }
 
 // MARK: - CaptureServiceProtocol
@@ -1053,34 +1077,6 @@ public protocol ClipboardServiceProtocol: Sendable {
     func addTagToItem(itemId: String, tagName: String) async throws
     func removeTagFromItem(itemId: String, tagName: String) async throws
     func listItemsByTag(_ tagName: String) async throws -> [ClipboardItem]
-}
-
-public extension ClipboardServiceProtocol {
-    var itemPublisher: AnyPublisher<ClipboardItem, Never> {
-        Empty().eraseToAnyPublisher()
-    }
-    func pauseWatching() async {}
-    func resumeWatching() async {}
-    func monitoringState() -> ClipboardMonitoringState { .unavailable }
-    func getStats() async -> ClipboardStats { ClipboardStats() }
-    func pasteTransiently(id: String) async throws {}
-    func enqueueForSequentialPaste(ids: [String]) {}
-    func pasteNextInQueue() async throws -> ClipboardItem? { nil }
-    func getQueueItems() -> [PasteQueue.QueueItem] { [] }
-    func clearPasteQueue() {}
-    func removeQueueItem(id: String) {}
-    func reorderQueue(from source: Int, to destination: Int) {}
-    func getCleaningRules() -> [CleaningRule] { [] }
-    func addCleaningRule(_ rule: CleaningRule) async {}
-    func updateCleaningRule(_ rule: CleaningRule) async {}
-    func deleteCleaningRule(id: String) async {}
-    func toggleCleaningRule(id: String) async {}
-    func createTag(name: String, color: String) async throws -> ClipboardTag { ClipboardTag(name: name, color: color) }
-    func listTags() async throws -> [ClipboardTag] { [] }
-    func deleteTag(id: String) async throws {}
-    func addTagToItem(itemId: String, tagName: String) async throws {}
-    func removeTagFromItem(itemId: String, tagName: String) async throws {}
-    func listItemsByTag(_ tagName: String) async throws -> [ClipboardItem] { [] }
 }
 
 public enum ClipboardMonitoringState: String, Sendable, Equatable {

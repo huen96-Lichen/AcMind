@@ -35,8 +35,6 @@ public protocol VoiceServiceProtocol: Sendable {
 }
 
 public extension VoiceServiceProtocol {
-    func setStatusHandler(_ handler: @escaping @Sendable (RecordingStatus) -> Void) async {}
-
     func polishTranscript(_ text: String, mode: VoicePolishMode, hotwords: [String] = [], customSystemPrompt: String? = nil, contextInfo: String? = nil) async throws -> String {
         try await polishTranscript(text, mode: mode)
     }
@@ -66,33 +64,4 @@ public extension VoiceServiceProtocol {
         return polished
     }
 
-    func translateTranscript(
-        _ text: String,
-        targetLanguage: String,
-        contextInfo: String? = nil
-    ) async throws -> String {
-        text
-    }
-
-    func translateTranscriptStream(
-        _ text: String,
-        targetLanguage: String,
-        contextInfo: String? = nil,
-        onChunk: @escaping @Sendable (String) async -> Void
-    ) async throws -> String {
-        await onChunk(text)
-        return text
-    }
-
-    func startRealtimeTranscription(onUpdate: @escaping @Sendable (TranscriptionSnapshot) -> Void) async throws {
-        throw NSError(domain: "VoiceService", code: -1, userInfo: [NSLocalizedDescriptionKey: "实时转写未实现"])
-    }
-
-    func stopRealtimeTranscription() async throws -> String {
-        ""
-    }
-
-    var isRealtimeActive: Bool {
-        get async { false }
-    }
 }

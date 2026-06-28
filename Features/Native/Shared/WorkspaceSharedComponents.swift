@@ -20,21 +20,6 @@ enum AcWorkPreviewScenario: String, CaseIterable, Identifiable {
         }
     }
 
-    static func fromProcessArguments(_ arguments: [String] = ProcessInfo.processInfo.arguments) -> AcWorkPreviewScenario? {
-        for argument in arguments {
-            if argument.hasPrefix("--acwork-preview=") {
-                let value = String(argument.dropFirst("--acwork-preview=".count))
-                return AcWorkPreviewScenario(rawValue: value)
-            }
-
-            if argument.hasPrefix("--acwork-preview-") {
-                let value = String(argument.dropFirst("--acwork-preview-".count))
-                return AcWorkPreviewScenario(rawValue: value)
-            }
-        }
-
-        return nil
-    }
 }
 
 struct AcWorkHomePreviewSnapshot: Equatable {
@@ -46,130 +31,163 @@ struct AcWorkHomePreviewSnapshot: Equatable {
     let systemMetrics: [String]
 }
 
-enum AcWorkPreviewData {
-    static let fixedNow = Date(timeIntervalSince1970: 1_781_491_200)
+struct ScreenshotOptionsView: View {
+    let onSelect: (ScreenshotMode) -> Void
+    let onSelectScroll: () -> Void
+    private let snapshot: ScreenshotPreferencesSnapshot
 
-    static var homeSnapshot: AcWorkHomePreviewSnapshot {
-        AcWorkHomePreviewSnapshot(
-            nowLabel: "2026-06-15 09:20",
-            currentFocus: "AcWork Phase 1 UI 重制",
-            nextStep: "确认收集箱统一模型与 Shell 响应式规则",
-            pendingItems: [
-                "3 条剪贴板内容待整理",
-                "1 条会议语音待提炼",
-                "2 张截图等待 OCR"
-            ],
-            scheduleItems: [
-                "10:00 设计规范复盘",
-                "14:30 收集箱 Repository 联调",
-                "17:00 构建与截图验收"
-            ],
-            systemMetrics: [
-                "CPU 28%",
-                "内存 11.2 GB",
-                "模型服务在线"
-            ]
+    init(
+        snapshot: ScreenshotPreferencesSnapshot = SettingsLocalPreferences.screenshotSnapshot(),
+        onSelect: @escaping (ScreenshotMode) -> Void,
+        onSelectScroll: @escaping () -> Void
+    ) {
+        self.snapshot = snapshot
+        self.onSelect = onSelect
+        self.onSelectScroll = onSelectScroll
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("选择截图模式")
+                .font(.headline)
+
+            HStack(spacing: 8) {
+                statusChip(
+                    title: "预设",
+                    value: snapshot.activePreset.name,
+                    tint: .blue
+                )
+                statusChip(
+                    title: "输出",
+                    value: snapshot.activePreset.defaultOutputAction.displayName,
+                    tint: .green
+                )
+                statusChip(
+                    title: "热键",
+                    value: snapshot.hotkeyLabel,
+                    tint: .orange
+                )
+            }
+
+            Text("快捷入口会沿用当前截图预设；如果要调整参数，可以去设置页切换预设。")
+                .font(.caption2)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 16) {
+                ScreenshotModeButton(
+                    icon: "desktopcomputer",
+                    title: "全屏"
+                ) {
+                    onSelect(.fullscreen)
+                }
+
+                ScreenshotModeButton(
+                    icon: "crop",
+                    title: "区域"
+                ) {
+                    onSelect(.area)
+                }
+
+                ScreenshotModeButton(
+                    icon: "uiwindow.split.2x1",
+                    title: "窗口"
+                ) {
+                    onSelect(.window)
+                }
+
+                ScreenshotModeButton(
+                    icon: "scroll",
+                    title: "滚动"
+                ) {
+                    onSelectScroll()
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("这些入口都会打开同一截图入口，选择模式后会直接开始截图。")
+                    .font(.caption2)
+                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 6) {
+                    Text("存储路径")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    Text(assetsDirectoryPath)
+                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
+                )
+            }
+        }
+        .padding()
+        .frame(width: 320)
+    }
+
+    private func statusChip(title: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(tint.opacity(0.72), lineWidth: 1)
         )
     }
 
-    static func inboxItems(for scenario: AcWorkPreviewScenario) -> [SourceItem] {
-        switch scenario {
-        case .populated:
-            return populatedInboxItems
-        case .loading, .empty, .error:
-            return []
-        }
+    private var assetsDirectoryPath: String {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?
+            .appendingPathComponent("AcMind", isDirectory: true)
+            .appendingPathComponent("assets", isDirectory: true)
+            .path
+        ?? "~/Library/Application Support/AcMind/assets"
     }
+}
 
-    static var populatedInboxItems: [SourceItem] {
-        [
-            SourceItem(
-                id: "acwork-preview-voice-standup",
-                type: .audio,
-                source: .voice,
-                status: .captured,
-                title: "站会语音记录",
-                previewText: "今天先完成导航迁移，再推进收集箱统一模型。",
-                transcript: "今天先完成导航迁移，再推进收集箱统一模型。风险点是旧剪贴板数据必须保持可读。",
-                sourceApp: "AcWork",
-                tags: ["voice", "standup"],
-                metadata: ["scenario": "populated", "duration": "00:42"],
-                createdAt: fixedNow.addingTimeInterval(-600),
-                updatedAt: fixedNow.addingTimeInterval(-540)
-            ),
-            SourceItem(
-                id: "acwork-preview-clipboard-link",
-                type: .webpage,
-                source: .clipboard,
-                status: .pending,
-                title: "设计规范链接",
-                previewText: "AcWork Focus Workspace 规范：Shell、Toolbar、Filter Rail、Inspector。",
-                sourceApp: "Safari",
-                originalUrl: "https://example.local/acwork/spec",
-                tags: ["link", "design-system"],
-                metadata: ["scenario": "populated", "contentKind": "link"],
-                createdAt: fixedNow.addingTimeInterval(-1_800)
-            ),
-            SourceItem(
-                id: "acwork-preview-phone-richtext",
-                type: .text,
-                source: .clipboard,
-                status: .inbox,
-                title: "手机同步富文本",
-                previewText: "从 iPhone 同步的竞品笔记，包含标题、列表和行动项。",
-                sourceApp: "iPhone",
-                tags: ["phone-sync", "rich-text"],
-                metadata: ["scenario": "populated", "sourceDevice": "iPhone", "contentKind": "richText"],
-                createdAt: fixedNow.addingTimeInterval(-2_400)
-            ),
-            SourceItem(
-                id: "acwork-preview-screenshot-ocr",
-                type: .screenshot,
-                source: .screenshot,
-                status: .parsed,
-                title: "设置页截图 OCR",
-                previewText: "截图中识别到模型配置、权限状态、快捷键说明。",
-                ocrText: "模型配置 / 权限状态 / 快捷键说明 / 本地优先",
-                tags: ["screenshot", "ocr"],
-                metadata: ["scenario": "populated", "contentKind": "image"],
-                createdAt: fixedNow.addingTimeInterval(-3_600)
-            ),
-            SourceItem(
-                id: "acwork-preview-agent-code",
-                type: .text,
-                source: .agent,
-                status: .distilled,
-                title: "Agent 生成代码片段",
-                previewText: "func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem { item == .clipboard ? .inbox : item }",
-                tags: ["agent", "code"],
-                metadata: ["scenario": "populated", "contentKind": "code", "language": "swift"],
-                createdAt: fixedNow.addingTimeInterval(-5_400),
-                updatedAt: fixedNow.addingTimeInterval(-5_100)
-            ),
-            SourceItem(
-                id: "acwork-preview-manual-file",
-                type: .pdf,
-                source: .manual,
-                status: .exported,
-                title: "手动添加的需求 PDF",
-                previewText: "Phase 1 范围、验收截图和风险清单。",
-                tags: ["file", "requirements"],
-                metadata: ["scenario": "populated", "contentKind": "file", "extension": "pdf"],
-                createdAt: fixedNow.addingTimeInterval(-7_200),
-                updatedAt: fixedNow.addingTimeInterval(-6_900)
-            ),
-            SourceItem(
-                id: "acwork-preview-video-reference",
-                type: .video,
-                source: .file,
-                status: .inbox,
-                title: "交互动效参考视频",
-                previewText: "用于比对工作台卡片进入动画和 Inspector 展开方式。",
-                tags: ["video", "motion"],
-                metadata: ["scenario": "populated", "contentKind": "video"],
-                createdAt: fixedNow.addingTimeInterval(-9_000)
+struct ScreenshotModeButton: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                Text(title)
+                    .font(.caption)
+            }
+            .frame(width: 70, height: 60)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
             )
-        ]
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -756,8 +774,8 @@ struct WorkspaceSharedComponentsPreviewSample: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 SectionHeader(
-                    title: "共享组件样板",
-                    description: "用于验证状态容器、徽章、指标和区块标题是否能跨页面复用。",
+                    title: "共享组件示意",
+                    description: "展示状态容器、徽章、指标和区块标题的复用效果。",
                     status: "DS-02"
                 )
 
@@ -810,9 +828,9 @@ struct WorkspaceSharedComponentsPreviewSample: View {
                     phase: .stale(title: "数据已过 60 秒", message: "继续展示最近一次可用状态，同时建议刷新。", actionTitle: "刷新") {}
                 ) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("内容区示例")
+                        Text("内容区")
                             .font(.system(size: 14, weight: .semibold))
-                        Text("这里是状态容器的正常内容状态。")
+                        Text("这里显示状态容器的正常内容状态。")
                             .font(.system(size: 12))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
@@ -833,7 +851,7 @@ struct WorkspaceSharedComponentsPreviewSample: View {
             .padding(20)
             .frame(maxWidth: 960, alignment: .leading)
         }
-        .background(AppSurfaceBackdrop())
+        .background(AppVisualBackdrop())
     }
 }
 

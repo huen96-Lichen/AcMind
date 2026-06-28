@@ -86,7 +86,7 @@ struct AgentDashboardView: View {
                 }
             }
         )
-        .background(AppSurfaceBackdrop())
+        .background(AppVisualBackdrop())
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") { viewModel.clearError() }
         } message: {
@@ -108,7 +108,7 @@ struct AgentDashboardView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    AppSurfaceCard(title: "协作概览", subtitle: "对话 + 任务 + 状态", padding: 14) {
+                    AppSurfaceCard(title: "当前协作工作区", subtitle: "对话 + 任务 + 状态", padding: 14) {
                         VStack(alignment: .leading, spacing: 12) {
                             AppSurfaceSummaryStrip(chips: [
                                 AppSurfaceSummaryChip(
@@ -177,7 +177,7 @@ struct AgentDashboardView: View {
         .padding(.vertical, AppSurfaceTokens.Spacing.xs)
         .background(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                .fill(AppSurfaceTokens.cardBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
@@ -371,6 +371,9 @@ struct AgentDashboardView: View {
                     AppSurfaceCard(title: "追溯收件箱", subtitle: "反馈、结果与错误", padding: 14) {
                         traceInboxSection
                     }
+                    AppSurfaceCard(title: "执行反馈", subtitle: "权限、工具和错误回执", padding: 14) {
+                        traceInboxSection
+                    }
                     AppSurfaceCard(title: "快捷功能", subtitle: "当前模式可用动作", padding: 14) {
                         quickActionsSection
                     }
@@ -378,7 +381,7 @@ struct AgentDashboardView: View {
                 .padding(16)
             }
         }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .background(AppSurfaceTokens.cardBackground)
     }
 
     private var summaryRailCard: some View {
@@ -744,7 +747,7 @@ struct AgentDashboardView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
         .overlay(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                 .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
@@ -776,7 +779,7 @@ struct AgentDashboardView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
         .overlay(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                 .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
@@ -808,7 +811,7 @@ struct AgentDashboardView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
         .overlay(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                 .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
@@ -832,7 +835,7 @@ struct AgentDashboardView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
         .overlay(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius)
                 .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
@@ -883,12 +886,12 @@ struct AgentDashboardView: View {
                     }
                 }
                 .padding(10)
-                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+        .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
     }
 
     private func errorTraceCard(_ message: String) -> some View {
@@ -902,7 +905,7 @@ struct AgentDashboardView: View {
                 .foregroundStyle(AppSurfaceTokens.primaryText)
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackgroundSoft))
+                .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius).fill(AppSurfaceTokens.cardBackground))
         }
     }
 
@@ -925,7 +928,7 @@ struct AgentDashboardView: View {
                 Spacer()
             }
             .padding(8)
-            .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous).fill(AppSurfaceTokens.cardBackgroundSoft))
+            .background(RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous).fill(AppSurfaceTokens.cardBackground))
         }
         .buttonStyle(.plain)
     }
@@ -1157,7 +1160,7 @@ private struct EmptyRailPlaceholder: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .background(AppSurfaceTokens.cardBackground)
     }
 }
 
@@ -1175,7 +1178,7 @@ struct MessageBubble: View {
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius)
-                        .fill(isUser ? AppSurfaceTokens.cardBackground : AppSurfaceTokens.cardBackgroundSoft)
+                        .fill(isUser ? AppSurfaceTokens.cardBackground : AppSurfaceTokens.cardBackground)
                     )
 
                     Text(isUser ? "你" : "Agent")

@@ -31,6 +31,9 @@ final class CollectedInboxViewModelTests: XCTestCase {
 
         let favorites = InboxFilterState(quickFilter: .favorites)
         XCTAssertTrue(favorites.repositoryFilter.favoriteOnly)
+
+        let screenshotHistory = InboxFilterState(quickFilter: .screenshotHistory)
+        XCTAssertEqual(screenshotHistory.repositoryFilter.sources, [.screenshot, .screenshotOCR])
     }
 
     func testViewModePersistsToDefaults() {
@@ -160,11 +163,36 @@ final class CollectedInboxViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.items.map(\.id), [pinnedVoice.id])
         XCTAssertEqual(viewModel.allItems.count, 2)
         XCTAssertEqual(viewModel.count(for: InboxQuickFilter.pending), 1)
+        XCTAssertEqual(viewModel.count(for: InboxQuickFilter.screenshotHistory), 0)
         XCTAssertEqual(viewModel.count(for: InboxQuickFilter.pinned), 1)
         XCTAssertEqual(viewModel.count(for: InboxQuickFilter.favorites), 1)
         XCTAssertEqual(viewModel.count(for: CollectionSource.phoneSync), 1)
         XCTAssertEqual(viewModel.count(for: CollectedContentType.link), 1)
         XCTAssertEqual(viewModel.count(for: ProcessingStatus.refined), 1)
+    }
+
+    func testScreenshotHistoryQuickFilterIncludesScreenshotAndOCRSources() async {
+        let repository = CollectedInboxRepositorySpy()
+        var screenshot = CollectedItem.sample("screenshot")
+        screenshot.source = .screenshot
+        screenshot.contentType = .image
+        var screenshotOCR = CollectedItem.sample("screenshot-ocr")
+        screenshotOCR.source = .screenshotOCR
+        screenshotOCR.contentType = .image
+        var voice = CollectedItem.sample("voice")
+        voice.source = .voice
+        voice.contentType = .audio
+        repository.items = [screenshot, screenshotOCR, voice]
+        let viewModel = CollectedInboxViewModel(
+            repository: repository,
+            filterState: InboxFilterState(quickFilter: .screenshotHistory)
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.items.map(\.id), [screenshot.id, screenshotOCR.id])
+        XCTAssertEqual(viewModel.count(for: InboxQuickFilter.screenshotHistory), 2)
+        XCTAssertEqual(repository.receivedFilters.first?.sources, [.screenshot, .screenshotOCR])
     }
 
     func testDeleteSelectedItemChoosesAdjacentItem() async {

@@ -110,10 +110,16 @@ struct CapsuleContentView: View {
                 .buttonStyle(PlainButtonStyle())
                 .disabled(isCapturing)
                 .popover(isPresented: $showingScreenshotOptions) {
-                    ScreenshotOptionsView(onSelect: { mode in
-                        captureScreenshot(mode: mode)
-                        showingScreenshotOptions = false
-                    })
+                    ScreenshotOptionsView(
+                        onSelect: { mode in
+                            captureScreenshot(mode: mode)
+                            showingScreenshotOptions = false
+                        },
+                        onSelectScroll: {
+                            captureScrollingScreenshot()
+                            showingScreenshotOptions = false
+                        }
+                    )
                 }
 
                 Button(action: { captureClipboard() }) {
@@ -189,6 +195,9 @@ struct CapsuleContentView: View {
                 webpageURL = ""
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AcMind.showScreenshotOptions"))) { _ in
+            showingScreenshotOptions = true
+        }
     }
 
     // MARK: - Actions
@@ -206,26 +215,25 @@ struct CapsuleContentView: View {
             return
         }
 
-        isCapturing = true
+        CapsulePanel.shared.hide()
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.captureScreenshot"),
+            object: ["mode": mode.rawValue]
+        )
+    }
 
-        Task {
-            do {
-                let result = try await captureService.captureScreenshot(mode: mode)
-                Self.logger.info("截图成功: \(result.sourceItem.id)")
-
-                // 隐藏胶囊
-                await MainActor.run {
-                    CapsulePanel.shared.hide()
-                    isCapturing = false
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showError = true
-                    isCapturing = false
-                }
-            }
+    private func captureScrollingScreenshot() {
+        guard SettingsLocalPreferences.isCaptureScreenshotEnabled() else {
+            errorMessage = "截图捕获已在设置中关闭"
+            showError = true
+            return
         }
+
+        CapsulePanel.shared.hide()
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.captureScreenshot"),
+            object: ["mode": ScreenshotMode.scroll.rawValue]
+        )
     }
 
     private func captureClipboard() {
@@ -445,67 +453,6 @@ struct CapsuleContentView: View {
         }
 
         Self.logger.warning("等待语音转写超时")
-    }
-}
-
-// MARK: - Screenshot Options View
-
-struct ScreenshotOptionsView: View {
-    let onSelect: (ScreenshotMode) -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("选择截图模式")
-                .font(.headline)
-
-            HStack(spacing: 16) {
-                ScreenshotModeButton(
-                    icon: "desktopcomputer",
-                    title: "全屏"
-                ) {
-                    onSelect(.fullscreen)
-                }
-
-                ScreenshotModeButton(
-                    icon: "crop",
-                    title: "区域"
-                ) {
-                    onSelect(.area)
-                }
-
-                ScreenshotModeButton(
-                    icon: "uiwindow.split.2x1",
-                    title: "窗口"
-                ) {
-                    onSelect(.window)
-                }
-            }
-        }
-        .padding()
-        .frame(width: 240)
-    }
-}
-
-struct ScreenshotModeButton: View {
-    let icon: String
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                Text(title)
-                    .font(.caption)
-            }
-            .frame(width: 70, height: 60)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackground.opacity(0.94))
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
     }
 }
 

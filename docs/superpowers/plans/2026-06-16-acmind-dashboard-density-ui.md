@@ -13,7 +13,7 @@
 ### Task 1: Map the current status-page surface area
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift`
+- Modify: `../../../Features/Native/SystemStatus/SystemStatusView.swift`
 
 - [ ] **Step 1: Identify the current sections that must survive the redesign**
 
@@ -31,14 +31,14 @@ Retain these user-visible surfaces in the new layout:
 - [ ] **Step 2: Inspect the current view tree and note the blocks that can be reused**
 
 ```text
-Run: rg -n "dashboardOverviewCard|dashboardUtilityGrid|dashboardBottomRow|dashboardPermissionStateStrip|dashboardHelperInstallerCard|dashboardFanControlPanel" "/Volumes/White Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift"
+Run: rg -n "dashboardOverviewCard|dashboardUtilityGrid|dashboardBottomRow|dashboardPermissionStateStrip|dashboardHelperInstallerCard|dashboardFanControlPanel" "../../../Features/Native/SystemStatus/SystemStatusView.swift"
 Expected: the current page already exposes reusable dashboard blocks that can be recomposed instead of rewritten.
 ```
 
 - [ ] **Step 3: Verify the current view still builds before layout surgery**
 
 ```text
-Run: xcodebuild -project "/Volumes/White Atlas/03_Projects/AcMind/AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' build
+Run: xcodebuild -project "../../../AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' build
 Expected: BUILD SUCCEEDED
 ```
 
@@ -51,8 +51,8 @@ No code change for this step. Record that the redesign will stay inside SystemSt
 ### Task 2: Recompose the page into a dense dashboard layout
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift`
-- Optional modify: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift`
+- Modify: `../../../Features/Native/SystemStatus/SystemStatusView.swift`
+- Optional modify: `../../../Features/Native/Shared/AppSurfaceStyle.swift`
 
 - [ ] **Step 1: Replace the current tall page flow with a denser two-level layout**
 
@@ -175,7 +175,7 @@ private var dashboardCapabilitySection: some View {
 ### Task 3: Rebalance the top summary and side rails
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift`
+- Modify: `../../../Features/Native/SystemStatus/SystemStatusView.swift`
 
 - [ ] **Step 1: Turn the left rail into a compact operational summary**
 
@@ -260,13 +260,13 @@ private var dashboardFanControlPanel: some View {
 ### Task 4: Verify the redesign without regressing helper or status behavior
 
 **Files:**
-- Modify: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift`
-- Modify if needed: `/Volumes/White Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift`
+- Modify: `../../../Features/Native/SystemStatus/SystemStatusView.swift`
+- Modify if needed: `../../../Features/Native/Shared/AppSurfaceStyle.swift`
 
 - [ ] **Step 1: Build the app after the layout rewrite**
 
 ```text
-Run: xcodebuild -project "/Volumes/White Atlas/03_Projects/AcMind/AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' build
+Run: xcodebuild -project "../../../AcMind.xcodeproj" -scheme AcMind -configuration Debug -destination 'platform=macOS' build
 Expected: BUILD SUCCEEDED
 ```
 
@@ -293,7 +293,7 @@ Open the AcMind system status page in the local browser, confirm the dashboard-d
 - [ ] **Step 5: Commit the final UI refinement**
 
 ```bash
-git add /Volumes/White\ Atlas/03_Projects/AcMind/Features/Native/SystemStatus/SystemStatusView.swift
-git add /Volumes/White\ Atlas/03_Projects/AcMind/Features/Native/Shared/AppSurfaceStyle.swift
+git add ../../../Features/Native/SystemStatus/SystemStatusView.swift
+git add ../../../Features/Native/Shared/AppSurfaceStyle.swift
 git commit -m "feat: tighten system status into denser dashboard layout"
 ```

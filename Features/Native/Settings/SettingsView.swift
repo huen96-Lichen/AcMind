@@ -113,7 +113,11 @@ struct SettingsView: View {
                         case .dataKnowledge:
                             DataKnowledgeSettingsPage(viewModel: viewModel)
                         case .captureInput:
-                            CaptureInputSettingsPage(viewModel: viewModel, cloudSyncService: cloudSyncService)
+                            CaptureInputSettingsPage(
+                                viewModel: viewModel,
+                                recordingShortcutTarget: $recordingShortcutTarget,
+                                cloudSyncService: cloudSyncService
+                            )
                         case .security:
                             SecuritySettingsPage(viewModel: viewModel)
                         case .about:
@@ -121,7 +125,9 @@ struct SettingsView: View {
                         }
                     }
                     .padding(24)
+                    .listRowBackground(Color.clear)
                 }
+                .scrollContentBackground(.hidden)
             },
             trailingRail: {
                 settingsSummaryRail
@@ -298,7 +304,7 @@ struct SettingsView: View {
                 )
 
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    AcMetric(
+                    MetricCard(
                         label: "插件总数",
                         primaryValue: "\(pluginSummaries.count)",
                         trend: "当前已发现的管理摘要",
@@ -311,7 +317,7 @@ struct SettingsView: View {
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
 
-                    AcMetric(
+                    MetricCard(
                         label: "运行中",
                         primaryValue: "\(pluginSummaries.filter { $0.status == .active }.count)",
                         trend: "已激活并提供能力",
@@ -324,7 +330,7 @@ struct SettingsView: View {
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
 
-                    AcMetric(
+                    MetricCard(
                         label: "错误",
                         primaryValue: "\(pluginSummaries.filter { $0.status == .error }.count)",
                         trend: "需要人工处理的扩展",
@@ -338,7 +344,7 @@ struct SettingsView: View {
                     }
                 }
 
-                AppSurfaceCard(title: "插件扩展", subtitle: "真实管理摘要", padding: 14) {
+                AppSurfaceCard(title: "插件扩展", subtitle: pluginSummaryHeadline, padding: 14) {
                     StateContainer(phase: pluginState) {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(pluginSummaries.prefix(4)) { summary in
@@ -432,7 +438,7 @@ struct SettingsView: View {
         switch selectedCategory {
         case .general:
             LivePreviewPanel(
-                title: "即时预览",
+                title: "即时面板",
                 subtitle: "外观和启动偏好会立即反映在主窗口与胶囊语法中",
                 tone: .info
             ) {
@@ -447,14 +453,14 @@ struct SettingsView: View {
             }
         case .companion:
             LivePreviewPanel(
-                title: "随身能力预览",
+                title: "随身能力面板",
                 subtitle: "这组设置会影响胶囊、语音和全局快捷键",
                 tone: .success
             ) {
                 VStack(alignment: .leading, spacing: 10) {
                     previewMetric(title: "胶囊位置", value: viewModel.companionCapsulePosition.displayName)
                     previewMetric(title: "语音快捷键", value: viewModel.companionVoiceShortcut)
-                    previewMetric(title: "截图快捷键", value: viewModel.companionScreenshotShortcut)
+                    previewMetric(title: "随身截图快捷键", value: viewModel.companionScreenshotShortcut)
                     Text("快捷键类设置立即生效，但需要系统辅助功能/麦克风权限时会在下方单独解释。")
                         .font(.caption2)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -462,7 +468,7 @@ struct SettingsView: View {
             }
         case .aiModels:
             LivePreviewPanel(
-                title: "模型与用量预览",
+                title: "模型与用量面板",
                 subtitle: "展示默认路由、提供商和用量风险",
                 tone: .warning
             ) {
@@ -477,7 +483,7 @@ struct SettingsView: View {
             }
         case .dataKnowledge:
             LivePreviewPanel(
-                title: "数据与知识库预览",
+                title: "数据与知识库面板",
                 subtitle: "显示库路径、默认文件夹和备份状态",
                 tone: .info
             ) {
@@ -492,23 +498,25 @@ struct SettingsView: View {
             }
         case .captureInput:
             LivePreviewPanel(
-                title: "捕获与输入预览",
-                subtitle: "显示截图、云同步和说入法的真实联动",
+                title: "捕获与输入面板",
+                subtitle: "显示截图、热键、预设和说入法的真实联动",
                 tone: .warning
             ) {
                 VStack(alignment: .leading, spacing: 10) {
-                    previewMetric(title: "自动采集", value: viewModel.autoCaptureClipboard ? "开启" : "关闭")
                     previewMetric(title: "截图捕获", value: viewModel.captureScreenshotEnabled ? "开启" : "关闭")
+                    previewMetric(title: "截图预设", value: viewModel.selectedScreenshotPreset.name)
+                    previewMetric(title: "全局截图热键", value: viewModel.captureScreenshotHotkey.isEmpty ? "未绑定" : viewModel.captureScreenshotHotkey)
+                    previewMetric(title: "自动打码", value: viewModel.captureAutoRedactionEnabled ? "开启" : "关闭")
                     previewMetric(title: "截图权限", value: viewModel.screenRecordingStatus.displayName)
                     previewMetric(title: "说入法", value: viewModel.voiceInputEnabled ? "开启" : "关闭")
-                    Text("系统权限和捕获开关会即时解释状态变化，不会只给一个空开关。")
+                    Text("系统权限、热键和预设会即时解释状态变化，不会只给一个空开关。")
                         .font(.caption2)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
             }
         case .security:
             LivePreviewPanel(
-                title: "权限与安全预览",
+                title: "权限与安全面板",
                 subtitle: "把需要系统授权的项目与普通开关分开",
                 tone: .danger
             ) {
@@ -522,11 +530,11 @@ struct SettingsView: View {
                 }
             }
         case .about:
-            AppSurfaceCard(title: "预览不可用", subtitle: "这个分组更适合直接提供跳转，而不是模拟预览", padding: 14) {
+            AppSurfaceCard(title: "更多信息", subtitle: "这个分组适合直接查看和跳转", padding: 14) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("版本 \(viewModel.diagnosticAppVersionString)")
                         .font(.caption)
-                    Text("帮助、许可和状态入口都已经放在当前页内。")
+                    Text("帮助、许可和状态都已经放在当前页内。")
                         .font(.caption2)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -557,6 +565,20 @@ struct SettingsView: View {
         let activeCount = pluginSummaries.filter { $0.status == .active }.count
         let errorCount = pluginSummaries.filter { $0.status == .error }.count
         return "\(activeCount) 运行中 · \(errorCount) 错误"
+    }
+
+    private var pluginSummaryHeadline: String {
+        if isLoadingPluginSummaries && pluginSummaries.isEmpty {
+            return "正在读取真实管理摘要"
+        }
+        if pluginSummaries.isEmpty {
+            return "暂无插件摘要"
+        }
+
+        let discoveredCount = pluginSummaries.filter { $0.status == .discovered }.count
+        let activeCount = pluginSummaries.filter { $0.status == .active }.count
+        let errorCount = pluginSummaries.filter { $0.status == .error }.count
+        return "\(pluginSummaries.count) 个插件 · \(activeCount) 运行中 · \(discoveredCount) 已发现 · \(errorCount) 错误"
     }
 
     private var pluginState: StateContainerPhase {
@@ -690,9 +712,9 @@ enum SettingsSearchCatalog {
         .init(category: .general, title: "外观", summary: "主题、语言和启动时的视觉偏好。", keywords: ["外观", "主题", "语言", "启动"]),
         .init(category: .general, title: "启动行为", summary: "开机显示、窗口恢复和首屏行为。", keywords: ["启动", "窗口", "恢复"]),
         .init(category: .general, title: "通知", summary: "任务完成、更新提醒和通知开关。", keywords: ["通知", "提醒", "消息"]),
-        .init(category: .general, title: "快捷键摘要", summary: "最常用入口的快速概览。", keywords: ["快捷键", "摘要"]),
+        .init(category: .general, title: "快捷键摘要", summary: "最常用能力的快速概览。", keywords: ["快捷键", "摘要"]),
         .init(category: .companion, title: "随身胶囊", summary: "胶囊位置、展开状态和启动显示。", keywords: ["胶囊", "随身", "位置"]),
-        .init(category: .companion, title: "说入法入口", summary: "语音入口、输出方式和收集行为。", keywords: ["说入法", "语音", "输入", "输出"]),
+        .init(category: .companion, title: "说入法", summary: "语音输入方式、输出和收集行为。", keywords: ["说入法", "语音", "输入", "输出"]),
         .init(category: .companion, title: "随身快捷键", summary: "录制说入法、收集、截图和日程快捷键。", keywords: ["快捷键", "录制", "截图", "日程"]),
         .init(category: .companion, title: "随身捕获", summary: "剪贴板、文本和链接的快速收集。", keywords: ["捕获", "剪贴板", "链接", "文本"]),
         .init(category: .aiModels, title: "模型路由策略", summary: "自动、本地优先、云端优先和成本/质量策略。", keywords: ["模型", "路由", "策略", "本地", "云端"]),
@@ -767,6 +789,7 @@ struct LivePreviewPanel<Content: View>: View {
 // MARK: - Shortcut Recorder
 
 enum ShortcutRecordingTarget: String, Identifiable {
+    case appScreenshotHotkey
     case voiceShortcut
     case captureShortcut
     case screenshotShortcut
@@ -777,7 +800,8 @@ enum ShortcutRecordingTarget: String, Identifiable {
 
     var title: String {
         switch self {
-        case .voiceShortcut: return "录制说入法入口快捷键"
+        case .appScreenshotHotkey: return "录制全局截图热键"
+        case .voiceShortcut: return "录制说入法快捷键"
         case .captureShortcut: return "录制快速收集快捷键"
         case .screenshotShortcut: return "录制截图捕获快捷键"
         case .agentShortcut: return "录制 Agent 快捷键"
@@ -788,6 +812,8 @@ enum ShortcutRecordingTarget: String, Identifiable {
     @MainActor
     func apply(shortcut: String, on viewModel: SettingsViewModel) {
         switch self {
+        case .appScreenshotHotkey:
+            viewModel.captureScreenshotHotkey = shortcut
         case .voiceShortcut:
             viewModel.companionVoiceShortcut = shortcut
         case .captureShortcut:
@@ -1090,7 +1116,7 @@ struct CompanionSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "说入法入口", description: "长按 Fn 唤起，选择输出落点与收集行为") {
+            SettingsCard(title: "说入法", description: "长按 Fn 唤起，选择输出落点与收集行为") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("启用说入法", isOn: $viewModel.companionVoiceEnabled)
 
@@ -1129,7 +1155,7 @@ struct CompanionSettingsPage: View {
 
             SettingsCard(title: "随身快捷键", description: "配置全局快捷键") {
                 VStack(spacing: 8) {
-                    ShortcutConfigRow(action: "说入法入口", shortcut: $viewModel.companionVoiceShortcut) {
+                    ShortcutConfigRow(action: "说入法", shortcut: $viewModel.companionVoiceShortcut) {
                         recordingShortcutTarget = .voiceShortcut
                     }
                     ShortcutConfigRow(action: "快速收集", shortcut: $viewModel.companionCaptureShortcut) {
@@ -1518,6 +1544,7 @@ struct DataKnowledgeSettingsPage: View {
 
 struct CaptureInputSettingsPage: View {
     @ObservedObject var viewModel: SettingsViewModel
+    @Binding var recordingShortcutTarget: ShortcutRecordingTarget?
     @State private var cloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "com.acmind.cloudSync.enabled")
     @State private var cloudSyncSummary = CloudSyncStatusSummary(
         title: "云同步状态加载中",
@@ -1525,6 +1552,7 @@ struct CaptureInputSettingsPage: View {
         canRetry: false,
         retryTitle: nil
     )
+    @FocusState private var isEditingScreenshotPresetName: Bool
     private let cloudSyncService: CloudSyncServiceProtocol
     private static let screenshotNumberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -1537,9 +1565,11 @@ struct CaptureInputSettingsPage: View {
 
     init(
         viewModel: SettingsViewModel,
+        recordingShortcutTarget: Binding<ShortcutRecordingTarget?>,
         cloudSyncService: CloudSyncServiceProtocol = CloudSyncService(storage: StorageService())
     ) {
         self.viewModel = viewModel
+        self._recordingShortcutTarget = recordingShortcutTarget
         self.cloudSyncService = cloudSyncService
     }
 
@@ -1605,7 +1635,127 @@ struct CaptureInputSettingsPage: View {
 
             SettingsCard(title: "截图捕获", description: "配置截图和滚动截图设置") {
                 VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        Button("打开截图查看") {
+                            (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Text("打开方式：菜单栏「AcMind -> 截图」、首页「截图」、侧栏「截图」、截图工作区、随身快捷键和胶囊")
+                            .font(.caption)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("截图预设")
+                                .font(.subheadline)
+                            Spacer()
+                            Picker("", selection: $viewModel.selectedScreenshotPresetID) {
+                                ForEach(viewModel.screenshotPresets) { preset in
+                                    Text(preset.name).tag(preset.id)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .onChange(of: viewModel.selectedScreenshotPresetID) { _, newValue in
+                                viewModel.selectScreenshotPreset(id: newValue)
+                                Task { await viewModel.saveSettings() }
+                            }
+                        }
+
+                        HStack(spacing: 10) {
+                            TextField("预设名称", text: presetNameBinding)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 180)
+                                .focused($isEditingScreenshotPresetName)
+                                .onSubmit {
+                                    Task { await viewModel.saveSettings() }
+                                }
+
+                            Picker("默认输出", selection: presetOutputActionBinding) {
+                                ForEach(ScreenshotPresetOutputAction.allCases) { action in
+                                    Text(action.displayName).tag(action)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                        }
+
+                        HStack(spacing: 8) {
+                            Button("保存当前预设") {
+                                viewModel.applyCurrentScreenshotSettingsToSelectedPreset()
+                                Task { await viewModel.saveSettings() }
+                            }
+                            .buttonStyle(.borderedProminent)
+
+                            Button("新建预设") {
+                                viewModel.createBlankScreenshotPreset()
+                                Task { await viewModel.saveSettings() }
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("复制预设") {
+                                viewModel.duplicateSelectedScreenshotPreset()
+                                Task { await viewModel.saveSettings() }
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("删除预设") {
+                                viewModel.deleteSelectedScreenshotPreset()
+                                Task { await viewModel.saveSettings() }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(viewModel.screenshotPresets.count <= 1)
+
+                            Button("恢复默认预设") {
+                                viewModel.restoreDefaultScreenshotPresets()
+                                Task { await viewModel.saveSettings() }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        Text("切换预设会立即应用到下一次截图；修改参数后点击“保存当前预设”写回当前方案。")
+                            .font(.caption)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     Toggle("启用截图捕获", isOn: $viewModel.captureScreenshotEnabled)
+
+                    SettingsPathRow(
+                        title: "截图存储路径",
+                        path: viewModel.assetsDirectoryPath,
+                        note: "普通截图保存为 screenshot_<timestamp>.png，滚动截图保存为 scrollshot_<timestamp>.png。",
+                        onCopy: {
+                            copyToPasteboard(viewModel.assetsDirectoryPath)
+                        },
+                        onReveal: {
+                            revealPathInFinder(viewModel.assetsDirectoryPath)
+                        }
+                    )
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("全局截图热键")
+                                .font(.subheadline)
+                            Spacer()
+                            TextField("", text: $viewModel.captureScreenshotHotkey)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 120)
+                                .layoutPriority(1)
+                            Button("录制") {
+                                recordingShortcutTarget = .appScreenshotHotkey
+                            }
+                            .controlSize(.small)
+                        }
+
+                        Text("这个热键由应用级设置注册。空值表示不自动注册。")
+                            .font(.caption)
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     VStack(alignment: .leading, spacing: 8) {
                         Toggle("自动打码敏感内容", isOn: $viewModel.captureAutoRedactionEnabled)
@@ -1635,11 +1785,27 @@ struct CaptureInputSettingsPage: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        Text("截图捕获会受系统屏幕录制权限影响。")
-                            .font(.caption)
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
+                    Text("截图捕获会受系统屏幕录制权限影响。")
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if viewModel.screenRecordingStatus != .authorized {
+                        HStack(spacing: 10) {
+                            Text("当前屏幕录制权限未开启，截图无法正常工作。")
+                                .font(.caption)
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Button("打开屏幕录制设置") {
+                                Task {
+                                    await viewModel.openSystemPreferences(for: .screenRecording)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
+                }
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("截图外观")
@@ -1817,6 +1983,10 @@ struct CaptureInputSettingsPage: View {
         .task {
             await refreshCloudSyncSummary()
         }
+        .onChange(of: isEditingScreenshotPresetName) { _, isFocused in
+            guard isFocused == false else { return }
+            Task { await viewModel.saveSettings() }
+        }
     }
 
     @MainActor
@@ -1824,6 +1994,23 @@ struct CaptureInputSettingsPage: View {
         cloudSyncEnabled = await cloudSyncService.isSyncEnabled()
         let status = await cloudSyncService.getSyncStatus()
         cloudSyncSummary = CloudSyncStatusSummary.make(from: status)
+    }
+
+    private var presetNameBinding: Binding<String> {
+        Binding(
+            get: { viewModel.selectedScreenshotPreset.name },
+            set: { viewModel.renameSelectedScreenshotPreset(to: $0) }
+        )
+    }
+
+    private var presetOutputActionBinding: Binding<ScreenshotPresetOutputAction> {
+        Binding(
+            get: { viewModel.selectedScreenshotPreset.defaultOutputAction },
+            set: {
+                viewModel.updateSelectedScreenshotPresetOutputAction($0)
+                Task { await viewModel.saveSettings() }
+            }
+        )
     }
 
     private var saveButton: some View {
@@ -2029,7 +2216,7 @@ struct AboutSettingsPage: View {
                 }
             }
 
-            SettingsCard(title: "状态入口", description: "完整本机状态集中到主侧边栏的「状态」") {
+            SettingsCard(title: "状态概览", description: "完整本机状态集中到主侧边栏的「状态」") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("这里不再展示诊断看板，只保留跳转。")
                         .font(.system(size: 12))

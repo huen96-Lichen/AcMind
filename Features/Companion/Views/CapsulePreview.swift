@@ -6,7 +6,7 @@ struct CapsulePreview: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            Text("预览效果")
+            Text("效果示意")
                 .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
             

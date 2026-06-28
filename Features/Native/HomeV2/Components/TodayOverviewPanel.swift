@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TodayOverviewPanel: View {
-    let model: WorkbenchV2MockData.TodayStatus
+    let model: WorkbenchV2DashboardData.TodayStatus
     let layout: WorkbenchV2ResolvedLayout
 
     @State private var islandEnabled = true
@@ -157,7 +157,7 @@ private struct WorkbenchV2SummaryPill: View {
 }
 
 private struct WorkbenchV2OverviewMetricTile: View {
-    let item: WorkbenchV2MockData.TodayStatusItem
+    let item: WorkbenchV2DashboardData.TodayStatusItem
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -252,7 +252,7 @@ private struct WorkbenchV2OverviewMetricTile: View {
 }
 
 private struct WorkbenchV2OverviewToggleRow: View {
-    let item: WorkbenchV2MockData.TodayStatusToggle
+    let item: WorkbenchV2DashboardData.TodayStatusToggle
     @Binding var isOn: Bool
     let isCompact: Bool
 
@@ -298,7 +298,7 @@ private struct WorkbenchV2OverviewToggleRow: View {
 }
 
 private struct WorkbenchV2OverviewStatusBlock: View {
-    let block: WorkbenchV2MockData.TodayStatusBlock
+    let block: WorkbenchV2DashboardData.TodayStatusBlock
     let isCompact: Bool
 
     var body: some View {
@@ -334,20 +334,22 @@ private struct WorkbenchV2OverviewStatusBlock: View {
     }
 }
 
-private extension WorkbenchV2MockData.TodayStatus {
-    func toggle(at index: Int) -> WorkbenchV2MockData.TodayStatusToggle? {
+private extension WorkbenchV2DashboardData.TodayStatus {
+    func toggle(at index: Int) -> WorkbenchV2DashboardData.TodayStatusToggle? {
         guard toggles.indices.contains(index) else { return nil }
         return toggles[index]
     }
 }
 
+#if DEBUG
 struct TodayOverviewPanel_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            TodayOverviewPanel(model: WorkbenchV2MockData.preview().todayStatus, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 330, height: 260)))
+            TodayOverviewPanel(model: WorkbenchV2DashboardData.preview().todayStatus, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 330, height: 260)))
             TodayOverviewPanel(model: .init(state: .empty, title: "今日总览", subtitle: "暂无内容", items: [], toggles: [], statusBlocks: []), layout: WorkbenchV2Layout.resolve(for: CGSize(width: 330, height: 260)))
         }
         .padding()
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

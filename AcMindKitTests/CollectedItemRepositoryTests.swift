@@ -1,4 +1,5 @@
 import Combine
+import Combine
 import XCTest
 @testable import AcMindKit
 
@@ -134,6 +135,7 @@ final class CollectedItemRepositoryTests: XCTestCase {
             status: .distilled,
             title: "OCR 截图",
             previewText: "识别后的截图文本",
+            ocrText: "识别后的截图文本",
             sourceApp: "Preview",
             tags: ["ocr", "design"],
             assetFileIds: ["asset-1"],
@@ -290,6 +292,7 @@ final class CollectedItemRepositoryTests: XCTestCase {
         XCTAssertEqual(result.partialErrors.count, 1)
         XCTAssertTrue(result.partialErrors[0].contains("source_items"))
     }
+
 }
 
 private final class CollectionStorageSpy: StorageServiceProtocol, @unchecked Sendable {
@@ -371,8 +374,16 @@ private final class CollectionClipboardSpy: ClipboardServiceProtocol, @unchecked
     var savedInboxIDs: [String] = []
     var enqueuedIDs: [String] = []
 
+    var itemPublisher: AnyPublisher<ClipboardItem, Never> {
+        Empty().eraseToAnyPublisher()
+    }
+
     func startWatching() async {}
     func stopWatching() async {}
+    func pauseWatching() async {}
+    func resumeWatching() async {}
+    func monitoringState() -> ClipboardMonitoringState { .stopped }
+    func getStats() async -> ClipboardStats { ClipboardStats() }
     func listItems(filter: ClipboardFilter?) async throws -> [ClipboardItem] { items }
     func pinItem(id: String) async throws { pinnedIDs.append(id) }
     func unpinItem(id: String) async throws { unpinnedIDs.append(id) }
@@ -384,10 +395,22 @@ private final class CollectionClipboardSpy: ClipboardServiceProtocol, @unchecked
     func copyItem(id: String) async throws {}
     func copyText(_ text: String) async {}
     func clearHistory() async throws {}
+    func pasteTransiently(id: String) async throws {}
     func enqueueForSequentialPaste(ids: [String]) { enqueuedIDs.append(contentsOf: ids) }
     func pasteNextInQueue() async throws -> ClipboardItem? { nil }
     func getQueueItems() -> [PasteQueue.QueueItem] { [] }
     func clearPasteQueue() {}
     func removeQueueItem(id: String) {}
     func reorderQueue(from source: Int, to destination: Int) {}
+    func getCleaningRules() -> [CleaningRule] { [] }
+    func addCleaningRule(_ rule: CleaningRule) async {}
+    func updateCleaningRule(_ rule: CleaningRule) async {}
+    func deleteCleaningRule(id: String) async {}
+    func toggleCleaningRule(id: String) async {}
+    func createTag(name: String, color: String) async throws -> ClipboardTag { ClipboardTag(name: name, color: color) }
+    func listTags() async throws -> [ClipboardTag] { [] }
+    func deleteTag(id: String) async throws {}
+    func addTagToItem(itemId: String, tagName: String) async throws {}
+    func removeTagFromItem(itemId: String, tagName: String) async throws {}
+    func listItemsByTag(_ tagName: String) async throws -> [ClipboardItem] { [] }
 }

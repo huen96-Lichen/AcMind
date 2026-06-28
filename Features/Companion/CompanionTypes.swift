@@ -402,7 +402,7 @@ public struct CompanionShortcut: Identifiable, Codable, Equatable, Sendable {
                 id: "schedule",
                 action: "今日日程",
                 shortcut: "⌥ T",
-                description: "快速查看今日日程",
+                description: "查看今日日程",
                 isEnabled: true,
                 isEditable: true
             )

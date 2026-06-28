@@ -1,7 +1,7 @@
 [background verification]
 userDefaultsKey=WorkbenchV2.heroBackgroundPath
-selectedBackgroundSource=/Volumes/White Atlas/03_Projects/AcMind/临时/DSCF0251.jpg
-persistedPath=/Users/lichen/Library/Application Support/com.acmind.app/WorkbenchV2/Backgrounds/hero-background.jpg
+selectedBackgroundSource=../../../临时/DSCF0251.jpg
+persistedPath=Application Support/com.acmind.app/WorkbenchV2/Backgrounds/hero-background.jpg
 
 stage=seed
 result=selected and persisted

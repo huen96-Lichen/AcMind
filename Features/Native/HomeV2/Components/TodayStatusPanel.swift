@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TodayStatusPanel: View {
-    let model: WorkbenchV2MockData.TodayStatus
+    let model: WorkbenchV2DashboardData.TodayStatus
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
@@ -41,10 +41,11 @@ struct TodayStatusPanel: View {
     }
 }
 
+#if DEBUG
 struct TodayStatusPanel_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            TodayStatusPanel(model: WorkbenchV2MockData.preview().todayStatus, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)))
+            TodayStatusPanel(model: WorkbenchV2DashboardData.preview().todayStatus, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)))
             TodayStatusPanel(
                 model: .init(state: .empty, title: "今日状态", subtitle: "暂无内容", items: [], toggles: [], statusBlocks: []),
                 layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220))
@@ -54,3 +55,4 @@ struct TodayStatusPanel_Previews: PreviewProvider {
         .previewLayout(.sizeThatFits)
     }
 }
+#endif

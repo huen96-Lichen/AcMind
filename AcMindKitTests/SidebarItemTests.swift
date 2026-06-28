@@ -3,10 +3,10 @@ import XCTest
 
 final class SidebarItemTests: XCTestCase {
     func testPrimaryNavigationMatchesAcWorkInformationArchitecture() {
-        XCTAssertEqual(SidebarItem.coreWorkflow, [.home, .agent, .inbox, .schedule, .workbench])
+        XCTAssertEqual(SidebarItem.coreWorkflow, [.home, .agent, .inbox, .screenshot, .screenshotHistory, .schedule, .workbench])
         XCTAssertEqual(SidebarItem.companionCapabilities, [.dynamicContinent, .voiceEntry])
         XCTAssertEqual(SidebarItem.systemItems, [.systemStatus, .modelManagement])
-        XCTAssertEqual(SidebarItem.mainItems.count, 9)
+        XCTAssertEqual(SidebarItem.mainItems.count, 11)
         XCTAssertFalse(SidebarItem.mainItems.contains(.clipboard))
     }
 
@@ -20,6 +20,8 @@ final class SidebarItemTests: XCTestCase {
     func testUserFacingNamesMatchAcWorkNavigation() {
         XCTAssertEqual(SidebarItem.home.displayName, "工作台")
         XCTAssertEqual(SidebarItem.home.commandTitle, "前往工作台")
+        XCTAssertEqual(SidebarItem.screenshot.displayName, "截图")
+        XCTAssertEqual(SidebarItem.screenshot.commandTitle, "打开截图查看")
         XCTAssertEqual(SidebarItem.dynamicContinent.displayName, "灵动大陆")
         XCTAssertEqual(SidebarItem.dynamicContinent.commandTitle, "前往灵动大陆")
         XCTAssertEqual(SidebarItem.modelManagement.displayName, "模型")

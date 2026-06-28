@@ -8,13 +8,11 @@ struct ISPreviewDemo: View {
 
     private var theme: ISTheme { isDarkMode ? .dark : .light }
 
-    // Mock Data
-    private let cpuHistory: [CGFloat] = stride(from: 0.1, through: 0.9, by: 0.05).map { _ in
-        CGFloat.random(in: 0.2...0.8)
-    }
+    // Sample Data
+    private let cpuHistory: [CGFloat] = [0.28, 0.31, 0.35, 0.39, 0.42, 0.45, 0.48, 0.5, 0.47, 0.44, 0.41, 0.38, 0.36, 0.34, 0.33, 0.35, 0.37, 0.4, 0.43, 0.46]
 
-    private let networkHistory: [CGFloat] = (0..<20).map { _ in CGFloat.random(in: 0.1...0.7) }
-    private let memoryHistory: [CGFloat] = (0..<20).map { _ in CGFloat.random(in: 0.4...0.8) }
+    private let networkHistory: [CGFloat] = [0.16, 0.19, 0.18, 0.21, 0.26, 0.31, 0.29, 0.27, 0.25, 0.28, 0.34, 0.37, 0.33, 0.3, 0.27, 0.22, 0.2, 0.18, 0.17, 0.16]
+    private let memoryHistory: [CGFloat] = [0.42, 0.43, 0.44, 0.45, 0.47, 0.48, 0.5, 0.52, 0.53, 0.55, 0.56, 0.58, 0.6, 0.61, 0.63, 0.62, 0.61, 0.6, 0.59, 0.58]
 
     private let processes = [
         ("Safari", CGFloat(0.23)),

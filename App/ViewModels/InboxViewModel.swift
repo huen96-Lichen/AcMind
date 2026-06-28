@@ -42,13 +42,17 @@ class InboxViewModel: ObservableObject {
         exportService: ExportServiceProtocol? = nil,
         distillService: DistillServiceProtocol? = nil,
         knowledgeService: KnowledgeServiceProtocol? = nil,
-        previewScenario: AcWorkPreviewScenario? = AcWorkPreviewScenario.fromProcessArguments()
+        previewScenario: AcWorkPreviewScenario? = nil
     ) {
         self.storage = storage ?? StorageService()
         self.exportService = exportService ?? ExportService()
         self.distillService = distillService ?? DistillService(storage: self.storage)
         self.knowledgeService = knowledgeService ?? KnowledgeService(storage: self.storage)
+#if DEBUG
+        self.previewScenario = previewScenario ?? DebugAcWorkPreviewScenario.resolve()
+#else
         self.previewScenario = previewScenario
+#endif
     }
     
     // MARK: - Load
@@ -501,7 +505,7 @@ final class CollectedItemWorkflowCoordinator: ObservableObject {
                 throw CollectedItemAIError.emptyResult
             }
             try await persist(result, item.id)
-            return "摘要已生成并更新到内容预览"
+            return "摘要已生成并更新到内容详情"
         case .polish:
             guard result.polishedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
                 throw CollectedItemAIError.emptyResult

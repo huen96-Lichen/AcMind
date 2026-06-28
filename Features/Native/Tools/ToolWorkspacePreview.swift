@@ -26,7 +26,7 @@ struct ToolWorkspacePreviewRoot: View {
                 let isNarrow = proxy.size.width < 1100
 
                 VStack(alignment: .leading, spacing: 12) {
-                    AppSurfaceCard(title: "工具台 / 工作台 预览", subtitle: "真实页面在调试窗口中的组合视图", padding: 14) {
+                    AppSurfaceCard(title: "工具台 / 工作台", subtitle: "真实页面在同一窗口中的组合视图", padding: 14) {
                         HStack(spacing: 12) {
                             StatusBadge(text: "工具台", tone: .info, compact: true)
                             StatusBadge(text: "工作台", tone: .success, compact: true)
@@ -123,8 +123,8 @@ struct ToolWorkspacePreviewRoot: View {
             WorkbenchNote(
                 id: "note-alpha-2",
                 projectID: alphaID,
-                title: "调试窗口约定",
-                content: "默认和窄宽预览都通过同一调试入口生成。",
+                title: "窗口约定",
+                content: "默认版和窄宽版都走同一生成流程。",
                 tags: ["preview", "release"],
                 createdAt: now.addingTimeInterval(-5400),
                 updatedAt: now.addingTimeInterval(-1800)
@@ -148,7 +148,7 @@ struct ToolWorkspacePreviewRoot: View {
         viewModel.pendingArchiveCount = 3
         viewModel.pendingArchiveItems = [
             WorkbenchArchiveItem(id: "archive-1", title: "旧版工具记录", status: "inbox", createdAt: now.addingTimeInterval(-14400)),
-            WorkbenchArchiveItem(id: "archive-2", title: "临时草稿", status: "inbox", createdAt: now.addingTimeInterval(-28800)),
+            WorkbenchArchiveItem(id: "archive-2", title: "待处理内容", status: "inbox", createdAt: now.addingTimeInterval(-28800)),
             WorkbenchArchiveItem(id: "archive-3", title: "项目备忘", status: "inbox", createdAt: now.addingTimeInterval(-43200))
         ]
     }
