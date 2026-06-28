@@ -133,7 +133,7 @@ struct ToolWorkspacePreviewRoot: View {
                 id: "note-beta-1",
                 projectID: betaID,
                 title: "共享层摘要",
-                content: "工作台摘要卡和项目列表继续沿用产品面板语言。",
+                content: "工作台摘要卡和项目列表继续沿用产品预览语言。",
                 tags: ["summary", "surface"],
                 createdAt: now.addingTimeInterval(-10800),
                 updatedAt: now.addingTimeInterval(-7200)

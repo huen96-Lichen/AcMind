@@ -502,7 +502,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsPreviewWindow == nil {
             let contentView = makeSettingsPreviewContentView(contentWidth: contentWidth, contentHeight: contentHeight)
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "设置面板",
+                title: "设置预览",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -522,7 +522,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "工具台面板",
+                title: "工具台预览",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -542,7 +542,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "产品面板",
+                title: "产品预览",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -568,7 +568,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "Agent 面板",
+                title: "Agent 预览",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -595,7 +595,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "系统状态面板",
+                title: "系统状态预览",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView

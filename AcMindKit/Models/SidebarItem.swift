@@ -89,7 +89,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "工作"
         case .agent: return "Agent"
         case .inbox: return "收集"
-        case .screenshot: return "面板"
+        case .screenshot: return "截图"
         case .screenshotHistory: return "历史"
         case .clipboard: return "同步"
         case .schedule: return "日程"

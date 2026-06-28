@@ -438,7 +438,7 @@ struct SettingsView: View {
         switch selectedCategory {
         case .general:
             LivePreviewPanel(
-                title: "即时面板",
+                title: "即时概览",
                 subtitle: "外观和启动偏好会立即反映在主窗口与胶囊语法中",
                 tone: .info
             ) {
@@ -453,7 +453,7 @@ struct SettingsView: View {
             }
         case .companion:
             LivePreviewPanel(
-                title: "随身能力面板",
+                title: "随身能力",
                 subtitle: "这组设置会影响胶囊、语音和全局快捷键",
                 tone: .success
             ) {
@@ -468,7 +468,7 @@ struct SettingsView: View {
             }
         case .aiModels:
             LivePreviewPanel(
-                title: "模型与用量面板",
+                title: "模型与用量",
                 subtitle: "展示默认路由、提供商和用量风险",
                 tone: .warning
             ) {
@@ -483,7 +483,7 @@ struct SettingsView: View {
             }
         case .dataKnowledge:
             LivePreviewPanel(
-                title: "数据与知识库面板",
+                title: "数据与知识库",
                 subtitle: "显示库路径、默认文件夹和备份状态",
                 tone: .info
             ) {
@@ -498,7 +498,7 @@ struct SettingsView: View {
             }
         case .captureInput:
             LivePreviewPanel(
-                title: "捕获与输入面板",
+                title: "捕获与输入",
                 subtitle: "显示截图、热键、预设和说入法的真实联动",
                 tone: .warning
             ) {
@@ -516,7 +516,7 @@ struct SettingsView: View {
             }
         case .security:
             LivePreviewPanel(
-                title: "权限与安全面板",
+                title: "权限与安全",
                 subtitle: "把需要系统授权的项目与普通开关分开",
                 tone: .danger
             ) {
