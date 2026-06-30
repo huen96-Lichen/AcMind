@@ -168,14 +168,14 @@ public actor PluginManager {
             throw PluginError.sandboxViolation
         }
 
-        // A descriptor on disk is metadata, not an executable Plugin instance.
-        // AcMind currently has no dynamic entry-point loader, so claiming the
-        // plugin is active here would make the management UI report a capability
-        // that cannot actually be called. Runtime plugins become active only via
-        // register(plugin:), where a concrete Plugin is activated and registered
-        // in the capability maps below.
-        pluginStatuses[descriptor.id] = .discovered
-        pluginErrors.removeValue(forKey: descriptor.id)
+        do {
+            let runtime = try DiskPolishPlugin(descriptor: descriptor, pluginDirectory: url)
+            try await activateAndRegister(plugin: runtime, descriptor: descriptor)
+        } catch {
+            pluginStatuses[descriptor.id] = .error
+            pluginErrors[descriptor.id] = error.localizedDescription
+            throw error
+        }
     }
 
     public func unloadPlugin(id: String) async throws {
@@ -216,19 +216,31 @@ public actor PluginManager {
             throw PluginError.sandboxViolation
         }
 
+        try await activateAndRegister(plugin: plugin, descriptor: nil)
+    }
+
+    private func activateAndRegister(plugin: Plugin, descriptor: PluginDescriptor?) async throws {
+        do {
+            try await plugin.activate()
+        } catch {
+            pluginStatuses[plugin.id] = .error
+            pluginErrors[plugin.id] = error.localizedDescription
+            throw error
+        }
+
         plugins[plugin.id] = plugin
-        if let asrPlugin = plugin as? ASRPlugin {
+        let capabilities = Set(descriptor?.capabilities ?? plugin.capabilities)
+        if capabilities.contains(.customASR), let asrPlugin = plugin as? ASRPlugin {
             asrPlugins[plugin.id] = asrPlugin
         }
-        if let polishPlugin = plugin as? PolishPlugin {
+        if capabilities.contains(.customPolish), let polishPlugin = plugin as? PolishPlugin {
             polishPlugins[plugin.id] = polishPlugin
         }
-        if let injectionPlugin = plugin as? InjectionPlugin {
+        if capabilities.contains(.customInjection), let injectionPlugin = plugin as? InjectionPlugin {
             injectionPlugins[plugin.id] = injectionPlugin
         }
         pluginStatuses[plugin.id] = .active
         pluginErrors.removeValue(forKey: plugin.id)
-        try await plugin.activate()
     }
 
     public func unregister(pluginId: String) async {

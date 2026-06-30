@@ -216,6 +216,7 @@
 		A1000000000000000000047E /* AcMindKit/Services/Plugins/PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000475 /* AcMindKit/Services/Plugins/PluginProtocol.swift */; };
 		A1000000000000000000047F /* AcMindKit/Services/Plugins/PluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000476 /* AcMindKit/Services/Plugins/PluginManager.swift */; };
 		A10000000000000000000480 /* AcMindKit/Services/Plugins/PluginSandbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000477 /* AcMindKit/Services/Plugins/PluginSandbox.swift */; };
+		D15C00000000000000000002 /* AcMindKit/Services/Plugins/DiskPluginRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15C00000000000000000001 /* AcMindKit/Services/Plugins/DiskPluginRuntime.swift */; };
 		A10000000000000000000481 /* AcMindKitTests/PersonalDictionaryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000478 /* AcMindKitTests/PersonalDictionaryServiceTests.swift */; };
 		A10000000000000000000482 /* AcMindKitTests/ContextCaptureServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000479 /* AcMindKitTests/ContextCaptureServiceTests.swift */; };
 		A10000000000000000000483 /* AcMindKitTests/InjectionMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000047A /* AcMindKitTests/InjectionMetricsTests.swift */; };
@@ -615,6 +616,7 @@
 		A10000000000000000000475 /* AcMindKit/Services/Plugins/PluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Plugins/PluginProtocol.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000476 /* AcMindKit/Services/Plugins/PluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Plugins/PluginManager.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000477 /* AcMindKit/Services/Plugins/PluginSandbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Plugins/PluginSandbox.swift; sourceTree = SOURCE_ROOT; };
+		D15C00000000000000000001 /* AcMindKit/Services/Plugins/DiskPluginRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Plugins/DiskPluginRuntime.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000478 /* AcMindKitTests/PersonalDictionaryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/PersonalDictionaryServiceTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000479 /* AcMindKitTests/ContextCaptureServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/ContextCaptureServiceTests.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000047A /* AcMindKitTests/InjectionMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/InjectionMetricsTests.swift; sourceTree = SOURCE_ROOT; };
@@ -1564,6 +1566,7 @@
 				A10000000000000000000475 /* AcMindKit/Services/Plugins/PluginProtocol.swift */,
 				A10000000000000000000476 /* AcMindKit/Services/Plugins/PluginManager.swift */,
 				A10000000000000000000477 /* AcMindKit/Services/Plugins/PluginSandbox.swift */,
+				D15C00000000000000000001 /* AcMindKit/Services/Plugins/DiskPluginRuntime.swift */,
 				A10000000000000000000478 /* AcMindKitTests/PersonalDictionaryServiceTests.swift */,
 				A10000000000000000000479 /* AcMindKitTests/ContextCaptureServiceTests.swift */,
 				A1000000000000000000047A /* AcMindKitTests/InjectionMetricsTests.swift */,
@@ -2025,6 +2028,7 @@
 				A1000000000000000000047E /* AcMindKit/Services/Plugins/PluginProtocol.swift in Sources */,
 				A1000000000000000000047F /* AcMindKit/Services/Plugins/PluginManager.swift in Sources */,
 				A10000000000000000000480 /* AcMindKit/Services/Plugins/PluginSandbox.swift in Sources */,
+				D15C00000000000000000002 /* AcMindKit/Services/Plugins/DiskPluginRuntime.swift in Sources */,
 				A10000000000000000000610 /* AcMindKit/Models/AgentMemory.swift in Sources */,
 				A10000000000000000000612 /* AcMindKit/Models/AgentSkill.swift in Sources */,
 				A10000000000000000000614 /* AcMindKit/Models/AgentTask.swift in Sources */,

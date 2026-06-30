@@ -38,6 +38,23 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertTrue(plugin.deactivateCalled)
     }
 
+    func testFailedActivationDoesNotRegisterPluginAsActive() async {
+        let manager = PluginManager()
+        let plugin = FailingPlugin(id: "failing-plugin-\(UUID().uuidString)")
+
+        do {
+            try await manager.register(plugin: plugin)
+            XCTFail("activation failure should be propagated")
+        } catch {
+            let status = await manager.getPluginStatus(id: plugin.id)
+            let activeCount = await manager.getActivePluginCount()
+            let registered = await manager.getAllPlugins()[plugin.id]
+            XCTAssertEqual(status, .error)
+            XCTAssertEqual(activeCount, 0)
+            XCTAssertNil(registered)
+        }
+    }
+
     func testManagementSummariesIncludeDescriptorStatusCapabilitiesAndPolicy() async throws {
         let pluginRoot = try makePluginRoot()
         let pluginDirectory = pluginRoot.appendingPathComponent("sample-plugin", isDirectory: true)
@@ -70,32 +87,100 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertNil(summary.errorMessage)
     }
 
-    func testLoadingDescriptorDoesNotClaimRuntimeIsActive() async throws {
+    func testLoadingExecutablePolishPluginActivatesAndRuns() async throws {
         let pluginRoot = try makePluginRoot()
         defer { try? FileManager.default.removeItem(at: pluginRoot) }
-        let pluginDirectory = pluginRoot.appendingPathComponent("metadata-only", isDirectory: true)
+        let pluginDirectory = pluginRoot.appendingPathComponent("disk-polish", isDirectory: true)
         try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
         let descriptor = PluginDescriptor(
-            id: "metadata-only",
-            name: "Metadata Only",
+            id: "disk-polish",
+            name: "Disk Polish",
             version: "1.0.0",
-            capabilities: [.customASR],
-            entryPoint: "main.swift",
+            capabilities: [.customPolish],
+            entryPoint: "plugin.sh",
             configPath: pluginDirectory.appendingPathComponent("plugin.json").path
         )
         try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+        let script = """
+        #!/bin/sh
+        input=$(cat)
+        case "$input" in
+          *'\"action\":\"polish\"'*) printf '{"success":true,"text":"来自磁盘插件"}' ;;
+          *) printf '{"success":true}' ;;
+        esac
+        """
+        let executable = pluginDirectory.appendingPathComponent("plugin.sh")
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
 
         let manager = PluginManager(pluginsDirectory: pluginRoot)
         try await manager.loadPlugin(at: pluginDirectory)
 
         let status = await manager.getPluginStatus(id: descriptor.id)
         let activeCount = await manager.getActivePluginCount()
-        let plugins = await manager.getAllPlugins()
-        let asrPlugins = await manager.getASRPlugins()
-        XCTAssertEqual(status, .discovered)
-        XCTAssertEqual(activeCount, 0)
-        XCTAssertTrue(plugins.isEmpty)
-        XCTAssertTrue(asrPlugins.isEmpty)
+        let polishPlugin = await manager.getPolishPlugins()[descriptor.id]
+        let result = try await polishPlugin?.polish(text: "原文", mode: .light)
+        XCTAssertEqual(status, .active)
+        XCTAssertEqual(activeCount, 1)
+        XCTAssertEqual(result, "来自磁盘插件")
+    }
+
+    func testLoadingUnsupportedDiskCapabilityFailsHonestly() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let pluginDirectory = pluginRoot.appendingPathComponent("disk-asr", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "disk-asr",
+            name: "Disk ASR",
+            version: "1.0.0",
+            capabilities: [.customASR],
+            entryPoint: "plugin.sh",
+            configPath: pluginDirectory.appendingPathComponent("plugin.json").path
+        )
+        try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        do {
+            try await manager.loadPlugin(at: pluginDirectory)
+            XCTFail("unsupported runtime should fail")
+        } catch {
+            let status = await manager.getPluginStatus(id: descriptor.id)
+            let pluginError = await manager.getPluginError(id: descriptor.id)
+            let activeCount = await manager.getActivePluginCount()
+            XCTAssertEqual(status, .error)
+            XCTAssertNotNil(pluginError)
+            XCTAssertEqual(activeCount, 0)
+        }
+    }
+
+    func testDiskPluginRejectsEntryPointSymlinkOutsidePluginDirectory() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let pluginDirectory = pluginRoot.appendingPathComponent("escaped-polish", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "escaped-polish",
+            name: "Escaped Polish",
+            version: "1.0.0",
+            capabilities: [.customPolish],
+            entryPoint: "plugin",
+            configPath: pluginDirectory.appendingPathComponent("plugin.json").path
+        )
+        try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+        try FileManager.default.createSymbolicLink(
+            at: pluginDirectory.appendingPathComponent("plugin"),
+            withDestinationURL: URL(fileURLWithPath: "/bin/sh")
+        )
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        do {
+            try await manager.loadPlugin(at: pluginDirectory)
+            XCTFail("entry point outside the plugin directory should fail")
+        } catch PluginError.sandboxViolation {
+            let status = await manager.getPluginStatus(id: descriptor.id)
+            XCTAssertEqual(status, .error)
+        }
     }
 
     func testPluginSandboxPolicySnapshotExposesPermissionsAndLimits() async {
@@ -156,4 +241,17 @@ private final class TestPlugin: Plugin, @unchecked Sendable {
     func deactivate() async {
         deactivateCalled = true
     }
+}
+
+private struct FailingPlugin: Plugin {
+    let id: String
+    let name = "Failing Plugin"
+    let version = "1.0.0"
+    let capabilities: [PluginCapability] = []
+
+    func activate() async throws {
+        throw PluginError.loadFailed("activation failed")
+    }
+
+    func deactivate() async {}
 }
