@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D16000000000000000000001 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = D16000000000000000000003 /* WhisperKit */; };
+		D16000000000000000000004 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = D16000000000000000000005 /* WhisperKit */; };
 		08DE15194A8B21CCEFF77141 /* ScheduleServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3F2A4D9FBDA12740C78B52 /* ScheduleServiceTests.swift */; };
 		0DD468BB3560D2BED70F5458 /* StreamingKeyboardWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01302AEAB88AF88A2F58772D /* StreamingKeyboardWriterTests.swift */; };
 		0E43A7A1E470D167AFAD33C9 /* AgentQuickAskServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */; };
@@ -792,6 +794,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D16000000000000000000001 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -799,6 +802,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D16000000000000000000004 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1613,6 +1617,9 @@
 			dependencies = (
 			);
 			name = AcMindKit;
+			packageProductDependencies = (
+				D16000000000000000000003 /* WhisperKit */,
+			);
 			productName = AcMindKit;
 			productReference = A10000000000000000000008 /* AcMindKit.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1651,6 +1658,9 @@
 				A100000000000000000001B1 /* PBXTargetDependency */,
 			);
 			name = AcMindKitTests;
+			packageProductDependencies = (
+				D16000000000000000000005 /* WhisperKit */,
+			);
 			productName = AcMindKitTests;
 			productReference = A100000000000000000001AE /* AcMindKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -1691,6 +1701,7 @@
 			mainGroup = A10000000000000000000026;
 			packageReferences = (
 				A100000000000000000001A0 /* XCRemoteSwiftPackageReference "." */,
+				D16000000000000000000002 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
 			);
 			productRefGroup = A10000000000000000000029 /* Products */;
 			projectDirPath = "";
@@ -2585,6 +2596,14 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = ../;
 		};
+		D16000000000000000000002 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.18.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2592,6 +2611,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A100000000000000000001A0 /* XCRemoteSwiftPackageReference "." */;
 			productName = AcMindKit;
+		};
+		D16000000000000000000003 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D16000000000000000000002 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+		D16000000000000000000005 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D16000000000000000000002 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
