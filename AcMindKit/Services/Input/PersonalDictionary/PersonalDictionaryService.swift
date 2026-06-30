@@ -135,6 +135,13 @@ public actor PersonalDictionaryService {
         words.removeAll()
         try await saveDictionary()
     }
+
+    /// Replaces the dictionary without rebuilding entries, preserving sync metadata.
+    public func replaceWords(_ newWords: [PersonalWord]) async throws {
+        words = newWords
+        isLoaded = true
+        try await saveDictionary()
+    }
 }
 
 // MARK: - Personal Word

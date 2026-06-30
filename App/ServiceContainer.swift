@@ -162,12 +162,15 @@ public final class ServiceContainer: ObservableObject, Sendable {
         // 阶段 1: 存储层（最底层，无依赖）
         self.storageService = configuration.storageService ?? StorageService()
         self.assetStore = configuration.assetStore ?? AssetStore()
-        self.cloudSyncService = configuration.cloudSyncService ?? CloudSyncService(storage: storageService)
 
         // 阶段 2: 设置服务（依赖存储层、权限管理器）
         self.settingsService = configuration.settingsService ?? SettingsService(
             storage: storageService,
             permissionManager: permissionManager
+        )
+        self.cloudSyncService = configuration.cloudSyncService ?? CloudSyncService(
+            storage: storageService,
+            settingsService: settingsService
         )
 
         // 阶段 3: AI 运行时（依赖设置服务获取 Provider 配置）

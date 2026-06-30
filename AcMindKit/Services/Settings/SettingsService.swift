@@ -137,19 +137,26 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
         try await storage.setSetting(key: "app.language", value: settings.language)
         if let providerId = settings.defaultProviderId {
             try await storage.setSetting(key: "app.defaultProviderId", value: providerId)
+        } else {
+            try? await storage.deleteSetting(key: "app.defaultProviderId")
         }
         if let modelId = settings.defaultModelId {
             try await storage.setSetting(key: "app.defaultModelId", value: modelId)
+        } else {
+            try? await storage.deleteSetting(key: "app.defaultModelId")
         }
         try await storage.setSetting(key: "app.modelRoutingStrategy", value: settings.modelRoutingStrategy.rawValue)
         try await storage.setSetting(key: "app.vaultPath", value: settings.vaultPath)
         try await storage.setSetting(key: "app.autoCaptureClipboard", value: settings.autoCaptureClipboard ? "true" : "false")
         if let hotkey = settings.captureScreenshotHotkey {
             try await storage.setSetting(key: "app.captureScreenshotHotkey", value: hotkey)
+        } else {
+            try? await storage.deleteSetting(key: "app.captureScreenshotHotkey")
         }
         try await storage.setSetting(key: "app.defaultExportTarget", value: settings.defaultExportTarget.rawValue)
         try await storage.setSetting(key: "app.autoFrontmatter", value: settings.autoFrontmatter ? "true" : "false")
         try await saveHotCornerSettingsToStorage(settings.hotCornerSettings)
+        try await storage.setSetting(key: "app.updatedAt", value: String(Date().timeIntervalSince1970))
     }
 
     private func loadHotCornerSettings() async throws -> HotCornerSettings? {

@@ -136,14 +136,110 @@ public protocol CloudSyncServiceProtocol: Sendable {
     func getSyncStatus() async -> SyncStatus
 }
 
+public protocol CloudKeyValueStore: Sendable {
+    func string(forKey key: String) -> String?
+    func set(_ value: String, forKey key: String)
+    @discardableResult func synchronize() -> Bool
+    func observeExternalChanges(_ handler: @escaping @Sendable () -> Void)
+}
+
+public final class UbiquitousCloudKeyValueStore: CloudKeyValueStore, @unchecked Sendable {
+    public static let shared = UbiquitousCloudKeyValueStore()
+
+    private let store: NSUbiquitousKeyValueStore
+    private let lock = NSLock()
+    private var observers: [NSObjectProtocol] = []
+
+    public init(store: NSUbiquitousKeyValueStore = .default) {
+        self.store = store
+    }
+
+    public func string(forKey key: String) -> String? { store.string(forKey: key) }
+    public func set(_ value: String, forKey key: String) { store.set(value, forKey: key) }
+    public func synchronize() -> Bool { store.synchronize() }
+
+    public func observeExternalChanges(_ handler: @escaping @Sendable () -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        let observer = NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: store,
+            queue: nil
+        ) { _ in handler() }
+        observers.append(observer)
+    }
+
+    deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
+}
+
+public protocol PersonalDictionarySyncStore: Sendable {
+    func getAllWords() async -> [PersonalWord]
+    func replaceWords(_ words: [PersonalWord]) async throws
+}
+
+extension PersonalDictionaryService: PersonalDictionarySyncStore {}
+
+public protocol CloudSyncStorageProtocol: Sendable {
+    func listKnowledgeCards() async throws -> [KnowledgeCard]
+    func saveKnowledgeCard(_ card: KnowledgeCard) async throws
+    func listDistilledNotes() async throws -> [DistilledNote]
+    func saveDistilledNote(_ note: DistilledNote) async throws
+    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask]
+    func saveScheduledAgentTask(_ task: ScheduledAgentTask) async throws
+    func getSettingsSnapshot() async throws -> CloudSettingsSnapshot
+    func saveSettingsSnapshot(_ snapshot: CloudSettingsSnapshot) async throws
+}
+
+public struct CloudSettingsSnapshot: Codable, Sendable, Equatable {
+    public var settings: AppSettings
+    public var updatedAt: Date?
+
+    public init(settings: AppSettings, updatedAt: Date?) {
+        self.settings = settings
+        self.updatedAt = updatedAt
+    }
+}
+
+private final class DefaultCloudSyncStorage: CloudSyncStorageProtocol, @unchecked Sendable {
+    private let storage: StorageServiceProtocol
+    private let settingsService: SettingsServiceProtocol
+
+    init(storage: StorageServiceProtocol, settingsService: SettingsServiceProtocol) {
+        self.storage = storage
+        self.settingsService = settingsService
+    }
+    func listKnowledgeCards() async throws -> [KnowledgeCard] { try await storage.listKnowledgeCards(status: nil) }
+    func saveKnowledgeCard(_ card: KnowledgeCard) async throws { try await storage.updateKnowledgeCard(card) }
+    func listDistilledNotes() async throws -> [DistilledNote] { try await storage.listDistilledNotes() }
+    func saveDistilledNote(_ note: DistilledNote) async throws { try await storage.updateDistilledNote(note) }
+    func listScheduledAgentTasks() async throws -> [ScheduledAgentTask] { try await storage.listScheduledAgentTasks() }
+    func saveScheduledAgentTask(_ task: ScheduledAgentTask) async throws { try await storage.insertScheduledAgentTask(task) }
+    func getSettingsSnapshot() async throws -> CloudSettingsSnapshot {
+        let settings = await settingsService.getSettings()
+        let updatedAt = try await storage.getSetting(key: "app.updatedAt")
+            .flatMap(Double.init)
+            .map(Date.init(timeIntervalSince1970:))
+        return CloudSettingsSnapshot(settings: settings, updatedAt: updatedAt)
+    }
+    func saveSettingsSnapshot(_ snapshot: CloudSettingsSnapshot) async throws {
+        try await settingsService.updateSettings(snapshot.settings)
+        if let updatedAt = snapshot.updatedAt {
+            try await storage.setSetting(key: "app.updatedAt", value: String(updatedAt.timeIntervalSince1970))
+        }
+    }
+}
+
 // MARK: - Cloud Sync Service
 
 public actor CloudSyncService: CloudSyncServiceProtocol {
 
-    private let storage: StorageServiceProtocol
-
-    private static let ubiquitousStore = NSUbiquitousKeyValueStore.default
-    private let userDefaults = UserDefaults.standard
+    private let storage: CloudSyncStorageProtocol
+    private let cloudStore: CloudKeyValueStore
+    private let personalDictionary: PersonalDictionarySyncStore
+    private let userDefaults: UserDefaults
+    private let now: @Sendable () -> Date
     private var lastSync: Date?
     private var syncInProgress = false
     private var lastSyncByType: [SyncDataType: Date] = [:]
@@ -156,19 +252,35 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
     private let settingsKey = "com.acmind.sync.settings"
     private let syncEnabledKey = "com.acmind.cloudSync.enabled"
 
-    public init(storage: StorageServiceProtocol) {
-        self.storage = storage
-
-        NotificationCenter.default.addObserver(
-            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: Self.ubiquitousStore,
-            queue: nil
-        ) { [weak self] _ in
-            Task {
-                await self?.handleExternalChange()
-            }
+    public init(storage: StorageServiceProtocol, settingsService: SettingsServiceProtocol? = nil) {
+        let resolvedSettingsService = settingsService ?? SettingsService(storage: storage)
+        self.storage = DefaultCloudSyncStorage(storage: storage, settingsService: resolvedSettingsService)
+        self.cloudStore = UbiquitousCloudKeyValueStore.shared
+        self.personalDictionary = PersonalDictionaryService.shared
+        self.userDefaults = .standard
+        self.now = { Date() }
+        cloudStore.observeExternalChanges { [weak self] in
+            Task { await self?.handleExternalChange() }
         }
-        Self.ubiquitousStore.synchronize()
+        cloudStore.synchronize()
+    }
+
+    public init(
+        syncStorage: CloudSyncStorageProtocol,
+        cloudStore: CloudKeyValueStore,
+        personalDictionary: PersonalDictionarySyncStore,
+        userDefaults: UserDefaults,
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
+        self.storage = syncStorage
+        self.cloudStore = cloudStore
+        self.personalDictionary = personalDictionary
+        self.userDefaults = userDefaults
+        self.now = now
+        cloudStore.observeExternalChanges { [weak self] in
+            Task { await self?.handleExternalChange() }
+        }
+        cloudStore.synchronize()
     }
 
     // MARK: - Sync
@@ -179,33 +291,44 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
 
         syncInProgress = true
         lastErrorMessage = nil
-        Self.ubiquitousStore.synchronize()
+        cloudStore.synchronize()
 
-        await pull()
-        await push()
-
-        if lastErrorMessage == nil {
-            lastSync = Date()
+        do {
+            try await pullAll()
+            try await pushAll()
+            lastSync = now()
+        } catch {
+            recordSyncFailure(error.localizedDescription)
         }
         syncInProgress = false
     }
 
     public func pull() async {
         guard await isSyncEnabled() else { return }
-        await mergePersonalWords()
-        await mergeKnowledgeCards()
-        await mergeDistilledNotes()
-        await mergeAgentTasks()
-        await mergeSettings()
+        lastErrorMessage = nil
+        do { try await pullAll() } catch { recordSyncFailure(error.localizedDescription) }
     }
 
     public func push() async {
         guard await isSyncEnabled() else { return }
-        await pushPersonalWords()
-        await pushKnowledgeCards()
-        await pushDistilledNotes()
-        await pushAgentTasks()
-        await pushSettings()
+        lastErrorMessage = nil
+        do { try await pushAll() } catch { recordSyncFailure(error.localizedDescription) }
+    }
+
+    private func pullAll() async throws {
+        try await mergePersonalWords()
+        try await mergeKnowledgeCards()
+        try await mergeDistilledNotes()
+        try await mergeAgentTasks()
+        try await mergeSettings()
+    }
+
+    private func pushAll() async throws {
+        try await pushPersonalWords()
+        try await pushKnowledgeCards()
+        try await pushDistilledNotes()
+        try await pushAgentTasks()
+        try await pushSettings()
     }
 
     // MARK: - Configuration
@@ -252,20 +375,17 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
 
     // MARK: - External Change
 
-    private func handleExternalChange() {
-        Task { await pull() }
+    private func handleExternalChange() async {
+        await pull()
     }
 
     // MARK: - Personal Dictionary Sync
 
-    private func mergePersonalWords() async {
-        guard let json = Self.ubiquitousStore.string(forKey: personalDictionaryKey),
-              let data = json.data(using: .utf8),
-              let remoteWords = try? JSONDecoder().decode([PersonalWord].self, from: data) else {
-            return
-        }
+    private func mergePersonalWords() async throws {
+        guard let json = cloudStore.string(forKey: personalDictionaryKey) else { return }
+        let remoteWords = try decode([PersonalWord].self, json: json, type: .personalDictionary)
 
-        let localWords = await PersonalDictionaryService.shared.getAllWords()
+        let localWords = await personalDictionary.getAllWords()
 
         var merged: [String: PersonalWord] = [:]
         for word in localWords {
@@ -274,44 +394,30 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         for remoteWord in remoteWords {
             let key = remoteWord.word.lowercased()
             if let existing = merged[key] {
-                if remoteWord.priority.rawValue > existing.priority.rawValue {
-                    merged[key] = remoteWord
-                }
+                merged[key] = preferredWord(existing, remoteWord)
             } else {
                 merged[key] = remoteWord
             }
         }
 
         let mergedWords = Array(merged.values)
-        try? await PersonalDictionaryService.shared.clearDictionary()
-        for word in mergedWords {
-            try? await PersonalDictionaryService.shared.addWord(
-                word.word,
-                category: word.category,
-                priority: word.priority
-            )
-        }
-        lastSyncByType[.personalDictionary] = Date()
+        try await personalDictionary.replaceWords(mergedWords)
+        lastSyncByType[.personalDictionary] = now()
     }
 
-    private func pushPersonalWords() async {
-        let localWords = await PersonalDictionaryService.shared.getAllWords()
-        guard let data = try? JSONEncoder().encode(localWords),
-              let json = String(data: data, encoding: .utf8) else { return }
-        Self.ubiquitousStore.set(json, forKey: personalDictionaryKey)
-        lastSyncByType[.personalDictionary] = Date()
+    private func pushPersonalWords() async throws {
+        let localWords = await personalDictionary.getAllWords()
+        let json = try encode(localWords, type: .personalDictionary)
+        try setCloudValue(json, forKey: personalDictionaryKey, type: .personalDictionary)
     }
 
     // MARK: - Knowledge Cards Sync
 
-    private func mergeKnowledgeCards() async {
-        guard let json = Self.ubiquitousStore.string(forKey: knowledgeCardsKey),
-              let data = json.data(using: .utf8),
-              let remoteCards = try? JSONDecoder().decode([KnowledgeCard].self, from: data) else {
-            return
-        }
+    private func mergeKnowledgeCards() async throws {
+        guard let json = cloudStore.string(forKey: knowledgeCardsKey) else { return }
+        let remoteCards = try decode([KnowledgeCard].self, json: json, type: .knowledgeCards)
 
-        let localCards = (try? await storage.listKnowledgeCards(status: nil)) ?? []
+        let localCards = try await storage.listKnowledgeCards()
 
         var merged: [String: KnowledgeCard] = [:]
         for card in localCards {
@@ -328,33 +434,23 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         }
 
         for card in merged.values {
-            try? await storage.updateKnowledgeCard(card)
+            try await storage.saveKnowledgeCard(card)
         }
-        lastSyncByType[.knowledgeCards] = Date()
+        lastSyncByType[.knowledgeCards] = now()
     }
 
-    private func pushKnowledgeCards() async {
-        let localCards = (try? await storage.listKnowledgeCards(status: nil)) ?? []
-        guard let data = try? JSONEncoder().encode(localCards),
-              let json = String(data: data, encoding: .utf8) else { return }
-        guard isWithinSizeLimit(json) else {
-            recordSyncFailure("知识卡片超过 iCloud 同步大小限制，请精简内容后重试。")
-            return
-        }
-        Self.ubiquitousStore.set(json, forKey: knowledgeCardsKey)
-        lastSyncByType[.knowledgeCards] = Date()
+    private func pushKnowledgeCards() async throws {
+        let json = try encode(await storage.listKnowledgeCards(), type: .knowledgeCards)
+        try setCloudValue(json, forKey: knowledgeCardsKey, type: .knowledgeCards)
     }
 
     // MARK: - Distilled Notes Sync
 
-    private func mergeDistilledNotes() async {
-        guard let json = Self.ubiquitousStore.string(forKey: distilledNotesKey),
-              let data = json.data(using: .utf8),
-              let remoteNotes = try? JSONDecoder().decode([DistilledNote].self, from: data) else {
-            return
-        }
+    private func mergeDistilledNotes() async throws {
+        guard let json = cloudStore.string(forKey: distilledNotesKey) else { return }
+        let remoteNotes = try decode([DistilledNote].self, json: json, type: .distilledNotes)
 
-        let localNotes = (try? await storage.listDistilledNotes()) ?? []
+        let localNotes = try await storage.listDistilledNotes()
 
         var merged: [String: DistilledNote] = [:]
         for note in localNotes {
@@ -371,33 +467,23 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         }
 
         for note in merged.values {
-            try? await storage.updateDistilledNote(note)
+            try await storage.saveDistilledNote(note)
         }
-        lastSyncByType[.distilledNotes] = Date()
+        lastSyncByType[.distilledNotes] = now()
     }
 
-    private func pushDistilledNotes() async {
-        let localNotes = (try? await storage.listDistilledNotes()) ?? []
-        guard let data = try? JSONEncoder().encode(localNotes),
-              let json = String(data: data, encoding: .utf8) else { return }
-        guard isWithinSizeLimit(json) else {
-            recordSyncFailure("蒸馏笔记超过 iCloud 同步大小限制，请精简内容后重试。")
-            return
-        }
-        Self.ubiquitousStore.set(json, forKey: distilledNotesKey)
-        lastSyncByType[.distilledNotes] = Date()
+    private func pushDistilledNotes() async throws {
+        let json = try encode(await storage.listDistilledNotes(), type: .distilledNotes)
+        try setCloudValue(json, forKey: distilledNotesKey, type: .distilledNotes)
     }
 
     // MARK: - Agent Tasks Sync
 
-    private func mergeAgentTasks() async {
-        guard let json = Self.ubiquitousStore.string(forKey: agentTasksKey),
-              let data = json.data(using: .utf8),
-              let remoteTasks = try? JSONDecoder().decode([ScheduledAgentTask].self, from: data) else {
-            return
-        }
+    private func mergeAgentTasks() async throws {
+        guard let json = cloudStore.string(forKey: agentTasksKey) else { return }
+        let remoteTasks = try decode([ScheduledAgentTask].self, json: json, type: .agentTasks)
 
-        let localTasks = (try? await storage.listScheduledAgentTasks()) ?? []
+        let localTasks = try await storage.listScheduledAgentTasks()
 
         var merged: [String: ScheduledAgentTask] = [:]
         for task in localTasks {
@@ -414,49 +500,80 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         }
 
         for task in merged.values {
-            try? await storage.insertScheduledAgentTask(task)
+            try await storage.saveScheduledAgentTask(task)
         }
-        lastSyncByType[.agentTasks] = Date()
+        lastSyncByType[.agentTasks] = now()
     }
 
-    private func pushAgentTasks() async {
-        let localTasks = (try? await storage.listScheduledAgentTasks()) ?? []
-        guard let data = try? JSONEncoder().encode(localTasks),
-              let json = String(data: data, encoding: .utf8) else { return }
-        guard isWithinSizeLimit(json) else { return }
-        Self.ubiquitousStore.set(json, forKey: agentTasksKey)
-        lastSyncByType[.agentTasks] = Date()
+    private func pushAgentTasks() async throws {
+        let json = try encode(await storage.listScheduledAgentTasks(), type: .agentTasks)
+        try setCloudValue(json, forKey: agentTasksKey, type: .agentTasks)
     }
 
     // MARK: - Settings Sync
 
-    private func mergeSettings() async {
-        guard let json = Self.ubiquitousStore.string(forKey: settingsKey),
-              let data = json.data(using: .utf8),
-              let remoteSettings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
-            return
-        }
+    private func mergeSettings() async throws {
+        guard let json = cloudStore.string(forKey: settingsKey) else { return }
+        let remoteSnapshot = try decodeSettingsSnapshot(json)
+        let localSnapshot = try await storage.getSettingsSnapshot()
+        let remoteDate = remoteSnapshot.updatedAt ?? .distantPast
+        let localDate = localSnapshot.updatedAt ?? .distantPast
+        guard remoteDate >= localDate else { return }
 
-        guard let settingsData = try? JSONEncoder().encode(remoteSettings),
-              let settingsJson = String(data: settingsData, encoding: .utf8) else {
-            return
+        var merged = remoteSnapshot
+        let preferences = SettingsLocalPreferences.loadOrDefault(from: userDefaults)
+        if preferences.sensitiveContentNotUpload {
+            merged.settings.defaultProviderId = localSnapshot.settings.defaultProviderId
+            merged.settings.defaultModelId = localSnapshot.settings.defaultModelId
+            merged.settings.vaultPath = localSnapshot.settings.vaultPath
+            merged.settings.captureScreenshotHotkey = localSnapshot.settings.captureScreenshotHotkey
         }
-        try? await storage.setSetting(key: "settings.backup", value: settingsJson)
-        lastSyncByType[.settings] = Date()
+        try await storage.saveSettingsSnapshot(merged)
+        lastSyncByType[.settings] = now()
     }
 
-    private func pushSettings() async {
-        guard let settingsJson = try? await storage.getSetting(key: "settings.backup") else { return }
+    private func pushSettings() async throws {
+        let localSnapshot = try await storage.getSettingsSnapshot()
         let preferences = SettingsLocalPreferences.loadOrDefault(from: userDefaults)
-        guard let sanitizedJson = Self.sanitizedSettingsBackupJSON(
-            from: settingsJson,
-            preferences: preferences
-        ) else {
-            return
-        }
+        let sanitized = Self.sanitizedSettingsBackup(localSnapshot.settings, preferences: preferences)
+        let sanitizedJson = try encode(
+            CloudSettingsSnapshot(settings: sanitized, updatedAt: localSnapshot.updatedAt),
+            type: .settings
+        )
+        try setCloudValue(sanitizedJson, forKey: settingsKey, type: .settings)
+    }
 
-        Self.ubiquitousStore.set(sanitizedJson, forKey: settingsKey)
-        lastSyncByType[.settings] = Date()
+    private func decodeSettingsSnapshot(_ json: String) throws -> CloudSettingsSnapshot {
+        if let snapshot = try? decode(CloudSettingsSnapshot.self, json: json, type: .settings) {
+            return snapshot
+        }
+        let legacySettings = try decode(AppSettings.self, json: json, type: .settings)
+        return CloudSettingsSnapshot(settings: legacySettings, updatedAt: nil)
+    }
+
+    private func preferredWord(_ lhs: PersonalWord, _ rhs: PersonalWord) -> PersonalWord {
+        if lhs.priority != rhs.priority { return lhs.priority.rawValue > rhs.priority.rawValue ? lhs : rhs }
+        if lhs.usageCount != rhs.usageCount { return lhs.usageCount > rhs.usageCount ? lhs : rhs }
+        return (lhs.lastUsed ?? .distantPast) >= (rhs.lastUsed ?? .distantPast) ? lhs : rhs
+    }
+
+    private func encode<T: Encodable>(_ value: T, type: SyncDataType) throws -> String {
+        guard let json = String(data: try JSONEncoder().encode(value), encoding: .utf8) else {
+            throw CloudSyncError.encodingFailed(type)
+        }
+        return json
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type, json: String, type syncType: SyncDataType) throws -> T {
+        guard let data = json.data(using: .utf8) else { throw CloudSyncError.invalidRemoteData(syncType) }
+        do { return try JSONDecoder().decode(type, from: data) }
+        catch { throw CloudSyncError.invalidRemoteData(syncType) }
+    }
+
+    private func setCloudValue(_ json: String, forKey key: String, type: SyncDataType) throws {
+        guard isWithinSizeLimit(json) else { throw CloudSyncError.sizeLimitExceeded(type) }
+        cloudStore.set(json, forKey: key)
+        lastSyncByType[type] = now()
     }
 
     nonisolated static func sanitizedSettingsBackupJSON(
@@ -490,5 +607,19 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         sanitized.vaultPath = ""
         sanitized.captureScreenshotHotkey = nil
         return sanitized
+    }
+}
+
+public enum CloudSyncError: LocalizedError, Sendable, Equatable {
+    case encodingFailed(SyncDataType)
+    case invalidRemoteData(SyncDataType)
+    case sizeLimitExceeded(SyncDataType)
+
+    public var errorDescription: String? {
+        switch self {
+        case .encodingFailed(let type): return "\(type.displayName)编码失败，请重试。"
+        case .invalidRemoteData(let type): return "云端\(type.displayName)数据损坏，已停止推送以避免覆盖。"
+        case .sizeLimitExceeded(let type): return "\(type.displayName)超过 iCloud 同步大小限制，请精简内容后重试。"
+        }
     }
 }
