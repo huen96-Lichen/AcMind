@@ -128,58 +128,87 @@ final class WorkbenchV2HeroBackgroundStore: ObservableObject {
     }
 
     static func makeDefaultBackgroundImage() -> NSImage {
+        if let bundledImage = NSImage(named: "WorkbenchHeroOcean") {
+            return bundledImage
+        }
+
         let size = NSSize(width: 1600, height: 900)
         let image = NSImage(size: size)
         image.lockFocus()
         defer { image.unlockFocus() }
 
         let bounds = NSRect(origin: .zero, size: size)
-        NSColor(calibratedRed: 0.07, green: 0.10, blue: 0.15, alpha: 1).setFill()
-        bounds.fill()
-
-        let backgroundGradient = NSGradient(
+        let skyGradient = NSGradient(
             colors: [
-                NSColor(calibratedRed: 0.13, green: 0.22, blue: 0.31, alpha: 1),
-                NSColor(calibratedRed: 0.08, green: 0.13, blue: 0.19, alpha: 1),
-                NSColor(calibratedRed: 0.04, green: 0.07, blue: 0.11, alpha: 1)
+                NSColor(calibratedRed: 0.64, green: 0.76, blue: 0.82, alpha: 1),
+                NSColor(calibratedRed: 0.28, green: 0.45, blue: 0.54, alpha: 1),
+                NSColor(calibratedRed: 0.06, green: 0.15, blue: 0.23, alpha: 1)
             ]
         )
-        backgroundGradient?.draw(in: bounds, angle: 0)
+        skyGradient?.draw(in: bounds, angle: 90)
 
-        let accentGradient = NSGradient(
+        let mountainPath = NSBezierPath()
+        mountainPath.move(to: NSPoint(x: 0, y: 520))
+        mountainPath.curve(to: NSPoint(x: 420, y: 560), controlPoint1: NSPoint(x: 120, y: 570), controlPoint2: NSPoint(x: 250, y: 500))
+        mountainPath.curve(to: NSPoint(x: 780, y: 545), controlPoint1: NSPoint(x: 560, y: 610), controlPoint2: NSPoint(x: 650, y: 510))
+        mountainPath.curve(to: NSPoint(x: 1160, y: 590), controlPoint1: NSPoint(x: 900, y: 580), controlPoint2: NSPoint(x: 1000, y: 535))
+        mountainPath.curve(to: NSPoint(x: 1600, y: 548), controlPoint1: NSPoint(x: 1340, y: 665), controlPoint2: NSPoint(x: 1460, y: 500))
+        mountainPath.line(to: NSPoint(x: 1600, y: 900))
+        mountainPath.line(to: NSPoint(x: 0, y: 900))
+        mountainPath.close()
+        NSColor(calibratedRed: 0.06, green: 0.12, blue: 0.17, alpha: 0.50).setFill()
+        mountainPath.fill()
+
+        let seaRect = NSRect(x: 0, y: 0, width: size.width, height: 560)
+        let seaGradient = NSGradient(
             colors: [
-                NSColor(calibratedRed: 0.36, green: 0.77, blue: 0.97, alpha: 0.42),
-                NSColor(calibratedRed: 0.55, green: 0.44, blue: 0.98, alpha: 0.20),
-                NSColor.clear
+                NSColor(calibratedRed: 0.04, green: 0.16, blue: 0.22, alpha: 1),
+                NSColor(calibratedRed: 0.07, green: 0.36, blue: 0.44, alpha: 1),
+                NSColor(calibratedRed: 0.28, green: 0.57, blue: 0.62, alpha: 1)
             ]
         )
-        accentGradient?.draw(in: NSRect(x: -120, y: 330, width: 980, height: 540), angle: -8)
+        seaGradient?.draw(in: seaRect, angle: 90)
 
-        let warmGradient = NSGradient(
-            colors: [
-                NSColor(calibratedRed: 0.96, green: 0.68, blue: 0.27, alpha: 0.28),
-                NSColor(calibratedRed: 0.95, green: 0.88, blue: 0.56, alpha: 0.10),
-                NSColor.clear
-            ]
-        )
-        warmGradient?.draw(in: NSRect(x: 760, y: 540, width: 720, height: 400), angle: 18)
+        for index in 0..<18 {
+            let y = CGFloat(60 + index * 28)
+            let path = NSBezierPath()
+            path.lineWidth = index < 6 ? 3.2 : 1.7
+            path.move(to: NSPoint(x: -40, y: y))
+            for step in 0...8 {
+                let x = CGFloat(step) * 220
+                let crest = y + CGFloat((step + index).isMultiple(of: 2) ? 12 : -10)
+                path.curve(
+                    to: NSPoint(x: x + 220, y: y + CGFloat(step.isMultiple(of: 2) ? -7 : 8)),
+                    controlPoint1: NSPoint(x: x + 70, y: crest),
+                    controlPoint2: NSPoint(x: x + 150, y: y - (crest - y))
+                )
+            }
+            NSColor(calibratedWhite: 1, alpha: index < 7 ? 0.26 : 0.15).setStroke()
+            path.stroke()
+        }
 
-        let circles: [(rect: CGRect, color: NSColor)] = [
-            (CGRect(x: 120, y: 92, width: 480, height: 480), NSColor(calibratedRed: 0.18, green: 0.48, blue: 0.92, alpha: 0.24)),
-            (CGRect(x: 820, y: 220, width: 380, height: 380), NSColor(calibratedRed: 0.98, green: 0.62, blue: 0.24, alpha: 0.18)),
-            (CGRect(x: 1040, y: 80, width: 260, height: 260), NSColor(calibratedRed: 0.28, green: 0.80, blue: 0.60, alpha: 0.16))
-        ]
-
-        for entry in circles {
-            entry.color.setFill()
-            NSBezierPath(ovalIn: entry.rect).fill()
+        for index in 0..<6 {
+            let y = CGFloat(120 + index * 58)
+            let foam = NSBezierPath()
+            foam.lineWidth = 4.0
+            foam.move(to: NSPoint(x: -80, y: y))
+            for step in 0...6 {
+                let x = CGFloat(step) * 280
+                foam.curve(
+                    to: NSPoint(x: x + 280, y: y + CGFloat(step.isMultiple(of: 2) ? 10 : -8)),
+                    controlPoint1: NSPoint(x: x + 80, y: y + 20),
+                    controlPoint2: NSPoint(x: x + 190, y: y - 22)
+                )
+            }
+            NSColor(calibratedWhite: 1, alpha: 0.10).setStroke()
+            foam.stroke()
         }
 
         let vignette = NSGradient(
             colors: [
                 NSColor.clear,
-                NSColor(calibratedWhite: 0, alpha: 0.18),
-                NSColor(calibratedWhite: 0, alpha: 0.34)
+                NSColor(calibratedWhite: 0, alpha: 0.16),
+                NSColor(calibratedWhite: 0, alpha: 0.36)
             ]
         )
         vignette?.draw(in: bounds, angle: 90)

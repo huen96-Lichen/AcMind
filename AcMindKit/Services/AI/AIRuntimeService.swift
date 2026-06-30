@@ -494,7 +494,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             )
             providers[config.id] = provider
             
-        case .openAI, .openAICompatible, .anthropic, .google:
+        case .openAI, .openAICompatible:
             guard let key = await SecretStore.shared.getAPIKey(for: config.id) else {
                 throw AIError.noKey
             }
@@ -503,6 +503,24 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                 apiKey: key
             )
             providers[config.id] = provider
+
+        case .anthropic:
+            guard let key = await SecretStore.shared.getAPIKey(for: config.id) else {
+                throw AIError.noKey
+            }
+            providers[config.id] = AnthropicProvider(
+                baseURL: resolvedBaseURL.isEmpty ? ProviderType.anthropic.defaultBaseURL : resolvedBaseURL,
+                apiKey: key
+            )
+
+        case .google:
+            guard let key = await SecretStore.shared.getAPIKey(for: config.id) else {
+                throw AIError.noKey
+            }
+            providers[config.id] = GoogleGenerativeAIProvider(
+                baseURL: resolvedBaseURL.isEmpty ? ProviderType.google.defaultBaseURL : resolvedBaseURL,
+                apiKey: key
+            )
 
         case .local:
             let provider = OllamaProvider(

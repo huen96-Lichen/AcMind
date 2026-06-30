@@ -225,7 +225,7 @@ struct NotchV2LauncherPage: View {
     private var emptyState: some View {
         CompanionEmptyState(
             title: "没有找到匹配的应用",
-            detail: "可以搜索应用名称、Bundle 名称或 Bundle Identifier。",
+            detail: "可以搜索应用名称、Bundle 名称或应用标识符。",
             icon: "magnifyingglass"
         )
     }

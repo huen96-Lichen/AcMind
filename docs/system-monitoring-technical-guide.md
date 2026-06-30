@@ -127,7 +127,7 @@ import IOKit
 func readCPUFrequency() -> (pCoreMHz: Int, eCoreMHz: Int)? {
     // IOReport 读取 Apple Silicon 的 CPU 频率
     // 需要解析 IOReportCopyChannelsInGroup("CPU Stats")
-    // 这部分需要 IOKit 桥接，AcMind 的 Vendor/stats-original 中有参考实现
+    // 这部分需要自行封装 IOKit 桥接
     return nil
 }
 ```
@@ -657,8 +657,6 @@ func readGPUUsage() -> Double? {
     // 关键键名（Apple Silicon）:
     // - "GPU Active"     - GPU 活跃时间占比
     // - "GPU Frequency"  - GPU 当前频率
-    //
-    // 参考: Vendor/stats-original/Modules/GPU/readers.swift
 
     return nil // 需要完整 IOReport 桥接实现
 }

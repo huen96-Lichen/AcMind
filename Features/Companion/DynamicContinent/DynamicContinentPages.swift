@@ -73,7 +73,7 @@ struct DynamicContinentSchedulePage: View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
             NotchV2SystemRail(viewModel: viewModel)
 
-            CompanionPanel(title: "本周概览", symbol: "chart.bar.fill") {
+            CompanionPanel(title: "本周总览", symbol: "chart.bar.fill") {
                 weekOverviewCard
             }
 
@@ -89,7 +89,7 @@ struct DynamicContinentSchedulePage: View {
 
     private var emptyTimeline: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("暂无安排")
+            Text("今天没有安排")
                 .font(NotchV2DesignTokens.Typography.title)
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(1)
@@ -218,11 +218,11 @@ struct DynamicContinentSchedulePage: View {
                     }
                 }
             } else {
-                Text("当前没有进行中的事项")
+                Text("当前没有进行中事项")
                     .font(NotchV2DesignTokens.Typography.title)
                     .foregroundStyle(NotchV2DesignTokens.primaryText)
                     .lineLimit(1)
-                Text("有日程时会自动进入焦点。")
+                Text("有日程时会自动切换到焦点。")
                     .font(NotchV2DesignTokens.Typography.body)
                     .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     .lineLimit(1)
@@ -406,7 +406,7 @@ struct DynamicContinentSystemStatusPage: View {
 
     private var leftColumn: some View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
-            CompanionPanel(title: "运行摘要", subtitle: "先看结论，再看细项", symbol: "desktopcomputer", fillHeight: true) {
+            CompanionPanel(title: "运行总览", subtitle: "先看结论，再看细项", symbol: "desktopcomputer", fillHeight: true) {
                 VStack(alignment: .leading, spacing: 6) {
                     NotchV2InfoRow(title: "主机", value: Host.current().localizedName ?? "Mac", icon: "desktopcomputer", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
                     NotchV2InfoRow(title: "系统", value: ProcessInfo.processInfo.operatingSystemVersionString, icon: "cpu", accent: NotchV2DesignTokens.secondaryText, compactValue: true)
@@ -428,7 +428,7 @@ struct DynamicContinentSystemStatusPage: View {
     }
 
     private var centerColumn: some View {
-        CompanionPanel(title: "核心摘要", symbol: "cpu", fillHeight: true) {
+        CompanionPanel(title: "核心总览", symbol: "cpu", fillHeight: true) {
             let columns = [
                 GridItem(.flexible(), spacing: 8),
                 GridItem(.flexible(), spacing: 8),

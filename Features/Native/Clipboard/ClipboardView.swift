@@ -147,7 +147,7 @@ struct ClipboardView: View {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("概览")
+                        Text("总览")
                             .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                         Spacer()
@@ -166,7 +166,7 @@ struct ClipboardView: View {
                         )
                         statBadge(
                             count: pinWindowCount,
-                            label: "Pin",
+                            label: "固定",
                             color: AppSurfaceTokens.accentOrange
                         )
                     }
@@ -178,7 +178,7 @@ struct ClipboardView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Pin 管理")
+                    Text("固定管理")
                         .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
 
@@ -249,7 +249,7 @@ struct ClipboardView: View {
         return HStack(spacing: 6) {
             Image(systemName: "pin")
                 .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
-            Text("Pin \(pinWindowCount)")
+            Text("固定 \(pinWindowCount)")
                 .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .medium))
         }
         .padding(.horizontal, 10)
@@ -417,7 +417,7 @@ struct ClipboardView: View {
                     .font(.system(size: AppSurfaceTokens.Typography.bodyLarge, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                Text(viewModel.searchQuery.isEmpty ? "复制内容后将自动记录在此处" : "尝试修改搜索关键词或筛选条件")
+                Text(viewModel.searchQuery.isEmpty ? "复制内容后会出现在这里" : "试试改一下搜索关键词或筛选条件")
                     .font(.system(size: AppSurfaceTokens.Typography.body))
                     .foregroundStyle(AppSurfaceTokens.tertiaryText)
             }
@@ -595,7 +595,7 @@ struct ClipboardItemCard: View {
                 .foregroundStyle(AppSurfaceTokens.primaryText)
 
             if item.isPinned {
-                Text("Pinned")
+                Text("已固定")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.accentOrange)
                     .padding(.horizontal, 6)
@@ -653,8 +653,8 @@ struct ClipboardItemCard: View {
             .buttonStyle(.borderless)
             .foregroundStyle(AppSurfaceTokens.accentOrange)
             .contentShape(Circle())
-            .help("Pin 到桌面")
-            .accessibilityLabel(Text("Pin 悬浮窗"))
+            .help("固定到桌面")
+            .accessibilityLabel(Text("固定悬浮窗"))
             .accessibilityHint(Text("将这条剪贴板内容固定为最前端的小窗口"))
 
             Button(action: onCopy) {
@@ -674,7 +674,7 @@ struct ClipboardItemCard: View {
 
     @ViewBuilder
     private var contextMenuItems: some View {
-        Button("Pin 到桌面", action: onPin)
+        Button("固定到桌面", action: onPin)
         Button("复制内容", action: onCopy)
 
         if item.isPinned {
@@ -685,7 +685,7 @@ struct ClipboardItemCard: View {
 
         Button("添加到粘贴队列", action: onAddToQueue)
 
-        Button("保存到 Inbox") {
+        Button("保存到收集箱") {
             onInbox()
         }
 

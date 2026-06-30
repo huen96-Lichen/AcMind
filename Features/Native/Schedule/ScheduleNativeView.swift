@@ -1,9 +1,9 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Schedule Page (Main Layout)
+// MARK: - 日程页（主布局）
 
-/// AcMind 日程页面 - 个人时间驾驶舱
+/// AcWork 日程页面，个人时间驾驶舱
 /// 左侧：分类、总览、今日待办、迷你月历、工作饱和度
 /// 右侧：周/月/年视图 + 年度热力图
 struct ScheduleNativeView: View {
@@ -11,7 +11,7 @@ struct ScheduleNativeView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // 左侧信息面板
+            // 左侧信息区
             ScheduleSidebar(viewModel: viewModel)
 
             Divider()
@@ -26,7 +26,7 @@ struct ScheduleNativeView: View {
     }
 }
 
-// MARK: - Schedule Main
+// MARK: - 日程主区域
 
 struct ScheduleMain: View {
     @ObservedObject var viewModel: ScheduleViewModel
@@ -46,7 +46,7 @@ struct ScheduleMain: View {
     }
 }
 
-// MARK: - Schedule View Surface
+// MARK: - 日程视图表面
 
 private struct ScheduleViewSurface: View {
     @ObservedObject var viewModel: ScheduleViewModel
@@ -63,7 +63,7 @@ private struct ScheduleViewSurface: View {
     }
 }
 
-// MARK: - Event Editor Sheet
+// MARK: - 事件编辑 Sheet
 
 private struct ScheduleEventEditorView: View {
     @ObservedObject var viewModel: ScheduleViewModel

@@ -419,9 +419,9 @@ public final class ServiceContainer: ObservableObject, Sendable {
         if exportService is ExportService { issues.append("✓ ExportService") }
         if knowledgeService is KnowledgeService { issues.append("✓ KnowledgeService") }
         if scheduleService is ScheduleService { issues.append("✓ ScheduleService") }
-        if agentMemoryService is AgentMemoryService { issues.append("✓ AgentMemoryService") }
-        if agentSkillService is AgentSkillService { issues.append("✓ AgentSkillService") }
-        if agentTaskBoardService is AgentTaskBoardService { issues.append("✓ AgentTaskBoardService") }
+        if agentMemoryService is AgentMemoryService { issues.append("✓ 智能体记忆服务") }
+        if agentSkillService is AgentSkillService { issues.append("✓ 智能体技能服务") }
+        if agentTaskBoardService is AgentTaskBoardService { issues.append("✓ 智能体任务板服务") }
         issues.append("✓ SystemStatusService")
         issues.append("✓ VoiceService")
 

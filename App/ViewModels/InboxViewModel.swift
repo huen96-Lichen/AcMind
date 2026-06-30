@@ -264,6 +264,7 @@ class InboxViewModel: ObservableObject {
     }
 
     private func applyPreviewScenario(_ scenario: AcWorkPreviewScenario) {
+        #if DEBUG
         items = AcWorkPreviewData.inboxItems(for: scenario)
         todayCount = items.count
         pendingCount = items.filter { $0.status == .pending || $0.status == .captured }.count
@@ -281,9 +282,19 @@ class InboxViewModel: ObservableObject {
             showError = false
         case .error:
             isLoading = false
-            errorMessage = "AcWork Preview: 收集箱加载失败"
+            errorMessage = "AcWork 预览：收集箱加载失败"
             showError = true
         }
+        #else
+        items = []
+        todayCount = 0
+        pendingCount = 0
+        distilledCount = 0
+        exportedCount = 0
+        isLoading = false
+        errorMessage = nil
+        showError = false
+        #endif
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -323,7 +334,7 @@ enum CollectedItemWorkflowAction: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .sendToAgent: return "发送给 Agent"
+        case .sendToAgent: return "发送给智能体"
         case .createTask: return "转任务"
         case .createSchedule: return "添加到日程"
         case .saveToKnowledge: return "保存到知识库"
@@ -466,7 +477,7 @@ final class CollectedItemWorkflowCoordinator: ObservableObject {
             let task = try await services.agentTaskBoardService.createTask(item.makeAgentTask())
             try await services.agentTaskBoardService.startTask(id: task.id)
             if shouldNavigate { navigateAfterWorkflow(action) }
-            return "已创建并启动 Agent 任务「\(task.title)」"
+            return "已创建并启动智能体任务「\(task.title)」"
         case .createTask:
             let task = try await services.agentTaskBoardService.createTask(item.makeAgentTask())
             if shouldNavigate { navigateAfterWorkflow(action) }
@@ -657,6 +668,7 @@ final class InboxCollectedItemRepository: CollectedItemRepositoryProtocol {
     }
 
     func list(filter: CollectedItemFilter, sort: CollectedItemSort) async -> CollectedItemListResult {
+        #if DEBUG
         if let previewScenario {
             let items = AcWorkPreviewData
                 .inboxItems(for: previewScenario)
@@ -673,6 +685,7 @@ final class InboxCollectedItemRepository: CollectedItemRepositoryProtocol {
                 return CollectedItemListResult(items: [], partialErrors: ["AcWork Preview: 收集箱加载失败"])
             }
         }
+        #endif
 
         return await liveRepository.list(filter: filter, sort: sort)
     }

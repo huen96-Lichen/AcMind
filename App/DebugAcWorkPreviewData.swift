@@ -13,7 +13,7 @@ enum AcWorkPreviewData {
             pendingItems: [
                 "3 条剪贴板内容待整理",
                 "1 条会议语音待提炼",
-                "2 张截图等待 OCR"
+                "2 张截图等待文字识别"
             ],
             scheduleItems: [
                 "10:00 设计规范复盘",
@@ -21,10 +21,65 @@ enum AcWorkPreviewData {
                 "17:00 构建与截图验收"
             ],
             systemMetrics: [
-                "CPU 28%",
+                "处理器 28%",
                 "内存 11.2 GB",
                 "模型服务在线"
-            ]
+            ],
+            systemStatusSnapshot: SystemStatusSnapshot(
+                cpu: .init(
+                    id: "cpu",
+                    name: "CPU",
+                    category: "processor",
+                    value: 28,
+                    unit: "%",
+                    source: "preview",
+                    isAvailable: true,
+                    unavailableReason: nil
+                ),
+                battery: .init(
+                    percentage: 84,
+                    state: "充电中",
+                    temperatureC: 31.8,
+                    chargerPowerW: 67,
+                    timeToFullChargeMinutes: 42,
+                    source: "交流电",
+                    isAvailable: true
+                ),
+                temperatureSensors: [
+                    .init(
+                        id: "cpu-proximity",
+                        name: "CPU Proximity",
+                        category: "temperature",
+                        value: 47.6,
+                        unit: "°C",
+                        source: "preview",
+                        isAvailable: true,
+                        unavailableReason: nil
+                    )
+                ],
+                loadAverage1m: 2.4,
+                diskUsedGB: 612,
+                diskTotalGB: 1024,
+                networkDownloadMBps: 8.6,
+                networkUploadMBps: 1.2,
+                hardwareInfo: .init(
+                    uptimeSeconds: 137_400,
+                    osVersion: "15.0",
+                    kernelVersion: "24.0.0",
+                    chipModel: "Apple M3 Pro",
+                    cpuCoreCount: 12,
+                    hostname: "AcWork-Mac"
+                ),
+                cpuUsage: 28,
+                memoryUsageGB: 11.2,
+                totalMemoryGB: 36,
+                memoryUsagePercent: 31,
+                diskUsagePercent: 60,
+                batteryLevel: 84,
+                batteryState: "充电中",
+                topProcesses: [],
+                lastUpdated: fixedNow
+            )
         )
     }
 
@@ -59,7 +114,7 @@ enum AcWorkPreviewData {
                 source: .clipboard,
                 status: .pending,
                 title: "设计规范链接",
-                previewText: "AcWork Focus Workspace 规范：Shell、Toolbar、Filter Rail、Inspector。",
+                previewText: "AcWork Focus Workspace 规范：外壳、工具栏、筛选栏、检查器。",
                 sourceApp: "Safari",
                 originalUrl: "https://example.local/acwork/spec",
                 tags: ["link", "design-system"],
@@ -83,7 +138,7 @@ enum AcWorkPreviewData {
                 type: .screenshot,
                 source: .screenshot,
                 status: .parsed,
-                title: "设置页截图 OCR",
+                title: "设置页截图文字识别",
                 previewText: "截图中识别到模型配置、权限状态、快捷键状态。",
                 ocrText: "模型配置 / 权限状态 / 快捷键状态 / 本地优先",
                 tags: ["screenshot", "ocr"],
@@ -95,7 +150,7 @@ enum AcWorkPreviewData {
                 type: .text,
                 source: .agent,
                 status: .distilled,
-                title: "Agent 生成代码片段",
+                title: "智能体生成代码片段",
                 previewText: "func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem { item == .clipboard ? .inbox : item }",
                 tags: ["agent", "code"],
                 metadata: ["scenario": "populated", "contentKind": "code", "language": "swift"],
@@ -120,7 +175,7 @@ enum AcWorkPreviewData {
                 source: .file,
                 status: .inbox,
                 title: "交互动效参考视频",
-                previewText: "用于比对工作台卡片进入动画和 Inspector 展开方式。",
+                previewText: "用于比对工作台卡片进入动画和检查器展开方式。",
                 tags: ["video", "motion"],
                 metadata: ["scenario": "populated", "contentKind": "video"],
                 createdAt: fixedNow.addingTimeInterval(-9_000)

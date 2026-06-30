@@ -1219,12 +1219,12 @@ public final class SettingsViewModel: ObservableObject {
         guard trimmed.isEmpty == false else { return [:] }
 
         guard let data = trimmed.data(using: .utf8) else {
-            throw NSError(domain: "AcMind.Settings", code: 1, userInfo: [NSLocalizedDescriptionKey: "Frontmatter 模板不是有效的 UTF-8 文本"])
+            throw NSError(domain: "AcMind.Settings", code: 1, userInfo: [NSLocalizedDescriptionKey: "元数据头模板不是有效的 UTF-8 文本"])
         }
 
         let object = try JSONSerialization.jsonObject(with: data, options: [])
         guard let dict = object as? [String: Any] else {
-            throw NSError(domain: "AcMind.Settings", code: 2, userInfo: [NSLocalizedDescriptionKey: "Frontmatter 模板必须是 JSON 对象"])
+            throw NSError(domain: "AcMind.Settings", code: 2, userInfo: [NSLocalizedDescriptionKey: "元数据头模板必须是 JSON 对象"])
         }
 
         var result: [String: String] = [:]

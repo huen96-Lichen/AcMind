@@ -86,6 +86,18 @@ enum DebugAcWorkAuditExporter {
             viewMode: nil
         )
         try exportContentViewScreenshot(
+            outputDirectory.appendingPathComponent("1180x720-workspace-collapsed-sidebar.png"),
+            size: compactSize,
+            appState: appState,
+            container: serviceContainer,
+            pinActions: pinActions,
+            workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+            inboxScenario: .populated,
+            sidebarSelection: .home,
+            viewMode: nil,
+            sidebarCollapsed: true
+        )
+        try exportContentViewScreenshot(
             outputDirectory.appendingPathComponent("1180x720-inbox.png"),
             size: compactSize,
             appState: appState,
@@ -321,6 +333,61 @@ enum DebugAcWorkAuditExporter {
                 sidebarSelection: .home,
                 viewMode: nil
             )
+        case "workspace-collapsed":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1180x720-workspace-collapsed-sidebar.png"),
+                size: compactSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil,
+                sidebarCollapsed: true
+            )
+        case "workspace-collapsed-hover-inbox":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1180x720-workspace-collapsed-sidebar-hover-inbox.png"),
+                size: compactSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil,
+                sidebarCollapsed: true,
+                forcedHoverItem: .inbox
+            )
+        case "workspace-collapsed-hover-model":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1180x720-workspace-collapsed-sidebar-hover-model.png"),
+                size: compactSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil,
+                sidebarCollapsed: true,
+                forcedHoverItem: .modelManagement
+            )
+        case "workspace-collapsed-hover-settings":
+            try exportContentViewScreenshot(
+                outputDirectory.appendingPathComponent("1180x720-workspace-collapsed-sidebar-hover-settings.png"),
+                size: compactSize,
+                appState: appState,
+                container: serviceContainer,
+                pinActions: pinActions,
+                workspaceRepository: PreviewWorkspaceDashboardRepository(phase: .loaded),
+                inboxScenario: .populated,
+                sidebarSelection: .home,
+                viewMode: nil,
+                sidebarCollapsed: true,
+                forcedSettingsHover: true
+            )
         case "inbox":
             try exportContentViewScreenshot(
                 outputDirectory.appendingPathComponent("1180x720-inbox.png"),
@@ -348,10 +415,13 @@ enum DebugAcWorkAuditExporter {
         inboxScenario: AcWorkPreviewScenario,
         sidebarSelection: SidebarItem,
         viewMode: String?,
+        sidebarCollapsed: Bool = false,
+        forcedHoverItem: SidebarItem? = nil,
+        forcedSettingsHover: Bool = false,
         showLayoutDebugOverlay: Bool = false
     ) throws {
         appState.sidebarSelection = sidebarSelection
-        appState.sidebarCollapsed = false
+        appState.sidebarCollapsed = sidebarCollapsed
         appState.isAppReady = true
         appState.initializationPhase = .completed
         appState.mainWindowState = .normal
@@ -361,6 +431,12 @@ enum DebugAcWorkAuditExporter {
         let defaults = UserDefaults.standard
         defaults.set(viewMode ?? "grid", forKey: "acwork.inbox.viewMode")
         defaults.set("standard", forKey: "acwork.inbox.density")
+        DebugSidebarPreviewState.forcedHoverItem = forcedHoverItem
+        DebugSidebarPreviewState.isSettingsHovered = forcedSettingsHover
+        defer {
+            DebugSidebarPreviewState.forcedHoverItem = nil
+            DebugSidebarPreviewState.isSettingsHovered = false
+        }
 
         let rootView = ContentView(
             clipboardPinActions: pinActions,
@@ -370,6 +446,9 @@ enum DebugAcWorkAuditExporter {
         .environmentObject(appState)
         .environmentObject(container)
         .preferredColorScheme(.light)
+        .transaction { transaction in
+            transaction.disablesAnimations = true
+        }
 
         LayoutDebugStore.shared.isOverlayVisible = showLayoutDebugOverlay
         defer { LayoutDebugStore.shared.isOverlayVisible = false }

@@ -15,7 +15,7 @@ enum SettingsSuiteSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: return "通用"
-        case .agent: return "Agent 设置"
+        case .agent: return "智能体设置"
         case .processing: return "信息处理"
         case .knowledge: return "知识库"
         case .tools: return "工具设置"
@@ -29,7 +29,7 @@ enum SettingsSuiteSection: String, CaseIterable, Identifiable {
         case .agent: return "随身能力、说入法、快捷方式"
         case .processing: return "收集、清洗、摘录和转写"
         case .knowledge: return "Vault、目录、冲突策略"
-        case .tools: return "截图、OCR、剪贴板、监听"
+        case .tools: return "截图、文字识别、剪贴板、监听"
         case .advanced: return "权限、诊断、导出与系统"
         }
     }
@@ -89,7 +89,7 @@ struct SettingsSuiteView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                Text("统一管理基础偏好、Agent、知识库和工具链，尽量保持一层就能找到。")
+                Text("统一管理基础偏好、智能体、知识库和工具链，常用项尽量一步可达。")
                     .font(.system(size: 13.5))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -105,7 +105,7 @@ struct SettingsSuiteView: View {
                     tint: AppSurfaceTokens.secondaryText
                 )
                 AppSurfaceMetricTile(
-                    title: "Agent 状态",
+                    title: "智能体状态",
                     value: SettingsStatusLabelFormatter.binaryState(
                         isEnabled: viewModel.companionVoiceEnabled,
                         enabledText: "已启用",
@@ -231,7 +231,7 @@ struct SettingsSuiteView: View {
 
                     Picker("语言", selection: $viewModel.language) {
                         Text("简体中文").tag("zh-CN")
-                        Text("English").tag("en")
+                        Text("英文").tag("en")
                     }
                     .pickerStyle(.segmented)
 
@@ -240,7 +240,7 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "快捷摘要", subtitle: "常用能力") {
+            settingsCard(title: "快捷总览", subtitle: "常用能力") {
                 VStack(spacing: 10) {
                     settingsRow(key: "主窗口", value: "⌘0")
                     settingsRow(key: "灵动大陆", value: "⌘⇧Space")
@@ -252,7 +252,7 @@ struct SettingsSuiteView: View {
 
     private var agentSection: some View {
         VStack(spacing: 16) {
-            settingsCard(title: "Agent 空间", subtitle: "执行中枢与待命状态") {
+            settingsCard(title: "智能体空间", subtitle: "执行中枢与空闲状态") {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle("启用说入法", isOn: $viewModel.companionVoiceEnabled)
                     Toggle("启用快捷指令", isOn: $viewModel.companionShortcutsEnabled)
@@ -261,7 +261,7 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "权限", subtitle: "Agent 运行所需") {
+            settingsCard(title: "权限", subtitle: "智能体运行所需") {
                 VStack(alignment: .leading, spacing: 8) {
                     settingsStatusRow(label: "麦克风", status: viewModel.microphonePermissionStatus.displayName, color: permissionBadgeColor(for: viewModel.microphonePermissionStatus))
                     settingsStatusRow(label: "无障碍", status: viewModel.accessibilityPermissionStatus.displayName, color: permissionBadgeColor(for: viewModel.accessibilityPermissionStatus))
@@ -286,10 +286,10 @@ struct SettingsSuiteView: View {
 
     private var processingSection: some View {
         VStack(spacing: 16) {
-            settingsCard(title: "信息处理", subtitle: "把碎片内容变成可沉淀资产") {
+            settingsCard(title: "信息处理", subtitle: "把碎片内容整理成可保存结果") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("自动剪贴板采集", isOn: $viewModel.autoCaptureClipboard)
-                    Toggle("自动前置 Frontmatter", isOn: $viewModel.autoFrontmatter)
+                    Toggle("自动前置元数据头", isOn: $viewModel.autoFrontmatter)
                     Toggle("自动备份（每周）", isOn: $viewModel.autoBackupEnabled)
                     Picker("导出目标", selection: $viewModel.defaultExportTarget) {
                         ForEach(ExportTarget.allCases, id: \.self) { target in
@@ -301,7 +301,7 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "转写 / 摘录", subtitle: "处理结果会进入收集链路") {
+            settingsCard(title: "转写 / 摘录", subtitle: "处理结果会先进入收集箱") {
                 VStack(alignment: .leading, spacing: 8) {
                     settingsRow(key: "默认语言", value: viewModel.voiceDefaultLanguage)
                     settingsRow(key: "翻译目标", value: translationLanguageDisplayName(viewModel.translationLanguage))
@@ -321,7 +321,7 @@ struct SettingsSuiteView: View {
 
     private var knowledgeSection: some View {
         VStack(spacing: 16) {
-            settingsCard(title: "Vault", subtitle: "Obsidian / Markdown 归档") {
+            settingsCard(title: "库", subtitle: "知识库 / 文稿归档") {
                 VStack(alignment: .leading, spacing: 12) {
                     TextField("Vault 路径", text: $viewModel.vaultPath)
                         .textFieldStyle(.roundedBorder)
@@ -335,7 +335,7 @@ struct SettingsSuiteView: View {
                     .pickerStyle(.menu)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Frontmatter 模板 (JSON)")
+                        Text("元数据头模板（JSON）")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
 
@@ -357,7 +357,7 @@ struct SettingsSuiteView: View {
 
     private var toolsSection: some View {
         VStack(spacing: 16) {
-            settingsCard(title: "工具集", subtitle: "截图、OCR、监听与语音") {
+            settingsCard(title: "工具集", subtitle: "截图、文字识别、监听与语音") {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("自动监听剪贴板", isOn: $viewModel.autoCaptureClipboard)
                     Text("截图自动打码和敏感信息检测已经接入实际捕获流程；滚动截图也已并入统一截图模式。")
@@ -448,9 +448,9 @@ struct SettingsSuiteView: View {
                 }
             }
 
-            settingsCard(title: "状态概览", subtitle: "完整本机状态已集中到主侧边栏的「状态」") {
+            settingsCard(title: "状态总览", subtitle: "完整本机状态已集中到主侧边栏的「状态」") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("这里不再展示诊断看板，只保留跳转。")
+                    Text("诊断看板已移到侧边栏。")
                         .font(.system(size: 12))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                     Button("查看状态") {

@@ -3,7 +3,7 @@ import SwiftUI
 import AcMindKit
 
 // MARK: - Workbench View
-// 工作台 - Obsidian / 项目 / 知识沉淀空间
+// 工作台 - 知识库 / 项目 / 知识沉淀空间
 
 struct WorkbenchView: View {
     @StateObject private var viewModel: WorkbenchViewModel
@@ -15,7 +15,7 @@ struct WorkbenchView: View {
     var body: some View {
         AcWorkShell(
             title: "工作台",
-            subtitle: "Obsidian / 项目 / 知识沉淀空间",
+            subtitle: "知识库 / 项目 / 知识沉淀空间",
             headerActions: AnyView(
                 HStack(spacing: 8) {
                     Button(action: { viewModel.presentNewProjectEditor() }) {
@@ -107,7 +107,7 @@ struct WorkbenchView: View {
                 AppSurfaceCard(title: "今日整理", subtitle: "\(viewModel.todayItems.count) 项", padding: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         if viewModel.todayItems.isEmpty {
-                            Text("今日暂无待整理内容")
+                            Text("今天尚未开始整理")
                                 .font(.caption)
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                         } else {
@@ -147,12 +147,12 @@ struct WorkbenchView: View {
                     }
                 }
 
-                AppSurfaceCard(title: "Obsidian", subtitle: "外部知识库入口", padding: 14) {
+                AppSurfaceCard(title: "知识库", subtitle: "外部知识库入口", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         Button(action: { viewModel.openObsidian() }) {
                             HStack {
                                 Image(systemName: "book.closed")
-                                Text("打开 Obsidian")
+                                Text("打开知识库")
                             }
                         }
                         .buttonStyle(.plain)
@@ -176,7 +176,7 @@ struct WorkbenchView: View {
                             .buttonStyle(.plain)
                             .font(.caption)
                         } else {
-                            Text("当前收集箱里没有待归档内容。")
+                            Text("当前收集箱暂无待归档内容。")
                                 .font(.caption)
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
@@ -222,7 +222,7 @@ struct WorkbenchView: View {
             }
             .padding()
 
-            AppSurfaceCard(title: "工作台摘要", subtitle: "按项目、笔记和归档拆层", padding: 14) {
+            AppSurfaceCard(title: "工作台总览", subtitle: "按项目、笔记和归档拆层", padding: 14) {
                 HStack(spacing: 10) {
                     workbenchSummaryMetric(title: "当前项目", value: viewModel.selectedProject?.name ?? "未选择")
                     workbenchSummaryMetric(title: "可见笔记", value: "\(viewModel.filteredNotes.count)")
@@ -271,7 +271,7 @@ struct WorkbenchView: View {
 
     private var emptyStateTitle: String {
         if viewModel.projects.isEmpty {
-            return "还没有项目"
+            return "暂无项目"
         }
         return viewModel.searchQuery.isEmpty ? "暂无笔记" : "未找到匹配内容"
     }
@@ -1043,7 +1043,7 @@ struct WorkbenchArchiveSheet: View {
                     Text("待归档")
                         .font(.title3)
                         .fontWeight(.semibold)
-                    Text("当前收集箱里尚未处理的条目。")
+                    Text("当前收集箱里暂无待处理条目。")
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -1083,7 +1083,7 @@ struct WorkbenchArchiveSheet: View {
                     }
 
                     if items.isEmpty {
-                        Text("当前没有待归档条目。")
+                        Text("暂无待归档条目。")
                             .font(.body)
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .padding(.top, 12)

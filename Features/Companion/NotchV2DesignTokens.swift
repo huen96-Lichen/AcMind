@@ -85,7 +85,7 @@ enum NotchV2Page: String, CaseIterable, Identifiable {
         case .overview: return "本机"
         case .launcher: return "启动器"
         case .music: return "音乐"
-        case .agent: return "AI"
+        case .agent: return "智能"
         case .schedule: return "日程"
         case .systemStatus: return "状态"
         case .settings: return "设置"

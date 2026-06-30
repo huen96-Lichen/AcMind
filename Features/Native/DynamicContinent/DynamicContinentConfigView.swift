@@ -23,9 +23,9 @@ struct DynamicContinentConfigView: View {
     }
 
     enum ConfigSection: String, CaseIterable, Identifiable {
-        case overviewAppearance = "概览与外观"
+        case overviewAppearance = "总览与外观"
         case behavior = "行为"
-        case permissionsDebug = "权限与调试"
+        case permissionsDebug = "权限与开关"
 
         var id: String { rawValue }
 
@@ -43,11 +43,11 @@ struct DynamicContinentConfigView: View {
     private typealias Lay = AcMindDesignTokens.Native.Layout
 
     private enum LocalTokens {
-        static let pageMaxWidth: CGFloat = 1040
-        static let pagePadding: CGFloat = 20
-        static let sectionSpacing: CGFloat = 12
-        static let cardSpacing: CGFloat = 10
-        static let previewCardGap: CGFloat = 12
+        static let pageMaxWidth: CGFloat = AppSurfaceTokens.Layout.workspaceMaxWidth
+        static let pagePadding: CGFloat = AppSurfaceTokens.Layout.workspacePagePadding
+        static let sectionSpacing: CGFloat = AppSurfaceTokens.Layout.workspaceSectionSpacing
+        static let cardSpacing: CGFloat = AppSurfaceTokens.Layout.workspaceGridSpacing
+        static let previewCardGap: CGFloat = AppSurfaceTokens.Layout.workspaceGridSpacing
         static let mainCardRadius: CGFloat = T.mainCardRadius
         static let secondaryCardRadius: CGFloat = T.secondaryCardRadius
         static let inlineBlockRadius: CGFloat = T.inlineBlockRadius
@@ -70,8 +70,8 @@ struct DynamicContinentConfigView: View {
         static let notchPreviewHeight: CGFloat = 130
         static let moduleCardHeight: CGFloat = 116
         static let permissionRowHeight: CGFloat = 48
-        static let summaryWidth: CGFloat = 224
-        static let summaryBlockGap: CGFloat = 10
+        static let summaryWidth: CGFloat = AppSurfaceTokens.Layout.summaryWidth
+        static let summaryBlockGap: CGFloat = AppSurfaceTokens.Layout.workspaceGridSpacing
         static let previewSurfaceMinHeight: CGFloat = 116
         static let previewStripeHeight: CGFloat = 74
         static let moduleListRowHeight: CGFloat = 42
@@ -86,29 +86,38 @@ struct DynamicContinentConfigView: View {
 
     var body: some View {
         AcWorkShell(
-            title: "灵动大陆 & 配置",
-            subtitle: "伴随能力的配置中心。",
-            leadingRailWidth: 208,
-            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
-            leadingRail: {
-                dynamicContinentSummaryRail
-            },
+            title: "灵动大陆",
+            subtitle: "管理伴随能力、显示行为与系统权限",
+            leadingRailWidth: 0,
+            trailingRailWidth: 0,
+            leadingRail: { EmptyView() },
             content: {
                 ScrollView {
                     VStack(alignment: .leading, spacing: LocalTokens.sectionSpacing) {
-                        header
-                            .padding(.bottom, LocalTokens.headerTabGap)
+                        AppSurfaceSummaryStrip(chips: [
+                            AppSurfaceSummaryChip(title: "启用", value: viewModel.isEnabled ? "已启用" : "已关闭", tint: viewModel.isEnabled ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentSecondary),
+                            AppSurfaceSummaryChip(title: "模块", value: "\(viewModel.activeModuleCount)", tint: AppSurfaceTokens.accentBlue),
+                            AppSurfaceSummaryChip(title: "展示", value: "\(viewModel.overviewVisibleModules.count)/\(viewModel.modules.count)", tint: AppSurfaceTokens.accentOrange)
+                        ])
+
                         sectionTabs
                         sectionContent
+
+                        AppSurfaceCard(title: "权限与开关", subtitle: "轻量摘要", padding: 14) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                railRow(title: "日历", value: calendarPermissionText)
+                                railRow(title: "麦克风", value: permissionManager.statuses[.microphone]?.displayName ?? "未知")
+                                railRow(title: "通知", value: permissionManager.statuses[.notifications]?.displayName ?? "未知")
+                                railRow(title: "浮窗", value: SettingsStatusLabelFormatter.binaryState(isEnabled: viewModel.showSystemEventHUD, enabledText: "开启", disabledText: "关闭"))
+                            }
+                        }
                     }
                     .padding(LocalTokens.pagePadding)
                     .frame(maxWidth: LocalTokens.pageMaxWidth, alignment: .leading)
                 }
                 .background(AppSurfaceTokens.contentBackground)
             },
-            trailingRail: {
-                dynamicContinentStatusRail
-            }
+            trailingRail: { EmptyView() }
         )
         .onChange(of: viewModel.isEnabled) { _, _ in
             viewModel.persistDisplaySettings()
@@ -154,7 +163,7 @@ struct DynamicContinentConfigView: View {
     private var dynamicContinentSummaryRail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "当前分区", subtitle: "固定外壳摘要", padding: 14) {
+            AppSurfaceCard(title: "当前分区", subtitle: "配置上下文", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         railRow(title: "选中", value: selectedSection.rawValue)
                         railRow(title: "模块", value: "\(viewModel.activeModuleCount)")
@@ -162,7 +171,7 @@ struct DynamicContinentConfigView: View {
                     }
                 }
 
-                AppSurfaceCard(title: "开关状态", subtitle: "只读摘要", padding: 14) {
+                AppSurfaceCard(title: "开关状态", subtitle: "只读信息", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         railRow(
                             title: "启用",
@@ -201,7 +210,7 @@ struct DynamicContinentConfigView: View {
             VStack(alignment: .leading, spacing: 16) {
                 AppSurfaceCard(title: "权限", subtitle: "高级信息", padding: 14) {
                     VStack(alignment: .leading, spacing: 8) {
-                        railRow(title: "EventKit", value: calendarPermissionText)
+                        railRow(title: "日历", value: calendarPermissionText)
                         railRow(title: "麦克风", value: permissionManager.statuses[.microphone]?.displayName ?? "未知")
                         railRow(title: "通知", value: permissionManager.statuses[.notifications]?.displayName ?? "未知")
                     }
@@ -212,7 +221,7 @@ struct DynamicContinentConfigView: View {
                         railRow(title: "热区", value: viewModel.hoverExpandDelay.formatted(.number.precision(.fractionLength(1))))
                         railRow(title: "收起宽度", value: "\(Int(viewModel.nonNotchCollapsedWidth))")
                         railRow(
-                            title: "HUD",
+                            title: "浮窗",
                             value: SettingsStatusLabelFormatter.binaryState(
                                 isEnabled: viewModel.showSystemEventHUD,
                                 enabledText: "开启",
@@ -298,13 +307,13 @@ struct DynamicContinentConfigView: View {
 
     private var overviewAppearancePage: some View {
         VStack(alignment: .leading, spacing: 16) {
-            AppSurfaceCard(title: "灵动大陆", subtitle: "当前配置与示意", padding: 14) {
+            AppSurfaceCard(title: "灵动大陆", subtitle: "当前配置总览", padding: 14) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("灵动大陆正在作为伴随能力的主配置中心运行。")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
-                        Text("这里集中管理启用、展开、HUD、模块可见性和快捷入口。")
+                        Text("这里集中管理启用、展开、浮窗、模块可见性和快捷入口。")
                             .font(.system(size: 11.5))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -338,7 +347,7 @@ struct DynamicContinentConfigView: View {
                         tint: AppSurfaceTokens.accentOrange
                     ),
                     AppSurfaceSummaryChip(
-                        title: "HUD",
+                        title: "浮窗",
                         value: viewModel.showSystemEventHUD ? "开启" : "关闭",
                         tint: viewModel.showSystemEventHUD ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentSecondary
                     )
@@ -347,7 +356,7 @@ struct DynamicContinentConfigView: View {
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {
-                AppSurfaceCard(title: "配置与示意", subtitle: "每次修改都会同步刷新这里的示意区", padding: 14) {
+                AppSurfaceCard(title: "配置总览", subtitle: "每次修改都会同步刷新这里的展示区", padding: 14) {
                     VStack(alignment: .leading, spacing: LocalTokens.previewCardGap) {
                         HStack(spacing: LocalTokens.previewCardGap) {
                             previewSurfaceCard(
@@ -381,7 +390,7 @@ struct DynamicContinentConfigView: View {
 
                 AppSurfaceCard(title: "视觉原则", subtitle: "展开时只保留一层信息密度。", padding: 12) {
                     VStack(alignment: .leading, spacing: 0) {
-                        infoRow(icon: "rectangle.expand.vertical", title: "展开态", desc: "状态条 + 主模块 + HUD。")
+                        infoRow(icon: "rectangle.expand.vertical", title: "展开态", desc: "状态条 + 主模块 + 浮窗。")
                         Divider()
                         infoRow(icon: "arrow.up.left.and.arrow.down.right", title: "收起态", desc: "只保留最低存在感。")
                     }
@@ -394,7 +403,7 @@ struct DynamicContinentConfigView: View {
                 summaryBlock(title: "反馈", icon: "bubble.left.and.bubble.right", color: .orange) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("HUD 时长")
+                            Text("浮窗时长")
                                 .font(.system(size: 11))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Spacer()
@@ -411,7 +420,7 @@ struct DynamicContinentConfigView: View {
                         }
                     }
                 }
-                summaryBlock(title: "状态概览", icon: "desktopcomputer", color: .blue) {
+                summaryBlock(title: "状态总览", icon: "desktopcomputer", color: .blue) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("完整本机状态已集中到主侧边栏的「状态」。")
                             .font(.system(size: 11))
@@ -482,7 +491,7 @@ struct DynamicContinentConfigView: View {
         [
             viewModel.isEnabled ? "启用" : "关闭",
             viewModel.autoExpand ? "自动展开" : "手动切换",
-            viewModel.showSystemEventHUD ? "HUD 开启" : "HUD 关闭"
+            viewModel.showSystemEventHUD ? "浮窗开启" : "浮窗关闭"
         ]
         .joined(separator: " · ")
     }
@@ -492,7 +501,7 @@ struct DynamicContinentConfigView: View {
         HStack(spacing: 8) {
             previewBadge(title: "启用", value: viewModel.isEnabled ? "开" : "关", tint: viewModel.isEnabled ? .green : .gray)
             previewBadge(title: "自动", value: viewModel.autoExpand ? "开" : "关", tint: viewModel.autoExpand ? .blue : .gray)
-            previewBadge(title: "HUD", value: viewModel.showSystemEventHUD ? "开" : "关", tint: viewModel.showSystemEventHUD ? .orange : .gray)
+            previewBadge(title: "浮窗", value: viewModel.showSystemEventHUD ? "开" : "关", tint: viewModel.showSystemEventHUD ? .orange : .gray)
             previewBadge(title: "录屏", value: permissionManager.statuses[.screenRecording]?.displayName ?? "未知", tint: permissionManager.statuses[.screenRecording] == .authorized ? .green : .orange)
         }
     }
@@ -634,7 +643,7 @@ struct DynamicContinentConfigView: View {
     }
 
     private var moduleManagementSection: some View {
-        AppSurfaceCard(title: "展示模块", subtitle: "固定外壳下的模块开关", padding: 14) {
+        AppSurfaceCard(title: "展示模块", subtitle: "控制可见模块", padding: 14) {
             VStack(alignment: .leading, spacing: LocalTokens.contentRowGap) {
                 ForEach(viewModel.modules) { module in
                     AppSurfaceCard(padding: 12) {
@@ -871,7 +880,7 @@ struct DynamicContinentConfigView: View {
                                 .font(.system(size: 11, weight: .medium))
                         }
                         HStack {
-                            Text("HUD 时长")
+                            Text("浮窗时长")
                                 .font(.system(size: 11))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Spacer()
@@ -889,7 +898,7 @@ struct DynamicContinentConfigView: View {
                     }
                 }
 
-                summaryBlock(title: "状态概览", icon: "desktopcomputer", color: .blue) {
+                summaryBlock(title: "状态总览", icon: "desktopcomputer", color: .blue) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("完整本机状态已集中到主侧边栏的「状态」。")
                             .font(.system(size: 11))
@@ -1002,7 +1011,7 @@ struct DynamicContinentConfigView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 12) {
-                summaryBlock(title: "权限概览", icon: "lock.shield", color: .green) {
+                summaryBlock(title: "权限总览", icon: "lock.shield", color: .green) {
                     VStack(alignment: .leading, spacing: 8) {
                         let allAuthorized = checkAllPermissions()
                         HStack {
@@ -1037,7 +1046,7 @@ struct DynamicContinentConfigView: View {
     private var hotZoneSection: some View {
         AppSurfaceCard(title: "热区配置", subtitle: "桌面四角与收起语义", padding: 0) {
             if hotCornerViewModel.isLoading {
-                ProgressView("正在加载热区设置")
+                ProgressView("热区设置加载中")
                     .padding(14)
             } else {
                 VStack(spacing: 0) {
@@ -1167,13 +1176,13 @@ struct DynamicContinentConfigView: View {
     private func moduleSummary(for name: String) -> String {
         switch name {
         case "音乐模块":
-            return "播放摘要与基础控制"
-        case "Agent 模块":
+            return "播放总览与基础控制"
+        case "智能体模块":
             return "对话与工具入口"
         case "日程模块":
             return "今日最近事项"
         case "系统状态模块":
-            return "设备概览与采样"
+            return "设备总览与采样"
         default:
             return "灵动大陆内容"
         }
@@ -1199,9 +1208,9 @@ struct DynamicContinentConfigView: View {
         case .music:
             return "播放中时接管收起态或主内容。"
         case .schedule:
-            return "今日日程摘要与下一步提示。"
+            return "今日日程总览与下一步提示。"
         case .agent:
-            return "默认空闲态与最近任务摘要。"
+            return "空闲态与近期任务总览。"
         case .systemStatus:
             return "权限异常、电量异常与系统提醒。"
         }
@@ -1459,7 +1468,7 @@ enum HotCornerActionKind: String, CaseIterable, Identifiable {
         case .openURL: return "打开链接"
         case .toggleFeature: return "切换功能"
         case .openInternalRoute: return "打开页面"
-        case .showPanel: return "显示面板"
+        case .showPanel: return "显示区域"
         }
     }
 }
@@ -1478,7 +1487,7 @@ extension HotCornerAction {
         case let .openInternalRoute(routeIdentifier):
             return "打开页面 · \(HotCornerRoutePreset.displayName(for: routeIdentifier))"
         case let .showPanel(panelIdentifier):
-            return "显示面板 · \(HotCornerPanelPreset.displayName(for: panelIdentifier))"
+            return "显示区域 · \(HotCornerPanelPreset.displayName(for: panelIdentifier))"
         }
     }
 }
@@ -1577,19 +1586,19 @@ struct HotCornerBindingEditorSheet: View {
             Group {
                 switch actionKind {
                 case .none:
-                    Text("当前不会触发任何动作。")
+                    Text("当前不执行任何动作。")
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 case .openApp:
                     VStack(alignment: .leading, spacing: 10) {
-                        TextField("Bundle Identifier", text: $bundleIdentifier)
+                        TextField("应用标识符", text: $bundleIdentifier)
                             .textFieldStyle(.roundedBorder)
                         HStack {
                             Button("选择应用") {
                                 chooseApplication()
                             }
                             .buttonStyle(.bordered)
-                            Text(bundleIdentifier.isEmpty ? "请选择一个 .app" : bundleIdentifier)
+                            Text(bundleIdentifier.isEmpty ? "请选择 .app 应用" : bundleIdentifier)
                                 .font(.caption)
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                             Spacer()
@@ -1613,7 +1622,7 @@ struct HotCornerBindingEditorSheet: View {
                     }
                     .pickerStyle(.menu)
                 case .showPanel:
-                    Picker("面板", selection: $panelIdentifier) {
+                    Picker("区域", selection: $panelIdentifier) {
                         Text("灵动岛").tag("notchPanel")
                         Text("灵动胶囊").tag("desktopCapsule")
                     }

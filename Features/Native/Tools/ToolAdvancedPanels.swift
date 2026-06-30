@@ -129,7 +129,7 @@ struct DocumentConverterPanel: View {
                             sourceCard
                         }
 
-                        AppSurfaceCard(title: "Markdown 输出", subtitle: "可复制、可保存、可回看", padding: 16) {
+                        AppSurfaceCard(title: "文稿输出", subtitle: "可复制、可保存、可回看", padding: 16) {
                             outputCard
                         }
                     }
@@ -147,7 +147,7 @@ struct DocumentConverterPanel: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("把 PDF、Word、网页导出文档和 Markdown 文件转换成可编辑的 Markdown。")
+                Text("把 PDF、Word、网页导出文档和文稿文件转换成可编辑文稿。")
                     .font(.caption)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -166,10 +166,10 @@ struct DocumentConverterPanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("优先尝试 `markitdown`，如果本机没有装，就退回到本地解析。")
+            Text("优先尝试 `markitdown`，没有安装时则退回本地解析。")
                 .font(.body)
 
-            Text("PDF 会用 PDFKit 抽取文本，DOCX / DOC / RTF / HTML 会优先用 `textutil`，Markdown 和纯文本直接读取。")
+            Text("PDF 用 PDFKit 抽取文本，DOCX / DOC / RTF / HTML 优先用 `textutil`，文稿和纯文本直接读取。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -193,7 +193,7 @@ struct DocumentConverterPanel: View {
                 Button {
                     viewModel.convert()
                 } label: {
-                    Text(viewModel.isConverting ? ToolStatusLabelFormatter.processingText : "转换为 Markdown")
+                    Text(viewModel.isConverting ? ToolStatusLabelFormatter.processingText : "转换为文稿")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isConverting || viewModel.sourceURL == nil)
@@ -209,7 +209,7 @@ struct DocumentConverterPanel: View {
                         .textSelection(.enabled)
                 }
             } else {
-                Text("还没有选择文档。")
+                Text("尚未选择文档。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -241,7 +241,7 @@ struct DocumentConverterPanel: View {
     private var outputCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Markdown 输出")
+                Text("文稿输出")
                     .font(.headline)
 
                 Spacer()
@@ -257,7 +257,7 @@ struct DocumentConverterPanel: View {
                 Button {
                     viewModel.saveOutput()
                 } label: {
-                    Label("保存为 .md", systemImage: "square.and.arrow.down")
+                    Label("保存为文稿", systemImage: "square.and.arrow.down")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.outputMarkdown.isEmpty)
@@ -340,7 +340,7 @@ final class DocumentConverterViewModel: ObservableObject {
                 let result = try await DocumentConversionSupport.convert(sourceURL: sourceURL)
                 await MainActor.run {
                     self.outputMarkdown = result.markdown
-                    self.statusText = ToolStatusLabelFormatter.completed("转换为 Markdown")
+                    self.statusText = ToolStatusLabelFormatter.completed("转换为文稿")
                     self.engineLabel = result.engine
                     self.isConverting = false
                     ToastManager.shared.show(.success, ToolStatusLabelFormatter.convertedToMarkdown("文档"))
@@ -359,7 +359,7 @@ final class DocumentConverterViewModel: ObservableObject {
 
     func copyOutput() {
         guard outputMarkdown.isEmpty == false else {
-            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("Markdown"))
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.nothingToCopy("文稿"))
             return
         }
 
@@ -545,7 +545,7 @@ struct OCRPanel: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("OCR 识别")
+            Text("文字识别")
                     .font(.title2)
                     .fontWeight(.semibold)
 
@@ -568,10 +568,10 @@ struct OCRPanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("直接调用本机 Vision OCR。")
+            Text("直接调用本机 Vision 文字识别。")
                 .font(.body)
 
-            Text("如果你已经把截图放进剪贴板，也可以直接从剪贴板识别。")
+            Text("截图已在剪贴板时，也可以直接识别。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -618,7 +618,7 @@ struct OCRPanel: View {
                         .textSelection(.enabled)
                 }
             } else {
-                Text("还没有选择图片。")
+                Text("尚未选择图片。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -920,7 +920,7 @@ struct ImageProcessingPanel: View {
                     .font(.caption)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             } else {
-                Text("还没有选择图片。")
+                Text("尚未选择图片。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -1030,7 +1030,7 @@ struct ImageProcessingPanel: View {
                     .background(AppSurfaceTokens.primaryText.opacity(0.02))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                Text("处理后会显示结果图。")
+                Text("处理完成后显示结果图。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 240)
@@ -1446,7 +1446,7 @@ struct BatchRenamePanel: View {
                         .textSelection(.enabled)
                 }
             } else {
-                Text("还没有选择文件夹。")
+                Text("尚未选择文件夹。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }

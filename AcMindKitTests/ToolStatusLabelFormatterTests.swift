@@ -79,7 +79,7 @@ final class ToolStatusLabelFormatterTests: XCTestCase {
         XCTAssertEqual(ToolStatusLabelFormatter.imageProcessed(), "图片已处理")
         XCTAssertEqual(ToolStatusLabelFormatter.chooseFolder(), "请选择文件夹")
         XCTAssertEqual(ToolStatusLabelFormatter.noRenamableItems(), "没有可重命名的项目")
-        XCTAssertEqual(ToolStatusLabelFormatter.duplicateTargetNames(), "预览中存在重复目标名称")
+        XCTAssertEqual(ToolStatusLabelFormatter.duplicateTargetNames(), "结果中存在重复目标名称")
         XCTAssertEqual(ToolStatusLabelFormatter.batchRenameCompleted(), "批量重命名完成")
         XCTAssertEqual(
             ToolStatusLabelFormatter.decodeFailed(),

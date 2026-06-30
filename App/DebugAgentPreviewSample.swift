@@ -7,8 +7,8 @@ enum DebugAgentPreviewSample {
     static func makeViewModel() -> AgentViewModel {
         let viewModel = AgentViewModel()
         viewModel.availableModelOptions = [
-            AgentViewModel.ModelOption(providerId: "openai", providerName: "OpenAI", modelName: "gpt-4.1"),
-            AgentViewModel.ModelOption(providerId: "claude", providerName: "Anthropic", modelName: "claude-3.5-sonnet")
+            AgentViewModel.ModelOption(providerId: "openai", providerName: "云端模型 A", modelName: "gpt-4.1"),
+            AgentViewModel.ModelOption(providerId: "claude", providerName: "云端模型 B", modelName: "claude-3.5-sonnet")
         ]
         viewModel.selectedModelOption = viewModel.availableModelOptions.first
         viewModel.selectedModelLabel = viewModel.availableModelOptions.first?.displayName ?? "未配置模型"
@@ -25,6 +25,32 @@ enum DebugAgentPreviewSample {
             ChatMessage(sessionId: "preview", role: .user, content: "帮我解释这段脚本在做什么？"),
             ChatMessage(sessionId: "preview", role: .assistant, content: "它会先读取配置，然后在失败时回退到默认值。")
         ]
+        viewModel.quickAskHistory = [
+            ChatSession(
+                id: "preview",
+                title: "解释配置脚本",
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                metadata: ["kind": "quickAsk"],
+                createdAt: Date(timeIntervalSince1970: 1_719_590_400),
+                updatedAt: Date(timeIntervalSince1970: 1_719_594_000)
+            ),
+            ChatSession(
+                id: "preview-2",
+                title: "整理日报素材",
+                metadata: ["kind": "quickAsk"],
+                createdAt: Date(timeIntervalSince1970: 1_719_504_000),
+                updatedAt: Date(timeIntervalSince1970: 1_719_507_600)
+            ),
+            ChatSession(
+                id: "preview-3",
+                title: "规划本周任务",
+                metadata: ["kind": "quickAsk"],
+                createdAt: Date(timeIntervalSince1970: 1_719_417_600),
+                updatedAt: Date(timeIntervalSince1970: 1_719_421_200)
+            )
+        ]
+        viewModel.selectedQuickAskSessionId = "preview"
         viewModel.toolCallResult = """
         执行完成
 
@@ -68,7 +94,7 @@ enum DebugAgentPreviewSample {
             ),
             AgentTask(
                 title: "导出周报",
-                description: "导出 markdown 周报",
+                description: "导出 Markdown 周报",
                 status: .waiting,
                 steps: [
                     TaskStep(title: "等待确认", description: "需要用户确认导出路径", status: .running, order: 0)

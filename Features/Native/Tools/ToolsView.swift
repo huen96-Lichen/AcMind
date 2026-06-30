@@ -7,6 +7,7 @@ import AcMindKit
 struct ToolsView: View {
     @StateObject private var viewModel: ToolsViewModel
     @FocusState private var searchFieldFocused: Bool
+    @State private var sortMode: ToolSortMode = .recent
 
     init(viewModel: ToolsViewModel = ToolsViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -15,26 +16,21 @@ struct ToolsView: View {
     var body: some View {
         AcWorkShell(
             title: "工具台",
-            subtitle: "先选工具，再配置运行，最后查看结果",
+            subtitle: "先选工具，再配置参数，最后查看结果",
+            headerActions: AnyView(headerActions),
             searchContent: AnyView(
                 AcSearchField(
                     text: $viewModel.searchQuery,
                     placeholder: "搜索工具...",
-                    width: 248,
+                    width: 260,
                     focusBinding: $searchFieldFocused
                 )
             ),
-            leadingRailWidth: 208,
-            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
-            leadingRail: {
-                toolsFilterRail
-            },
-            content: {
-                toolsGrid
-            },
-            trailingRail: {
-                toolDetailRail
-            }
+            leadingRailWidth: 0,
+            trailingRailWidth: 0,
+            leadingRail: { EmptyView() },
+            content: { toolsCanvas },
+            trailingRail: { EmptyView() }
         )
         .sheet(item: $viewModel.activeToolRoute, onDismiss: {
             viewModel.activeToolRoute = nil
@@ -45,57 +41,91 @@ struct ToolsView: View {
         .background(searchKeyboardShortcut)
     }
 
-    private var toolsFilterRail: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                ToolWorkspaceStageRail(
-                    activeStage: ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute),
-                    selectionSummary: ToolWorkspaceFlow.selectionSummary(filteredCount: viewModel.filteredTools.count),
-                    configurationSummary: ToolWorkspaceFlow.configurationSummary(activeToolRoute: viewModel.activeToolRoute),
-                    reviewSummary: viewModel.recentTools.isEmpty ? "暂无结果" : ToolWorkspaceFlow.reviewSummary(recentCount: viewModel.recentTools.count)
-                )
+    private var headerActions: some View {
+        HStack(spacing: 8) {
+            Menu {
+                Button("聚焦搜索") {
+                    searchFieldFocused = true
+                }
 
-                AppSurfaceCard(title: "工具概览", subtitle: "固定外壳下的轻量摘要", padding: 14) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        railSummaryRow(title: "工具总数", value: "\(viewModel.filteredTools.count)")
-                        railSummaryRow(title: "最近使用", value: "\(viewModel.recentTools.count)")
-                        railSummaryRow(title: "当前分类", value: viewModel.selectedCategory.displayName)
+                Divider()
+
+                Button("全部分类") {
+                    viewModel.selectedCategory = .all
+                }
+
+                ForEach(ToolCategory.allCases.filter { $0 != .all }) { category in
+                    Button(category.displayName) {
+                        viewModel.selectedCategory = category
+                    }
+                }
+            } label: {
+                Label("选择工具", systemImage: "chevron.down")
+            }
+            .buttonStyle(.borderedProminent)
+
+            Menu {
+                ForEach(workflowStarterTools) { tool in
+                    Button(tool.name) {
+                        viewModel.openTool(tool)
+                    }
+                }
+            } label: {
+                Label("新建工作流", systemImage: "plus")
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var workflowStarterTools: [Tool] {
+        [
+            .webDigest,
+            .markdownCleaner,
+            .jsonFormatter,
+            .ocr
+        ].compactMap { route in
+            viewModel.tools.first { $0.route == route }
+        }
+    }
+
+    private var toolsCanvas: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceSectionSpacing) {
+                AppSurfaceCard(title: "分类筛选", subtitle: "按类别和最近使用收窄范围", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+                    VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                        HStack(spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                            Text("分类")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(AppSurfaceTokens.primaryText)
+
+                            Spacer(minLength: 0)
+
+                            sortModeMenu
+                        }
+
+                        categoryFilterBar
                     }
                 }
 
-                AppSurfaceCard(title: "分类筛选", subtitle: "竖排切换区", padding: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(ToolCategory.allCases) { category in
-                            Button {
-                                viewModel.selectedCategory = category
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Text(category.displayName)
-                                    Spacer()
-                                    Text("\(viewModel.toolCount(for: category))")
-                                        .font(.caption2)
+                AppSurfaceCard(title: "工具库", subtitle: "\(displayedTools.count) 个工具", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+                    if displayedTools.isEmpty {
+                        AppSurfaceEmptyState(
+                            icon: "magnifyingglass",
+                            title: "没有匹配的工具",
+                            message: "换个关键词，或者切到其他分类继续查看。"
+                        )
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: AppSurfaceTokens.Layout.workspaceGridSpacing)], spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                            ForEach(displayedTools) { tool in
+                                ToolCard(tool: tool, isSelected: viewModel.activeToolRoute == tool.route) {
+                                    viewModel.openTool(tool)
                                 }
-                                .font(.caption)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(viewModel.selectedCategory == category ? AppSurfaceTokens.cardBackgroundSoft : AppSurfaceTokens.cardBackgroundSoft)
-                                .foregroundStyle(viewModel.selectedCategory == category ? AppSurfaceTokens.primaryText : .primary)
-                                .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
-            }
-            .padding(AppSurfaceTokens.Spacing.lg)
-        }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-    }
 
-    private var toolDetailRail: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "最近使用", subtitle: "可恢复的工具历史", padding: 14) {
+                AppSurfaceCard(title: "最近使用", subtitle: "可恢复的工具历史", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
                     RecentToolsSection(
                         recentTools: viewModel.recentTools,
                         canRestoreRecentTools: viewModel.canRestoreRecentTools,
@@ -110,216 +140,38 @@ struct ToolsView: View {
                         }
                     )
                 }
-
-                AppSurfaceCard(title: "最近控制", subtitle: "历史操作管理", padding: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        railSummaryRow(title: "历史数量", value: "\(viewModel.recentTools.count)")
-                        railSummaryRow(title: "可恢复", value: viewModel.canRestoreRecentTools ? "是" : "否")
-                        Button("清空最近") {
-                            viewModel.clearRecentTools()
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(viewModel.recentTools.isEmpty)
-                    }
-                }
-
-                if let selectedTool {
-                    AppSurfaceCard(title: "工具信息", subtitle: "当前选中的工具", padding: 14) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack(alignment: .top, spacing: 10) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                                        .fill(AppSurfaceTokens.accentBlue.opacity(0.12))
-                                    Image(systemName: selectedTool.icon)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(AppSurfaceTokens.accentBlue)
-                                }
-                                .frame(width: 40, height: 40)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(selectedTool.name)
-                                        .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
-                                        .foregroundStyle(AppSurfaceTokens.primaryText)
-                                        .lineLimit(2)
-                                    Text(selectedTool.description)
-                                        .font(.system(size: AppSurfaceTokens.Typography.caption))
-                                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                railSummaryRow(title: "分类", value: selectedTool.category.displayName)
-                                railSummaryRow(title: "路由", value: selectedTool.route.displayName)
-                                railSummaryRow(title: "标签", value: selectedTool.tags.map(\.displayName).joined(separator: " · "))
-                            }
-
-                            HStack(spacing: 8) {
-                                Button("重新打开") {
-                                    viewModel.openTool(selectedTool)
-                                }
-                                .buttonStyle(.borderedProminent)
-
-                                Button("清空最近") {
-                                    viewModel.clearRecentTools()
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        }
-                    }
-                } else {
-                    AppSurfaceCard(title: "工具信息", subtitle: "选择一个工具后显示信息", padding: 14) {
-                        AcEmptyState(
-                            icon: "wrench.and.screwdriver",
-                            title: "尚未选择工具",
-                            message: "从中间列表里打开一个工具，右侧会只显示这个工具的信息。"
-                        )
-                    }
-                }
             }
-            .padding(AppSurfaceTokens.Spacing.lg)
-        }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-    }
-
-    private var selectedTool: Tool? {
-        guard let activeToolRoute = viewModel.activeToolRoute else { return nil }
-        return viewModel.tools.first { $0.route == activeToolRoute }
-    }
-
-    private func railSummaryRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: AppSurfaceTokens.Typography.caption))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Spacer()
-            Text(value)
-                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .lineLimit(1)
-        }
-    }
-
-    // MARK: - Category Filter Bar
-
-    private var categoryFilterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(ToolCategory.allCases) { category in
-                    Button {
-                        viewModel.selectedCategory = category
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(category.displayName)
-                            Text("\(viewModel.toolCount(for: category))")
-                                .font(.caption2)
-                        }
-                        .font(.caption)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackgroundSoft)
-                        .foregroundStyle(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-                        .clipShape(Capsule(style: .continuous))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(viewModel.selectedCategory == category ? AppSurfaceTokens.accentBlue.opacity(0.28) : AppSurfaceTokens.separator, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-        }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-    }
-
-    // MARK: - Tools Grid
-
-    private var toolsGrid: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                let activeStage = ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute)
-                ToolStageHeader(
-                    title: "工具工作流",
-                    subtitle: "\(ToolWorkspaceFlow.selectionSummary(filteredCount: viewModel.filteredTools.count)) · \(ToolWorkspaceFlow.configurationSummary(activeToolRoute: viewModel.activeToolRoute)) · \(viewModel.recentTools.isEmpty ? "暂无结果" : ToolWorkspaceFlow.reviewSummary(recentCount: viewModel.recentTools.count))",
-                    stage: activeStage
-                )
-
-                toolsOverviewCard
-
-                AppSurfaceCard(title: "工具概览", subtitle: "搜索、筛选与常用操作都放在同一层", padding: 16) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 12) {
-                            overviewMetric(title: "当前分类", value: viewModel.selectedCategory.displayName)
-                            overviewMetric(title: "命中工具", value: "\(viewModel.filteredTools.count)")
-                            overviewMetric(title: "最近使用", value: "\(viewModel.recentTools.count)")
-                        }
-
-                        toolsCategoryStrip
-                    }
-                }
-
-                if viewModel.filteredTools.isEmpty {
-                    AppSurfaceEmptyState(
-                        icon: "magnifyingglass",
-                        title: "没有匹配的工具",
-                        message: "换个关键词，或者切到其他分类继续查看。"
-                    )
-                    .padding(.top, 4)
-                } else {
-                    AppSurfaceCard(title: "结果区", subtitle: viewModel.selectedCategory.displayName, padding: 16) {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                            ForEach(viewModel.filteredTools) { tool in
-                                ToolCard(tool: tool) {
-                                    viewModel.openTool(tool)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(AppSurfaceTokens.Spacing.lg)
+            .padding(AppSurfaceTokens.Layout.workspacePagePadding)
+            .frame(maxWidth: AppSurfaceTokens.Layout.workspaceMaxWidth, alignment: .leading)
         }
         .background(Color.clear)
     }
 
-    private var toolsOverviewCard: some View {
-        AppSurfaceCard(title: "工具台概览", subtitle: "工具矩阵与结果区", padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                AppSurfaceSummaryStrip(chips: [
-                    AppSurfaceSummaryChip(
-                        title: "分类",
-                        value: viewModel.selectedCategory.displayName,
-                        tint: AppSurfaceTokens.accentBlue
-                    ),
-                    AppSurfaceSummaryChip(
-                        title: "命中",
-                        value: "\(viewModel.filteredTools.count) 个",
-                        tint: AppSurfaceTokens.accentGreen
-                    ),
-                    AppSurfaceSummaryChip(
-                        title: "最近",
-                        value: "\(viewModel.recentTools.count) 个",
-                        tint: viewModel.recentTools.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange
-                    )
-                ])
-
-                HStack(spacing: 10) {
-                    overviewMetric(title: "工作阶段", value: ToolWorkspaceFlow.activeStage(activeToolRoute: viewModel.activeToolRoute).title, tint: AppSurfaceTokens.accentBlue)
-                    overviewMetric(title: "筛选状态", value: viewModel.searchQuery.isEmpty ? "未搜索" : "已搜索", tint: viewModel.searchQuery.isEmpty ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
-                    overviewMetric(title: "选中状态", value: selectedTool == nil ? "未选中" : "已打开", tint: selectedTool == nil ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentGreen)
-                }
-
-                Text("顶部先把当前分类、命中数和最近使用亮出来，下面仍然保持原来的工具网格与结果区。")
-                    .font(.system(size: AppSurfaceTokens.Typography.caption))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .lineLimit(2)
-            }
-        }
+    private var displayedTools: [Tool] {
+        sortTools(viewModel.filteredTools)
     }
 
-    private var toolsCategoryStrip: some View {
+    private var sortModeMenu: some View {
+        Menu {
+            ForEach(ToolSortMode.allCases) { mode in
+                Button {
+                    sortMode = mode
+                } label: {
+                    if sortMode == mode {
+                        Label(mode.title, systemImage: "checkmark")
+                    } else {
+                        Text(mode.title)
+                    }
+                }
+            }
+        } label: {
+            Label(sortMode.title, systemImage: "chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .buttonStyle(.bordered)
+    }
+
+    private var categoryFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(ToolCategory.allCases) { category in
@@ -351,22 +203,30 @@ struct ToolsView: View {
         }
     }
 
-    private func overviewMetric(title: String, value: String, tint: Color = AppSurfaceTokens.primaryText) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.system(size: 11))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Text(value)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(tint)
-                .lineLimit(1)
+    private func sortTools(_ tools: [Tool]) -> [Tool] {
+        switch sortMode {
+        case .recent:
+            let recentRoutes = Dictionary(uniqueKeysWithValues: viewModel.recentTools.enumerated().map { ($1.route, $0) })
+            return tools.sorted {
+                let leftRank = recentRoutes[$0.route] ?? Int.max
+                let rightRank = recentRoutes[$1.route] ?? Int.max
+
+                if leftRank != rightRank {
+                    return leftRank < rightRank
+                }
+
+                return $0.name < $1.name
+            }
+        case .name:
+            return tools.sorted { $0.name < $1.name }
+        case .category:
+            return tools.sorted {
+                if $0.category.displayName != $1.category.displayName {
+                    return $0.category.displayName < $1.category.displayName
+                }
+                return $0.name < $1.name
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
     }
 
     @ViewBuilder
@@ -416,6 +276,7 @@ struct ToolsView: View {
 
 struct ToolCard: View {
     let tool: Tool
+    let isSelected: Bool
     let onTap: () -> Void
     @State private var isHovered = false
     @State private var isPressed = false
@@ -443,7 +304,7 @@ struct ToolCard: View {
                             .foregroundStyle(AppSurfaceTokens.primaryText)
                         
                         if tool.tags.contains(where: { $0.id == "new" }) {
-                            Text("NEW")
+                            Text("新")
                                 .font(.caption2)
                                 .fontWeight(.bold)
                                 .padding(.horizontal, 5)
@@ -494,10 +355,11 @@ struct ToolCard: View {
             .frame(height: 96)
             .background(
                 RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackgroundSoft)
+                    .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.05) : AppSurfaceTokens.cardBackgroundSoft)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                             .stroke(
+                                isSelected ? AppSurfaceTokens.accentBlue.opacity(0.42) :
                                 isPressed ? AppSurfaceTokens.separator.opacity(0.85) :
                                 isHovered ? AppSurfaceTokens.separator.opacity(0.65) :
                                 AppSurfaceTokens.separator,
@@ -505,6 +367,14 @@ struct ToolCard: View {
                             )
                     )
             )
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
+                        .padding(10)
+                }
+            }
             .scaleEffect(isPressed ? 0.985 : 1)
             .animation(.easeInOut(duration: 0.1), value: isPressed)
         }
@@ -553,20 +423,14 @@ struct RecentToolsSection: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            // 标题栏
             HStack {
-                Text("最近使用")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
                 if canRestoreRecentTools {
                     Button("恢复记录", action: onRestore)
                         .buttonStyle(.borderless)
                         .font(.caption)
-
                 }
+
+                Spacer()
 
                 if !recentTools.isEmpty {
                     Button(action: onClear) {
@@ -578,7 +442,6 @@ struct RecentToolsSection: View {
                 }
             }
 
-            // 最近使用工具列表
             if !recentTools.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -592,8 +455,8 @@ struct RecentToolsSection: View {
             } else {
                 AppSurfaceEmptyState(
                     icon: "clock",
-                    title: "暂无最近使用工具",
-                    message: "开始使用任一工具后，这里会沉淀成你的快捷历史。",
+                        title: "最近尚未使用过工具",
+                    message: "使用过的工具会保留在这里。",
                     actionTitle: canRestoreRecentTools ? "恢复记录" : nil,
                     tint: AppSurfaceTokens.accentBlue,
                     action: canRestoreRecentTools ? onRestore : nil
@@ -664,12 +527,12 @@ struct ToolTag: Hashable {
     static let text = ToolTag(id: "text", displayName: "文本", color: .blue)
     static let image = ToolTag(id: "image", displayName: "图片", color: .gray)
     static let download = ToolTag(id: "download", displayName: "下载", color: .blue)
-    static let ai = ToolTag(id: "ai", displayName: "AI", color: .blue)
+    static let ai = ToolTag(id: "ai", displayName: "智能", color: .blue)
     static let dev = ToolTag(id: "dev", displayName: "开发", color: .gray)
     static let document = ToolTag(id: "document", displayName: "文档", color: .blue)
     static let local = ToolTag(id: "local", displayName: "本地", color: .gray)
-    static let new = ToolTag(id: "new", displayName: "NEW", color: .blue)
-    static let beta = ToolTag(id: "beta", displayName: "Beta", color: .gray)
+        static let new = ToolTag(id: "new", displayName: "新", color: .blue)
+    static let beta = ToolTag(id: "beta", displayName: "测试版", color: .gray)
 }
 
 struct Tool: Identifiable {
@@ -767,7 +630,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .text: return "文本处理"
         case .conversion: return "内容转换"
         case .download: return "下载工具"
-        case .ai: return "AI 工具"
+        case .ai: return "智能工具"
         case .developer: return "开发工具"
         case .utility: return "实用工具"
         }
@@ -782,6 +645,22 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .ai: return .blue
         case .developer: return .gray
         case .utility: return .gray
+        }
+    }
+}
+
+enum ToolSortMode: String, CaseIterable, Identifiable {
+    case recent
+    case name
+    case category
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .recent: return "按最近使用"
+        case .name: return "按名称"
+        case .category: return "按分类"
         }
     }
 }
@@ -969,23 +848,23 @@ enum ToolRegistry {
     static var defaultTools: [Tool] {
         [
             // 文本处理
-            Tool(name: "Markdown 整理", description: "自动整理和格式化 Markdown 文档", icon: "text.quote", category: .text, tags: [.text, .local], route: .markdownCleaner),
+            Tool(name: "文稿整理", description: "自动整理和格式化文稿", icon: "text.quote", category: .text, tags: [.text, .local], route: .markdownCleaner),
             Tool(name: "文本对比", description: "对比两段文本的差异", icon: "arrow.left.arrow.right", category: .text, tags: [.text, .local], route: .textCompare),
             Tool(name: "JSON 格式化", description: "格式化和验证 JSON", icon: "curlybraces", category: .text, tags: [.dev, .local], route: .jsonFormatter),
             Tool(name: "Base64 编解码", description: "Base64 编码和解码", icon: "number", category: .text, tags: [.dev, .local], route: .base64Codec),
             
             // 内容转换
-            Tool(name: "文档转换", description: "在 PDF、Word、Markdown 之间转换", icon: "doc.text", category: .conversion, tags: [.document, .new], route: .documentConvert),
+            Tool(name: "文档转换", description: "在 PDF、Word、文稿之间转换", icon: "doc.text", category: .conversion, tags: [.document, .new], route: .documentConvert),
             Tool(name: "图片处理", description: "压缩、裁剪、格式转换", icon: "photo", category: .conversion, tags: [.image, .local], route: .imageProcess),
-            Tool(name: "OCR 识别", description: "从图片中提取文字", icon: "text.viewfinder", category: .conversion, tags: [.image, .ai, .new], route: .ocr),
+            Tool(name: "文字识别", description: "从图片中提取文字", icon: "text.viewfinder", category: .conversion, tags: [.image, .ai, .new], route: .ocr),
             
             // 下载工具
-            Tool(name: "WebDigest｜网页精读", description: "输入 URL，抓取网页正文并生成 Markdown", icon: "globe", category: .download, tags: [.download, .new], route: .webDigest),
+            Tool(name: "网页精读", description: "输入网页地址，抓取正文并生成文稿", icon: "globe", category: .download, tags: [.download, .new], route: .webDigest),
             Tool(name: "批量下载", description: "批量下载网页中的图片或文件", icon: "arrow.down.circle", category: .download, tags: [.download], route: .batchDownload),
             Tool(name: "视频下载", description: "下载在线视频", icon: "video", category: .download, tags: [.download], route: .videoDownload),
             
-            // AI 工具
-            Tool(name: "API 测试", description: "测试 AI 提供商的 API", icon: "network", category: .ai, tags: [.ai, .dev], route: .apiTest),
+            // 智能工具
+            Tool(name: "接口测试", description: "测试智能提供商的接口", icon: "network", category: .ai, tags: [.ai, .dev], route: .apiTest),
             
             // 实用工具
             Tool(name: "批量重命名", description: "批量重命名文件和文件夹", icon: "character.cursor.ibeam", category: .utility, tags: [.document, .local], route: .batchRename),

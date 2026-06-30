@@ -8,9 +8,9 @@ struct PendingItemsCard: View {
         WorkbenchV2Card(title: model.title, debugName: "PendingItemsCard", state: model.state, layout: layout) {
             VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.sm) {
                 if model.items.isEmpty {
-                    WorkbenchV2EmptyState(text: "暂无待处理项目")
+                    WorkbenchV2EmptyState(text: "没有待处理项")
                 } else {
-                    ForEach(model.items) { item in
+                    ForEach(model.items.prefix(maxVisibleItems)) { item in
                         HStack(alignment: .top, spacing: WorkbenchV2Tokens.Spacing.sm) {
                             Text(item.priority)
                                 .font(.system(size: WorkbenchV2Tokens.Typography.caption, weight: .semibold, design: .monospaced))
@@ -21,10 +21,11 @@ struct PendingItemsCard: View {
                                 Text(item.title)
                                     .font(.system(size: WorkbenchV2Tokens.Typography.body, weight: .semibold))
                                     .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
+                                    .lineLimit(1)
                                 Text(item.detail)
                                     .font(.system(size: WorkbenchV2Tokens.Typography.caption))
-                                    .foregroundStyle(layout.showSecondaryCopy ? WorkbenchV2Tokens.Color.textSecondary : WorkbenchV2Tokens.Color.textTertiary)
-                                    .lineLimit(layout.showSecondaryCopy ? 2 : 1)
+                                    .foregroundStyle(layout.showSecondaryCopy ? WorkbenchV2Tokens.Color.textSecondary : WorkbenchV2Tokens.Color.textSecondary.opacity(0.88))
+                                    .lineLimit(1)
                             }
 
                             Spacer(minLength: 0)
@@ -34,6 +35,10 @@ struct PendingItemsCard: View {
                 }
             }
         }
+    }
+
+    private var maxVisibleItems: Int {
+        2
     }
 }
 

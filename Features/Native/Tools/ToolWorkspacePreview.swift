@@ -75,14 +75,14 @@ struct ToolWorkspacePreviewRoot: View {
             makeRecentTool(
                 route: .documentConvert,
                 name: "文档转换",
-                description: "在 PDF、Word、Markdown 之间转换",
+                description: "在 PDF、Word、文稿之间转换",
                 icon: "doc.text",
                 category: .conversion,
                 lastUsedDate: now.addingTimeInterval(-300)
             ),
             makeRecentTool(
                 route: .ocr,
-                name: "OCR 识别",
+                name: "文字识别",
                 description: "从图片中提取文字",
                 icon: "text.viewfinder",
                 category: .conversion,
@@ -90,8 +90,8 @@ struct ToolWorkspacePreviewRoot: View {
             ),
             makeRecentTool(
                 route: .webDigest,
-                name: "WebDigest｜网页精读",
-                description: "输入 URL，抓取网页正文并生成 Markdown",
+                name: "网页精读",
+                description: "输入网页地址，抓取正文并生成文稿",
                 icon: "globe",
                 category: .download,
                 lastUsedDate: now.addingTimeInterval(-7200)
@@ -132,8 +132,8 @@ struct ToolWorkspacePreviewRoot: View {
             WorkbenchNote(
                 id: "note-beta-1",
                 projectID: betaID,
-                title: "共享层摘要",
-                content: "工作台摘要卡和项目列表继续沿用产品预览语言。",
+                title: "共享层总览",
+                content: "工作台总览卡和项目列表继续沿用产品页面语言。",
                 tags: ["summary", "surface"],
                 createdAt: now.addingTimeInterval(-10800),
                 updatedAt: now.addingTimeInterval(-7200)

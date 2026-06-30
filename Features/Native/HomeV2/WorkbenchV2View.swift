@@ -101,20 +101,9 @@ struct WorkbenchV2View: View {
                 selectBackground: { heroBackgroundStore.chooseBackground() }
             )
 
-            VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
                     WorkbenchHeader(model: dashboardData.header, layout: layout)
-
-                    WorkbenchSummaryStrip(
-                        items: [
-                            .init(title: "聚焦", value: dashboardData.currentFocus.title, tint: WorkbenchV2Tokens.Color.accent),
-                            .init(title: "待办", value: "\(dashboardData.pendingItems.items.count) 项", tint: WorkbenchV2Tokens.Color.accentOrange),
-                            .init(title: "今日", value: "\(dashboardData.todayStatus.items.count) 项", tint: WorkbenchV2Tokens.Color.accentGreen),
-                            .init(title: "快捷", value: "\(dashboardData.quickActions.actions.count) 个", tint: WorkbenchV2Tokens.Color.textSecondary)
-                        ],
-                        layout: layout
-                    )
-                    .padding(.top, WorkbenchV2Tokens.Spacing.sm)
 
                     WorkbenchV2MainDashboardGrid(
                         model: dashboardData,
@@ -131,9 +120,11 @@ struct WorkbenchV2View: View {
                 .padding(.leading, layout.pagePaddingLeading)
                 .padding(.trailing, layout.pagePaddingTrailing)
                 .padding(.bottom, layout.pagePaddingBottom)
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-                .background(WorkbenchV2Tokens.Color.background)
+                .frame(width: proxy.size.width, alignment: .topLeading)
+                .frame(minHeight: proxy.size.height, alignment: .topLeading)
             }
+            .scrollIndicators(.automatic)
+            .background(WorkbenchV2Tokens.Color.background)
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             .coordinateSpace(name: "AcWorkWindow")
 #if DEBUG
@@ -161,6 +152,8 @@ private struct WorkbenchV2MainDashboardGrid: View {
     let quickActionHandlers: WorkbenchV2QuickActionHandlers
 
     var body: some View {
+        let lowerCardHeight = layout.trendHeight
+
         ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: layout.dashboardRowGap) {
                 HStack(alignment: .top, spacing: layout.dashboardColumnGap) {
@@ -188,13 +181,13 @@ private struct WorkbenchV2MainDashboardGrid: View {
 
                 HStack(alignment: .top, spacing: layout.dashboardColumnGap) {
                     ActivityTrendCard(model: model.activityTrend, layout: layout)
-                        .frame(width: layout.leftColumnWidth + layout.dashboardColumnGap + layout.middleColumnWidth, height: layout.trendHeight, alignment: .topLeading)
+                        .frame(width: layout.leftColumnWidth + layout.dashboardColumnGap + layout.middleColumnWidth, height: lowerCardHeight, alignment: .topLeading)
                         .layoutDebugRegion("ActivityTrendCard")
                 }
                 .frame(width: layout.leftColumnWidth + layout.dashboardColumnGap + layout.middleColumnWidth, alignment: .topLeading)
 
                 DeviceStatusBar(model: model.deviceStatus, layout: layout)
-                    .frame(width: layout.contentWidth, height: layout.footerHeight, alignment: .center)
+                    .frame(width: layout.leftColumnWidth + layout.dashboardColumnGap + layout.middleColumnWidth, height: layout.footerHeight, alignment: .center)
                     .layoutDebugRegion("DeviceStatusBar")
             }
             .frame(width: layout.contentWidth, height: layout.bodyHeight, alignment: .topLeading)
@@ -234,7 +227,7 @@ private struct WorkbenchSummaryStrip: View {
     let layout: WorkbenchV2ResolvedLayout
 
     var body: some View {
-        HStack(spacing: WorkbenchV2Tokens.Spacing.sm) {
+        HStack(spacing: WorkbenchV2Tokens.Layout.containerGap) {
             ForEach(items) { item in
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.title)
@@ -257,7 +250,7 @@ private struct WorkbenchSummaryStrip: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                        .stroke(item.tint.opacity(0.16), lineWidth: 1)
+                        .stroke(item.tint.opacity(0.20), lineWidth: 1)
                 )
             }
         }
@@ -289,7 +282,7 @@ struct WorkbenchV2Card<Content: View>: View {
         VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.md) {
             HStack(alignment: .firstTextBaseline, spacing: WorkbenchV2Tokens.Spacing.sm) {
                 Text(title)
-                    .font(.system(size: WorkbenchV2Tokens.Typography.cardTitle, weight: .semibold))
+                    .font(.system(size: WorkbenchV2Tokens.Typography.cardTitle + 1, weight: .semibold))
                     .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
 
                 Spacer(minLength: 0)
@@ -299,8 +292,9 @@ struct WorkbenchV2Card<Content: View>: View {
 
             content
         }
-        .padding(WorkbenchV2Tokens.Spacing.lg)
+        .padding(WorkbenchV2Tokens.Layout.containerGap)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.surface)
@@ -310,7 +304,7 @@ struct WorkbenchV2Card<Content: View>: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator, lineWidth: WorkbenchV2Tokens.Border.width)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.24), lineWidth: WorkbenchV2Tokens.Border.width)
         )
         .shadow(
             color: Color.black.opacity(WorkbenchV2Tokens.Shadow.opacity),
@@ -332,7 +326,7 @@ private struct WorkbenchV2StatusPill: View {
             .padding(.vertical, 4)
             .background(
                 Capsule(style: .continuous)
-                    .fill(tint.opacity(0.12))
+                    .fill(tint.opacity(0.16))
             )
     }
 
@@ -355,16 +349,20 @@ struct WorkbenchV2EmptyState: View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "square.dashed")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(WorkbenchV2Tokens.Color.textTertiary)
+                .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary)
             Text(text)
-                .font(.system(size: WorkbenchV2Tokens.Typography.caption))
-                .foregroundStyle(WorkbenchV2Tokens.Color.textTertiary)
+                .font(.system(size: WorkbenchV2Tokens.Typography.caption + 0.5))
+                .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(WorkbenchV2Tokens.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.surfaceSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.20), lineWidth: 1)
         )
     }
 }

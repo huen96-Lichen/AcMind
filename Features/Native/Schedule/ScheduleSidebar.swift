@@ -231,7 +231,7 @@ struct TodayTodoList: View {
                         Image(systemName: "checkmark.circle")
                             .font(.system(size: 20))
                             .foregroundStyle(AppSurfaceTokens.tertiaryText)
-                        Text("今天暂无安排")
+                        Text("今日无日程")
                             .font(.system(size: 12))
                             .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     }

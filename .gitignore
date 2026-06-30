@@ -39,8 +39,11 @@ Thumbs.db
 .acmind-tmp/
 .codex/
 .agents/
+.impeccable/
 .superpowers/
 .swiftpm/
+.uploads/
+skills-lock.json
 
 # User data (Obsidian vault)
 ~/PinMind/

@@ -1,91 +1,91 @@
-# Privacy and Permissions
+# 隐私与权限
 
-This document records the permissions and data-handling surfaces that are visible in the current repository. Where a behavior is not fully confirmed by code audit, it is marked as needing review.
+本文记录当前仓库中可见的权限与数据处理表面。对于尚未通过代码审计完全确认的行为，会标记为“需要复核”。
 
-## Permission surfaces
+## 权限表面
 
-| Surface | Status | What it is used for | Notes |
+| 表面 | 状态 | 用途 | 备注 |
 |---|---|---|---|
-| Microphone | Verified | Voice input and recording workflows | The app requests microphone access for voice features. |
-| Accessibility | Verified | Text insertion and system interaction | Used by capture and input-assistance flows. |
-| Screen Recording | Verified | Screenshot and capture workflows | Required when the app captures screen content. |
-| Clipboard | Verified | Clipboard collection and pinning | Clipboard data may be read, stored locally, and displayed in the app. |
-| File access | Verified | Export, local notes, document processing, and vault integration | Some workflows touch local files and user-selected storage locations. |
-| Notifications | Verified | In-app and system feedback | Used for user-visible state changes and alerts. |
-| Global input monitoring | Needs code audit | Hotkey and input-related features may rely on system input hooks | Confirm the exact permission path before release notes claim more. |
-| Full Disk Access | Needs code audit | Broad file-heavy workflows may benefit from it | The repository mentions it in the README, but the exact dependency should be audited before release claims. |
+| 麦克风 | 已验证 | 语音输入和录音工作流 | 应用会为语音功能请求麦克风访问权限。 |
+| 辅助功能 | 已验证 | 文本注入和系统交互 | 被采集与输入辅助流程使用。 |
+| 屏幕录制 | 已验证 | 截图与采集工作流 | 当应用采集屏幕内容时需要。 |
+| 剪贴板 | 已验证 | 剪贴板收集与固定 | 剪贴板数据可能被读取、保存在本地并显示在应用中。 |
+| 文件访问 | 已验证 | 导出、本地笔记、文档处理和 vault 集成 | 部分工作流会触及本地文件和用户选择的存储位置。 |
+| 通知 | 已验证 | 应用内与系统反馈 | 用于用户可见的状态变化和提醒。 |
+| 全局输入监控 | 需要代码审计 | 热键和输入相关功能可能依赖系统输入钩子 | 在发布说明里声称更强的权限路径之前，请先确认。 |
+| 完整磁盘访问 | 需要代码审计 | 较重的文件型工作流可能会受益 | README 中提到过它，但在发布声明前，应先审计具体依赖。 |
 
-## Local storage
+## 本地存储
 
-The repository includes local storage for:
+仓库中包含以下本地存储内容：
 
-- application settings;
-- workspace state;
-- clipboard and capture data;
-- export and cache artifacts;
-- local helper and service state.
+- 应用设置；
+- 工作区状态；
+- 剪贴板和采集数据；
+- 导出与缓存产物；
+- 本地辅助程序与服务状态。
 
-The codebase also includes a local secret store for provider credentials.
+代码库里还包含一个本地密钥存储，用于保存提供方凭据。
 
-## API key storage
+## API 密钥存储
 
-API credentials are stored locally. The implementation supports Keychain-backed storage and also contains a plaintext fallback in local settings when the corresponding preference is selected.
+API 凭据保存在本地。实现同时支持基于 Keychain 的存储，也包含一个在用户选择对应偏好时回退到本地设置明文保存的路径。
 
-That fallback is a security-sensitive tradeoff and should stay documented clearly in the release notes and security policy.
+这个回退路径属于安全敏感的权衡项，应在发布说明和安全政策里清楚记录。
 
-## Local model use
+## 本地模型使用
 
-The project includes local-provider routing, including paths that can be used with local model backends.
+项目中包含本地提供方路由，也包括可用于本地模型后端的路径。
 
-When a local model is selected, the payload should remain on device except for any local logs or artifacts the user chooses to export.
+当选择本地模型时，payload 应保持在设备上，除了用户主动导出的本地日志或产物之外。
 
-## Cloud model use
+## 云端模型使用
 
-Cloud-backed features can send user-selected content to external providers.
+云端功能会把用户选择的内容发送给外部提供方。
 
-What may leave the device depends on the workflow the user explicitly chooses. That can include prompts, transcripts, screenshots, files, or other capture output that is routed to a provider.
+哪些数据会离开设备，取决于用户显式选择的工作流。可能包括 prompt、转写、截图、文件或其他被路由到提供方的采集结果。
 
-## Telemetry policy
+## 遥测政策
 
-No dedicated product telemetry pipeline was identified in the current audit.
+在当前审计中，没有发现独立的产品遥测管线。
 
-That does not mean the codebase is fully audited for every log destination. Before release, re-check:
+这并不意味着代码库里的所有日志出口都已被完全审计。发布前应重新检查：
 
-- OS log output;
-- crash reports;
-- helper logs;
-- provider SDK behavior;
-- any future analytics or diagnostics integrations.
+- 系统日志输出；
+- 崩溃报告；
+- 辅助程序日志；
+- 提供方 SDK 行为；
+- 未来可能加入的分析或诊断集成。
 
-## Revoking permissions
+## 撤销权限
 
-Users can revoke macOS permissions from System Settings under Privacy & Security:
+用户可以在“系统设置”中的“隐私与安全性”里撤销 macOS 权限：
 
-- Microphone
-- Accessibility
-- Screen Recording
-- Input Monitoring
-- Full Disk Access
-- Notifications
+- 麦克风
+- 辅助功能
+- 屏幕录制
+- 输入监控
+- 完整磁盘访问
+- 通知
 
-If a permission is revoked, the affected feature should be expected to degrade or stop working until access is restored.
+如果权限被撤销，受影响的功能应当预期会降级或停止工作，直到权限恢复。
 
-## Deleting local data
+## 删除本地数据
 
-The repository currently stores data locally. To remove it, users should clear the app's local storage, settings, caches, and any Keychain entries created for provider credentials.
+仓库当前将数据保存在本地。要移除这些数据，用户应清理应用本地存储、设置、缓存，以及为提供方凭据创建的任何 Keychain 项。
 
-This document does not claim that the app already exposes a single, audited "delete all data" flow. That should be verified in code before such a promise is added to public documentation.
+本文并不声称应用已经暴露了一个经过审计的“删除全部数据”入口。在把这种承诺写进公开文档之前，应先从代码里确认。
 
-## Data that may leave the device
+## 可能离开设备的数据
 
-Only user-chosen workflows should send data off device.
+只有用户主动选择的工作流才应该把数据发送到设备外。
 
-Possible outbound data includes:
+可能的外发数据包括：
 
-- AI prompts;
-- voice transcripts;
-- screenshots or captured windows;
-- files sent to a cloud provider;
-- metadata required by a remote service.
+- AI prompt；
+- 语音转写；
+- 截图或被捕获的窗口；
+- 发送给云端提供方的文件；
+- 远程服务所需的元数据。
 
-If you are adding a new workflow, document the outbound payload explicitly before release.
+如果你要增加新的工作流，请在发布前把外发 payload 明确写出来。

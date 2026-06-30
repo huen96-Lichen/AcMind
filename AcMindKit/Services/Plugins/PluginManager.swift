@@ -13,7 +13,7 @@ public enum PluginStatus: String, Codable, Sendable, CaseIterable {
         switch self {
         case .discovered: return "已发现"
         case .loading: return "加载中"
-        case .active: return "运行中"
+        case .active: return "进行中"
         case .inactive: return "已停用"
         case .error: return "错误"
         }

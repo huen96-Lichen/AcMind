@@ -75,7 +75,7 @@ public enum DynamicContinentModuleID: String, CaseIterable, Codable, Sendable, I
     public var displayName: String {
         switch self {
         case .music: return "音乐模块"
-        case .agent: return "Agent 模块"
+        case .agent: return "智能体模块"
         case .schedule: return "日程模块"
         case .systemStatus: return "系统状态模块"
         }
@@ -111,7 +111,7 @@ public enum CompanionRuntimeContentID: String, CaseIterable, Codable, Sendable, 
         case .screenshot: return "截图反馈"
         case .music: return "音乐"
         case .schedule: return "日程"
-        case .agent: return "Agent"
+        case .agent: return "智能体"
         case .systemStatus: return "系统状态"
         }
     }
@@ -392,9 +392,9 @@ public struct CompanionShortcut: Identifiable, Codable, Equatable, Sendable {
             ),
             CompanionShortcut(
                 id: "agent",
-                action: "打开 Agent",
+                action: "打开智能体",
                 shortcut: "⌥ A",
-                description: "快速打开主窗口并聚焦 Agent",
+                description: "快速打开主窗口并聚焦智能体",
                 isEnabled: true,
                 isEditable: true
             ),

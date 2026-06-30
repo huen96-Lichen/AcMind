@@ -69,6 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var registeredVoiceShortcut: KeyboardShortcut?
     private var isCompanionRuntimeEnabled = true
     private var isTerminating = false
+    private var hasStartedStartupFlow = false
     private let logger = AcMindLogger(category: .lifecycle)
     private lazy var notchPanelController = NotchPanel.shared
     private lazy var desktopCapsuleController = DesktopCapsulePanel.shared
@@ -97,6 +98,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         serviceContainer?.assetStore
     }
 
+    override init() {
+        super.init()
+        Task { @MainActor [weak self] in
+            self?.beginStartupFlow()
+        }
+    }
+
     private func configureTransparentWindow(_ window: NSWindow) {
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -121,13 +129,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func workbenchV2FixtureBackgroundURL() -> URL {
         repositoryRootURL()
-            .appendingPathComponent("docs/refactor/workbench-v17/screenshots/background-selected-1500x888.png")
+            .appendingPathComponent("Resources/Assets.xcassets/WorkbenchHeroOcean.imageset/workbench-hero-ocean.jpg")
     }
 #endif
 
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        beginStartupFlow()
+    }
+
+    private func beginStartupFlow() {
+        guard hasStartedStartupFlow == false else { return }
+        hasStartedStartupFlow = true
+
 #if DEBUG
         if let debugCommand = DebugPreviewLaunchCommand.resolve() {
             handleDebugPreviewLaunch(debugCommand)
@@ -247,6 +262,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { HeadphoneMonitor.shared.disable() }
         clipboardPinWindowManager?.closeAll()
         NotificationCenter.default.removeObserver(self)
+    }
+
+    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
+        false
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
@@ -443,6 +462,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showProductPanelPreviewWindow(options: options)
 
         case let .agent(options):
+            if let exportPath = options.exportPath {
+                let terminatingRunner = runTerminatingDebugExport
+                terminatingRunner(
+                    "AgentPreviewExport",
+                    "starting agent preview export",
+                    "agent preview export finished",
+                    "Failed to export agent preview"
+                ) {
+                    try exportAgentPreviewImage(to: exportPath, options: options)
+                }
+                return
+            }
             showAgentPreviewWindow(options: options)
 
         case let .systemStatus(options):
@@ -502,7 +533,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsPreviewWindow == nil {
             let contentView = makeSettingsPreviewContentView(contentWidth: contentWidth, contentHeight: contentHeight)
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "设置预览",
+                title: "设置面板",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -522,7 +553,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "工具台预览",
+                title: "工具台面板",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -542,7 +573,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "产品预览",
+                title: "产品面板",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -552,23 +583,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func makeAgentPreviewContentView(options: AgentPreviewLaunchOptions) -> NSHostingView<AnyView> {
+        let contentWidth = options.contentWidth
+        let contentHeight = options.contentHeight
+        let rootView = AnyView(
+            AgentDashboardView(
+                viewModel: DebugAgentPreviewSample.makeViewModel(),
+                selectedSidebarItem: options.sidebarSelection,
+                showRightPanel: false,
+                previewSidebarSelection: nil,
+                shouldLoadDashboardData: false
+            )
+            .preferredColorScheme(.light)
+            .frame(width: contentWidth, height: contentHeight, alignment: .topLeading)
+        )
+        let hostingView = NSHostingView(rootView: rootView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
+        hostingView.layoutSubtreeIfNeeded()
+        return hostingView
+    }
+
+    private func exportAgentPreviewImage(to path: String, options: AgentPreviewLaunchOptions) throws {
+        try DebugScreenshotRenderer.exportHostingView(
+            makeAgentPreviewContentView(options: options),
+            to: URL(fileURLWithPath: path),
+            errorDomain: "AgentPreviewExport",
+            logPrefix: "AgentPreviewExport"
+        )
+    }
+
     private func showAgentPreviewWindow(options: AgentPreviewLaunchOptions) {
         let contentWidth = options.contentWidth
         let contentHeight = options.contentHeight
 
         if agentPreviewWindow == nil {
-            let contentView = NSHostingView(
-                rootView: AgentDashboardView(
-                    viewModel: DebugAgentPreviewSample.makeViewModel(),
-                    selectedSidebarItem: options.sidebarSelection,
-                    showRightPanel: true,
-                    previewSidebarSelection: options.sidebarSelection,
-                    shouldLoadDashboardData: false
-                )
-                    .preferredColorScheme(.dark)
-            )
+            let contentView = makeAgentPreviewContentView(options: options)
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "Agent 预览",
+                title: "智能体面板",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -595,7 +646,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .preferredColorScheme(.dark)
             )
             let window = DebugPreviewWindowFactory.makeWindow(
-                title: "系统状态预览",
+                title: "系统状态面板",
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
                 contentView: contentView
@@ -682,6 +733,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         showClipboardPinWindow(item: item)
     }
 
+    func showClipboardPinWindow(collectedItem: CollectedItem) {
+        guard collectedItem.canOpenDesktopPin else { return }
+        Task { [weak self] in
+            await self?.showClipboardPinWindow(collectedItem: collectedItem)
+        }
+    }
+
+    private func showClipboardPinWindow(collectedItem: CollectedItem) async {
+        guard let assetStore else {
+            await MainActor.run {
+                appState.showError(.serviceUnavailable("资产存储不可用"))
+            }
+            return
+        }
+
+        do {
+            let sourceItem = SourceItem(collectedItem: collectedItem)
+            let assetFiles = try await assetStore.getAssetsForSourceItem(sourceItemId: collectedItem.id.rawID)
+            let result = CaptureResult(sourceItem: sourceItem, assetFiles: assetFiles)
+
+            await MainActor.run {
+                self.showClipboardPinWindow(captureResult: result)
+            }
+        } catch {
+            await MainActor.run {
+                appState.showError(AppError.unknown(error))
+            }
+        }
+    }
+
     func hideClipboardPinWindows() {
         #if DEBUG
         logger.debug("ClipboardPin hide all request", file: "AppDelegate")
@@ -712,7 +793,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func copyClipboardPinDiagnosticsToPasteboard() {
-        let diagnostics = clipboardPinWindowManager?.diagnosticsReport() ?? "AcWork Clipboard Pin Diagnostics\nWindow Count: 0\nNo open pin windows."
+        let diagnostics = clipboardPinWindowManager?.diagnosticsReport() ?? "AcWork 剪贴板固定诊断\n窗口数量：0\n当前没有打开的固定窗口。"
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(diagnostics, forType: .string)
     }
@@ -822,13 +903,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "显示灵动胶囊", action: #selector(toggleDesktopCapsuleFromMenu), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
 
-        let pinMenu = NSMenu(title: "剪贴板 Pin")
-        pinMenu.addItem(NSMenuItem(title: "全部显示 Pin 窗口", action: #selector(showClipboardPinWindowsFromMenu), keyEquivalent: ""))
-        pinMenu.addItem(NSMenuItem(title: "全部隐藏 Pin 窗口", action: #selector(hideClipboardPinWindowsFromMenu), keyEquivalent: ""))
-        pinMenu.addItem(NSMenuItem(title: "全部关闭 Pin 窗口", action: #selector(closeClipboardPinWindowsFromMenu), keyEquivalent: ""))
+        let pinMenu = NSMenu(title: "剪贴板固定")
+        pinMenu.addItem(NSMenuItem(title: "全部显示固定窗口", action: #selector(showClipboardPinWindowsFromMenu), keyEquivalent: ""))
+        pinMenu.addItem(NSMenuItem(title: "全部隐藏固定窗口", action: #selector(hideClipboardPinWindowsFromMenu), keyEquivalent: ""))
+        pinMenu.addItem(NSMenuItem(title: "全部关闭固定窗口", action: #selector(closeClipboardPinWindowsFromMenu), keyEquivalent: ""))
         pinMenu.addItem(NSMenuItem.separator())
-        pinMenu.addItem(NSMenuItem(title: "复制 Pin 诊断", action: #selector(copyClipboardPinDiagnosticsFromMenu), keyEquivalent: ""))
-        let pinMenuItem = NSMenuItem(title: "剪贴板 Pin", action: nil, keyEquivalent: "")
+        pinMenu.addItem(NSMenuItem(title: "复制固定诊断信息", action: #selector(copyClipboardPinDiagnosticsFromMenu), keyEquivalent: ""))
+        let pinMenuItem = NSMenuItem(title: "剪贴板固定", action: nil, keyEquivalent: "")
         pinMenuItem.submenu = pinMenu
         menu.addItem(pinMenuItem)
 
@@ -848,7 +929,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         screenshotItem.submenu = screenshotMenu
         captureMenu.addItem(screenshotItem)
         captureMenu.addItem(NSMenuItem(title: "截图历史", action: #selector(showScreenshotHistoryFromMenu), keyEquivalent: ""))
-        captureMenu.addItem(NSMenuItem(title: "继续处理最近截图", action: #selector(openLatestScreenshotPreviewFromMenu), keyEquivalent: ""))
+        captureMenu.addItem(NSMenuItem(title: "继续处理最近一次截图", action: #selector(openLatestScreenshotPreviewFromMenu), keyEquivalent: ""))
         captureMenu.addItem(NSMenuItem(title: "胶囊输入", action: #selector(showCapsuleFromMenu), keyEquivalent: ""))
         let captureItem = NSMenuItem(title: "截图", action: nil, keyEquivalent: "")
         captureItem.submenu = captureMenu
@@ -1368,7 +1449,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
         case "截图捕获":
             NotificationCenter.default.post(name: Notification.Name("AcMind.captureScreenshot"), object: nil)
-        case "打开 Agent":
+        case "打开智能体":
             appState.navigate(to: .agent)
             showMainWindow()
         case "今日日程":
@@ -1617,7 +1698,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func openSettingsWindow() {
-        showSettings()
+        notchPanelController.show(page: .settings)
     }
 
     @objc private func showSettings() {
@@ -1728,6 +1809,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc func openLatestScreenshotPinWindowFromMenu() {
+        Task { [weak self] in
+            await self?.openLatestScreenshotPinWindow()
+        }
+    }
+
     private func openLatestScreenshotPreview() async {
         guard let storageService else {
             await MainActor.run {
@@ -1740,7 +1827,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let items = try await storageService.listSourceItems(filter: SourceItemFilter(type: .screenshot, limit: 1))
             guard let latest = items.first else {
                 await MainActor.run {
-                    appState.showError(.serviceUnavailable("没有可预览的截图"))
+                    appState.showError(.serviceUnavailable("没有可查看的截图"))
                 }
                 return
             }
@@ -1753,6 +1840,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             await MainActor.run {
                 showScreenshotPreview(image: image, result: result)
+            }
+        } catch {
+            await MainActor.run {
+                appState.showError(AppError.unknown(error))
+            }
+        }
+    }
+
+    private func openLatestScreenshotPinWindow() async {
+        guard let storageService else {
+            await MainActor.run {
+                appState.showError(.serviceUnavailable("存储服务不可用"))
+            }
+            return
+        }
+
+        do {
+            let items = try await storageService.listSourceItems(filter: SourceItemFilter(type: .screenshot, limit: 1))
+            guard let latest = items.first else {
+                await MainActor.run {
+                    appState.showError(.serviceUnavailable("没有可固定的截图"))
+                }
+                return
+            }
+
+            let assets = latest.assetFileIds.isEmpty
+                ? []
+                : try await assetStore?.getAssetsForSourceItem(sourceItemId: latest.id) ?? []
+            let result = CaptureResult(sourceItem: latest, assetFiles: assets)
+
+            await MainActor.run {
+                showClipboardPinWindow(captureResult: result)
             }
         } catch {
             await MainActor.run {
@@ -1804,7 +1923,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         screenshotPreviewWindow = previewWindow
         screenshotPreviewSession = ScreenshotPreviewSession(result: result)
-        previewWindow.title = "截图查看"
+        previewWindow.title = "截图工作区"
         previewWindow.delegate = self
         configureTransparentWindow(previewWindow)
         previewWindow.center()
@@ -2138,7 +2257,7 @@ struct ScreenshotPreviewView: View {
                     .buttonStyle(.bordered)
                     .keyboardShortcut("h", modifiers: [.command])
 
-                    Button("在 Finder 中显示") {
+                    Button("在访达中显示") {
                         onReveal()
                     }
                     .buttonStyle(.bordered)
@@ -2226,7 +2345,7 @@ struct ScreenshotPreviewView: View {
             .keyboardShortcut("c", modifiers: [.command])
             .buttonStyle(.borderedProminent)
         case .pinToDesktop:
-            Button("Pin 到桌面") {
+            Button("固定到桌面") {
                 onPin()
             }
             .keyboardShortcut(.return)
@@ -2240,7 +2359,7 @@ struct ScreenshotPreviewView: View {
     }
 
     private var secondaryPinLabel: String {
-        defaultAction == .pinToDesktop ? "Pin 到桌面" : "Pin 到桌面"
+        defaultAction == .pinToDesktop ? "固定到桌面" : "固定到桌面"
     }
 
     private func secondaryActionButton(label: String, action: @escaping () -> Void) -> some View {
@@ -2253,8 +2372,6 @@ struct ScreenshotPreviewView: View {
 // MARK: - Main Window Controller
 
 class MainWindowController: NSWindowController {
-    private static let toolbarIdentifier = NSToolbar.Identifier("MainWindowToolbar")
-    private static let screenshotToolbarItemIdentifier = NSToolbarItem.Identifier("MainWindowScreenshotToolbarItem")
     private var didEnforceInitialSize = false
 
     convenience init(restoreWindowPosition: Bool, clipboardPinActions: ClipboardPinActions, serviceContainer: ServiceContainer) {
@@ -2287,29 +2404,11 @@ class MainWindowController: NSWindowController {
 
         self.init(window: window)
 
-        setupWindowToolbar()
         setupWindowDelegate()
-    }
-
-    private func setupWindowToolbar() {
-        guard let window else { return }
-        let toolbar = NSToolbar(identifier: Self.toolbarIdentifier)
-        toolbar.delegate = self
-        toolbar.displayMode = .iconOnly
-        toolbar.sizeMode = .regular
-        toolbar.allowsUserCustomization = false
-        toolbar.autosavesConfiguration = false
-        toolbar.showsBaselineSeparator = false
-        window.toolbar = toolbar
-        window.toolbarStyle = .unifiedCompact
     }
 
     private func setupWindowDelegate() {
         window?.delegate = self
-    }
-
-    @objc private func openScreenshotToolbarAction() {
-        (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
     }
 
     private func enforceInitialWindowSizeIfNeeded() {
@@ -2368,32 +2467,6 @@ extension MainWindowController: NSWindowDelegate {
     }
 }
 
-extension MainWindowController: NSToolbarDelegate {
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [Self.screenshotToolbarItemIdentifier, .flexibleSpace]
-    }
-
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [Self.screenshotToolbarItemIdentifier]
-    }
-
-    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
-        switch itemIdentifier {
-        case Self.screenshotToolbarItemIdentifier:
-            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-            item.label = "截图"
-            item.paletteLabel = "截图"
-            item.toolTip = "打开截图查看"
-            item.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "截图")
-            item.target = self
-            item.action = #selector(openScreenshotToolbarAction)
-            return item
-        default:
-            return nil
-        }
-    }
-}
-
 private extension AppDelegate {
     var shouldRestoreWindowPosition: Bool {
         SettingsLocalPreferences.loadOrDefault().restoreWindowPosition
@@ -2443,7 +2516,8 @@ class LaunchWindowController: NSWindowController {
             defer: false
         )
 
-        window.title = AcWorkBrand.displayName
+        // 避免被占位窗清理器误判为“空白启动壳”
+        window.title = "\(AcWorkBrand.displayName) 启动中"
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.level = .statusBar

@@ -19,7 +19,7 @@ struct JSONFormatterPanel: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSurfaceCard(title: "格式概览", subtitle: "先了解能力，再进入输入与输出", padding: 16) {
+                        AppSurfaceCard(title: "格式总览", subtitle: "先了解能力，再进入输入与输出", padding: 16) {
                             introCard
                         }
 
@@ -67,7 +67,7 @@ struct JSONFormatterPanel: View {
             Text("支持对象、数组、字符串、数字、布尔值和 `null`。")
                 .font(.body)
 
-            Text("如果是 JSON 片段，面板会先解析再重新输出；如果解析失败，会直接告诉你哪里不合法。")
+            Text("JSON 片段会先解析再重新输出；解析失败时会直接标出不合法的位置。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -346,7 +346,7 @@ struct Base64CodecPanel: View {
             Text("支持文本编码与 Base64 解码。")
                 .font(.body)
 
-            Text("如果解码后的内容不是 UTF-8 文本，面板会转成十六进制预览，方便你确认原始字节。")
+            Text("非 UTF-8 结果会转成十六进制预览，方便确认原始字节。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -596,7 +596,7 @@ struct MarkdownCleanerPanel: View {
                             introCard
                         }
 
-                        AppSurfaceCard(title: "输入", subtitle: "从剪贴板读入 Markdown", padding: 16) {
+                        AppSurfaceCard(title: "输入", subtitle: "从剪贴板读入文稿", padding: 16) {
                             inputCard
                         }
 
@@ -614,7 +614,7 @@ struct MarkdownCleanerPanel: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Markdown 整理")
+                Text("文稿整理")
                     .font(.title2)
                     .fontWeight(.semibold)
 
@@ -637,10 +637,10 @@ struct MarkdownCleanerPanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("适合把剪贴板里的 Markdown 初稿快速整理一下。")
+            Text("适合把剪贴板里的文稿初稿快速整理一下。")
                 .font(.body)
 
-            Text("会保留代码块内容，减少连着的空行，并清掉尾随空格。")
+            Text("保留代码块内容，减少连续空行，并清掉尾随空格。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -668,7 +668,7 @@ struct MarkdownCleanerPanel: View {
                 Button {
                     viewModel.clean()
                 } label: {
-                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "整理 Markdown")
+                    Text(viewModel.isWorking ? ToolStatusLabelFormatter.processingText : "整理文稿")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
@@ -715,7 +715,7 @@ struct MarkdownCleanerPanel: View {
 final class MarkdownCleanerViewModel: ObservableObject {
     @Published var inputText = ""
     @Published var outputText = ""
-    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("Markdown")
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("文稿")
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published var lastSavedURL: URL?
@@ -723,7 +723,7 @@ final class MarkdownCleanerViewModel: ObservableObject {
     func clear() {
         inputText = ""
         outputText = ""
-        statusText = ToolStatusLabelFormatter.waitingToInput("Markdown")
+        statusText = ToolStatusLabelFormatter.waitingToInput("文稿")
         errorMessage = nil
         isWorking = false
         lastSavedURL = nil
@@ -742,9 +742,9 @@ final class MarkdownCleanerViewModel: ObservableObject {
     func clean() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
-            errorMessage = ToolStatusLabelFormatter.enterInput("Markdown")
-            statusText = ToolStatusLabelFormatter.waitingToInput("Markdown")
-            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("Markdown"))
+            errorMessage = ToolStatusLabelFormatter.enterInput("文稿")
+            statusText = ToolStatusLabelFormatter.waitingToInput("文稿")
+            ToastManager.shared.show(.warning, ToolStatusLabelFormatter.enterInput("文稿"))
             return
         }
 
@@ -915,7 +915,7 @@ struct TextComparePanel: View {
                             inputCard
                         }
 
-                        AppSurfaceCard(title: "比较结果", subtitle: "摘要与差异分开看", padding: 16) {
+                        AppSurfaceCard(title: "比较结果", subtitle: "总览与差异分开看", padding: 16) {
                             resultCard
                         }
                     }
@@ -955,7 +955,7 @@ struct TextComparePanel: View {
             Text("适合快速看两段文本到底改了哪里。")
                 .font(.body)
 
-            Text("这是逐行 LCS 对比，足够应付大多数文案、配置和 Markdown 变化。")
+            Text("这是逐行 LCS 对比，足够应付大多数文案、配置和文稿变化。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -1050,7 +1050,7 @@ struct TextComparePanel: View {
                 .disabled(viewModel.lastSavedURL == nil)
             }
 
-            Text(viewModel.summaryText.isEmpty ? "比较完成后会显示摘要" : viewModel.summaryText)
+            Text(viewModel.summaryText.isEmpty ? "比较完成后显示总览" : viewModel.summaryText)
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
@@ -1907,7 +1907,7 @@ struct SRTTFCPXMLPanel: View {
             AppSurfaceCard(title: "时间轴", subtitle: "帧率与合成节奏", padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("FPS")
+                        Text("帧率")
                         Spacer()
                         Picker("", selection: $viewModel.fps) {
                             Text("24").tag(24)
@@ -1960,8 +1960,8 @@ struct SRTTFCPXMLPanel: View {
                             Text("苹方").tag("PingFang SC")
                             Text("黑体").tag("Hei SC")
                             Text("宋体").tag("STSong")
-                            Text("Helvetica").tag("Helvetica")
-                            Text("Arial").tag("Arial")
+                            Text("Helvetica（英文字体）").tag("Helvetica")
+                            Text("Arial（英文字体）").tag("Arial")
                         }
                         .labelsHidden()
                         .frame(width: 120)
@@ -1973,7 +1973,7 @@ struct SRTTFCPXMLPanel: View {
                         TextField("", value: $viewModel.fontSize, format: .number)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 60)
-                        Text("px")
+                        Text("像素")
                             .font(.caption)
                     }
 
@@ -1994,7 +1994,7 @@ struct SRTTFCPXMLPanel: View {
             AppSurfaceCard(title: "位置", subtitle: "标题坐标", padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("X")
+                        Text("X 坐标")
                         Spacer()
                         TextField("", value: $viewModel.titleX, format: .number)
                             .textFieldStyle(.roundedBorder)
@@ -2002,7 +2002,7 @@ struct SRTTFCPXMLPanel: View {
                     }
 
                     HStack {
-                        Text("Y")
+                        Text("Y 坐标")
                         Spacer()
                         TextField("", value: $viewModel.titleY, format: .number)
                             .textFieldStyle(.roundedBorder)

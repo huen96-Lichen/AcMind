@@ -8,7 +8,7 @@ struct NotchV2SystemStatusRail: View {
         VStack(spacing: NotchV2DesignTokens.cardSpacing) {
             CompanionPanel(title: "本机状态", subtitle: "系统和权限", symbol: "desktopcomputer") {
                 VStack(alignment: .leading, spacing: 6) {
-                    statusRow(title: "CPU", value: viewModel.cpuSummary, accent: .blue)
+                    statusRow(title: "处理器", value: viewModel.cpuSummary, accent: .blue)
                     statusRow(title: "内存", value: viewModel.memorySummary, accent: .purple)
                     statusRow(title: "电池", value: viewModel.batterySummary, accent: .cyan)
                     statusRow(title: "网络", value: viewModel.networkSummary, accent: .green)

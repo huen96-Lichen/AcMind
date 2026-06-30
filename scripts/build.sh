@@ -35,13 +35,14 @@ NC='\033[0m' # No Color
 APP_NAME="AcMind"
 SCHEME="AcMind"
 PROJECT="AcMind.xcodeproj"
-BUNDLE_ID="com.acore.acmind"
+BUNDLE_ID="com.acmind.app"
 HELPER_NAME="com.acmind.systemstatus.helper"
 
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 OUTPUT_DIR="${OUTPUT_DIR:-$PROJECT_DIR/build}"
+PROJECT_CACHE_STAMP="$OUTPUT_DIR/.project-root-stamp"
 
 # 解析参数
 CONFIGURATION="Debug"
@@ -49,6 +50,7 @@ DO_SIGN=false
 DO_PACKAGE=false
 DO_NOTARIZE=false
 DO_CLEAN=false
+DO_UPDATE_DEPS=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -75,15 +77,48 @@ while [[ $# -gt 0 ]]; do
             DO_CLEAN=true
             shift
             ;;
+        --update-deps)
+            DO_UPDATE_DEPS=true
+            shift
+            ;;
         *)
             echo -e "${RED}未知参数: $1${NC}"
-            echo "用法: $0 [--release] [--sign] [--package] [--notarize] [--clean]"
+            echo "用法: $0 [--release] [--sign] [--package] [--notarize] [--clean] [--update-deps]"
             exit 1
             ;;
     esac
 done
 
 cd "$PROJECT_DIR"
+
+cleanup_path_sensitive_caches() {
+    echo -e "${BLUE}🧹 清理路径敏感缓存...${NC}"
+    rm -rf "$PROJECT_DIR/.build"
+    rm -rf "$OUTPUT_DIR/DerivedData"
+    rm -rf "$PROJECT_DIR/DerivedData"
+    mkdir -p "$OUTPUT_DIR"
+    printf '%s\n' "$PROJECT_DIR" > "$PROJECT_CACHE_STAMP"
+    echo -e "${GREEN}✅ 路径敏感缓存已清理${NC}"
+}
+
+SWIFT_OFFLINE_FLAGS=(
+    --skip-update
+    --disable-automatic-resolution
+    --only-use-versions-from-resolved-file
+)
+
+XCODE_OFFLINE_FLAGS=(
+    -disableAutomaticPackageResolution
+    -onlyUsePackageVersionsFromResolvedFile
+    -skipPackageUpdates
+)
+
+needs_cache_cleanup=false
+if [ ! -f "$PROJECT_CACHE_STAMP" ]; then
+    needs_cache_cleanup=true
+elif [ "$(cat "$PROJECT_CACHE_STAMP")" != "$PROJECT_DIR" ]; then
+    needs_cache_cleanup=true
+fi
 
 # =============================================================================
 # 清理
@@ -95,6 +130,12 @@ if [ "$DO_CLEAN" = true ]; then
     rm -rf "$PROJECT_DIR/DerivedData"
     echo -e "${GREEN}✅ 清理完成${NC}"
     exit 0
+fi
+
+if [ "$needs_cache_cleanup" = true ]; then
+    cleanup_path_sensitive_caches
+else
+    echo -e "${BLUE}🧹 复用当前工作区缓存，未检测到路径变更...${NC}"
 fi
 
 # =============================================================================
@@ -122,13 +163,21 @@ echo -e "${GREEN}✅ Xcode 工具链就绪${NC}"
 # =============================================================================
 # 解析 Swift 依赖
 # =============================================================================
-echo -e "${BLUE}📦 解析 Swift 依赖...${NC}"
-swift package resolve
-echo -e "${GREEN}✅ 依赖解析完成${NC}"
+if [ "$DO_UPDATE_DEPS" = true ]; then
+    echo -e "${BLUE}📦 更新 Swift 依赖...${NC}"
+    swift package resolve
+    echo -e "${GREEN}✅ 依赖更新完成${NC}"
+else
+    echo -e "${BLUE}📦 跳过主动更新 Swift 依赖（如需刷新请加 --update-deps）...${NC}"
+fi
 
 echo -e "${BLUE}🧩 构建 system status helper...${NC}"
 HELPER_SWIFT_CONFIGURATION="$(printf '%s' "$CONFIGURATION" | tr '[:upper:]' '[:lower:]')"
-swift build -c "$HELPER_SWIFT_CONFIGURATION" --product AcMindSystemStatusHelper
+if [ "$DO_UPDATE_DEPS" = true ]; then
+    swift build -c "$HELPER_SWIFT_CONFIGURATION" --product AcMindSystemStatusHelper
+else
+    swift build "${SWIFT_OFFLINE_FLAGS[@]}" -c "$HELPER_SWIFT_CONFIGURATION" --product AcMindSystemStatusHelper
+fi
 echo -e "${GREEN}✅ helper 构建完成${NC}"
 
 # =============================================================================
@@ -145,6 +194,7 @@ xcodebuild \
     -configuration "$CONFIGURATION" \
     -destination 'platform=macOS' \
     -derivedDataPath "$OUTPUT_DIR/DerivedData" \
+    "${XCODE_OFFLINE_FLAGS[@]}" \
     build \
     CONFIGURATION_BUILD_DIR="$BUILD_DIR" \
     CODE_SIGN_IDENTITY="-" \

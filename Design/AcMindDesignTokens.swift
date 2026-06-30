@@ -859,10 +859,10 @@ struct ProductPanelPreviewSample: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: ProductPanelTokens.Layout.sectionSpacing) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Product Panel")
+                        Text("产品面板")
                             .font(ProductPanelTokens.Typography.pageTitle)
                             .foregroundStyle(palette.textPrimary)
-                        Text("Isolated surface tokens, foundation cards, and width-aware layouts.")
+                        Text("独立表面令牌、基础卡片和适配宽度的布局样例。")
                             .font(ProductPanelTokens.Typography.pageSubtitle)
                             .foregroundStyle(palette.textSecondary)
                     }
@@ -870,72 +870,72 @@ struct ProductPanelPreviewSample: View {
                     LazyVGrid(columns: columns, alignment: .leading, spacing: ProductPanelTokens.Layout.cardSpacing) {
                         ProductPanelCard(
                             variant: .standard,
-                            title: "System Overview",
+                            title: "系统总览",
                             icon: "rectangle.grid.2x2",
-                            status: "Ready",
+                            status: "就绪",
                             statusTone: .success,
-                            footer: "Updated 2 minutes ago"
+                            footer: "2 分钟前更新"
                         ) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("CPU 42% · Memory 58% · Network stable")
-                                Text("This card keeps the main metric first, then explanation and timing.")
+                                Text("CPU 42% · 内存 58% · 网络稳定")
+                                Text("这张卡片先放主指标，再放解释和时间。")
                                     .foregroundStyle(palette.textSecondary)
                             }
                         }
 
                         ProductPanelCard(
                             variant: .prominent,
-                            title: "Agent Queue",
+                            title: "智能体队列",
                             icon: "sparkles",
-                            status: "Needs attention",
+                            status: "需要处理",
                             statusTone: .warning,
-                            footer: "2 approvals pending",
-                            actionTitle: "Open",
+                            footer: "有 2 项待审批",
+                            actionTitle: "打开",
                             actionSystemImage: "arrow.right"
                         ) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("1 task is waiting for a response, 3 are running, and 1 is blocked.")
-                                Text("The promoted surface keeps the primary action visible without turning into a dashboard wall.")
+                                Text("1 个任务在等待回复，3 个在运行，1 个被阻塞。")
+                                Text("这个被抬起的表面会保留主操作可见，但不会变成仪表盘墙。")
                                     .foregroundStyle(palette.textSecondary)
                             }
                         }
 
                         ProductPanelCard(
                             variant: .compact,
-                            title: "Clipboard Shelf",
+                            title: "剪贴板架",
                             icon: "doc.on.clipboard",
-                            status: "No selection yet",
+                            status: "尚未选择",
                             statusTone: .neutral,
-                            footer: "Compact cards keep dense contexts readable"
+                            footer: "紧凑卡片让高密度上下文仍然可读"
                         ) {
-                            Text("Pinned items will appear here once the user starts selecting content.")
+                            Text("用户开始选择内容后，已固定的条目会出现在这里。")
                         }
 
                         ProductPanelCard(
                             variant: .interactive,
-                            title: "Network Probe",
+                            title: "网络探针",
                             icon: "dot.radiowaves.left.and.right",
-                            status: "Unavailable",
+                            status: "不可用",
                             statusTone: .unavailable,
-                            footer: "Requires network permission and a detected interface",
-                            actionTitle: "Check setup",
+                            footer: "需要网络权限和已识别的接口",
+                            actionTitle: "检查设置",
                             actionSystemImage: "arrow.up.right"
                         ) {
-                            Text("The unavailable state explains why the card cannot yet provide a signal.")
+                            Text("不可用状态会说明为什么这张卡片暂时还不能提供信号。")
                         }
                         .frame(maxWidth: .infinity, alignment: .topLeading)
 
                         ProductPanelCard(
                             variant: .warning,
-                            title: "Storage Health",
+                            title: "存储健康",
                             icon: "externaldrive.badge.exclamationmark",
-                            status: "Watch closely",
+                            status: "请留意",
                             statusTone: .warning,
-                            footer: "Stale readings must never masquerade as fresh data"
+                            footer: "过期读数不能伪装成最新数据"
                         ) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("A slow reader is still acceptable, but the state must stay explicit.")
-                                Text("Reduced motion and higher contrast should still keep this surface readable.")
+                                Text("读取慢一点也可以，但状态必须明确。")
+                                Text("减少动效和提高对比度后，这个表面仍然要能读清。")
                                     .foregroundStyle(palette.textSecondary)
                             }
                         }

@@ -13,6 +13,7 @@ final class DesktopCapsulePanel: NSPanel {
     static let shared = DesktopCapsulePanel()
 
     private var hostingView: NSHostingView<DesktopCapsuleView>?
+    private var viewModel: DesktopCapsuleViewModel?
     private var isDockedToNotch = false
     private weak var notchController: NotchPanelControlling?
     private var dockingCoordinator: DesktopCapsuleDockingCoordinator?
@@ -56,6 +57,7 @@ final class DesktopCapsulePanel: NSPanel {
 
     private func setupContentView() {
         let viewModel = DesktopCapsuleViewModel(panelController: self)
+        self.viewModel = viewModel
         let contentView = DesktopCapsuleView(viewModel: viewModel)
         hostingView = NSHostingView(rootView: contentView)
         self.contentView = hostingView

@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 import AcMindKit
 
 // MARK: - Sidebar View
@@ -7,21 +6,22 @@ import AcMindKit
 /// 侧边栏导航视图
 /// 使用固定宽度的自绘布局，避免 macOS sidebar 样式在窗口变窄时自动折叠成图标栏。
 struct SidebarView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var container: ServiceContainer
     @State private var hoveredItem: SidebarItem?
+    @State private var isSettingsHovered = false
     @State private var footerStatus: SidebarFooterStatus = .loading
     @State private var capabilityStatuses: [SidebarItem: SidebarCapabilityState] = [:]
 
     var body: some View {
-        Group {
-            if appState.sidebarCollapsed {
-                collapsedSidebar
-            } else {
-                expandedSidebar
-            }
-        }
-        .frame(width: appState.sidebarCollapsed ? 84 : AppSurfaceTokens.Layout.sidebarWidth, alignment: .topLeading)
+        sidebarContent(isCollapsed: appState.sidebarCollapsed)
+        .frame(
+            width: appState.sidebarCollapsed
+                ? AppSurfaceTokens.Layout.sidebarCollapsedWidth
+                : AppSurfaceTokens.Layout.sidebarWidth,
+            alignment: .topLeading
+        )
         .frame(maxHeight: .infinity, alignment: .topLeading)
         .background(sidebarBackground.ignoresSafeArea())
         .accessibilityElement(children: .contain)
@@ -32,15 +32,6 @@ struct SidebarView: View {
                 .fill(AppSurfaceTokens.separator.opacity(0.55))
                 .frame(width: 1)
                 .ignoresSafeArea()
-        }
-        .toolbar {
-            ToolbarItem {
-                Button(action: toggleSidebar) {
-                    Image(systemName: "sidebar.left")
-                }
-                .help("切换侧边栏")
-                .accessibilityLabel("切换侧边栏")
-            }
         }
         .onAppear {
             setupKeyboardShortcuts()
@@ -69,286 +60,167 @@ struct SidebarView: View {
         }
     }
 
-    private var expandedSidebar: some View {
+    private func sidebarContent(isCollapsed: Bool) -> some View {
         VStack(spacing: 0) {
-            sidebarBrandHeader
+            sidebarBrandHeader(isCollapsed: isCollapsed)
             Divider().overlay(AppSurfaceTokens.separator.opacity(0.55))
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
-                    sidebarSection(title: SidebarItem.Group.coreWorkflow.displayName, items: SidebarItem.coreWorkflow)
-                    sidebarSection(title: SidebarItem.Group.companionCapabilities.displayName, items: SidebarItem.companionCapabilities)
-                    sidebarSection(title: SidebarItem.Group.system.displayName, items: SidebarItem.systemItems)
+                    sidebarSection(title: SidebarItem.Group.coreWorkflow.displayName, items: SidebarItem.coreWorkflow, isCollapsed: isCollapsed)
+                    sidebarSection(title: SidebarItem.Group.companionCapabilities.displayName, items: SidebarItem.companionCapabilities, isCollapsed: isCollapsed)
+                    sidebarSection(title: SidebarItem.Group.system.displayName, items: SidebarItem.systemItems, isCollapsed: isCollapsed)
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 14)
+                .padding(.horizontal, 10)
+                .padding(.top, 12)
                 .padding(.bottom, 12)
             }
             .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             Divider().overlay(AppSurfaceTokens.separator.opacity(0.55))
-            sidebarFooter
+            sidebarFooter(isCollapsed: isCollapsed)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private var collapsedSidebar: some View {
-        VStack(spacing: 0) {
-            compactChrome
-            Divider().overlay(AppSurfaceTokens.separator.opacity(0.55))
-
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
-                    compactSection(items: SidebarItem.coreWorkflow)
-                    compactSection(items: SidebarItem.companionCapabilities)
-                    compactSection(items: SidebarItem.systemItems)
-                }
-                .padding(.horizontal, 10)
-                .padding(.top, 10)
-                .padding(.bottom, 10)
+    private func sidebarBrandHeader(isCollapsed: Bool) -> some View {
+        HStack(alignment: .center, spacing: 0) {
+            Button(action: toggleSidebar) {
+                SidebarLogoMarkView()
+                    .frame(width: 26, height: 26)
+                    .accessibilityHidden(true)
             }
-            .scrollIndicators(.hidden)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(width: 36, height: 28)
+            .buttonStyle(SidebarPressableButtonStyle())
+            .help(isCollapsed ? "展开侧边栏" : "AcWork")
+            .accessibilityLabel(isCollapsed ? "展开侧边栏" : "AcWork")
 
-            Divider().overlay(AppSurfaceTokens.separator.opacity(0.55))
-            compactFooter
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var sidebarChrome: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(Color(red: 0.99, green: 0.37, blue: 0.34))
-                    .frame(width: 8, height: 8)
-                Circle()
-                    .fill(Color(red: 1.0, green: 0.75, blue: 0.18))
-                    .frame(width: 8, height: 8)
-                Circle()
-                    .fill(AppSurfaceTokens.accentGreen.opacity(0.95))
-                    .frame(width: 8, height: 8)
+            if !isCollapsed {
+                Text(AcWorkBrand.displayName)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
             }
 
             Spacer(minLength: 0)
 
-            Button {
-                openScreenshotOptions()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "camera.viewfinder")
-                        .font(.system(size: 11.5, weight: .semibold))
-                    Text("截图")
-                        .font(.system(size: 11.5, weight: .semibold))
+            if !isCollapsed {
+                Button(action: toggleSidebar) {
+                    Image(systemName: "sidebar.left")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 28, height: 28)
                 }
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
+                .buttonStyle(SidebarPressableButtonStyle())
                 .background(
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                        .fill(AppSurfaceTokens.cardBackgroundSoft)
+                        .fill(AppSurfaceTokens.cardBackground.opacity(0.72))
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                        .stroke(AppSurfaceTokens.accentOrange.opacity(0.72), lineWidth: 1)
-                )
+                .help("折叠侧边栏")
+                .accessibilityLabel("折叠侧边栏")
             }
-            .buttonStyle(.plain)
-            .help("打开截图查看")
-            .accessibilityLabel("打开截图查看")
-
-            Button(action: toggleSidebar) {
-                Image(systemName: "sidebar.left")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(SidebarPressableButtonStyle())
-            .background(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackground.opacity(0.76))
-            )
-            .help("折叠侧边栏")
-            .accessibilityLabel("折叠侧边栏")
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-    }
-
-    private var compactChrome: some View {
-        HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(AppSurfaceTokens.accentBlue.opacity(0.12))
-                .overlay(
-                    Image(systemName: "rectangle.grid.2x2")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppSurfaceTokens.accentBlue)
-                )
-                .frame(width: 28, height: 28)
-
-            Spacer(minLength: 0)
-
-            Button(action: toggleSidebar) {
-                Image(systemName: "sidebar.left")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(SidebarPressableButtonStyle())
-            .background(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .fill(AppSurfaceTokens.cardBackground.opacity(0.76))
-            )
-            .help("展开侧边栏")
-            .accessibilityLabel("展开侧边栏")
-
-            Button {
-                openScreenshotOptions()
-            } label: {
-                Image(systemName: "camera.viewfinder")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 28, height: 28)
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                            .fill(AppSurfaceTokens.cardBackground.opacity(0.76))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                            .stroke(AppSurfaceTokens.accentOrange.opacity(0.72), lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
-            .help("打开截图查看")
-            .accessibilityLabel("打开截图查看")
         }
         .padding(.horizontal, 10)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-    }
-
-    private var sidebarBrandHeader: some View {
-        HStack(alignment: .top, spacing: 10) {
-            SidebarLogoMarkView()
-                .frame(width: 34, height: 34)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(AcWorkBrand.displayName)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                    .lineLimit(1)
-
-                Text("本地优先 AI 工作台")
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            Button {
-                openScreenshotOptions()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "camera.viewfinder")
-                        .font(.system(size: 11.5, weight: .semibold))
-                    Text("截图")
-                        .font(.system(size: 11.5, weight: .semibold))
-                }
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(
-                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                        .fill(AppSurfaceTokens.cardBackgroundSoft)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                        .stroke(AppSurfaceTokens.separator.opacity(0.72), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("打开截图查看")
-        }
-        .padding(.horizontal, 14)
         .padding(.vertical, 12)
     }
 
-    private func openScreenshotOptions() {
-        (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
-    }
-
-    private func sidebarSection(title: String, items: [SidebarItem]) -> some View {
+    private func sidebarSection(title: String, items: [SidebarItem], isCollapsed: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .lineLimit(1)
                 .padding(.horizontal, 4)
+                .opacity(isCollapsed ? 0 : 1)
+                .accessibilityHidden(isCollapsed)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(items) { item in
-                    Button {
-                        appState.navigate(to: item)
-                    } label: {
-                        SidebarItemRow(
-                            item: item,
-                            isSelected: appState.sidebarSelection == item,
-                            isHovered: hoveredItem == item,
-                            capabilityState: capabilityState(for: item)
-                        )
-                    }
-                    .buttonStyle(SidebarPressableButtonStyle())
-                    .onHover { isHovered in
-                        hoveredItem = isHovered ? item : nil
-                    }
+                    sidebarButton(for: item, isCollapsed: isCollapsed)
                 }
             }
         }
     }
 
-    private func compactSection(items: [SidebarItem]) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(items) { item in
-                Button {
-                    appState.navigate(to: item)
-                } label: {
-                    SidebarCompactItemRow(
-                        item: item,
-                        isSelected: appState.sidebarSelection == item,
-                        isHovered: hoveredItem == item,
-                        capabilityState: capabilityState(for: item)
-                    )
-                }
-                .buttonStyle(SidebarPressableButtonStyle())
-                .onHover { isHovered in
-                    hoveredItem = isHovered ? item : nil
-                }
+    @ViewBuilder
+    private func sidebarButton(for item: SidebarItem, isCollapsed: Bool) -> some View {
+        Button {
+            appState.navigate(to: item)
+        } label: {
+            if isCollapsed {
+                SidebarCompactItemRow(
+                    item: item,
+                    isSelected: appState.sidebarSelection == item,
+                    isHovered: effectiveHoveredItem == item
+                )
+            } else {
+                SidebarItemRow(
+                    item: item,
+                    isSelected: appState.sidebarSelection == item,
+                    isHovered: effectiveHoveredItem == item,
+                    capabilityState: capabilityState(for: item)
+                )
+            }
+        }
+        .buttonStyle(SidebarPressableButtonStyle())
+        .onHover { isHovered in
+            withAnimation(hoverAnimation) {
+                hoveredItem = isHovered ? item : nil
             }
         }
     }
 
-    private var sidebarFooter: some View {
+    private var effectiveHoveredItem: SidebarItem? {
+#if DEBUG
+        if let forcedItem = DebugSidebarPreviewState.forcedHoverItem {
+            return forcedItem
+        }
+#endif
+        return hoveredItem
+    }
+
+    private var effectiveSettingsHovered: Bool {
+#if DEBUG
+        if DebugSidebarPreviewState.isSettingsHovered {
+            return true
+        }
+#endif
+        return isSettingsHovered
+    }
+
+    private func sidebarFooter(isCollapsed: Bool) -> some View {
         Button {
             appState.navigate(to: .settings)
         } label: {
-            SidebarFooterRow(status: footerStatus, isCompact: false)
+            SidebarFooterRow(
+                status: footerStatus,
+                isCompact: isCollapsed,
+                isSelected: appState.sidebarSelection == .settings,
+                isHovered: effectiveSettingsHovered
+            )
         }
         .buttonStyle(SidebarPressableButtonStyle())
-        .padding(.horizontal, 12)
+        .onHover { isHovered in
+            withAnimation(hoverAnimation) {
+                isSettingsHovered = isHovered
+            }
+        }
+        .anchorPreference(key: SidebarRailTooltipPreferenceKey.self, value: .bounds) { anchor in
+            isCollapsed && effectiveSettingsHovered
+                ? SidebarRailTooltipValue(item: .settings, isSelected: appState.sidebarSelection == .settings, anchor: anchor)
+                : nil
+        }
+        .padding(.horizontal, 10)
         .padding(.vertical, 12)
         .accessibilityLabel("设置")
     }
 
-    private var compactFooter: some View {
-        Button {
-            appState.navigate(to: .settings)
-        } label: {
-            SidebarFooterRow(status: footerStatus, isCompact: true)
-        }
-        .buttonStyle(SidebarPressableButtonStyle())
-        .padding(.horizontal, 10)
-        .padding(.vertical, 10)
-        .accessibilityLabel("设置")
+    private var hoverAnimation: Animation {
+        reduceMotion
+            ? .easeOut(duration: 0.10)
+            : .spring(response: 0.22, dampingFraction: 0.88)
     }
 
     private func capabilityState(for item: SidebarItem) -> SidebarCapabilityState? {
@@ -400,53 +272,68 @@ struct SidebarView: View {
     }
 }
 
+#if DEBUG
+@MainActor
+enum DebugSidebarPreviewState {
+    static var forcedHoverItem: SidebarItem?
+    static var isSettingsHovered = false
+}
+#endif
+
 // MARK: - Sidebar Item Row
 
 private struct SidebarLogoMarkView: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(AppSurfaceTokens.accentBlue.opacity(0.12))
-
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(AppSurfaceTokens.accentBlue.opacity(0.20), lineWidth: 1)
-
-            VStack(spacing: 2) {
-                HStack(spacing: 2) {
-                    logoDot
-                    logoDot.opacity(0.78)
-                }
-                HStack(spacing: 2) {
-                    logoDot.opacity(0.78)
-                    logoDot
-                }
+            Path { path in
+                path.move(to: CGPoint(x: 7, y: 19))
+                path.addLine(to: CGPoint(x: 14, y: 6))
+                path.addLine(to: CGPoint(x: 21, y: 19))
             }
-            .padding(7)
-        }
-        .accessibilityHidden(true)
-    }
+            .stroke(
+                AppSurfaceTokens.primaryText,
+                style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round)
+            )
 
-    private var logoDot: some View {
-        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-            .fill(AppSurfaceTokens.accentBlue)
+            Circle()
+                .fill(AppSurfaceTokens.accentBlue)
+                .frame(width: 4.8, height: 4.8)
+                .offset(y: 4)
+        }
+        .frame(width: 26, height: 26)
+        .accessibilityHidden(true)
     }
 }
 
 private struct SidebarItemGlyphView: View {
+    enum Presentation {
+        case card
+        case rail
+    }
+
     let item: SidebarItem
     let isSelected: Bool
+    let presentation: Presentation
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.14) : AppSurfaceTokens.cardBackground.opacity(0.76))
-                .overlay(
+        Group {
+            switch presentation {
+            case .card:
+                ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.20) : Color.clear, lineWidth: 1)
-                )
+                        .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.14) : AppSurfaceTokens.cardBackground.opacity(0.76))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.20) : Color.clear, lineWidth: 1)
+                        )
 
-            glyph
-                .padding(4.5)
+                    glyph
+                        .padding(4.5)
+                }
+            case .rail:
+                glyph
+                    .padding(1.5)
+            }
         }
         .accessibilityHidden(true)
     }
@@ -832,12 +719,12 @@ struct SidebarItemRow: View {
                 shortcutPill(shortcutDisplay(for: shortcut))
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.trailing, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, minHeight: AppSurfaceTokens.Layout.rowMinHeight, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
-                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : (isHovered ? AppSurfaceTokens.cardBackground.opacity(0.72) : Color.clear))
+                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : (isHovered ? AppSurfaceTokens.cardBackground.opacity(0.64) : Color.clear))
         )
         .overlay(alignment: .leading) {
             if isSelected {
@@ -857,21 +744,22 @@ struct SidebarItemRow: View {
     }
 
     private var iconTile: some View {
-        SidebarItemGlyphView(item: item, isSelected: isSelected)
-        .frame(width: 26, height: 26)
+        SidebarItemGlyphView(item: item, isSelected: isSelected, presentation: .card)
+            .frame(width: 26, height: 26)
+            .frame(width: 36, alignment: .center)
     }
 
     private func capabilityPill(state: SidebarCapabilityState) -> some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Circle()
                 .fill(state.isActive ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.secondaryText.opacity(0.5))
-                .frame(width: 6, height: 6)
-            Text(state.label)
-                .font(.system(size: 9.5, weight: .semibold))
+                .frame(width: 5, height: 5)
+            Text(state.isActive ? "已开" : "已关")
+                .font(.system(size: 8.5, weight: .semibold))
                 .foregroundStyle(state.isActive ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.secondaryText)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
         .background(
             Capsule(style: .continuous)
                 .fill(state.isActive ? AppSurfaceTokens.accentGreen.opacity(0.10) : AppSurfaceTokens.cardBackground.opacity(0.82))
@@ -901,63 +789,102 @@ struct SidebarItemRow: View {
 }
 
 struct SidebarCompactItemRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let item: SidebarItem
     let isSelected: Bool
     let isHovered: Bool
-    let capabilityState: SidebarCapabilityState?
 
     var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                SidebarItemGlyphView(item: item, isSelected: isSelected)
-            }
-            .frame(width: 26, height: 26)
-
-            Text(item.compactName)
-                .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-
-            Spacer(minLength: 0)
-
-            if let capabilityState {
-                Circle()
-                    .fill(capabilityState.isActive ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.secondaryText.opacity(0.55))
-                    .frame(width: 6, height: 6)
-            } else if (isHovered || isSelected), let shortcut = item.shortcut {
-                Text(shortcutDisplay(for: shortcut))
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-            }
+        ZStack {
+            SidebarItemGlyphView(item: item, isSelected: isSelected, presentation: .card)
+                .frame(width: 26, height: 26)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: AppSurfaceTokens.Layout.rowMinHeight, alignment: .center)
         .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
-                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : (isHovered ? AppSurfaceTokens.cardBackground.opacity(0.72) : Color.clear))
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : (isHovered ? AppSurfaceTokens.cardBackground.opacity(0.64) : Color.clear))
         )
         .overlay(alignment: .leading) {
             if isSelected {
                 Capsule(style: .continuous)
                     .fill(AppSurfaceTokens.accentBlue)
-                    .frame(width: 3, height: 18)
+                    .frame(width: 3, height: 20)
+                    .padding(.leading, 0)
             }
         }
+        .anchorPreference(key: SidebarRailTooltipPreferenceKey.self, value: .bounds) { anchor in
+            isHovered ? SidebarRailTooltipValue(item: item, isSelected: isSelected, anchor: anchor) : nil
+        }
+        .animation(
+            reduceMotion
+                ? .easeOut(duration: 0.10)
+                : .spring(response: 0.24, dampingFraction: 0.92),
+            value: isHovered
+        )
+        .zIndex(isHovered ? 10 : 0)
         .contentShape(Rectangle())
         .help(item.displayName)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.displayName)\(isSelected ? "，当前页面" : "")")
     }
+}
 
-    private func shortcutDisplay(for shortcut: AcMindKeyboardShortcut) -> String {
-        var parts: [String] = []
-        if shortcut.modifiers.contains(.command) { parts.append("⌘") }
-        if shortcut.modifiers.contains(.option) { parts.append("⌥") }
-        if shortcut.modifiers.contains(.shift) { parts.append("⇧") }
-        parts.append(shortcut.key.uppercased())
-        return parts.joined()
+struct SidebarRailTooltip: View {
+    let item: SidebarItem
+    let isSelected: Bool
+
+    var body: some View {
+        Text(item.displayName)
+            .font(.system(size: 12.5, weight: .semibold))
+            .foregroundStyle(AppSurfaceTokens.primaryText)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(minWidth: 82, alignment: .leading)
+            .background(tooltipBackground)
+            .overlay(tooltipBorder)
+            .shadow(color: Color.black.opacity(0.11), radius: 5, x: 0, y: 2)
+            .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 6)
+            .shadow(color: isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : Color.clear, radius: 10, x: 0, y: 0)
+            .fixedSize(horizontal: true, vertical: false)
+            .allowsHitTesting(false)
+    }
+
+    private var tooltipBackground: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(AppSurfaceTokens.cardBackgroundStrong)
+    }
+
+    private var tooltipBorder: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .strokeBorder(
+                isSelected ? AppSurfaceTokens.accentBlue.opacity(0.24) : AppSurfaceTokens.separator.opacity(0.72),
+                lineWidth: 1
+            )
+    }
+}
+
+struct SidebarRailTooltipValue {
+    let item: SidebarItem
+    let isSelected: Bool
+    let anchor: Anchor<CGRect>
+}
+
+struct SidebarRailTooltipPreferenceKey: PreferenceKey {
+    static let defaultValue: SidebarRailTooltipValue? = nil
+
+    static func reduce(value: inout SidebarRailTooltipValue?, nextValue: () -> SidebarRailTooltipValue?) {
+        value = nextValue() ?? value
+    }
+}
+
+enum SidebarRailTooltipLayout {
+    static func yOffset(for frame: CGRect, viewportHeight: CGFloat) -> CGFloat {
+        let tooltipHalfHeight: CGFloat = 16
+        let viewportInset: CGFloat = 28
+        let projectedBottom = frame.midY + tooltipHalfHeight + viewportInset
+        return -max(0, projectedBottom - viewportHeight)
     }
 }
 
@@ -976,27 +903,80 @@ private struct SidebarFooterStatus: Sendable, Equatable {
 private struct SidebarFooterRow: View {
     let status: SidebarFooterStatus
     let isCompact: Bool
+    var isSelected: Bool = false
+    var isHovered: Bool = false
 
     var body: some View {
+        Group {
+            if isCompact {
+                compactBody
+            } else {
+                expandedBody
+            }
+        }
+    }
+
+    private var compactBody: some View {
+        ZStack {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(AppSurfaceTokens.accentBlue.opacity(0.12))
+
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.accentBlue)
+                    .accessibilityHidden(true)
+            }
+            .frame(width: 26, height: 26)
+        }
+        .frame(maxWidth: .infinity, minHeight: AppSurfaceTokens.Layout.rowMinHeight, alignment: .center)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : (isHovered ? AppSurfaceTokens.cardBackground.opacity(0.64) : Color.clear))
+        )
+        .overlay(alignment: .leading) {
+            if isSelected {
+                Capsule(style: .continuous)
+                    .fill(AppSurfaceTokens.accentBlue)
+                    .frame(width: 3, height: 20)
+                    .padding(.leading, 0)
+            }
+        }
+        .overlay(alignment: .trailing) {
+            Circle()
+                .fill(AppSurfaceTokens.accentGreen.opacity(0.92))
+                .frame(width: 4.5, height: 4.5)
+                .padding(.trailing, 4)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
+                .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.18) : Color.clear, lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(status.serviceState)，模型：\(status.modelLabel)")
+    }
+
+    private var expandedBody: some View {
         HStack(spacing: 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .fill(AppSurfaceTokens.accentBlue.opacity(0.12))
 
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: isCompact ? 12 : 13, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.accentBlue)
                     .accessibilityHidden(true)
             }
-            .frame(width: isCompact ? 26 : 30, height: isCompact ? 26 : 30)
+            .frame(width: 30, height: 30)
+            .frame(width: 36, alignment: .center)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("设置")
-                    .font(.system(size: isCompact ? 11.5 : 12.6, weight: .semibold))
+                    .font(.system(size: 12.6, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
                 Text("\(status.serviceState) · \(status.modelLabel)")
-                    .font(.system(size: isCompact ? 9 : 10.2, weight: .medium))
+                    .font(.system(size: 10.2, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(1)
             }
@@ -1004,18 +984,18 @@ private struct SidebarFooterRow: View {
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: isCompact ? 9 : 10, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
-        .padding(.horizontal, isCompact ? 8 : 10)
-        .padding(.vertical, isCompact ? 8 : 10)
+        .padding(.trailing, 10)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: isCompact ? 11 : 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(AppSurfaceTokens.cardBackground.opacity(0.64))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: isCompact ? 11 : 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)

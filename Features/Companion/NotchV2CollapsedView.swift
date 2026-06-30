@@ -57,7 +57,6 @@ struct NotchV2CollapsedView: View {
         .onTapGesture {
             viewModel.toggleExpansion()
         }
-        .clipped()
     }
 
     private var musicCollapsedLayout: some View {

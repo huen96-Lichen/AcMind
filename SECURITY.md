@@ -1,61 +1,61 @@
-# Security Policy
+# 安全政策
 
-## Supported status
+## 支持范围
 
-AcMind is currently pre-release. Security review should focus on the current `main` branch and the upcoming `v0.1.0-alpha` release line.
+AcMind 目前处于预发布阶段。安全审查应聚焦当前的 `main` 分支，以及即将发布的 `v0.1.0-alpha` 版本线。
 
-Older snapshots are not guaranteed to receive security fixes.
+较早的快照不保证会收到安全修复。
 
-## Reporting a vulnerability
+## 漏洞报告
 
-Use GitHub private vulnerability reporting if it is enabled for this repository. That is the preferred path for:
+如果仓库已启用 GitHub 私密漏洞报告，请优先使用该渠道。以下问题都建议走私密报告：
 
-- API key exposure;
-- local file disclosure;
-- clipboard leakage;
-- screen content leakage;
-- microphone or accessibility permission misuse;
-- input monitoring concerns;
-- helper installation or privilege-boundary issues;
-- cloud-provider data leaks;
-- insecure packaging or update behavior.
+- API 密钥泄露；
+- 本地文件泄露；
+- 剪贴板泄露；
+- 屏幕内容泄露；
+- 麦克风或辅助功能权限误用；
+- 输入监控相关风险；
+- 辅助程序安装或权限边界问题；
+- 云端提供方数据外泄；
+- 不安全的打包或更新行为。
 
-If the repository does not yet expose GitHub private vulnerability reporting, maintainers need to enable it before public release. Do not publish exploit details, proof-of-concept code, screenshots with sensitive content, or credentials in a public issue.
+如果仓库还没有启用 GitHub 私密漏洞报告，维护者需要在公开发布前先开启它。请不要在公开 issue 里发布利用细节、概念验证代码、包含敏感内容的截图或凭据。
 
-## What to include in a private report
+## 私密报告中应包含什么
 
-- a short summary;
-- how to reproduce the issue;
-- the affected feature or path;
-- the expected and actual behavior;
-- relevant macOS, Xcode, and Swift versions;
-- any commit or release identifier involved;
-- whether the issue is a regression;
-- whether the data exposure is local-only or can leave the device.
+- 简短摘要；
+- 复现方法；
+- 受影响的功能或路径；
+- 期望行为与实际行为；
+- 相关的 macOS、Xcode 和 Swift 版本；
+- 涉及的提交或发布标识；
+- 是否属于回归问题；
+- 数据泄露是否只在本地发生，还是可能离开设备。
 
-## What not to include publicly
+## 不要公开包含什么
 
-Do not post:
+请不要发布：
 
-- secrets or tokens;
-- private URLs or credentials;
-- clipboard contents;
-- screenshots with personal data;
-- local machine paths that identify a workstation;
-- exploit payloads or bypass instructions.
+- 密钥或令牌；
+- 私有 URL 或凭据；
+- 剪贴板内容；
+- 包含个人数据的截图；
+- 会暴露工作站身份的本地机器路径；
+- 利用载荷或绕过指令。
 
-## Acknowledgement
+## 处理说明
 
-We aim to acknowledge private reports promptly and keep the discussion private while the issue is being reviewed.
+我们会尽快确认私密报告，并在问题审查期间保持讨论私密。
 
-We cannot promise a fixed response time or a formal audit result, because no formal security audit has been completed for this repository.
+我们不能承诺固定响应时间，也不能承诺正式审计结果，因为这个仓库还没有完成正式安全审计。
 
-## Current limitations
+## 当前限制
 
-Known limitations that still need careful review before release include:
+在发布前仍需要谨慎审查的已知限制包括：
 
-- local secret storage can fall back to plaintext settings storage when that preference is selected;
-- cloud providers receive whatever data the user explicitly routes to them;
-- permission-dependent features rely on macOS privacy prompts and user consent;
-- helper installation and code-signing behavior should be validated carefully on new machines;
-- telemetry has not been identified as a dedicated product pipeline, but the codebase should be re-audited before claiming that no data ever leaves the device.
+- 当用户选择该偏好时，本地密钥存储可能回退到明文设置存储；
+- 云端提供方会收到用户明确路由给它们的数据；
+- 依赖权限的功能会依赖 macOS 隐私提示和用户授权；
+- 在新机器上应仔细验证辅助程序安装和代码签名行为；
+- 目前没有识别出独立的遥测产品管线，但在声明“任何数据都不会离开设备”之前，代码库仍应重新审查。

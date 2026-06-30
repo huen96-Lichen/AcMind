@@ -32,9 +32,9 @@ struct CompanionCapabilityCard<Content: View>: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
+            // 头部
             HStack(alignment: .top, spacing: 12) {
-                // Icon
+                // 图标
                 ZStack {
                     RoundedRectangle(cornerRadius: AppSurfaceTokens.secondaryCardRadius, style: .continuous)
                         .fill(AppSurfaceTokens.cardBackgroundSoft)
@@ -45,7 +45,7 @@ struct CompanionCapabilityCard<Content: View>: View {
                         .foregroundColor(iconColor)
                 }
                 
-                // Title & Description
+                // 标题与说明
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
@@ -58,14 +58,14 @@ struct CompanionCapabilityCard<Content: View>: View {
                 
                 Spacer()
                 
-                // Toggle
+                // 开关
                 Toggle("启用", isOn: $toggleEnabled)
                     .toggleStyle(.switch)
                     .disabled(!isGlobalEnabled)
             }
             .padding(.bottom, 16)
             
-            // Content
+            // 内容
             if isGlobalEnabled {
                 content
                     .opacity(isEnabled ? 1.0 : 0.55)

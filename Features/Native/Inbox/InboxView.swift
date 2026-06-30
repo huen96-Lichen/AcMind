@@ -36,17 +36,12 @@ struct InboxView: View {
             title: inboxWorkspaceTitle,
             subtitle: inboxWorkspaceSubtitle,
             headerActions: AnyView(inboxHeaderActions),
-            leadingRailWidth: AppSurfaceTokens.Layout.leadingRailWidth,
+            leadingRailWidth: 0,
             trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
             usesResponsiveInspector: true,
-            compactInspectorTitle: "收集详情",
+            compactInspectorTitle: "收集信息",
             leadingRail: {
-                CollectedInboxFilterRail(
-                    items: viewModel.allItems,
-                    filterState: viewModel.filterState,
-                    onUpdateFilter: updateFilter,
-                    onClearFilters: clearFilters
-                )
+                EmptyView()
             },
             content: {
                 itemList
@@ -66,6 +61,7 @@ struct InboxView: View {
                     onCloseAllPins: clipboardPinActions.closeAll,
                     onOpenPasteQueue: { showPasteQueue = true },
                     onPinToggle: { item in Task { item.isPinned ? await viewModel.unpin(item.id) : await viewModel.pin(item.id) } },
+                    onDesktopPin: { item in (NSApp.delegate as? AppDelegate)?.showClipboardPinWindow(collectedItem: item) },
                     onFavoriteToggle: { item in Task { await viewModel.setFavorite(item.id, isFavorite: !item.isFavorite) } },
                     onArchive: { item in Task { await viewModel.archive(item.id) } },
                     onSaveClipboard: { item in Task { await viewModel.saveClipboardItemToInbox(item.id) } },
@@ -169,10 +165,6 @@ struct InboxView: View {
 
     private var itemList: some View {
         VStack(spacing: 0) {
-            inboxOverviewCard
-
-            Divider()
-
             inboxControlBar
 
             if let batchResult = viewModel.lastBatchOperationResult {
@@ -234,6 +226,7 @@ struct InboxView: View {
                                         onSelect: { selectItem(item) },
                                         onToggleBatch: { viewModel.toggleBatchSelection(item.id) },
                                         onPinToggle: { Task { item.isPinned ? await viewModel.unpin(item.id) : await viewModel.pin(item.id) } },
+                                        onDesktopPin: { (NSApp.delegate as? AppDelegate)?.showClipboardPinWindow(collectedItem: item) },
                                         onFavoriteToggle: { Task { await viewModel.setFavorite(item.id, isFavorite: !item.isFavorite) } },
                                         onArchive: { Task { await viewModel.archive(item.id) } },
                                         onSaveClipboard: { Task { await viewModel.saveClipboardItemToInbox(item.id) } },
@@ -242,9 +235,9 @@ struct InboxView: View {
                                     )
                                 }
                             }
-                            .padding(16)
+                            .padding(18)
                         } else {
-                            LazyVGrid(columns: inboxColumns(availableWidth: proxy.size.width), spacing: 12) {
+                            LazyVGrid(columns: inboxColumns(availableWidth: proxy.size.width), spacing: 10) {
                                 ForEach(viewModel.items) { item in
                                     CollectedInboxItemCard(
                                         item: item,
@@ -255,6 +248,7 @@ struct InboxView: View {
                                         onSelect: { selectItem(item) },
                                         onToggleBatch: { viewModel.toggleBatchSelection(item.id) },
                                         onPinToggle: { Task { item.isPinned ? await viewModel.unpin(item.id) : await viewModel.pin(item.id) } },
+                                        onDesktopPin: { (NSApp.delegate as? AppDelegate)?.showClipboardPinWindow(collectedItem: item) },
                                         onFavoriteToggle: { Task { await viewModel.setFavorite(item.id, isFavorite: !item.isFavorite) } },
                                         onArchive: { Task { await viewModel.archive(item.id) } },
                                         onSaveClipboard: { Task { await viewModel.saveClipboardItemToInbox(item.id) } },
@@ -263,7 +257,7 @@ struct InboxView: View {
                                     )
                                 }
                             }
-                            .padding(16)
+                            .padding(18)
                         }
                     }
                 }
@@ -282,164 +276,14 @@ struct InboxView: View {
         }
     }
 
-    private var inboxOverviewCard: some View {
-        AppSurfaceCard(title: inboxWorkspaceTitle, subtitle: inboxWorkspaceSubtitle, padding: 14) {
-            VStack(alignment: .leading, spacing: 12) {
-                if appState.inboxWorkspaceSelection == "screenshotHistory" {
-                    screenshotWorkspaceBanner
-                }
-
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10)
-                    ],
-                    spacing: 10
-                ) {
-                    inboxSummaryChip(title: "总量", value: "\(viewModel.allItems.count) 条", tint: AppSurfaceTokens.accentBlue)
-                    inboxSummaryChip(title: "待处理", value: "\(viewModel.count(for: InboxQuickFilter.pending)) 条", tint: AppSurfaceTokens.accentOrange)
-                    inboxSummaryChip(title: "Pin", value: "\(viewModel.count(for: .pinned)) 条", tint: AppSurfaceTokens.accentGreen)
-                    inboxSummaryChip(title: "收藏", value: "\(viewModel.count(for: .favorites)) 条", tint: AppSurfaceTokens.secondaryText)
-                }
-
-                HStack(alignment: .center, spacing: 10) {
-                    AppSurfaceSummaryChip(
-                        title: "筛选",
-                        value: activeFilterSummary,
-                        tint: AppSurfaceTokens.primaryText
-                    )
-                    AppSurfaceSummaryChip(
-                        title: "队列",
-                        value: viewModel.pasteQueueItems.isEmpty ? "空" : "\(viewModel.pasteQueueItems.count) 项",
-                        tint: AppSurfaceTokens.accentBlue
-                    )
-                    AppSurfaceSummaryChip(
-                        title: "模式",
-                        value: viewModel.viewMode == .list ? "列表" : "网格",
-                        tint: AppSurfaceTokens.secondaryText
-                    )
-                }
-
-                HStack(spacing: 8) {
-                    filterChip(
-                        title: "截图历史",
-                        icon: "camera.viewfinder",
-                        isSelected: viewModel.filterState.quickFilter == .screenshotHistory
-                    ) {
-                        updateFilter { $0.quickFilter = .screenshotHistory }
-                    }
-
-                    filterChip(
-                        title: "待整理",
-                        icon: "clock",
-                        isSelected: viewModel.filterState.quickFilter == .pending
-                    ) {
-                        updateFilter { $0.quickFilter = .pending }
-                    }
-
-                    filterChip(
-                        title: "最近更新",
-                        icon: "clock.arrow.circlepath",
-                        isSelected: viewModel.filterState.quickFilter == .recent
-                    ) {
-                        updateFilter { $0.quickFilter = .recent }
-                    }
-                }
-
-                Text("列表主体保持高效浏览，顶部只负责概览与状态解释。")
-                    .font(.system(size: AppSurfaceTokens.Typography.caption))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-            }
-        }
-        .padding(.horizontal, AppSurfaceTokens.Spacing.lg)
-        .padding(.top, AppSurfaceTokens.Spacing.lg)
-    }
-
-    private var screenshotWorkspaceBanner: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppSurfaceTokens.accentBlue)
-                        Text("截图历史工作区")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppSurfaceTokens.primaryText)
-                    }
-                    Text("只看截图与截图 OCR 结果，保留 Pin、查看和后续整理入口。")
-                        .font(.system(size: AppSurfaceTokens.Typography.caption))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                }
-
-                Spacer(minLength: 8)
-
-                HStack(spacing: 8) {
-                    Button("继续处理最近截图") {
-                        (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button("返回收集箱") {
-                        appState.selectInboxWorkspace("all")
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-
-            HStack(spacing: 8) {
-                inboxSummaryChip(title: "截图", value: "\(viewModel.count(for: .screenshot)) 条", tint: AppSurfaceTokens.accentBlue)
-                inboxSummaryChip(title: "OCR", value: "\(viewModel.count(for: .screenshotOCR)) 条", tint: AppSurfaceTokens.accentGreen)
-                inboxSummaryChip(title: "合计", value: "\(viewModel.count(for: .screenshotHistory)) 条", tint: AppSurfaceTokens.accentOrange)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                .stroke(AppSurfaceTokens.accentBlue.opacity(0.20), lineWidth: 1)
-        )
-    }
-
-    private func inboxSummaryChip(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .medium))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .lineLimit(1)
-
-            Text(value)
-                .font(.system(size: AppSurfaceTokens.Typography.controlStrong, weight: .semibold, design: .rounded))
-                .foregroundStyle(tint)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, AppSurfaceTokens.Spacing.sm)
-        .padding(.vertical, AppSurfaceTokens.Spacing.xs)
-        .background(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
-                .fill(AppSurfaceTokens.cardBackgroundSoft)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
-                .stroke(tint.opacity(0.18), lineWidth: 1)
-        )
-    }
-
     private func inboxColumns(availableWidth: CGFloat) -> [GridItem] {
         let count = MaterialCardGridLayout.columnCount(
             availableWidth: availableWidth,
             minimumColumnWidth: 240,
-            maximumColumns: 3
+            maximumColumns: 4
         )
         return Array(
-            repeating: GridItem(.flexible(minimum: 240, maximum: 300), spacing: MaterialCardGridLayout.spacing),
+            repeating: GridItem(.flexible(minimum: 240, maximum: 300), spacing: 10),
             count: count
         )
     }
@@ -452,7 +296,7 @@ struct InboxView: View {
                     appState.selectInboxWorkspace("all")
                 }
 
-                Button("继续处理最近截图") {
+                Button("继续处理最近一次截图") {
                     (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
                 }
             } label: {
@@ -488,16 +332,19 @@ struct InboxView: View {
     }
 
     private var inboxControlBar: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
                 searchBar
+                    .frame(minWidth: 220, idealWidth: 340, maxWidth: 420)
 
                 Spacer(minLength: 8)
+
+                inboxFilterMenu
 
                 Menu {
                     Button("最新优先") { updateFilter { $0.sort = .newestFirst } }
                     Button("最早优先") { updateFilter { $0.sort = .oldestFirst } }
-                    Button("Pin 优先") { updateFilter { $0.sort = .pinnedFirst } }
+                    Button("固定优先") { updateFilter { $0.sort = .pinnedFirst } }
                     Button("最近更新") { updateFilter { $0.sort = .recentlyUpdated } }
                 } label: {
                     Label(viewModel.filterState.sort.displayName, systemImage: "arrow.up.arrow.down")
@@ -513,8 +360,8 @@ struct InboxView: View {
                 }
                 .padding(3)
                 .background(
-                    RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                        .fill(AppSurfaceTokens.cardBackground.opacity(0.75))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackground.opacity(0.62))
                 )
 
                 if viewModel.pasteQueueItems.isEmpty == false {
@@ -530,27 +377,29 @@ struct InboxView: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    CollectedInboxFilterRail(
+                        items: viewModel.allItems,
+                        sourceFilters: [.clipboard, .phoneSync, .voice, .screenshot, .screenshotOCR, .agent, .manual],
+                        contentTypeFilters: [.text, .image, .link, .file, .audio, .video],
+                        statusFilters: [.captured, .pending, .processing, .refined, .exported, .archived]
+                    )
+                    .frame(width: 0, height: 0)
+                    .accessibilityHidden(true)
+
+                    ForEach([InboxQuickFilter.all, .pending, .screenshotHistory, .recent], id: \.self) { filter in
+                        quickFilterButton(filter)
+                    }
+
+                    Spacer(minLength: 8)
+
                     if viewModel.filterState.sources.contains(.clipboard) {
                         clipboardMonitoringControl
                     }
 
-                    Label(activeFilterSummary, systemImage: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 12, weight: .semibold))
+                    Text("\(viewModel.items.count) 项")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
-
-                    ForEach(activeFilterChips, id: \.self) { chip in
-                        Text(chip)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppSurfaceTokens.primaryText)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(AppSurfaceTokens.cardBackground.opacity(0.82)))
-                            .overlay(
-                                Capsule()
-                                    .stroke(AppSurfaceTokens.separator.opacity(0.45), lineWidth: 1)
-                            )
-                    }
 
                     if hasActiveInlineFilters {
                         Button("清除筛选") {
@@ -564,8 +413,87 @@ struct InboxView: View {
                 .padding(.vertical, 1)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(AppSurfaceTokens.contentBackground)
+    }
+
+    private var inboxFilterMenu: some View {
+        Menu {
+            Section("快捷视图") {
+                ForEach(InboxQuickFilter.allCases, id: \.self) { filter in
+                    filterMenuButton(
+                        title: filter.displayName,
+                        icon: filter.iconName,
+                        isSelected: viewModel.filterState.quickFilter == filter
+                    ) {
+                        selectQuickFilter(filter)
+                    }
+                }
+            }
+
+            Menu("来源") {
+                ForEach([CollectionSource.clipboard, .phoneSync, .voice, .screenshot, .screenshotOCR, .agent, .manual], id: \.self) { source in
+                    filterMenuButton(title: source.displayName, icon: source.iconName, isSelected: viewModel.filterState.sources.contains(source)) {
+                        updateFilter { $0.sources.toggleMembership(source) }
+                    }
+                }
+            }
+
+            Menu("内容类型") {
+                ForEach([CollectedContentType.text, .link, .image, .file, .code, .richText, .video], id: \.self) { type in
+                    filterMenuButton(title: type.displayName, icon: type.iconName, isSelected: viewModel.filterState.contentTypes.contains(type)) {
+                        updateFilter { $0.contentTypes.toggleMembership(type) }
+                    }
+                }
+            }
+
+            Menu("处理状态") {
+                ForEach([ProcessingStatus.pending, .refined, .archived, .exported], id: \.self) { status in
+                    filterMenuButton(title: status.displayName, icon: status.iconName, isSelected: viewModel.filterState.statuses.contains(status)) {
+                        updateFilter { $0.statuses.toggleMembership(status) }
+                    }
+                }
+            }
+
+            if hasActiveInlineFilters {
+                Divider()
+                Button("清除全部筛选", action: clearFilters)
+            }
+        } label: {
+            Label(
+                activeFilterChips.isEmpty ? "筛选" : "筛选 \(activeFilterChips.count)",
+                systemImage: "line.3.horizontal.decrease"
+            )
+            .font(.system(size: 12, weight: .medium))
+        }
+        .menuStyle(.borderlessButton)
+        .accessibilityLabel("筛选收集内容")
+    }
+
+    private func filterMenuButton(title: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: isSelected ? "checkmark" : icon)
+        }
+    }
+
+    private func quickFilterButton(_ filter: InboxQuickFilter) -> some View {
+        let isSelected = viewModel.filterState.quickFilter == filter
+        return Button {
+            selectQuickFilter(filter)
+        } label: {
+            Text(filter.displayName)
+                .font(.system(size: 11, weight: isSelected ? .semibold : .medium))
+                .foregroundStyle(isSelected ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
+                .padding(.horizontal, 9)
+                .frame(height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.11) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(filter.displayName)
     }
 
     private var hasActiveInlineFilters: Bool {
@@ -654,30 +582,15 @@ struct InboxView: View {
         )
     }
 
-    private func filterChip(title: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.white : AppSurfaceTokens.primaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.cardBackground.opacity(0.82))
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.clear : AppSurfaceTokens.separator.opacity(0.55), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-    }
-
     private func updateFilter(_ mutate: @escaping (inout InboxFilterState) -> Void) {
         var next = viewModel.filterState
         mutate(&next)
         Task { await viewModel.updateFilter(next) }
+    }
+
+    private func selectQuickFilter(_ filter: InboxQuickFilter) {
+        appState.selectInboxWorkspace(filter == .screenshotHistory ? "screenshotHistory" : "all")
+        updateFilter { $0.quickFilter = filter }
     }
 
     private func clearFilters() {
@@ -700,7 +613,7 @@ struct InboxView: View {
     private var inboxWorkspaceSubtitle: String {
         switch appState.inboxWorkspaceSelection {
         case "screenshotHistory":
-            return "只看截图与截图 OCR 结果"
+            return "只看截图与截图文字识别结果"
         default:
             return "\(viewModel.items.count) 条内容"
         }
@@ -802,14 +715,14 @@ struct InboxView: View {
     private var emptyState: some View {
         StateContainer(
             phase: .empty(
-                title: "暂无收集内容",
-                message: "通过语音、截图、剪贴板或 Agent 生成内容后，会先进入这里等待整理。"
+                title: "没有收集内容",
+                message: "语音、截图、剪贴板或智能体生成的内容会先汇到这里。"
             )
         ) {
             AppSurfaceEmptyState(
                 icon: "tray",
-                title: "暂无收集内容",
-                message: "通过语音、截图、剪贴板或 Agent 生成内容后，会先进入这里等待整理。",
+                title: "没有收集内容",
+                message: "语音、截图、剪贴板或智能体生成的内容会先汇到这里。",
                 tint: AppSurfaceTokens.accentBlue
             )
         }
@@ -818,7 +731,7 @@ struct InboxView: View {
 
     private var loadingState: some View {
         StateContainer(
-            phase: .loading(message: "正在加载收集箱：读取语音、截图、剪贴板和 Agent 生成内容。")
+            phase: .loading(message: "收集箱加载中。")
         ) {
             EmptyView()
         }
@@ -854,190 +767,6 @@ struct InboxView: View {
             guard Task.isCancelled == false else { return }
             await focusPendingCaptureDetailIfNeeded()
         }
-    }
-}
-
-private struct CollectedInboxFilterRail: View {
-    let items: [CollectedItem]
-    let filterState: InboxFilterState
-    let onUpdateFilter: (@escaping (inout InboxFilterState) -> Void) -> Void
-    let onClearFilters: () -> Void
-
-    private let sourceFilters: [CollectionSource] = [.clipboard, .phoneSync, .voice, .screenshot, .screenshotOCR, .agent, .manual]
-    private let contentTypeFilters: [CollectedContentType] = [.text, .link, .image, .file, .code, .richText, .video]
-    private let statusFilters: [ProcessingStatus] = [.pending, .refined, .archived, .exported]
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                railHeader
-
-                railSection(title: "快捷视图") {
-                    ForEach(InboxQuickFilter.allCases, id: \.self) { filter in
-                        railButton(
-                            title: filter.displayName,
-                            icon: filter.iconName,
-                            isSelected: filterState.quickFilter == filter,
-                            badge: "\(count(for: filter))"
-                        ) {
-                            onUpdateFilter { $0.quickFilter = filter }
-                        }
-                    }
-                }
-
-                railSection(title: "来源") {
-                    ForEach(sourceFilters, id: \.self) { source in
-                        railButton(
-                            title: source.displayName,
-                            icon: source.iconName,
-                            isSelected: filterState.sources.contains(source),
-                            badge: "\(items.filter { $0.source == source }.count)"
-                        ) {
-                            onUpdateFilter { state in
-                                state.sources.toggleMembership(source)
-                            }
-                        }
-                    }
-                }
-
-                railSection(title: "类型") {
-                    ForEach(contentTypeFilters, id: \.self) { type in
-                        railButton(
-                            title: type.displayName,
-                            icon: type.iconName,
-                            isSelected: filterState.contentTypes.contains(type),
-                            badge: "\(items.filter { $0.contentType == type }.count)"
-                        ) {
-                            onUpdateFilter { state in
-                                state.contentTypes.toggleMembership(type)
-                            }
-                        }
-                    }
-                }
-
-                railSection(title: "状态") {
-                    ForEach(statusFilters, id: \.self) { status in
-                        railButton(
-                            title: status.displayName,
-                            icon: status.iconName,
-                            isSelected: filterState.statuses.contains(status),
-                            badge: "\(items.filter { $0.processingStatus == status }.count)"
-                        ) {
-                            onUpdateFilter { state in
-                                state.statuses.toggleMembership(status)
-                            }
-                        }
-                    }
-                }
-
-                if hasActiveFilters {
-                    Button(action: onClearFilters) {
-                        Label("清除全部筛选", systemImage: "xmark.circle")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppSurfaceTokens.accentBlue)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
-                }
-            }
-            .padding(AppSurfaceTokens.Spacing.lg)
-        }
-        .background(AppSurfaceBackdrop())
-        .accessibilityLabel("收集箱筛选栏")
-    }
-
-    private var railHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Filter Rail")
-                .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .bold))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .textCase(.uppercase)
-
-            Text("收集箱")
-                .font(.system(size: AppSurfaceTokens.Typography.pageTitle, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-
-            Text("\(items.count) 条内容 · 多条件筛选")
-                .font(.system(size: AppSurfaceTokens.Typography.caption))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-        }
-    }
-
-    private var hasActiveFilters: Bool {
-        filterState.quickFilter != .all ||
-        filterState.sources.isEmpty == false ||
-        filterState.contentTypes.isEmpty == false ||
-        filterState.statuses.isEmpty == false ||
-        filterState.searchQuery.isEmpty == false ||
-        filterState.sort != .newestFirst
-    }
-
-    private func count(for filter: InboxQuickFilter) -> Int {
-        switch filter {
-        case .all:
-            return items.count
-        case .pending:
-            return items.filter { $0.processingStatus == .pending || $0.processingStatus == .captured }.count
-        case .screenshotHistory:
-            return items.filter { $0.source == .screenshot || $0.source == .screenshotOCR }.count
-        case .pinned:
-            return items.filter(\.isPinned).count
-        case .favorites:
-            return items.filter(\.isFavorite).count
-        case .recent:
-            let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? .distantPast
-            return items.filter { ($0.updatedAt ?? $0.createdAt) >= cutoff }.count
-        }
-    }
-
-    private func railSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-                .textCase(.uppercase)
-
-            VStack(spacing: 6) {
-                content()
-            }
-        }
-    }
-
-    private func railButton(title: String, icon: String, isSelected: Bool, badge: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-                    .frame(width: 16)
-
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isSelected ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
-                    .lineLimit(1)
-
-                Spacer(minLength: 4)
-
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
-                }
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 34)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.10) : AppSurfaceTokens.cardBackground.opacity(0.68))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.42) : AppSurfaceTokens.separator.opacity(0.35), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
     }
 }
 
@@ -1709,7 +1438,7 @@ private struct CollectedInboxBatchActionBar: View {
                 Spacer(minLength: 8)
 
                 batchButton("添加标签", icon: "tag", action: onAddTags)
-                batchButton("发送给 Agent", icon: "paperplane", isEnabled: !isPerformingWorkflow, action: onSendToAgent)
+                batchButton("发送给智能体", icon: "paperplane", isEnabled: !isPerformingWorkflow, action: onSendToAgent)
                 batchButton("转任务", icon: "checkmark.square", isEnabled: !isPerformingWorkflow, action: onCreateTask)
                 batchButton("转日程", icon: "calendar", isEnabled: !isPerformingWorkflow, action: onCreateSchedule)
                 batchButton("归档", icon: "archivebox", action: onArchive)
@@ -1774,6 +1503,45 @@ private struct CollectedInboxBatchActionBar: View {
     }
 }
 
+private struct CollectedInboxFilterRail: View {
+    let items: [CollectedItem]
+    private let sourceFilters: [CollectionSource]
+    private let contentTypeFilters: [CollectedContentType]
+    private let statusFilters: [ProcessingStatus]
+
+    init(
+        items: [CollectedItem],
+        sourceFilters: [CollectionSource],
+        contentTypeFilters: [CollectedContentType],
+        statusFilters: [ProcessingStatus]
+    ) {
+        self.items = items
+        self.sourceFilters = sourceFilters
+        self.contentTypeFilters = contentTypeFilters
+        self.statusFilters = statusFilters
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(sourceFilters, id: \.self) { source in
+                railBadge(title: source.displayName, badge: "\(items.filter { $0.source == source }.count)")
+            }
+            ForEach(contentTypeFilters, id: \.self) { type in
+                railBadge(title: type.displayName, badge: "\(items.filter { $0.contentType == type }.count)")
+            }
+            ForEach(statusFilters, id: \.self) { status in
+                railBadge(title: status.displayName, badge: "\(items.filter { $0.processingStatus == status }.count)")
+            }
+        }
+    }
+
+    private func railBadge(title: String, badge: String) -> some View {
+        Text("\(title) \(badge)")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+    }
+}
+
 private struct CollectedInboxInspector: View {
     let items: [CollectedItem]
     let selectedItem: CollectedItem?
@@ -1788,6 +1556,7 @@ private struct CollectedInboxInspector: View {
     let onCloseAllPins: () -> Void
     let onOpenPasteQueue: () -> Void
     let onPinToggle: (CollectedItem) -> Void
+    let onDesktopPin: (CollectedItem) -> Void
     let onFavoriteToggle: (CollectedItem) -> Void
     let onArchive: (CollectedItem) -> Void
     let onSaveClipboard: (CollectedItem) -> Void
@@ -1798,7 +1567,7 @@ private struct CollectedInboxInspector: View {
 
     var body: some View {
         AcInspector(
-            title: selectedItem?.title ?? "Inspector",
+            title: selectedItem?.title ?? "检查器",
             subtitle: selectedItem.map { "\($0.contentType.displayName) · \($0.processingStatus.displayName)" } ?? "选择一条内容查看细节",
             footerContent: selectedItem.map { AnyView(fixedActionFooter(for: $0)) }
         ) {
@@ -1812,11 +1581,11 @@ private struct CollectedInboxInspector: View {
 
     private var summaryInspector: some View {
         VStack(alignment: .leading, spacing: 16) {
-            AppSurfaceCard(title: "收集概览", subtitle: activeFilterSummary, padding: 14) {
+            AppSurfaceCard(title: "收集总览", subtitle: activeFilterSummary, padding: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     metricRow(title: "总数量", value: "\(items.count)")
                     metricRow(title: "待整理", value: "\(items.filter { $0.processingStatus == .pending || $0.processingStatus == .captured }.count)")
-                    metricRow(title: "Pin", value: "\(items.filter(\.isPinned).count)")
+                    metricRow(title: "固定", value: "\(items.filter(\.isPinned).count)")
                     metricRow(title: "手机同步", value: "\(items.filter { $0.source == .phoneSync }.count)")
                     metricRow(title: "粘贴队列", value: "\(items.filter { $0.id.origin == .clipboardItem }.count)")
                     metricRow(title: "批量选择", value: selectedCount == 0 ? "无" : "\(selectedCount)")
@@ -1824,22 +1593,22 @@ private struct CollectedInboxInspector: View {
                 }
             }
 
-            AppSurfaceCard(title: "下一步", subtitle: "Inspector 将承接内容去向", padding: 14) {
+            AppSurfaceCard(title: "下一步", subtitle: "检查器将承接内容去向", padding: 14) {
                 VStack(alignment: .leading, spacing: 8) {
                     guidanceLine("选择内容后可查看完整信息、来源和标签。")
                     guidanceLine("剪贴板内容可保存到收集箱或加入粘贴队列。")
-                    guidanceLine("任务、日程、知识库和 Markdown 去向已接通，可从内容详情直接执行。")
+                    guidanceLine("任务、日程、知识库和文稿去向已接通，可从内容详情直接执行。")
                 }
             }
 
-            AppSurfaceCard(title: "Pin 与队列", subtitle: "\(pasteQueueCount) 条待粘贴", padding: 14) {
+            AppSurfaceCard(title: "固定与队列", subtitle: "\(pasteQueueCount) 条待粘贴", padding: 14) {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
-                        inspectorAction("显示 Pin", icon: "eye", action: onShowAllPins)
-                        inspectorAction("隐藏 Pin", icon: "eye.slash", action: onHideAllPins)
+                        inspectorAction("显示固定", icon: "eye", action: onShowAllPins)
+                        inspectorAction("隐藏固定", icon: "eye.slash", action: onHideAllPins)
                     }
                     HStack(spacing: 8) {
-                        inspectorAction("关闭 Pin", icon: "xmark.circle", action: onCloseAllPins)
+                        inspectorAction("关闭固定", icon: "xmark.circle", action: onCloseAllPins)
                         inspectorAction("粘贴队列", icon: "list.number", isEnabled: pasteQueueCount > 0, action: onOpenPasteQueue)
                     }
                 }
@@ -1888,14 +1657,14 @@ private struct CollectedInboxInspector: View {
                 }
             }
 
-            AppSurfaceCard(title: "AI", subtitle: activeAIAction == nil ? "结构化处理当前内容" : "正在处理，请稍候", padding: 14) {
+            AppSurfaceCard(title: "智能处理", subtitle: activeAIAction == nil ? "结构化处理当前内容" : "正在处理，请稍候", padding: 14) {
                 VStack(spacing: 8) {
                     aiAction("自动标题", icon: "textformat.size", action: .generateTitle, item: item)
                     aiAction("摘要", icon: "sparkles", action: .summarize, item: item)
                     aiAction("提取待办", icon: "checklist", action: .extractTodos, item: item)
                     aiAction("提取日程", icon: "calendar.badge.plus", action: .extractSchedule, item: item)
                     aiAction("润色", icon: "wand.and.stars", action: .polish, item: item)
-                    inspectorAction("发送给 Agent", icon: "paperplane", isEnabled: isPerformingWorkflow == false) {
+                    inspectorAction("发送给智能体", icon: "paperplane", isEnabled: isPerformingWorkflow == false) {
                         onWorkflow(.sendToAgent, item)
                     }
                 }
@@ -1907,10 +1676,13 @@ private struct CollectedInboxInspector: View {
                         inspectorAction("保存到收集箱", icon: "tray.and.arrow.down") { onSaveClipboard(item) }
                         inspectorAction("加入粘贴队列", icon: "text.insert") { onEnqueuePaste(item) }
                     }
+                    if item.canOpenDesktopPin {
+                        inspectorAction("桌面固定", icon: "pin", action: { onDesktopPin(item) })
+                    }
                     inspectorAction("转任务", icon: "checkmark.square", isEnabled: isPerformingWorkflow == false) { onWorkflow(.createTask, item) }
                     inspectorAction("添加到日程", icon: "calendar", isEnabled: isPerformingWorkflow == false) { onWorkflow(.createSchedule, item) }
                     inspectorAction("保存到知识库", icon: "books.vertical", isEnabled: isPerformingWorkflow == false) { onWorkflow(.saveToKnowledge, item) }
-                    inspectorAction("导出 Markdown", icon: "doc.plaintext", isEnabled: isPerformingWorkflow == false) { onWorkflow(.exportMarkdown, item) }
+                    inspectorAction("导出文稿", icon: "doc.plaintext", isEnabled: isPerformingWorkflow == false) { onWorkflow(.exportMarkdown, item) }
                 }
             }
         }
@@ -2045,7 +1817,14 @@ private struct CollectedInboxInspector: View {
                     Image(systemName: item.isPinned ? "pin.fill" : "pin")
                 }
                 .buttonStyle(.borderless)
-                .accessibilityLabel(item.isPinned ? "取消 Pin" : "Pin")
+                    .accessibilityLabel(item.isPinned ? "取消固定" : "固定")
+
+                if item.canOpenDesktopPin {
+                    Button("桌面固定") {
+                        onDesktopPin(item)
+                    }
+                    .buttonStyle(.borderless)
+                }
 
                 Button {
                     onFavoriteToggle(item)
@@ -2084,6 +1863,7 @@ private struct CollectedInboxItemCard: View {
     let onSelect: () -> Void
     let onToggleBatch: () -> Void
     let onPinToggle: () -> Void
+    let onDesktopPin: () -> Void
     let onFavoriteToggle: () -> Void
     let onArchive: () -> Void
     let onSaveClipboard: () -> Void
@@ -2129,14 +1909,14 @@ private struct CollectedInboxItemCard: View {
     }
 
     private var gridBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             header
             previewPanel
-                .frame(height: 72)
+                .frame(height: 58)
             footer
         }
-        .padding(12)
-        .frame(maxWidth: 300, minHeight: 188, maxHeight: 188, alignment: .topLeading)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 188, maxHeight: 188, alignment: .topLeading)
         .background(cardBackground)
         .overlay(selectionOverlay)
     }
@@ -2178,7 +1958,7 @@ private struct CollectedInboxItemCard: View {
                     actionButtons
                 }
 
-                Text(previewText.isEmpty ? "暂无内容" : previewText)
+                Text(previewText.isEmpty ? "无内容" : previewText)
                     .font(.system(size: 12))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(2)
@@ -2192,6 +1972,7 @@ private struct CollectedInboxItemCard: View {
         .padding(.horizontal, 12)
         .padding(.vertical, density == .compact ? 7 : 10)
         .frame(maxWidth: .infinity, minHeight: density.rowHeight, maxHeight: density.rowHeight, alignment: .topLeading)
+        .frame(minHeight: presentation == .grid ? 188 : nil, maxHeight: presentation == .grid ? 188 : nil)
         .background(cardBackground)
         .overlay(selectionOverlay)
     }
@@ -2223,7 +2004,7 @@ private struct CollectedInboxItemCard: View {
     private var previewPanel: some View {
         if item.contentType == .link {
             HStack(alignment: .top, spacing: 10) {
-                CollectedLinkSiteIconView(item: item, size: 36)
+                CollectedLinkSiteIconView(item: item, size: 30)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(item.title ?? item.linkHost ?? "链接")
@@ -2236,76 +2017,43 @@ private struct CollectedInboxItemCard: View {
                         .foregroundStyle(Color(nsColor: .systemTeal))
                         .lineLimit(1)
 
-                    Text(previewText.isEmpty ? "无链接摘要" : previewText)
+                    Text(previewText.isEmpty ? "无摘要" : previewText)
                         .font(.system(size: 12))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
 
                 Spacer(minLength: 0)
             }
-            .padding(12)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .fill(Color(nsColor: .systemTeal).opacity(0.07))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
-            )
         } else if item.supportsThumbnail {
             CollectedItemThumbnailView(
                 item: item,
-                height: 72,
-                cornerRadius: AppSurfaceTokens.inlineBlockRadius
+                height: 58,
+                cornerRadius: 8
             )
         } else {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.title ?? item.contentType.displayName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(previewText.isEmpty ? "暂无内容" : previewText)
+                Text(previewText.isEmpty ? "无内容" : previewText)
                     .font(item.contentType == .code ? .system(size: 12, design: .monospaced) : .system(size: 12))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .lineLimit(item.contentType == .text ? 5 : 3)
+                    .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
 
                 Spacer(minLength: 0)
             }
-            .padding(12)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .fill(item.contentType.tint.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
-                    .stroke(AppSurfaceTokens.separator.opacity(0.18), lineWidth: 1)
-            )
         }
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            metadataLine
-
-            if item.tags.isEmpty == false {
-                HStack(spacing: 6) {
-                    ForEach(item.tags.prefix(3), id: \.self) { tag in
-                        Text(tag)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(AppSurfaceTokens.cardBackground.opacity(0.75)))
-                    }
-                }
-            }
-        }
+        metadataLine
     }
 
     private var metadataLine: some View {
@@ -2341,7 +2089,16 @@ private struct CollectedInboxItemCard: View {
                     .foregroundStyle(item.isPinned ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.secondaryText)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(item.isPinned ? "取消 Pin" : "Pin")
+            .accessibilityLabel(item.isPinned ? "取消固定" : "固定")
+
+            if item.canOpenDesktopPin {
+                Button(action: onDesktopPin) {
+                    Image(systemName: "pin.circle")
+                        .foregroundStyle(AppSurfaceTokens.accentBlue)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("桌面固定")
+            }
 
             Button(action: onFavoriteToggle) {
                 Image(systemName: item.isFavorite ? "star.fill" : "star")
@@ -2351,7 +2108,7 @@ private struct CollectedInboxItemCard: View {
             .accessibilityLabel(item.isFavorite ? "取消收藏" : "收藏")
         }
         .font(.system(size: 12, weight: .semibold))
-        .opacity(isHovered || isSelected || isBatchSelected || item.isPinned || item.isFavorite ? 1 : 0.74)
+        .opacity(isHovered || isSelected || isBatchSelected || item.isPinned || item.isFavorite ? 1 : 0)
     }
 
     private var contentIcon: some View {
@@ -2392,19 +2149,22 @@ private struct CollectedInboxItemCard: View {
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.09) : AppSurfaceTokens.cardBackgroundSoft)
-            .shadow(color: AppSurfaceTokens.separator.opacity(isHovered ? 0.16 : 0.07), radius: isHovered ? 7 : 3, x: 0, y: 2)
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(isSelected ? AppSurfaceTokens.accentBlue.opacity(0.08) : AppSurfaceTokens.cardBackgroundSoft)
+            .shadow(color: Color.black.opacity(isHovered ? 0.07 : 0), radius: 8, x: 0, y: 3)
     }
 
     private var selectionOverlay: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .stroke(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.separator.opacity(isHovered ? 0.72 : 0.42), lineWidth: isSelected ? 1.5 : 1)
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .stroke(isSelected ? AppSurfaceTokens.accentBlue : AppSurfaceTokens.separator.opacity(isHovered ? 0.58 : 0.28), lineWidth: isSelected ? 1.5 : 1)
     }
 
     @ViewBuilder
     private var menuItems: some View {
-        Button(item.isPinned ? "取消 Pin" : "Pin", action: onPinToggle)
+        Button(item.isPinned ? "取消固定" : "固定", action: onPinToggle)
+        if item.canOpenDesktopPin {
+            Button("桌面固定", action: onDesktopPin)
+        }
         Button(item.isFavorite ? "取消收藏" : "收藏", action: onFavoriteToggle)
         Button("归档", action: onArchive)
         if item.id.origin == .clipboardItem {
@@ -2433,7 +2193,7 @@ private struct CollectedInboxItemCard: View {
             parts.append("已加入批量选择")
         }
         if previewText.isEmpty == false {
-            parts.append("预览 \(previewText.prefix(80))")
+            parts.append("内容 \(previewText.prefix(80))")
         }
         return parts.joined(separator: "，")
     }
@@ -2462,7 +2222,7 @@ private extension InboxQuickFilter {
         case .all: return "全部"
         case .pending: return "待整理"
         case .screenshotHistory: return "截图历史"
-        case .pinned: return "Pin"
+        case .pinned: return "固定"
         case .favorites: return "收藏"
         case .recent: return "最近更新"
         }
@@ -2485,7 +2245,7 @@ private extension CollectedItemSort {
         switch self {
         case .newestFirst: return "最新优先"
         case .oldestFirst: return "最早优先"
-        case .pinnedFirst: return "Pin 优先"
+        case .pinnedFirst: return "固定优先"
         case .recentlyUpdated: return "最近更新"
         }
     }
@@ -2744,17 +2504,17 @@ private extension CollectedItem {
 
         switch content {
         case .text(let text), .audio(let text):
-            return text?.nilIfEmpty ?? "暂无文本内容"
+            return text?.nilIfEmpty ?? "无内容"
         case .link(let urlString, let title):
-            return [title, urlString].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "暂无链接信息"
+            return [title, urlString].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "无内容"
         case .image(_, let caption), .video(_, let caption):
-            return caption?.nilIfEmpty ?? "暂无媒体信息"
+            return caption?.nilIfEmpty ?? "无内容"
         case .file(let path, let name), .document(let path, let name):
-            return [name, path].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "暂无文件信息"
+            return [name, path].compactMap { $0?.nilIfEmpty }.joined(separator: "\n").nilIfEmpty ?? "无内容"
         case .code(let language, let text):
-            return [language, text].compactMap { $0?.nilIfEmpty }.joined(separator: "\n\n").nilIfEmpty ?? "暂无代码内容"
+            return [language, text].compactMap { $0?.nilIfEmpty }.joined(separator: "\n\n").nilIfEmpty ?? "无内容"
         case .richText(_, let plainText), .unknown(let plainText):
-            return plainText?.nilIfEmpty ?? "暂无内容"
+            return plainText?.nilIfEmpty ?? "无内容"
         }
     }
 }

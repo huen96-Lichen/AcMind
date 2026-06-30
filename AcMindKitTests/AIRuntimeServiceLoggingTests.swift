@@ -99,7 +99,7 @@ final class AIRuntimeServiceLoggingTests: XCTestCase {
             settingsDefaults: defaults,
             loggingSink: sink
         )
-        service.installTestProvider(id: "mock", provider: StreamingAIProvider())
+        service.installTestProvider(id: "mock", provider: StreamingAIProvider(), modelId: "mock-model")
 
         let stream = service.chatStream(
             messages: [ChatMessage(sessionId: "test", role: .user, content: "hello")]
@@ -118,7 +118,7 @@ final class AIRuntimeServiceLoggingTests: XCTestCase {
             settingsDefaults: defaults,
             loggingSink: sink
         )
-        service.installTestProvider(id: "mock", provider: StreamingAIProvider())
+        service.installTestProvider(id: "mock", provider: StreamingAIProvider(), modelId: "mock-model")
 
         let stream = service.chatStream(
             messages: [ChatMessage(sessionId: "test", role: .user, content: "hello")]

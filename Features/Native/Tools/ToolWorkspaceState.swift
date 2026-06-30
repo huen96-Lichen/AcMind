@@ -21,19 +21,19 @@ enum ToolWorkspaceFlow {
 extension ToolRoute {
     var displayName: String {
         switch self {
-        case .webDigest: return "WebDigest｜网页精读"
+        case .webDigest: return "网页精读"
         case .jsonFormatter: return "JSON 格式化"
         case .base64Codec: return "Base64 编解码"
-        case .markdownCleaner: return "Markdown 整理"
+        case .markdownCleaner: return "文稿整理"
         case .textCompare: return "文本对比"
         case .documentConvert: return "文档转换"
-        case .ocr: return "OCR 识别"
+        case .ocr: return "文字识别"
         case .imageProcess: return "图片处理"
         case .batchRename: return "批量重命名"
         case .srtToFcpxml: return "SRT → FCPXML"
         case .batchDownload: return "批量下载"
         case .videoDownload: return "视频下载"
-        case .apiTest: return "API 测试"
+        case .apiTest: return "接口测试"
         }
     }
 }

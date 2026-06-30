@@ -5,7 +5,7 @@ struct CompanionSettingsHeader: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
-            // Left: Title & Description
+            // 左侧：标题与说明
             VStack(alignment: .leading, spacing: 4) {
                 Text("随身")
                     .font(.system(size: AppSurfaceTokens.Typography.pageTitle, weight: .bold))
@@ -18,7 +18,7 @@ struct CompanionSettingsHeader: View {
             
             Spacer()
             
-            // Right: Global Toggle
+            // 右侧：总开关
             HStack(spacing: 8) {
                 Text("启用随身能力")
                     .font(.system(size: AppSurfaceTokens.Typography.body))

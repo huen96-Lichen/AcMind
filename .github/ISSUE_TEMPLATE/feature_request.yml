@@ -1,61 +1,61 @@
-name: Feature request
-description: Suggest a new capability, workflow, or improvement.
-title: "[Feature]: "
+name: 功能建议
+description: 提议新的能力、流程或改进。
+title: "[建议]: "
 labels:
   - enhancement
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the suggestion. Please focus on the problem you are trying to solve and the workflow impact.
+        感谢你的建议。请重点描述你想解决的问题，以及它对工作流的影响。
   - type: textarea
     id: summary
     attributes:
-      label: Summary
-      description: One short sentence describing the request.
-      placeholder: Add...
+      label: 需求概述
+      description: 用一句话描述你的需求。
+      placeholder: 增加……
     validations:
       required: true
   - type: textarea
     id: problem
     attributes:
-      label: Problem statement
-      description: What user problem should this solve?
+      label: 问题陈述
+      description: 这个需求要解决什么用户问题？
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
-      description: Describe the behavior you want to see.
+      label: 方案建议
+      description: 描述你希望看到的行为。
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives considered
-      description: Mention other approaches you thought about.
+      label: 备选方案
+      description: 写下你考虑过的其他方案。
   - type: input
     id: area
     attributes:
-      label: Affected area
-      description: Which part of AcMind does this touch?
-      placeholder: Clipboard, system status, voice input, AI routing, docs, etc.
+      label: 影响范围
+      description: 这会影响 AcMind 的哪一部分？
+      placeholder: 剪贴板、系统状态、语音输入、AI 路由、文档等
     validations:
       required: true
   - type: dropdown
     id: priority
     attributes:
-      label: Priority
-      description: How urgent is this to you?
+      label: 优先级
+      description: 这对你有多紧急？
       options:
-        - Nice to have
-        - Important
-        - High priority
+        - 可有可无
+        - 重要
+        - 高优先级
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Mockups, examples, or references
-      description: Optional supporting material, if it helps explain the request.
+      label: 原型、示例或参考
+      description: 可选补充材料，如果有助于说明需求的话。

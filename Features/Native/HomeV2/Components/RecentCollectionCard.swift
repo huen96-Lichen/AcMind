@@ -8,27 +8,43 @@ struct RecentCollectionCard: View {
         WorkbenchV2Card(title: model.title, debugName: "RecentCollectionCard", state: model.state, layout: layout) {
             VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.sm) {
                 if model.items.isEmpty {
-                    WorkbenchV2EmptyState(text: "暂无最近收集")
+                    WorkbenchV2EmptyState(text: "最近尚无新增收集")
                 } else {
-                    ForEach(model.items) { item in
-                        HStack(alignment: .firstTextBaseline, spacing: WorkbenchV2Tokens.Spacing.sm) {
+                    ForEach(model.items.prefix(maxVisibleItems)) { item in
+                        HStack(alignment: .center, spacing: WorkbenchV2Tokens.Spacing.sm) {
+                            RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.control, style: .continuous)
+                                .fill(WorkbenchV2Tokens.Color.surfaceSoft)
+                                .frame(width: 34, height: 34)
+                                .overlay(
+                                    Image(systemName: "doc.text")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary)
+                                )
+
                             VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.xxs) {
                                 Text(item.title)
                                     .font(.system(size: WorkbenchV2Tokens.Typography.body, weight: .semibold))
+                                    .lineLimit(1)
                                 Text(item.detail)
                                     .font(.system(size: WorkbenchV2Tokens.Typography.caption))
-                                    .foregroundStyle(layout.showSecondaryCopy ? WorkbenchV2Tokens.Color.textSecondary : WorkbenchV2Tokens.Color.textTertiary)
-                                    .lineLimit(layout.showSecondaryCopy ? 2 : 1)
+                                    .foregroundStyle(layout.showSecondaryCopy ? WorkbenchV2Tokens.Color.textSecondary : WorkbenchV2Tokens.Color.textSecondary.opacity(0.88))
+                                    .lineLimit(1)
                             }
                             Spacer(minLength: 0)
                             Text(item.timeLabel)
                                 .font(.system(size: WorkbenchV2Tokens.Typography.caption, design: .monospaced))
-                                .foregroundStyle(WorkbenchV2Tokens.Color.textTertiary)
+                                .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.9))
+                                .lineLimit(1)
                         }
+                        .padding(.vertical, 2)
                     }
                 }
             }
         }
+    }
+
+    private var maxVisibleItems: Int {
+        2
     }
 }
 

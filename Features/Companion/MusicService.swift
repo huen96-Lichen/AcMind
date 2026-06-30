@@ -355,6 +355,12 @@ public class MusicService: ObservableObject {
     }
 
     private func apply(snapshot: NowPlayingSnapshot) {
+        let previousTitle = songTitle
+        let previousArtist = artistName
+        let previousAlbum = album
+        let previousBundleIdentifier = bundleIdentifier
+        let previousArtworkData = currentArtworkData
+
         let titleChanged = snapshot.title != songTitle
         songTitle = snapshot.title
         artistName = snapshot.artist
@@ -369,7 +375,16 @@ public class MusicService: ObservableObject {
             source: snapshot.source
         )
         timestampDate = Date()
-        if let artworkData = snapshot.artworkData, let image = NSImage(data: artworkData) {
+        let shouldPreserveArtwork =
+            snapshot.artworkData == nil &&
+            previousArtworkData != nil &&
+            snapshot.title == previousTitle &&
+            snapshot.artist == previousArtist &&
+            snapshot.album == previousAlbum &&
+            snapshot.bundleIdentifier == previousBundleIdentifier
+
+        let artworkData = snapshot.artworkData ?? (shouldPreserveArtwork ? previousArtworkData : nil)
+        if let artworkData, let image = NSImage(data: artworkData) {
             albumArt = image
             currentArtworkData = artworkData
         } else {
@@ -893,6 +908,11 @@ private enum QishuiMusicNowPlayingProbe {
         let frame: CGRect
     }
 
+    private struct ArtworkCandidate {
+        let frame: CGRect
+        let role: String
+    }
+
     private nonisolated(unsafe) static var didLogMissingAccessibilityThisLaunch = false
 
     static func fetch(logger: Logger) async -> NowPlayingSnapshot? {
@@ -919,12 +939,21 @@ private enum QishuiMusicNowPlayingProbe {
         }
 
         var candidates: [Candidate] = []
+        var artworkData: Data?
 
         if AXIsProcessTrusted() {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
             if let window = frontWindow(of: axApp) {
                 let axWindowFrame = rectValue(of: window, attribute: "AXFrame" as CFString) ?? windowFrame
                 candidates = collectTextCandidates(from: window)
+                let artworkCandidates = collectArtworkCandidates(from: window)
+                if let artworkFrame = pickArtworkFrame(from: artworkCandidates, windowFrame: axWindowFrame),
+                   let image = await captureWindowImage(processIdentifier: app.processIdentifier, matching: axWindowFrame, logger: logger),
+                   let croppedArtworkData = cropArtwork(from: image, windowFrame: axWindowFrame, artworkFrame: artworkFrame) {
+                    let artworkRole = pickArtworkRole(from: artworkCandidates, frame: artworkFrame) ?? "unknown"
+                    logger.debug("汽水音乐封面命中：role=\(artworkRole, privacy: .public)")
+                    artworkData = croppedArtworkData
+                }
                 if candidates.isEmpty {
                     candidates = await collectOCRTextCandidates(from: axWindowFrame, processIdentifier: app.processIdentifier, logger: logger)
                 } else {
@@ -933,7 +962,8 @@ private enum QishuiMusicNowPlayingProbe {
                 }
             } else if !didLogMissingAccessibilityThisLaunch {
                 didLogMissingAccessibilityThisLaunch = true
-                logger.debug("Accessibility trusted but 汽水音乐 front window not found, falling back to OCR")
+                logger.info("Accessibility is unavailable; falling back to OCR")
+                logger.debug("辅助功能已授权，但未找到汽水音乐前台窗口，回退到文字识别")
             }
         }
 
@@ -942,32 +972,20 @@ private enum QishuiMusicNowPlayingProbe {
         }
 
         if candidates.isEmpty {
-            logger.debug("汽水音乐 yielded no text candidates")
+            logger.debug("汽水音乐没有提取到文本候选")
             return nil
         }
-
-        let lyricsTrack = pickQishuiTrackFromLyricsScreen(from: candidates, windowFrame: windowFrame)
-        guard let title = lyricsTrack?.title ?? pickQishuiTitle(from: candidates, windowFrame: windowFrame) else {
-            logger.debug("汽水音乐 title candidate not found")
-            return nil
-        }
-
-        let artist = lyricsTrack?.artist ?? pickQishuiArtist(from: candidates, title: title, windowFrame: windowFrame) ?? ""
-        let elapsed = parseElapsedTime(from: candidates) ?? 0
-        let total = parseTotalTime(from: candidates) ?? 0
-
-        logger.debug("Qishui probe hit: title=\(title, privacy: .public) artist=\(artist, privacy: .public)")
-
-        return NowPlayingSnapshot(
-            title: title,
-            artist: artist,
-            album: "",
-            artworkData: nil,
-            duration: total,
-            elapsedTime: elapsed,
-            playbackRate: 1.0,
+        return buildSnapshot(
+            title: nil,
+            artist: nil,
+            elapsed: nil,
+            total: nil,
+            artworkData: artworkData,
             bundleIdentifier: "com.soda.music",
-            source: "汽水音乐"
+            source: "汽水音乐",
+            candidates: candidates,
+            windowFrame: windowFrame,
+            logger: logger
         )
     }
 
@@ -1013,6 +1031,25 @@ private enum QishuiMusicNowPlayingProbe {
         return results
     }
 
+    private static func collectArtworkCandidates(from element: AXUIElement) -> [ArtworkCandidate] {
+        var results: [ArtworkCandidate] = []
+
+        func walk(_ element: AXUIElement) {
+            let role = stringValue(of: element, attribute: kAXRoleAttribute as CFString) ?? ""
+            if let frame = rectValue(of: element, attribute: "AXFrame" as CFString),
+               isArtworkRole(role) {
+                results.append(ArtworkCandidate(frame: frame, role: role))
+            }
+
+            for child in children(of: element) {
+                walk(child)
+            }
+        }
+
+        walk(element)
+        return results
+    }
+
     private static func collectOCRTextCandidates(
         from windowFrame: CGRect,
         processIdentifier: pid_t,
@@ -1022,7 +1059,7 @@ private enum QishuiMusicNowPlayingProbe {
         let image = await captureWindowImage(processIdentifier: processIdentifier, matching: windowFrame, logger: logger)
 
         guard let image else {
-            logger.debug("汽水音乐 OCR capture failed")
+            logger.debug("汽水音乐文字识别截屏失败")
             return []
         }
 
@@ -1030,7 +1067,7 @@ private enum QishuiMusicNowPlayingProbe {
             DispatchQueue.global(qos: .userInitiated).async {
                 let request = VNRecognizeTextRequest { request, error in
                     if let error {
-                        logger.debug("汽水音乐 OCR failed: \(error.localizedDescription, privacy: .public)")
+                        logger.debug("汽水音乐文字识别失败：\(error.localizedDescription, privacy: .public)")
                         continuation.resume(returning: [])
                         return
                     }
@@ -1059,7 +1096,7 @@ private enum QishuiMusicNowPlayingProbe {
                 do {
                     try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
                 } catch {
-                    logger.debug("汽水音乐 OCR request failed: \(error.localizedDescription, privacy: .public)")
+                    logger.debug("汽水音乐文字识别请求失败：\(error.localizedDescription, privacy: .public)")
                     continuation.resume(returning: [])
                 }
             }
@@ -1211,6 +1248,105 @@ private enum QishuiMusicNowPlayingProbe {
         return (titleCandidate.text, artist)
     }
 
+    private static func pickArtworkFrame(from candidates: [ArtworkCandidate], windowFrame: CGRect) -> CGRect? {
+        let filtered = candidates.filter { candidate in
+            let width = candidate.frame.width
+            let height = candidate.frame.height
+            guard width >= 120, height >= 120 else { return false }
+            guard width <= windowFrame.width * 0.45, height <= windowFrame.height * 0.55 else { return false }
+            let aspect = width / max(height, 1)
+            guard aspect >= 0.7, aspect <= 1.3 else { return false }
+            let normalizedX = (candidate.frame.midX - windowFrame.minX) / max(windowFrame.width, 1)
+            let normalizedY = (candidate.frame.midY - windowFrame.minY) / max(windowFrame.height, 1)
+            guard normalizedX >= 0.18, normalizedX <= 0.52 else { return false }
+            guard normalizedY >= 0.20, normalizedY <= 0.78 else { return false }
+            return true
+        }
+
+        return filtered.sorted(by: { lhs, rhs in
+            let lhsScore = artworkScore(frame: lhs.frame, windowFrame: windowFrame)
+            let rhsScore = artworkScore(frame: rhs.frame, windowFrame: windowFrame)
+            if lhsScore == rhsScore {
+                return lhs.frame.width > rhs.frame.width
+            }
+            return lhsScore < rhsScore
+        }).first?.frame
+    }
+
+    private static func pickArtworkRole(from candidates: [ArtworkCandidate], frame: CGRect) -> String? {
+        candidates.first(where: { $0.frame == frame })?.role
+    }
+
+    private static func artworkScore(frame: CGRect, windowFrame: CGRect) -> CGFloat {
+        let normalizedX = (frame.midX - windowFrame.minX) / max(windowFrame.width, 1)
+        let normalizedY = (frame.midY - windowFrame.minY) / max(windowFrame.height, 1)
+        let size = max(frame.width, frame.height) / max(min(windowFrame.width, windowFrame.height), 1)
+        let aspect = frame.width / max(frame.height, 1)
+        return abs(normalizedX - 0.34) + abs(normalizedY - 0.48) + abs(size - 0.22) + abs(aspect - 1.0) * 0.25
+    }
+
+    private static func isArtworkRole(_ role: String) -> Bool {
+        let normalized = role.lowercased()
+        return normalized.contains("image") || normalized.contains("artwork") || normalized.contains("cover")
+    }
+
+    private static func cropArtwork(from image: CGImage, windowFrame: CGRect, artworkFrame: CGRect) -> Data? {
+        guard windowFrame.width > 0, windowFrame.height > 0 else { return nil }
+
+        let xScale = CGFloat(image.width) / windowFrame.width
+        let yScale = CGFloat(image.height) / windowFrame.height
+        let cropRect = CGRect(
+            x: (artworkFrame.minX - windowFrame.minX) * xScale,
+            y: (artworkFrame.minY - windowFrame.minY) * yScale,
+            width: artworkFrame.width * xScale,
+            height: artworkFrame.height * yScale
+        ).integral
+
+        guard cropRect.width > 0, cropRect.height > 0,
+              let cropped = image.cropping(to: cropRect) else { return nil }
+
+        let rep = NSBitmapImageRep(cgImage: cropped)
+        return rep.representation(using: .png, properties: [:]) ?? rep.representation(using: .tiff, properties: [:])
+    }
+
+    private static func buildSnapshot(
+        title: String?,
+        artist: String?,
+        elapsed: TimeInterval?,
+        total: TimeInterval?,
+        artworkData: Data?,
+        bundleIdentifier: String,
+        source: String,
+        candidates: [Candidate],
+        windowFrame: CGRect,
+        logger: Logger
+    ) -> NowPlayingSnapshot? {
+        let lyricsTrack = pickQishuiTrackFromLyricsScreen(from: candidates, windowFrame: windowFrame)
+        let resolvedTitle = title ?? lyricsTrack?.title ?? pickQishuiTitle(from: candidates, windowFrame: windowFrame)
+        guard let resolvedTitle else {
+            logger.debug("汽水音乐未找到标题候选")
+            return nil
+        }
+
+        let resolvedArtist = artist ?? lyricsTrack?.artist ?? pickQishuiArtist(from: candidates, title: resolvedTitle, windowFrame: windowFrame) ?? ""
+        let resolvedElapsed = elapsed ?? parseElapsedTime(from: candidates, windowFrame: windowFrame) ?? 0
+        let resolvedTotal = total ?? parseTotalTime(from: candidates, windowFrame: windowFrame) ?? 0
+
+        logger.debug("汽水音乐探测命中：title=\(resolvedTitle, privacy: .public) artist=\(resolvedArtist, privacy: .public)")
+
+        return NowPlayingSnapshot(
+            title: resolvedTitle,
+            artist: resolvedArtist,
+            album: "",
+            artworkData: artworkData,
+            duration: resolvedTotal,
+            elapsedTime: resolvedElapsed,
+            playbackRate: 1.0,
+            bundleIdentifier: bundleIdentifier,
+            source: source
+        )
+    }
+
     private static func pickQishuiArtist(from candidates: [Candidate], title: String, windowFrame: CGRect) -> String? {
         let titleFrame = candidates.first(where: { $0.text == title })?.frame ?? .zero
         let artistCandidates = candidates.filter { candidate in
@@ -1239,18 +1375,45 @@ private enum QishuiMusicNowPlayingProbe {
             .text
     }
 
-    private static func parseElapsedTime(from candidates: [Candidate]) -> TimeInterval? {
-        guard let candidate = candidates.first(where: { $0.text.range(of: timePattern, options: .regularExpression) != nil }) else {
+    private static func parseElapsedTime(from candidates: [Candidate], windowFrame: CGRect) -> TimeInterval? {
+        guard let candidate = pickProgressCandidate(from: candidates, windowFrame: windowFrame) else {
             return nil
         }
         return parseTime(candidate.text).elapsed
     }
 
-    private static func parseTotalTime(from candidates: [Candidate]) -> TimeInterval? {
-        guard let candidate = candidates.first(where: { $0.text.range(of: timePattern, options: .regularExpression) != nil }) else {
+    private static func parseTotalTime(from candidates: [Candidate], windowFrame: CGRect) -> TimeInterval? {
+        guard let candidate = pickProgressCandidate(from: candidates, windowFrame: windowFrame) else {
             return nil
         }
         return parseTime(candidate.text).total
+    }
+
+    private static func pickProgressCandidate(from candidates: [Candidate], windowFrame: CGRect) -> Candidate? {
+        let progressCandidates = candidates.filter { candidate in
+            guard candidate.text.range(of: timePattern, options: .regularExpression) != nil else { return false }
+            guard candidate.frame.width >= 90, candidate.frame.width <= 260 else { return false }
+            guard candidate.frame.height >= 12, candidate.frame.height <= 30 else { return false }
+            guard candidate.frame.minY >= windowFrame.minY + windowFrame.height * 0.78 else { return false }
+            guard candidate.text.contains("/") else { return false }
+            return true
+        }
+
+        return progressCandidates.sorted {
+            let lhsScore = progressScore(frame: $0.frame, windowFrame: windowFrame)
+            let rhsScore = progressScore(frame: $1.frame, windowFrame: windowFrame)
+            if lhsScore == rhsScore {
+                return $0.frame.minY > $1.frame.minY
+            }
+            return lhsScore < rhsScore
+        }.first
+    }
+
+    private static func progressScore(frame: CGRect, windowFrame: CGRect) -> CGFloat {
+        let normalizedX = (frame.midX - windowFrame.minX) / max(windowFrame.width, 1)
+        let normalizedY = (frame.midY - windowFrame.minY) / max(windowFrame.height, 1)
+        let size = max(frame.width, frame.height) / max(min(windowFrame.width, windowFrame.height), 1)
+        return abs(normalizedX - 0.50) + abs(normalizedY - 0.90) + abs(size - 0.12)
     }
 
     private static func parseTime(_ text: String) -> (elapsed: TimeInterval, total: TimeInterval) {

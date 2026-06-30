@@ -320,6 +320,15 @@ final class MusicNowPlayingParserTests: XCTestCase {
         XCTAssertFalse(source.contains("collectStaticTextCandidates"))
     }
 
+    func testQishuiProbeUsesArtworkAndProgressHeuristics() throws {
+        let source = try readSource("Features/Companion/MusicService.swift")
+
+        XCTAssertTrue(source.contains("collectArtworkCandidates"))
+        XCTAssertTrue(source.contains("cropArtwork"))
+        XCTAssertTrue(source.contains("pickProgressCandidate"))
+        XCTAssertTrue(source.contains("artworkScore"))
+    }
+
     func testBrowserProbeIteratesAllConfiguredBrowsers() throws {
         let source = try readSource("Features/Companion/MusicService.swift")
 

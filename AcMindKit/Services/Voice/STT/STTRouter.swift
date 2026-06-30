@@ -264,7 +264,7 @@ public final class STTRouter: @unchecked Sendable {
 
         guard decoder.isModelInstalled(storageURL: storageURL) else {
             throw STTError.modelNotDownloaded(
-                "SenseVoice 模型未找到。请先在模型管理中下载后重试。"
+                "SenseVoice 模型尚未下载。请先在模型管理中下载后重试。"
             )
         }
 
@@ -276,7 +276,7 @@ public final class STTRouter: @unchecked Sendable {
         return WhisperKitTranscriber(modelName: whisperKitModelName)
         #else
         throw STTError.providerNotAvailable(
-            "WhisperKit 依赖未集成。需要在 Package.swift 中添加:\n" +
+            "WhisperKit 依赖尚未集成。需要在 Package.swift 中添加:\n" +
             ".package(url: \"https://github.com/argmaxinc/WhisperKit\", from: \"0.10.0\")"
         )
         #endif

@@ -127,11 +127,14 @@ public final class AppState: ObservableObject, Sendable {
     public func selectInboxWorkspace(_ selection: String?) {
         let resolvedSelection = selection ?? "all"
         inboxWorkspaceSelection = resolvedSelection
-        sidebarSelection = resolvedSelection == "screenshotHistory" ? .screenshotHistory : .inbox
+        sidebarSelection = .inbox
     }
 
     public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {
-        item == .clipboard ? .inbox : item
+        if item == .screenshotHistory {
+            return .inbox
+        }
+        return item == .clipboard ? .inbox : item
     }
 
     public func toggleSidebar() {

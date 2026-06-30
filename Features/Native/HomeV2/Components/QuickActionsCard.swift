@@ -8,7 +8,7 @@ struct QuickActionsCard: View {
     var body: some View {
         VStack(
             alignment: .leading,
-            spacing: layout.mode == .compact ? WorkbenchV2Tokens.Spacing.sm : WorkbenchV2Tokens.Spacing.md
+            spacing: isCondensed ? WorkbenchV2Tokens.Spacing.sm : WorkbenchV2Tokens.Layout.containerGap
         ) {
             HStack(alignment: .firstTextBaseline, spacing: WorkbenchV2Tokens.Spacing.sm) {
                 Text(model.title)
@@ -20,79 +20,46 @@ struct QuickActionsCard: View {
 
             LazyVGrid(
                 columns: [
-                    GridItem(.flexible(), spacing: WorkbenchV2Tokens.Layout.quickActionGridSpacing),
-                    GridItem(.flexible(), spacing: WorkbenchV2Tokens.Layout.quickActionGridSpacing),
-                    GridItem(.flexible(), spacing: WorkbenchV2Tokens.Layout.quickActionGridSpacing)
+                    GridItem(.flexible(), spacing: actionGridSpacing),
+                    GridItem(.flexible(), spacing: actionGridSpacing),
+                    GridItem(.flexible(), spacing: actionGridSpacing)
                 ],
-                spacing: WorkbenchV2Tokens.Layout.quickActionGridSpacing
+                spacing: actionGridSpacing
             ) {
                 ForEach(Array(model.actions.prefix(6).enumerated()), id: \.offset) { index, action in
                     Button(action: actionHandler(for: index)) {
-                        Group {
-                            if layout.mode == .compact {
-                                VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.xs) {
-                                    Circle()
-                                        .fill(WorkbenchV2Tokens.Color.separator.opacity(0.10))
-                                        .frame(width: 22, height: 22)
-                                        .overlay(
-                                            Image(systemName: action.systemImage)
-                                                .font(.system(size: 10.5, weight: .semibold))
-                                                .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.9))
-                                        )
+                        VStack(alignment: .center, spacing: WorkbenchV2Tokens.Spacing.xs) {
+                            Image(systemName: action.systemImage)
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.9))
+                                .frame(width: 24, height: 22)
 
-                                    Text(action.title)
-                                        .font(.system(size: 10.5, weight: .semibold))
-                                        .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
-                                        .lineLimit(2)
-                                        .minimumScaleFactor(0.82)
-                                        .multilineTextAlignment(.leading)
-                                        .fixedSize(horizontal: false, vertical: true)
+                            Text(action.title)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
+                                .multilineTextAlignment(.center)
 
-                                    if action.subtitle.isEmpty == false {
-                                        Text(action.subtitle)
-                                            .font(.system(size: 9, weight: .medium))
-                                            .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.85)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            } else {
-                                HStack(alignment: .center, spacing: WorkbenchV2Tokens.Spacing.sm) {
-                                    Circle()
-                                        .fill(WorkbenchV2Tokens.Color.separator.opacity(0.10))
-                                        .frame(width: 22, height: 22)
-                                        .overlay(
-                                            Image(systemName: action.systemImage)
-                                                .font(.system(size: 10.5, weight: .semibold))
-                                                .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.9))
-                                        )
-
-                                    Text(action.title)
-                                        .font(.system(size: 11.5, weight: .semibold))
-                                        .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
-                                        .lineLimit(2)
-                                        .minimumScaleFactor(0.82)
-                                        .multilineTextAlignment(.leading)
-                                        .fixedSize(horizontal: false, vertical: true)
-
-                                    Spacer(minLength: 0)
-                                }
-
-                                if action.subtitle.isEmpty == false {
-                                    Text(action.subtitle)
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.85)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .padding(.top, 2)
-                                }
+                            if action.subtitle.isEmpty == false {
+                                Text(action.subtitle)
+                                    .font(.system(size: 9.5, weight: .medium))
+                                    .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .minimumScaleFactor(0.8)
+                                    .multilineTextAlignment(.center)
                             }
                         }
-                        .padding(WorkbenchV2Tokens.Spacing.sm)
-                        .frame(maxWidth: .infinity, minHeight: layout.mode == .compact ? 60 : 64, alignment: .leading)
+                        .padding(.horizontal, WorkbenchV2Tokens.Spacing.sm)
+                        .padding(.vertical, WorkbenchV2Tokens.Spacing.sm)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: isCondensed
+                                ? WorkbenchV2Tokens.Layout.compactQuickActionTileHeight
+                                : WorkbenchV2Tokens.Layout.quickActionTileHeight,
+                            alignment: .center
+                        )
                     }
                     .buttonStyle(
                         WorkbenchV2QuickActionButtonStyle(
@@ -102,8 +69,9 @@ struct QuickActionsCard: View {
                 }
             }
         }
-        .padding(layout.mode == .compact ? WorkbenchV2Tokens.Spacing.md : WorkbenchV2Tokens.Spacing.lg)
+        .padding(isCondensed ? WorkbenchV2Tokens.Spacing.md : WorkbenchV2Tokens.Layout.containerGap)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.surface)
@@ -113,7 +81,7 @@ struct QuickActionsCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.36), lineWidth: WorkbenchV2Tokens.Border.width)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.26), lineWidth: WorkbenchV2Tokens.Border.width)
         )
         .shadow(
             color: Color.black.opacity(WorkbenchV2Tokens.Shadow.opacity),
@@ -121,6 +89,14 @@ struct QuickActionsCard: View {
             x: WorkbenchV2Tokens.Shadow.x,
             y: WorkbenchV2Tokens.Shadow.y
         )
+    }
+
+    private var isCondensed: Bool {
+        layout.mode == .compact
+    }
+
+    private var actionGridSpacing: CGFloat {
+        layout.mode == .compact ? WorkbenchV2Tokens.Spacing.sm : WorkbenchV2Tokens.Layout.quickActionGridSpacing
     }
 
     private func actionHandler(for index: Int) -> () -> Void {
@@ -149,12 +125,12 @@ private struct WorkbenchV2QuickActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(
-            RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                    .fill(WorkbenchV2Tokens.Color.surfaceSoft.opacity(configuration.isPressed ? 1.0 : 0.88))
+                RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
+                    .fill(WorkbenchV2Tokens.Color.surfaceSoft.opacity(configuration.isPressed ? 1.0 : 0.92))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                    .stroke(border.opacity(configuration.isPressed ? 0.35 : 0.22), lineWidth: 1)
+                    .stroke(border.opacity(configuration.isPressed ? 0.42 : 0.26), lineWidth: 1)
             )
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)

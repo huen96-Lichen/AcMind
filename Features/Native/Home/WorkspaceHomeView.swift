@@ -132,7 +132,6 @@ struct WorkspaceHomeView: View {
     @StateObject private var dashboardViewModel: WorkspaceDashboardViewModel
     private let permissionManager: PermissionManager
     private let settingsService: SettingsServiceProtocol
-    @State private var showingScreenshotOptions = false
     @State private var screenshotSnapshot = SettingsLocalPreferences.screenshotSnapshot()
     @State private var activeScreenshotPresetID: String = ScreenshotPreset.defaultPresets.first?.id ?? "default-save"
 
@@ -203,7 +202,7 @@ struct WorkspaceHomeView: View {
 
                 case .loading:
                     StateContainer(
-                        phase: .loading(message: "正在读取工作台摘要、日程、待处理内容和系统状态。")
+                        phase: .loading(message: "正在读取工作台、日程、待处理内容和系统状态。")
                     ) {
                         EmptyView()
                     }
@@ -212,8 +211,8 @@ struct WorkspaceHomeView: View {
                 case .empty:
                     StateContainer(
                         phase: .empty(
-                            title: "暂无工作内容",
-                            message: "当前没有待处理内容，创建第一条记录后会回到这里。"
+                            title: "没有工作内容",
+                            message: "创建第一条记录后会显示在这里。"
                         )
                     ) {
                         EmptyView()
@@ -282,7 +281,7 @@ struct WorkspaceHomeView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                Text("优先点顶部工具栏的“截图”，或者用首页的“立即截图”；也可以从状态栏菜单进入。")
+                Text("优先点顶部工具栏的“截图”，首页“立即截图”会直接触发全屏截图并进入预览；需要改模式时再进截图工作区。")
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -290,7 +289,7 @@ struct WorkspaceHomeView: View {
                 HStack(spacing: 8) {
                     Button {
                         dismissScreenshotQuickStart()
-                        showingScreenshotOptions = true
+                        postScreenshotCapture(mode: .fullscreen)
                     } label: {
                         Text("立即截图")
                     }
@@ -300,7 +299,7 @@ struct WorkspaceHomeView: View {
                         dismissScreenshotQuickStart()
                         appState.navigate(to: .screenshot)
                     } label: {
-                        Text("打开截图查看")
+                        Text("打开截图工作区")
                     }
                     .buttonStyle(.bordered)
                 }
@@ -356,20 +355,7 @@ struct WorkspaceHomeView: View {
             HStack(spacing: 3) {
                 topActionButton(title: "立即截图", icon: "camera.viewfinder", tint: AppSurfaceTokens.accentOrange) {
                     dismissScreenshotQuickStart()
-                    showingScreenshotOptions = true
-                }
-                .popover(isPresented: $showingScreenshotOptions) {
-                    ScreenshotOptionsView(
-                        snapshot: screenshotSnapshot,
-                        onSelect: { mode in
-                            postScreenshotCapture(mode: mode)
-                            showingScreenshotOptions = false
-                        },
-                        onSelectScroll: {
-                            postScreenshotCapture(mode: .scroll)
-                            showingScreenshotOptions = false
-                        }
-                    )
+                    postScreenshotCapture(mode: .fullscreen)
                 }
 
                 topActionButton(title: "快速记录", icon: "pencil", tint: AppSurfaceTokens.accentBlue) {
@@ -458,7 +444,7 @@ struct WorkspaceHomeView: View {
                     footer: viewModel.refreshHint
                 ) {
                     VStack(alignment: .leading, spacing: 10) {
-                        homeHealthRow(label: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText)
+                        homeHealthRow(label: "处理器", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText)
                         homeHealthRow(label: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.secondaryText)
                         homeHealthRow(label: "网络", value: viewModel.networkSummary, tint: AppSurfaceTokens.secondaryText)
                         homeHealthRow(label: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.secondaryText)
@@ -499,63 +485,94 @@ struct WorkspaceHomeView: View {
     }
 
     private var screenshotCenterStrip: some View {
-        DashboardCard(title: "截图中心", subtitle: "模式直达 / 历史回看 / 快捷触发", style: .subtle) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
+        DashboardCard(title: "截图中心", subtitle: "一键入口优先，模式入口次级", style: .prominent) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
                     Button {
-                        showingScreenshotOptions = true
+                        dismissScreenshotQuickStart()
+                        postScreenshotCapture(mode: .fullscreen)
                     } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("立即截图")
-                                .font(.system(size: 13, weight: .semibold))
+                        HStack(alignment: .center, spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(AppSurfaceTokens.accentOrange.opacity(0.14))
+                                Image(systemName: "camera.viewfinder")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(AppSurfaceTokens.accentOrange)
+                            }
+                            .frame(width: 44, height: 44)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("立即截图")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                                    .lineLimit(1)
+                                Text("直接进入预览，然后再决定复制、保存、固定或重截。")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            VStack(alignment: .trailing, spacing: 6) {
+                                Text("默认：全屏")
+                                    .font(.system(size: 9.5, weight: .semibold))
+                                    .foregroundStyle(AppSurfaceTokens.secondaryText)
+                                Text(screenshotSnapshot.hotkeyLabel)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(AppSurfaceTokens.primaryText)
+                            }
                         }
-                        .foregroundStyle(AppSurfaceTokens.primaryText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .frame(maxHeight: .infinity)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
                         .background(
-                            RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
-                                .fill(AppSurfaceTokens.cardBackgroundSoft)
+                            LinearGradient(
+                                colors: [
+                                    AppSurfaceTokens.accentOrange.opacity(0.18),
+                                    AppSurfaceTokens.cardBackgroundSoft
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: DashboardRadius.card, style: .continuous)
-                                .stroke(AppSurfaceTokens.accentOrange.opacity(0.32), lineWidth: 1)
+                                .stroke(AppSurfaceTokens.accentOrange.opacity(0.48), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
-                    .popover(isPresented: $showingScreenshotOptions) {
-                        ScreenshotOptionsView(
-                            snapshot: screenshotSnapshot,
-                            onSelect: { mode in
-                                postScreenshotCapture(mode: mode)
-                                showingScreenshotOptions = false
-                            },
-                            onSelectScroll: {
-                                postScreenshotCapture(mode: .scroll)
-                                showingScreenshotOptions = false
-                            }
-                        )
-                    }
+                    .layoutPriority(2)
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("先点这里开始截图")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(AppSurfaceTokens.primaryText)
-                        Text("也可以走菜单栏、胶囊、随身快捷键。")
-                            .font(.system(size: 9.5, weight: .medium))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button {
+                            dismissScreenshotQuickStart()
+                            appState.navigate(to: .screenshot)
+                        } label: {
+                            screenshotUtilityChip(title: "截图工作区", icon: "rectangle.grid.2x2", tint: AppSurfaceTokens.primaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
 
-                    Spacer(minLength: 0)
+                        Button {
+                            dismissScreenshotQuickStart()
+                            appState.navigate(to: .screenshotHistory)
+                        } label: {
+                            screenshotUtilityChip(title: "查看历史", icon: "clock.arrow.circlepath", tint: AppSurfaceTokens.primaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
 
-                    Button {
-                        appState.navigate(to: .settings)
-                    } label: {
-                        screenshotUtilityChip(title: "预设与热键", icon: "gearshape", tint: AppSurfaceTokens.secondaryText)
+                        Button {
+                            appState.navigate(to: .settings)
+                        } label: {
+                            screenshotUtilityChip(title: "预设与热键", icon: "gearshape", tint: AppSurfaceTokens.secondaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .frame(width: 166)
                 }
 
                 HStack(spacing: 8) {
@@ -564,61 +581,42 @@ struct WorkspaceHomeView: View {
                     screenshotContextChip(title: "热键", value: screenshotSnapshot.hotkeyLabel, tint: AppSurfaceTokens.accentOrange)
                 }
 
-                if screenshotSnapshot.presets.isEmpty == false {
-                    HStack(spacing: 8) {
-                        ForEach(screenshotSnapshot.presets.prefix(3)) { preset in
-                            Button {
-                                dismissScreenshotQuickStart()
-                                selectScreenshotPreset(preset)
-                            } label: {
-                                screenshotPresetChip(
-                                    title: preset.name,
-                                    subtitle: preset.defaultOutputAction.displayName,
-                                    isSelected: preset.id == activeScreenshotPresetID,
-                                    tint: preset.id == activeScreenshotPresetID ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.separator
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Text("更多模式")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Text("次级入口")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText.opacity(0.9))
                     }
-                }
 
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 6),
-                        GridItem(.flexible(), spacing: 6),
-                        GridItem(.flexible(), spacing: 6),
-                        GridItem(.flexible(), spacing: 6)
-                    ],
-                    spacing: 6
-                ) {
-                    screenshotModeAction(title: "全屏", icon: "rectangle.on.rectangle", mode: .fullscreen, tint: AppSurfaceTokens.accentBlue)
-                    screenshotModeAction(title: "区域", icon: "crop", mode: .area, tint: AppSurfaceTokens.accentPrimary)
-                    screenshotModeAction(title: "窗口", icon: "macwindow", mode: .window, tint: AppSurfaceTokens.accentGreen)
-                    screenshotModeAction(title: "滚动", icon: "scroll", mode: .scroll, tint: AppSurfaceTokens.accentOrange)
-                }
-
-                HStack(spacing: 8) {
-                    Button {
-                        dismissScreenshotQuickStart()
-                        appState.navigate(to: .screenshotHistory)
-                    } label: {
-                        screenshotUtilityChip(title: "打开历史", icon: "camera.viewfinder", tint: AppSurfaceTokens.primaryText)
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 6),
+                            GridItem(.flexible(), spacing: 6),
+                            GridItem(.flexible(), spacing: 6),
+                            GridItem(.flexible(), spacing: 6)
+                        ],
+                        spacing: 6
+                    ) {
+                        screenshotModeAction(title: "全屏", icon: "rectangle.on.rectangle", mode: .fullscreen, tint: AppSurfaceTokens.accentBlue)
+                        screenshotModeAction(title: "区域", icon: "crop", mode: .area, tint: AppSurfaceTokens.accentPrimary)
+                        screenshotModeAction(title: "窗口", icon: "macwindow", mode: .window, tint: AppSurfaceTokens.accentGreen)
+                        screenshotModeAction(title: "滚动", icon: "scroll", mode: .scroll, tint: AppSurfaceTokens.accentOrange)
                     }
-                    .buttonStyle(.plain)
-
-                    Spacer(minLength: 0)
-
-                    Text(screenshotSnapshot.hotkeyLabel)
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
                 if dashboardViewModel.snapshot.recentScreenshotItems.isEmpty == false {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("最近截图")
-                            .font(.system(size: 9.5, weight: .semibold))
-                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        HStack(spacing: 6) {
+                            Text("最近截图")
+                                .font(.system(size: 9.5, weight: .semibold))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            Text("继续处理")
+                                .font(.system(size: 8.5, weight: .medium))
+                                .foregroundStyle(AppSurfaceTokens.secondaryText.opacity(0.9))
+                        }
 
                         LazyVGrid(
                             columns: [
@@ -655,7 +653,7 @@ struct WorkspaceHomeView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
-                                .help("继续处理最近截图")
+                                .help("继续处理最近一次截图")
                             }
                         }
                     }
@@ -794,7 +792,7 @@ struct WorkspaceHomeView: View {
         case .voice:
             return "打开说入法"
         case .capture:
-            return "打开截图查看 · ⌘⇧4"
+            return "全屏截图并立即预览 · ⌘⇧4"
         case .inbox:
             return "进入收集箱"
         case .settings:
@@ -891,7 +889,7 @@ struct WorkspaceHomeView: View {
             spacing: 3.5
         ) {
             dashboardMetric(
-                title: "CPU",
+                title: "处理器",
                 icon: "cpu",
                 value: viewModel.cpuSummary,
                 detail: cpuCardDetail,
@@ -957,10 +955,10 @@ struct WorkspaceHomeView: View {
 
     private var overviewRow: some View {
         HStack(alignment: .top, spacing: 3.5) {
-            DashboardCard(title: "运行概览", subtitle: nil, style: .prominent) {
+            DashboardCard(title: "运行总览", subtitle: nil, style: .prominent) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
-                        overviewMetric(label: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.accentBlue)
+                        overviewMetric(label: "处理器", value: viewModel.cpuSummary, tint: AppSurfaceTokens.accentBlue)
                         overviewMetric(label: "内存", value: viewModel.memoryUsagePercentSummary, tint: AppSurfaceTokens.accentPrimary)
                         overviewMetric(label: "网络", value: networkTrendHeadline, tint: AppSurfaceTokens.accentGreen)
                     }
@@ -980,7 +978,7 @@ struct WorkspaceHomeView: View {
                     .frame(height: 68)
 
                     HStack(spacing: 2.5) {
-                        trendLegend(title: "CPU", tint: AppSurfaceTokens.accentBlue)
+                        trendLegend(title: "处理器", tint: AppSurfaceTokens.accentBlue)
                         trendLegend(title: "内存", tint: AppSurfaceTokens.accentPrimary)
                         trendLegend(title: "网络", tint: AppSurfaceTokens.accentGreen)
                         Spacer(minLength: 0)
@@ -994,12 +992,12 @@ struct WorkspaceHomeView: View {
             .layoutDebugRegion("RuntimeOverviewCard")
 #endif
 
-            DashboardCard(title: "进程占用 Top 5", subtitle: nil, style: .regular) {
+            DashboardCard(title: "进程占用前五", subtitle: nil, style: .regular) {
                 HStack(alignment: .center, spacing: 6) {
                     ProcessDonutChart(
                         segments: cpuProcessSegments,
                         totalLabel: viewModel.cpuSummary,
-                        subtitle: "CPU 占用"
+                        subtitle: "处理器占用"
                     )
                     .frame(width: 68, height: 68)
 
@@ -1170,7 +1168,7 @@ struct WorkspaceHomeView: View {
         DashboardCard(padding: 1.5, style: .subtle) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("工作台摘要")
+                    Text("工作台总览")
                         .font(.system(size: 9.5, weight: .semibold))
                         .foregroundStyle(AppSurfaceTokens.primaryText)
                     Text(viewModel.refreshHint)
@@ -1186,7 +1184,7 @@ struct WorkspaceHomeView: View {
 
                     AppSurfaceSummaryStrip(
                         chips: [
-                            AppSurfaceSummaryChip(title: "CPU", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText),
+                            AppSurfaceSummaryChip(title: "处理器", value: viewModel.cpuSummary, tint: AppSurfaceTokens.secondaryText),
                             AppSurfaceSummaryChip(title: "内存", value: viewModel.memorySummary, tint: AppSurfaceTokens.secondaryText),
                             AppSurfaceSummaryChip(title: "磁盘", value: viewModel.diskSummary, tint: AppSurfaceTokens.secondaryText)
                         ]
@@ -1290,7 +1288,7 @@ struct WorkspaceHomeView: View {
 
         if processes.isEmpty {
             return [
-                ProcessSegment(name: "暂无数据", ratio: 1, displayValue: "0%", color: AppSurfaceTokens.accentSecondary.opacity(0.35))
+                ProcessSegment(name: "没有数据", ratio: 1, displayValue: "0%", color: AppSurfaceTokens.accentSecondary.opacity(0.35))
             ]
         }
 
@@ -1894,26 +1892,26 @@ struct WorkspaceHomeView: View {
         } label: {
             VStack(spacing: 4) {
                 ZStack {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(AppSurfaceTokens.cardBackgroundSoft)
-                        .frame(width: 22, height: 22)
+                        .frame(width: 24, height: 24)
                     Image(systemName: icon)
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 9.5, weight: .semibold))
                         .foregroundStyle(tint)
                 }
 
                 Text(title)
-                    .font(.system(size: AppSurfaceTokens.Typography.badge, weight: .semibold))
+                    .font(.system(size: 9.5, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                     .lineLimit(1)
 
                 Text(mode.displayName)
-                    .font(.system(size: 8, weight: .medium))
+                    .font(.system(size: 7.5, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .lineLimit(1)
             }
-            .padding(.vertical, 2.25)
-            .frame(maxWidth: .infinity, minHeight: 38)
+            .padding(.vertical, 3)
+            .frame(maxWidth: .infinity, minHeight: 40)
             .background(
                 RoundedRectangle(cornerRadius: DashboardRadius.block, style: .continuous)
                     .fill(AppSurfaceTokens.cardBackgroundSoft)
@@ -2271,7 +2269,10 @@ private struct HomeAction: Identifiable {
             case .voice:
                 NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
             case .capture:
-                (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
+                NotificationCenter.default.post(
+                    name: Notification.Name("AcMind.captureScreenshot"),
+                    object: ["mode": ScreenshotMode.fullscreen.rawValue]
+                )
             case .inbox:
                 appState.navigate(to: .inbox)
             case .settings:
@@ -2347,7 +2348,7 @@ private struct MiniTrendStack: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            trendRow(title: "CPU", values: cpu, tint: AppSurfaceTokens.accentBlue)
+            trendRow(title: "处理器", values: cpu, tint: AppSurfaceTokens.accentBlue)
             trendRow(title: "内存", values: memory, tint: AppSurfaceTokens.accentPrimary)
             trendRow(title: "网络", values: network, tint: AppSurfaceTokens.accentGreen)
         }
@@ -2483,6 +2484,7 @@ struct WorkspaceDashboardSnapshot: Equatable {
     let recentScreenshotItems: [String]
     let scheduleItems: [String]
     let systemMetrics: [String]
+    let systemStatusSnapshot: SystemStatusSnapshot?
     let currentPage: String
     let permissionSummary: String
     let unavailableReasons: [SystemStatusUnavailableReason]
@@ -2542,6 +2544,7 @@ struct LiveWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
             recentScreenshotItems: buildScreenshotItems(from: sourceItems),
             scheduleItems: scheduleItems.prefix(6).map { "\($0.timeRange)  \($0.title)" },
             systemMetrics: buildSystemMetrics(from: systemStatus),
+            systemStatusSnapshot: systemStatus,
             currentPage: appState.sidebarSelection.displayName,
             permissionSummary: SystemStatusLabelFormatter.permissionOverviewSummary(systemStatus.permissions),
             unavailableReasons: systemStatus.unavailableReasons
@@ -2556,20 +2559,20 @@ struct LiveWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
         if let task = tasks.first(where: { $0.status == .running }) {
             let nextStep = task.steps.indices.contains(task.currentStepIndex)
                 ? task.steps[task.currentStepIndex].title
-                : "继续当前 Agent 任务"
+                : "继续当前智能体任务"
             return (task.title, nextStep)
         }
         if let event = events.first(where: { $0.isTodo && $0.endAt >= Date() }) {
             return (event.title, "按 \(event.timeRange) 推进日程")
         }
         if let task = tasks.first(where: { $0.status == .waiting || $0.status == .pending || $0.status == .failed }) {
-            let action = task.status == .failed ? "检查失败原因并重试" : "启动这项 Agent 任务"
+            let action = task.status == .failed ? "检查失败原因并重试" : "启动这项智能体任务"
             return (task.title, action)
         }
         if let item = sourceItems.first {
             return (displayTitle(for: item), "打开收集箱继续整理")
         }
-        return ("目前没有进行中的任务", "从快速记录、日程或 Agent 创建下一项工作")
+        return ("没有进行中任务", "从快速记录、日程或智能体创建下一项工作")
     }
 
     private func buildPendingItems(tasks: [AgentTask], sourceItems: [SourceItem]) -> [String] {
@@ -2588,7 +2591,7 @@ struct LiveWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
             .prefix(4)
             .map { item in
                 let content = displayTitle(for: item)
-                let sourceLabel = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "OCR" : "截图"
+                let sourceLabel = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "文字识别" : "截图"
                 return "\(sourceLabel) · \(content)"
             }
     }
@@ -2606,7 +2609,7 @@ struct LiveWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol {
     private func buildSystemMetrics(from snapshot: SystemStatusSnapshot) -> [String] {
         var metrics: [String] = []
         if let cpu = snapshot.cpu?.value {
-            metrics.append(String(format: "CPU %.0f%%", cpu))
+            metrics.append(String(format: "处理器 %.0f%%", cpu))
         }
         if snapshot.memoryUsagePercent > 0 {
             metrics.append(String(format: "内存 %.0f%%", snapshot.memoryUsagePercent))
@@ -2655,6 +2658,7 @@ final class WorkspaceDashboardViewModel: ObservableObject {
             recentScreenshotItems: [],
             scheduleItems: [],
             systemMetrics: [],
+            systemStatusSnapshot: nil,
             currentPage: SidebarItem.home.displayName,
             permissionSummary: "正在读取权限状态",
             unavailableReasons: []

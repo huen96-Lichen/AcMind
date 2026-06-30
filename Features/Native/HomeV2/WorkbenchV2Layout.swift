@@ -39,7 +39,7 @@ enum WorkbenchV2Layout {
         // The GeometryReader excludes the title-bar safe area. Width is the stable
         // signal for choosing the dashboard density; using height made the default
         // 1500 x 888 window incorrectly resolve to compact mode.
-        let isCompact = effectiveWindowWidth < 1380
+        let isCompact = effectiveWindowWidth < 1450
         let mode: WorkbenchV2LayoutMode = isCompact ? .compact : .regular
         let availableWidth = max(containerSize.width, 0)
         if isCompact {
@@ -49,9 +49,9 @@ enum WorkbenchV2Layout {
             let contentWidth = max(availableWidth - WorkbenchV2Tokens.Layout.compactInnerPadding * 2, 0)
             let columnGap = WorkbenchV2Tokens.Layout.compactColumnGap
             let rowGap = WorkbenchV2Tokens.Layout.dashboardRowGap
-            let rightWidth = min(WorkbenchV2Tokens.Layout.compactRightColumnWidth, max(contentWidth * 0.28, 236))
+            let rightWidth = min(WorkbenchV2Tokens.Layout.compactRightColumnWidth, max(contentWidth * 0.26, 260))
             let remainingWidth = max(contentWidth - rightWidth - columnGap * 2, 0)
-            let leftWidth = max(remainingWidth * 0.52, 0)
+            let leftWidth = floor(max(remainingWidth * 0.5, 0))
             let middleWidth = max(remainingWidth - leftWidth, 0)
             let heroHeight = WorkbenchV2Tokens.Layout.compactHeroHeight
             let secondaryCardHeight = WorkbenchV2Tokens.Layout.compactSecondaryCardHeight
@@ -62,17 +62,17 @@ enum WorkbenchV2Layout {
                 containerSize.height - pagePadding * 2 - headerHeight - headerBottomGap,
                 0
             )
-            let dashboardHeight = availableDashboardHeight
+            let minimumDashboardHeight = topCompositeHeight + rowGap * 2 + trendHeight + footerHeight
+            let dashboardHeight = max(availableDashboardHeight, minimumDashboardHeight)
             let resolvedTrendHeight = max(
                 trendHeight,
                 dashboardHeight - topCompositeHeight - rowGap * 2 - footerHeight
             )
-            let rightContentHeight = dashboardHeight - footerHeight - rowGap
-            let todayOverviewHeight = min(
-                WorkbenchV2Tokens.Layout.compactTodayOverviewHeight,
-                rightContentHeight - rowGap - WorkbenchV2Tokens.Layout.compactQuickActionsHeight
+            let quickActionsHeight = min(
+                WorkbenchV2Tokens.Layout.compactQuickActionsHeight,
+                max(144, floor(dashboardHeight * 0.32))
             )
-            let quickActionsHeight = rightContentHeight - todayOverviewHeight - rowGap
+            let todayOverviewHeight = max(dashboardHeight - rowGap - quickActionsHeight, 0)
 
             return WorkbenchV2ResolvedLayout(
                 mode: mode,
@@ -104,11 +104,13 @@ enum WorkbenchV2Layout {
         let contentWidth = max(availableWidth - WorkbenchV2Tokens.Layout.pagePaddingLeading - WorkbenchV2Tokens.Layout.pagePaddingTrailing, 0)
         let columnGap = WorkbenchV2Tokens.Layout.dashboardColumnGap
         let rowGap = WorkbenchV2Tokens.Layout.dashboardRowGap
-        let usableWidth = max(contentWidth - columnGap * 2, 0)
-        let widthWeight: CGFloat = 1.04 + 0.98 + 0.92
-        let leftWidth = floor(usableWidth * 1.04 / widthWeight)
-        let middleWidth = floor(usableWidth * 0.98 / widthWeight)
-        let rightWidth = max(usableWidth - leftWidth - middleWidth, 0)
+        let rightWidth = min(
+            WorkbenchV2Tokens.Layout.rightColumnWidth,
+            max(contentWidth * 0.26, 292)
+        )
+        let mainWidth = max(contentWidth - rightWidth - columnGap, 0)
+        let leftWidth = floor((mainWidth - columnGap) / 2)
+        let middleWidth = max(mainWidth - columnGap - leftWidth, 0)
         let heroHeight = WorkbenchV2Tokens.Layout.heroHeight
         let secondaryCardHeight = WorkbenchV2Tokens.Layout.secondaryCardHeight
         let topCompositeHeight = heroHeight + rowGap + secondaryCardHeight
@@ -122,17 +124,23 @@ enum WorkbenchV2Layout {
                 - WorkbenchV2Tokens.Layout.headerBottomGap,
             0
         )
-        let dashboardHeight = availableDashboardHeight
+        let minimumDashboardHeight = topCompositeHeight + rowGap * 2 + minimumTrendHeight + footerHeight
+        let dashboardHeight = max(
+            availableDashboardHeight,
+            minimumDashboardHeight
+        )
         let trendHeight = max(
             minimumTrendHeight,
             dashboardHeight - topCompositeHeight - rowGap * 2 - footerHeight
         )
-        let rightContentHeight = dashboardHeight - footerHeight - rowGap
         let todayOverviewHeight = min(
             WorkbenchV2Tokens.Layout.todayOverviewHeight,
-            rightContentHeight - rowGap - WorkbenchV2Tokens.Layout.quickActionsHeight
+            max(dashboardHeight - WorkbenchV2Tokens.Layout.quickActionsHeight - rowGap, topCompositeHeight)
         )
-        let quickActionsHeight = rightContentHeight - todayOverviewHeight - rowGap
+        let quickActionsHeight = min(
+            WorkbenchV2Tokens.Layout.quickActionsHeight,
+            max(dashboardHeight - todayOverviewHeight - rowGap, WorkbenchV2Tokens.Layout.quickActionsHeight)
+        )
 
         return WorkbenchV2ResolvedLayout(
             mode: mode,

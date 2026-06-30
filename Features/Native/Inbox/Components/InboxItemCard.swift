@@ -289,7 +289,7 @@ struct InboxItemCard: View {
 
     @ViewBuilder
     private var contextMenuItems: some View {
-        Button("AI 整理") {
+        Button("智能整理") {
             copySummary()
             AppState.shared.navigate(to: .agent)
         }

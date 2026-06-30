@@ -14,6 +14,7 @@ struct ClipboardPinActions {
 // AcWork 主应用框架
 
 struct ContentView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var appState: AppState
     let clipboardPinActions: ClipboardPinActions
     let workspaceDashboardRepository: (any WorkspaceDashboardRepositoryProtocol)?
@@ -38,13 +39,19 @@ struct ContentView: View {
     var body: some View {
         HStack(spacing: 0) {
             SidebarView()
-                .frame(width: appState.sidebarCollapsed ? 84 : AppSurfaceTokens.Layout.sidebarWidth)
+                .frame(
+                    width: appState.sidebarCollapsed
+                        ? AppSurfaceTokens.Layout.sidebarCollapsedWidth
+                        : AppSurfaceTokens.Layout.sidebarWidth
+                )
                 .layoutPriority(1)
+                .zIndex(2)
 #if DEBUG
                 .layoutDebugRegion("PrimarySidebarPanel")
 #endif
 
             Divider()
+                .zIndex(1)
 
             MainContent(
                 selectedItem: appState.sidebarSelection,
@@ -59,6 +66,44 @@ struct ContentView: View {
 #endif
         }
         .coordinateSpace(name: "AcWorkWindow")
+        .overlayPreferenceValue(SidebarRailTooltipPreferenceKey.self) { tooltip in
+            GeometryReader { proxy in
+                if let tooltip {
+                    let rect = proxy[tooltip.anchor]
+                    let tooltipX = max(
+                        rect.maxX + 10,
+                        AppSurfaceTokens.Layout.sidebarCollapsedWidth + 8
+                    )
+                    SidebarRailTooltip(item: tooltip.item, isSelected: tooltip.isSelected)
+                        .offset(
+                            x: tooltipX,
+                            y: rect.midY - 16 + SidebarRailTooltipLayout.yOffset(
+                                for: rect,
+                                viewportHeight: proxy.size.height
+                            )
+                        )
+                        .transition(
+                            reduceMotion
+                                ? .opacity
+                                : .opacity.combined(with: .scale(scale: 0.97, anchor: .leading))
+                        )
+                        .animation(
+                            reduceMotion
+                                ? .easeOut(duration: 0.12)
+                                : .spring(response: 0.24, dampingFraction: 0.90),
+                            value: rect.midY
+                        )
+                        .zIndex(20)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+        .animation(
+            reduceMotion
+                ? .easeOut(duration: 0.12)
+                : .spring(response: 0.28, dampingFraction: 0.88),
+            value: appState.sidebarCollapsed
+        )
 #if DEBUG
         .layoutDebugRegion("AppShell")
 #endif
@@ -200,7 +245,7 @@ struct MainContent: View {
                     .navigationTitle("状态")
             case .agent:
                 AgentDashboardView()
-                    .navigationTitle("Agent")
+                    .navigationTitle("智能体")
             case .clipboard:
                 InboxView(clipboardPinActions: clipboardPinActions)
                     .navigationTitle("收集箱")
@@ -209,10 +254,10 @@ struct MainContent: View {
                     .navigationTitle("收集箱")
             case .screenshot:
                 ScreenshotWorkspaceView(clipboardPinActions: clipboardPinActions)
-                    .navigationTitle("截图查看")
+                    .navigationTitle("截图工作区")
             case .screenshotHistory:
                 InboxView(clipboardPinActions: clipboardPinActions, previewScenario: inboxPreviewScenario)
-                    .navigationTitle("截图历史")
+                    .navigationTitle("收集箱")
             case .schedule:
                 ScheduleDashboardView()
                     .navigationTitle("日程")

@@ -129,7 +129,7 @@ enum NotchRuntimeSurfaceDispatcher {
         guard context.isCapturing, context.allows(.screenshot, scope: scope) else { return nil }
         return NotchRuntimeSurface(
             kind: .screenshot,
-            title: "截图处理中",
+            title: "截图进行中",
             subtitle: "正在截取当前屏幕",
             symbol: "camera.viewfinder",
             accentColor: .orange,
@@ -225,7 +225,7 @@ enum NotchRuntimeSurfaceDispatcher {
         }
         return NotchRuntimeSurface(
             kind: .agent,
-            title: "Agent 待命",
+            title: "智能体空闲",
             subtitle: subtitle,
             symbol: "sparkles",
             accentColor: context.status.color,

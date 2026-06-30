@@ -76,7 +76,14 @@ enum AppSurfaceTokens {
 
     enum Layout {
         static let pageMaxWidth: CGFloat = 1240
-        static let sidebarWidth: CGFloat = 250
+        static let workspaceMaxWidth: CGFloat = 1120
+        static let workspacePagePadding: CGFloat = 16
+        static let workspaceSectionSpacing: CGFloat = 16
+        static let workspaceCardPadding: CGFloat = 14
+        static let workspaceGridSpacing: CGFloat = 12
+        static let workspaceCompactGridSpacing: CGFloat = 8
+        static let sidebarWidth: CGFloat = 206
+        static let sidebarCollapsedWidth: CGFloat = 56
         static let toolbarHeight: CGFloat = 60
         static let leadingRailWidth: CGFloat = 220
         static let trailingRailWidth: CGFloat = 304
@@ -95,8 +102,19 @@ enum AppSurfaceTokens {
         static let buttonHeight: CGFloat = 32
         static let keycapHeight: CGFloat = 28
         static let inputHeight: CGFloat = 36
-        static let summaryWidth: CGFloat = 224
+        static let summaryWidth: CGFloat = 260
         static let rowMinHeight: CGFloat = 42
+    }
+
+    enum Shadow {
+        static let color = Color.black.opacity(0.10)
+        static let radius: CGFloat = 8
+        static let x: CGFloat = 0
+        static let y: CGFloat = 3
+
+        static let subtleColor = Color.black.opacity(0.06)
+        static let subtleRadius: CGFloat = 4
+        static let subtleY: CGFloat = 2
     }
 }
 
@@ -148,7 +166,12 @@ struct AppSurfaceCard<Content: View>: View {
             RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.card, style: .continuous)
                 .stroke(AppSurfaceTokens.separator, lineWidth: 1)
         )
-        .shadow(color: AppSurfaceTokens.separator.opacity(0.08), radius: 2, x: 0, y: 1)
+        .shadow(
+            color: AppSurfaceTokens.Shadow.color,
+            radius: AppSurfaceTokens.Shadow.radius,
+            x: AppSurfaceTokens.Shadow.x,
+            y: AppSurfaceTokens.Shadow.y
+        )
     }
 }
 
@@ -194,7 +217,12 @@ struct AppSurfaceSectionCard<Content: View>: View {
             RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.section, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.8), lineWidth: 1)
         )
-        .shadow(color: AppSurfaceTokens.separator.opacity(0.06), radius: 2, x: 0, y: 1)
+        .shadow(
+            color: AppSurfaceTokens.Shadow.subtleColor,
+            radius: AppSurfaceTokens.Shadow.subtleRadius,
+            x: 0,
+            y: AppSurfaceTokens.Shadow.subtleY
+        )
     }
 }
 
@@ -264,7 +292,6 @@ struct AppSurfaceMetricTile: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: AppSurfaceTokens.separator.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -577,7 +604,12 @@ struct AppSurfaceEmptyState: View {
             RoundedRectangle(cornerRadius: AppSurfaceTokens.cardRadius, style: .continuous)
                 .stroke(AppSurfaceTokens.separator.opacity(0.9), lineWidth: 1)
         )
-        .shadow(color: AppSurfaceTokens.separator.opacity(0.06), radius: 4, x: 0, y: 2)
+        .shadow(
+            color: AppSurfaceTokens.Shadow.color,
+            radius: AppSurfaceTokens.Shadow.radius,
+            x: AppSurfaceTokens.Shadow.x,
+            y: AppSurfaceTokens.Shadow.y
+        )
     }
 }
 
@@ -781,7 +813,7 @@ struct AcInspector<Content: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Inspector")
+                        Text("检查器")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .textCase(.uppercase)
@@ -1568,7 +1600,7 @@ struct WorkspacePageShell<Leading: View, Content: View, Trailing: View>: View {
         trailingRailWidth: CGFloat = AppSurfaceTokens.Layout.trailingRailWidth,
         usesResponsiveInspector: Bool = false,
         windowWidthOffset: CGFloat = AppSurfaceTokens.Layout.sidebarWidth,
-        compactInspectorTitle: String = "详情",
+        compactInspectorTitle: String = "信息",
         @ViewBuilder leadingRail: @escaping () -> Leading,
         @ViewBuilder content: @escaping () -> Content,
         @ViewBuilder trailingRail: @escaping () -> Trailing
@@ -1608,6 +1640,7 @@ struct WorkspacePageShell<Leading: View, Content: View, Trailing: View>: View {
 struct AcPageToolbar: View {
     let title: String
     let context: String?
+    let isCompact: Bool
     let searchContent: AnyView?
     let trailingContent: AnyView?
     let compactInspectorTitle: String?
@@ -1616,6 +1649,7 @@ struct AcPageToolbar: View {
     init(
         title: String,
         context: String? = nil,
+        isCompact: Bool = false,
         searchContent: AnyView? = nil,
         trailingContent: AnyView? = nil,
         compactInspectorTitle: String? = nil,
@@ -1623,6 +1657,7 @@ struct AcPageToolbar: View {
     ) {
         self.title = title
         self.context = context
+        self.isCompact = isCompact
         self.searchContent = searchContent
         self.trailingContent = trailingContent
         self.compactInspectorTitle = compactInspectorTitle
@@ -1630,18 +1665,36 @@ struct AcPageToolbar: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(AppSurfaceTokens.primaryText)
-                    .lineLimit(1)
+        HStack(alignment: isCompact ? .center : .top, spacing: 16) {
+            if isCompact {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .lineLimit(1)
 
-                if let context {
-                    Text(context)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        .lineLimit(2)
+                    if let context {
+                        Divider()
+                            .frame(height: 14)
+                        Text(context)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .lineLimit(1)
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: AppSurfaceTokens.Typography.pageTitle, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                        .lineLimit(1)
+
+                    if let context {
+                        Text(context)
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .lineLimit(2)
+                    }
                 }
             }
 
@@ -1664,7 +1717,7 @@ struct AcPageToolbar: View {
                 .accessibilityLabel("打开\(compactInspectorTitle)")
             }
         }
-        .frame(minHeight: 60, alignment: .center)
+        .frame(minHeight: isCompact ? 32 : 44, alignment: .center)
     }
 }
 
@@ -1679,6 +1732,7 @@ struct AcWorkShell<Leading: View, Content: View, Trailing: View>: View {
     let subtitle: String?
     let headerActions: AnyView?
     let searchContent: AnyView?
+    let compactToolbar: Bool
     let leadingRailWidth: CGFloat
     let trailingRailWidth: CGFloat
     let usesResponsiveInspector: Bool
@@ -1697,11 +1751,12 @@ struct AcWorkShell<Leading: View, Content: View, Trailing: View>: View {
         subtitle: String? = nil,
         headerActions: AnyView? = nil,
         searchContent: AnyView? = nil,
+        compactToolbar: Bool = false,
         leadingRailWidth: CGFloat = AppSurfaceTokens.Layout.leadingRailWidth,
         trailingRailWidth: CGFloat = AppSurfaceTokens.Layout.trailingRailWidth,
         usesResponsiveInspector: Bool = false,
         windowWidthOffset: CGFloat = AppSurfaceTokens.Layout.sidebarWidth,
-        compactInspectorTitle: String = "详情",
+        compactInspectorTitle: String = "信息",
         @ViewBuilder leadingRail: @escaping () -> Leading,
         @ViewBuilder content: @escaping () -> Content,
         @ViewBuilder trailingRail: @escaping () -> Trailing
@@ -1710,6 +1765,7 @@ struct AcWorkShell<Leading: View, Content: View, Trailing: View>: View {
         self.subtitle = subtitle
         self.headerActions = headerActions
         self.searchContent = searchContent
+        self.compactToolbar = compactToolbar
         self.leadingRailWidth = leadingRailWidth
         self.trailingRailWidth = trailingRailWidth
         self.usesResponsiveInspector = usesResponsiveInspector
@@ -1722,7 +1778,6 @@ struct AcWorkShell<Leading: View, Content: View, Trailing: View>: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let isCompactHeight = proxy.size.height < 760
             let inspectorPresentation = AcWorkResponsiveLayout.inspectorPresentation(
                 windowWidth: proxy.size.width + windowWidthOffset,
                 hasInspector: trailingRailWidth > 0
@@ -1733,13 +1788,14 @@ struct AcWorkShell<Leading: View, Content: View, Trailing: View>: View {
                 AcPageToolbar(
                     title: title,
                     context: subtitle,
+                    isCompact: compactToolbar,
                     searchContent: searchContent,
                     trailingContent: headerActions,
                     compactInspectorTitle: usesCompactInspector ? compactInspectorTitle : nil,
                     compactInspectorAction: usesCompactInspector ? { showsCompactInspector = true } : nil
                 )
-                .padding(.horizontal, AppSurfaceTokens.Spacing.lg)
-                .padding(.vertical, isCompactHeight ? AppSurfaceTokens.Spacing.xxs + 2 : AppSurfaceTokens.Spacing.xs + 2)
+                .padding(.horizontal, AppSurfaceTokens.Spacing.md)
+                .padding(.vertical, compactToolbar ? AppSurfaceTokens.Spacing.xxs : AppSurfaceTokens.Spacing.xs)
                 .layoutDebugRegion("TopToolbar")
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel("\(title)工具栏")
@@ -1775,7 +1831,7 @@ struct AcWorkShell<Leading: View, Content: View, Trailing: View>: View {
                             .frame(maxHeight: .infinity, alignment: .topLeading)
                             .layoutDebugRegion("RightStatusRail")
                             .accessibilityElement(children: .contain)
-                            .accessibilityLabel("\(title)详情栏")
+                            .accessibilityLabel("\(title)信息栏")
                             .accessibilitySortPriority(60)
                     }
                 }

@@ -140,8 +140,8 @@ extension NotchV2ViewModel {
         items.append(
                 NotchV2LightStatusItem(
                     icon: isCapturing ? "camera.viewfinder" : "camera",
-                    title: isCapturing ? "截图处理中" : "截图",
-                    detail: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "处理中", idleLabel: "待命"),
+                    title: isCapturing ? "截图进行中" : "截图",
+                    detail: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "进行中", idleLabel: "空闲"),
                     accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText,
                     highlighted: isCapturing,
                     priority: 4

@@ -6,11 +6,11 @@ struct CapsulePreview: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            Text("效果示意")
+            Text("胶囊预览")
                 .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
                 .foregroundStyle(AppSurfaceTokens.primaryText)
             
-            // macOS 菜单栏示意
+            // macOS 菜单栏预览
             ZStack(alignment: position.alignment) {
                 // 菜单栏背景
                 RoundedRectangle(cornerRadius: 8)
@@ -21,9 +21,9 @@ struct CapsulePreview: View {
                             .stroke(AppSurfaceTokens.separator, lineWidth: 1)
                     )
                 
-                // 胶囊示意
+                // 胶囊预览
                 HStack(spacing: 4) {
-                    // 胶囊按钮示意
+                    // 胶囊按钮预览
                     Circle()
                         .fill(Color.accentColor)
                         .frame(width: 18, height: 18)

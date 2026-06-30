@@ -10,9 +10,12 @@ struct WorkbenchHeader: View {
                 Text(model.title)
                     .font(.system(size: WorkbenchV2Tokens.Typography.pageTitle, weight: .semibold))
                     .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
-                Text(model.subtitle)
-                    .font(.system(size: WorkbenchV2Tokens.Typography.headerKicker, weight: .medium))
-                    .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary)
+
+                if model.subtitle.isEmpty == false {
+                    Text(model.subtitle)
+                        .font(.system(size: WorkbenchV2Tokens.Typography.headerKicker, weight: .medium))
+                        .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary)
+                }
             }
 
             Spacer(minLength: 0)

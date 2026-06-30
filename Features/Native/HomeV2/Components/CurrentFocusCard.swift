@@ -17,7 +17,9 @@ struct CurrentFocusCard: View {
                     .layoutDebugRegion("CurrentFocusBackground")
 
                 cardContent
-                    .padding(layout.mode == .compact ? WorkbenchV2Tokens.Spacing.md : WorkbenchV2Tokens.Spacing.lg)
+                    .padding(WorkbenchV2Tokens.Layout.containerGap)
+                    .frame(width: cardSize.width, height: cardSize.height, alignment: .topLeading)
+                    .clipped()
                     .layoutDebugRegion("CurrentFocusContent")
             }
             .frame(width: cardSize.width, height: cardSize.height, alignment: .topLeading)
@@ -30,13 +32,13 @@ struct CurrentFocusCard: View {
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
                 .stroke(WorkbenchV2Tokens.Color.heroSurfaceBorder, lineWidth: WorkbenchV2Tokens.Border.width)
         )
-        .shadow(color: Color.black.opacity(0.16), radius: 18, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.14), radius: 8, x: 0, y: 3)
         .compositingGroup()
     }
 
     @ViewBuilder
     private var cardContent: some View {
-        if layout.mode == .compact {
+        if layout.mode == .compact && layout.heroHeight < 260 {
             compactContent
         } else {
             regularContent
@@ -44,19 +46,19 @@ struct CurrentFocusCard: View {
     }
 
     private var regularContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.md) {
             topBar
 
-            VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.xs) {
+            VStack(alignment: .leading, spacing: WorkbenchV2Tokens.Spacing.sm) {
                 Text(model.title)
-                    .font(.system(size: 22.5, weight: .semibold))
+                    .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(WorkbenchV2Tokens.Color.heroTextPrimary)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+                    .minimumScaleFactor(0.82)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(model.summary)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 14))
                     .foregroundStyle(WorkbenchV2Tokens.Color.heroTextSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.92)
@@ -79,6 +81,8 @@ struct CurrentFocusCard: View {
             }
             .layoutDebugRegion("CurrentFocusMetrics")
 
+            Spacer(minLength: 0)
+
             HStack(alignment: .center, spacing: WorkbenchV2Tokens.Spacing.sm) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.nextStepLabel)
@@ -98,6 +102,7 @@ struct CurrentFocusCard: View {
                 actionRow
                     .layoutDebugRegion("CurrentFocusActions")
             }
+            .frame(maxWidth: .infinity, alignment: .bottomLeading)
         }
     }
 
@@ -107,17 +112,17 @@ struct CurrentFocusCard: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(model.title)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 18.5, weight: .semibold))
                     .foregroundStyle(WorkbenchV2Tokens.Color.heroTextPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.9)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(model.summary)
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(WorkbenchV2Tokens.Color.heroTextSecondary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.92)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -136,17 +141,29 @@ struct CurrentFocusCard: View {
                     showsProgress: true,
                     progress: progressFraction
                 )
-
-                WorkbenchV2CompactStepBlock(
-                    title: model.nextStepLabel,
-                    value: model.nextStepValue
-                )
             }
             .layoutDebugRegion("CurrentFocusMetrics")
 
-            actionRow
-                .padding(.top, 2)
-                .layoutDebugRegion("CurrentFocusActions")
+            Spacer(minLength: 0)
+
+            HStack(alignment: .bottom, spacing: WorkbenchV2Tokens.Spacing.sm) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.nextStepLabel)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(WorkbenchV2Tokens.Color.heroTextSecondary)
+
+                    Text(model.nextStepValue)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WorkbenchV2Tokens.Color.heroTextPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+
+                Spacer(minLength: 0)
+
+                actionRow
+                    .layoutDebugRegion("CurrentFocusActions")
+            }
         }
     }
 
@@ -162,11 +179,11 @@ struct CurrentFocusCard: View {
             Button(action: actions.selectBackground) {
                     Label("自定义背景", systemImage: "photo.on.rectangle.angled")
                         .labelStyle(.titleAndIcon)
-                    .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
             }
             .buttonStyle(
                 WorkbenchV2HeroActionButtonStyle(
-                    height: layout.mode == .compact ? 20 : WorkbenchV2Tokens.Layout.heroButtonHeight,
+                    height: layout.mode == .compact ? 18 : WorkbenchV2Tokens.Layout.heroButtonHeight,
                     fill: WorkbenchV2Tokens.Color.heroButtonSecondaryFill,
                     foreground: WorkbenchV2Tokens.Color.heroButtonSecondaryText,
                     border: WorkbenchV2Tokens.Color.heroButtonSecondaryBorder
@@ -182,11 +199,11 @@ struct CurrentFocusCard: View {
             Button(action: actions.continueWork) {
                 Label("继续工作", systemImage: "play.fill")
                     .labelStyle(.titleAndIcon)
-                    .font(.system(size: layout.mode == .compact ? 10.5 : 12.5, weight: .semibold))
+                    .font(.system(size: layout.mode == .compact ? 10 : 12.5, weight: .semibold))
             }
             .buttonStyle(
                 WorkbenchV2HeroActionButtonStyle(
-                    height: layout.mode == .compact ? 24 : WorkbenchV2Tokens.Layout.heroPrimaryActionHeight,
+                    height: layout.mode == .compact ? 22 : WorkbenchV2Tokens.Layout.heroPrimaryActionHeight,
                     fill: WorkbenchV2Tokens.Color.heroButtonPrimaryFill,
                     foreground: WorkbenchV2Tokens.Color.heroButtonPrimaryText,
                     border: nil
@@ -196,11 +213,11 @@ struct CurrentFocusCard: View {
             Button(action: actions.viewDetails) {
                 Label("查看详情", systemImage: "arrow.right.circle")
                     .labelStyle(.titleAndIcon)
-                    .font(.system(size: layout.mode == .compact ? 10.5 : 12.5, weight: .semibold))
+                    .font(.system(size: layout.mode == .compact ? 10 : 12.5, weight: .semibold))
             }
             .buttonStyle(
                 WorkbenchV2HeroActionButtonStyle(
-                    height: layout.mode == .compact ? 24 : WorkbenchV2Tokens.Layout.heroSecondaryActionHeight,
+                    height: layout.mode == .compact ? 22 : WorkbenchV2Tokens.Layout.heroSecondaryActionHeight,
                     fill: WorkbenchV2Tokens.Color.heroButtonSecondaryFill,
                     foreground: WorkbenchV2Tokens.Color.heroButtonSecondaryText,
                     border: WorkbenchV2Tokens.Color.heroButtonSecondaryBorder
@@ -224,10 +241,10 @@ struct CurrentFocusCard: View {
                 .clipped()
 
             LinearGradient(
-                colors: [
-                    WorkbenchV2Tokens.Color.heroBackgroundMaskLeading,
-                    WorkbenchV2Tokens.Color.heroBackgroundMaskMiddle,
-                    WorkbenchV2Tokens.Color.heroBackgroundMaskTrailing
+                stops: [
+                    .init(color: Color.black.opacity(0.82), location: 0),
+                    .init(color: Color.black.opacity(0.44), location: 0.52),
+                    .init(color: Color.black.opacity(0.10), location: 1)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -235,8 +252,8 @@ struct CurrentFocusCard: View {
 
             LinearGradient(
                 colors: [
-                    Color.black.opacity(0.04),
-                    WorkbenchV2Tokens.Color.heroBackgroundShade
+                    Color.black.opacity(0.08),
+                    Color.black.opacity(0.36)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -268,8 +285,8 @@ private struct WorkbenchV2HeroStatBlock: View {
                 .foregroundStyle(WorkbenchV2Tokens.Color.heroTextPrimary)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 40, alignment: .topLeading)
-        .padding(5)
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+        .padding(WorkbenchV2Tokens.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.heroSurface)
@@ -323,8 +340,8 @@ private struct WorkbenchV2HeroProgressBlock: View {
             }
             .frame(height: 4)
         }
-        .frame(maxWidth: .infinity, minHeight: 40, alignment: .topLeading)
-        .padding(5)
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+        .padding(WorkbenchV2Tokens.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.heroSurface)
@@ -465,8 +482,8 @@ struct CurrentFocusCard_Previews: PreviewProvider {
             CurrentFocusCard(
                 model: .init(
                     state: .warning,
-                    title: "暂无聚焦",
-                    summary: "当前暂无聚焦内容，可稍后再返回查看。",
+                    title: "还未聚焦",
+                    summary: "当前还未聚焦内容，稍后回来查看。",
                     primaryMetricLabel: "主线",
                     primaryMetricValue: "-",
                     secondaryMetricLabel: "阶段",

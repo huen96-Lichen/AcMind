@@ -72,11 +72,11 @@ struct ToolWorkspacePreviewLaunchOptions: Equatable {
     let isNarrow: Bool
 
     var contentWidth: CGFloat {
-        isNarrow ? 880 : 1280
+        isNarrow ? 900 : 1200
     }
 
     var contentHeight: CGFloat {
-        isNarrow ? 1180 : 980
+        isNarrow ? 720 : 800
     }
 
     init(arguments: [String]) {
@@ -101,6 +101,7 @@ struct ProductPanelPreviewLaunchOptions: Equatable {
 }
 
 struct AgentPreviewLaunchOptions: Equatable {
+    let exportPath: String?
     let isNarrow: Bool
     let sidebarSelection: String
 
@@ -113,6 +114,8 @@ struct AgentPreviewLaunchOptions: Equatable {
     }
 
     init(arguments: [String]) {
+        exportPath = arguments.first(where: { $0.hasPrefix("--agent-preview-export=") })
+            .map { String($0.dropFirst("--agent-preview-export=".count)) }
         isNarrow = arguments.contains("--agent-preview-narrow")
         if arguments.contains("--agent-preview-tool-call") {
             sidebarSelection = "toolCall"

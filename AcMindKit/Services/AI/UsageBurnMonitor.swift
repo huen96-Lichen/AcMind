@@ -98,7 +98,7 @@ public struct UsageBurnSnapshot: Sendable, Codable, Equatable {
         totalLatencyMs: 0,
         averageLatencyMs: 0,
         lastUpdated: nil,
-        note: "暂无模型调用"
+        note: "目前没有模型调用"
     )
 }
 
@@ -179,7 +179,7 @@ public actor UsageBurnMonitor {
 
     private func evaluate(at now: Date) -> (severity: UsageBurnSeverity, windows: [UsageBurnWindowSnapshot], totalTokens: Int, totalCostCNY: Double, totalRequests: Int, totalLatencyMs: Int, averageLatencyMs: Int, note: String) {
         guard samples.isEmpty == false else {
-            return (.none, [], 0, 0, 0, 0, 0, "暂无模型调用")
+            return (.none, [], 0, 0, 0, 0, 0, "目前没有模型调用")
         }
 
         let usages = samples.map(\.usage)

@@ -264,7 +264,7 @@ struct NotchV2MusicPage: View {
                 .foregroundStyle(NotchV2DesignTokens.primaryText)
                 .lineLimit(2)
                 .truncationMode(.tail)
-            Text("开始播放音乐或网页媒体后，这里会显示封面、标题和进度。")
+            Text("播放音乐或网页媒体后，这里显示封面、标题和进度。")
                 .font(NotchV2DesignTokens.Typography.body)
                 .foregroundStyle(NotchV2DesignTokens.secondaryText)
                 .lineLimit(2)
@@ -292,12 +292,12 @@ struct NotchV2MusicPage: View {
     }
 
     private var queueEmptyStateTitle: String {
-        "暂无队列"
+        "队列为空"
     }
 
     private var queueEmptyStateDetail: String {
         if viewModel.hasPlaybackContext {
-            return "当前只检测到播放中的曲目，暂未拿到下一首队列。"
+            return "当前只检测到播放中的曲目，尚未获取下一首队列。"
         }
 
         return NowPlayingSourceLabelFormatter.playbackContextLabel(

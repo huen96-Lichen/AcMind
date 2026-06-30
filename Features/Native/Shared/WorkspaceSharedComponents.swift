@@ -29,6 +29,7 @@ struct AcWorkHomePreviewSnapshot: Equatable {
     let pendingItems: [String]
     let scheduleItems: [String]
     let systemMetrics: [String]
+    let systemStatusSnapshot: SystemStatusSnapshot?
 }
 
 struct ScreenshotOptionsView: View {
@@ -69,7 +70,7 @@ struct ScreenshotOptionsView: View {
                 )
             }
 
-            Text("快捷入口会沿用当前截图预设；如果要调整参数，可以去设置页切换预设。")
+            Text("快捷入口沿用当前截图预设。")
                 .font(.caption2)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -622,7 +623,7 @@ struct StateContainer<Content: View>: View {
             statusPlaceholder(
                 icon: "circle.dotted",
                 title: "正在加载",
-                message: message ?? "正在读取最新状态。"
+                message: message ?? "状态加载中。"
             )
 
         case .empty(let title, let message, let actionTitle, let action):
@@ -774,7 +775,7 @@ struct WorkspaceSharedComponentsPreviewSample: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 SectionHeader(
-                    title: "共享组件示意",
+                    title: "共享组件预览",
                     description: "展示状态容器、徽章、指标和区块标题的复用效果。",
                     status: "DS-02"
                 )
@@ -783,7 +784,7 @@ struct WorkspaceSharedComponentsPreviewSample: View {
                     MetricCard(
                         label: "插件总数",
                         primaryValue: "12",
-                        trend: "4 个处于运行中",
+                        trend: "4 个处于进行中",
                         state: "稳定",
                         lastUpdated: "刚刚",
                         tint: AppSurfaceTokens.accentBlue
@@ -830,7 +831,7 @@ struct WorkspaceSharedComponentsPreviewSample: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("内容区")
                             .font(.system(size: 14, weight: .semibold))
-                        Text("这里显示状态容器的正常内容状态。")
+                        Text("这里展示状态容器的正常内容。")
                             .font(.system(size: 12))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
@@ -843,7 +844,7 @@ struct WorkspaceSharedComponentsPreviewSample: View {
             }
 
                 StateContainer(
-                    phase: .failed(title: "插件摘要读取失败", message: "无法连接到插件目录。", actionTitle: "重试") {}
+                    phase: .failed(title: "插件信息读取失败", message: "无法连接到插件目录。", actionTitle: "重试") {}
                 ) {
                     EmptyView()
                 }

@@ -182,7 +182,7 @@ final class SettingsLocalPreferencesTests: XCTestCase {
 
         XCTAssertEqual(snapshot.activePreset.id, customPreset.id)
         XCTAssertEqual(snapshot.activePreset.defaultOutputAction, .copyToClipboard)
-        XCTAssertEqual(snapshot.hotkeyLabel, "全局热键 ⌘⇧4")
+        XCTAssertEqual(snapshot.hotkeyLabel, "全局热键：⌘⇧4")
     }
 
     func testScreenshotSnapshotUsesUnboundLabelWhenHotkeyMissing() throws {
@@ -194,7 +194,7 @@ final class SettingsLocalPreferencesTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let snapshot = SettingsLocalPreferences.screenshotSnapshot(defaults: defaults)
-        XCTAssertEqual(snapshot.hotkeyLabel, "全局热键 未绑定")
+        XCTAssertEqual(snapshot.hotkeyLabel, "全局热键：未设置")
         XCTAssertEqual(snapshot.activePreset.id, ScreenshotPreset.defaultPresets.first?.id)
     }
 

@@ -14,17 +14,17 @@ struct TodayOverviewPanel: View {
 
             LazyVGrid(
                 columns: [
-                    GridItem(.flexible(), spacing: WorkbenchV2Tokens.Layout.overviewTileSpacing),
-                    GridItem(.flexible(), spacing: WorkbenchV2Tokens.Layout.overviewTileSpacing)
+                    GridItem(.flexible(), spacing: overviewSpacing),
+                    GridItem(.flexible(), spacing: overviewSpacing)
                 ],
-                spacing: WorkbenchV2Tokens.Layout.overviewTileSpacing
+                spacing: overviewSpacing
             ) {
                 ForEach(Array(model.items.prefix(4))) { item in
                     WorkbenchV2OverviewMetricTile(item: item, layout: layout)
                 }
             }
 
-            VStack(spacing: WorkbenchV2Tokens.Spacing.sm) {
+            VStack(spacing: overviewSpacing) {
                 WorkbenchV2OverviewToggleRow(
                     item: model.toggle(at: 0) ?? .init(title: "灵动大陆", subtitle: "已开启", isOn: true, systemImage: "circle"),
                     isOn: $islandEnabled,
@@ -38,16 +38,16 @@ struct TodayOverviewPanel: View {
                 )
             }
 
-            HStack(spacing: WorkbenchV2Tokens.Layout.overviewTileSpacing) {
-                ForEach(model.statusBlocks) { block in
+            HStack(spacing: overviewSpacing) {
+                ForEach(Array(model.statusBlocks.prefix(1))) { block in
                     WorkbenchV2OverviewStatusBlock(
                         block: block,
-                        isCompact: layout.mode == .compact
+                        isCompact: isCondensed
                     )
                 }
             }
         }
-        .padding(layout.mode == .compact ? WorkbenchV2Tokens.Spacing.md : WorkbenchV2Tokens.Spacing.lg)
+        .padding(layout.mode == .compact ? WorkbenchV2Tokens.Spacing.md : WorkbenchV2Tokens.Layout.containerGap)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
@@ -58,7 +58,7 @@ struct TodayOverviewPanel: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.36), lineWidth: WorkbenchV2Tokens.Border.width)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.26), lineWidth: WorkbenchV2Tokens.Border.width)
         )
         .shadow(
             color: Color.black.opacity(WorkbenchV2Tokens.Shadow.opacity),
@@ -69,7 +69,15 @@ struct TodayOverviewPanel: View {
     }
 
     private var sectionSpacing: CGFloat {
-        layout.mode == .compact ? WorkbenchV2Tokens.Spacing.sm : WorkbenchV2Tokens.Spacing.md
+        isCondensed ? WorkbenchV2Tokens.Spacing.sm : WorkbenchV2Tokens.Layout.containerGap
+    }
+
+    private var overviewSpacing: CGFloat {
+        layout.mode == .compact ? WorkbenchV2Tokens.Spacing.sm : WorkbenchV2Tokens.Layout.overviewTileSpacing
+    }
+
+    private var isCondensed: Bool {
+        layout.mode == .compact && layout.todayOverviewHeight < 440
     }
 
     private var header: some View {
@@ -91,7 +99,7 @@ struct TodayOverviewPanel: View {
     }
 
     private var summaryBar: some View {
-        HStack(spacing: WorkbenchV2Tokens.Spacing.sm) {
+        HStack(spacing: overviewSpacing) {
             WorkbenchV2SummaryPill(
                 title: "状态",
                 value: model.state.rawValue.uppercased(),
@@ -151,7 +159,7 @@ private struct WorkbenchV2SummaryPill: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                .stroke(tint.opacity(0.18), lineWidth: 1)
+                .stroke(tint.opacity(0.22), lineWidth: 1)
         )
     }
 }
@@ -193,7 +201,7 @@ private struct WorkbenchV2OverviewMetricTile: View {
 
                     Text(item.meta)
                         .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                        .foregroundStyle(WorkbenchV2Tokens.Color.textTertiary)
+                        .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .minimumScaleFactor(0.82)
@@ -232,22 +240,30 @@ private struct WorkbenchV2OverviewMetricTile: View {
 
                         Text(item.meta)
                             .font(.system(size: WorkbenchV2Tokens.Typography.caption, weight: .medium, design: .monospaced))
-                            .foregroundStyle(WorkbenchV2Tokens.Color.textTertiary)
+                            .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary.opacity(0.92))
                             .lineLimit(1)
                     }
                 }
             }
         }
         .padding(WorkbenchV2Tokens.Spacing.sm)
-        .frame(maxWidth: .infinity, minHeight: layout.mode == .compact ? 58 : WorkbenchV2Tokens.Layout.overviewTileHeight, alignment: .topLeading)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: isCondensed ? 54 : (layout.mode == .compact ? 58 : WorkbenchV2Tokens.Layout.overviewTileHeight),
+            alignment: .topLeading
+        )
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.surfaceSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.18), lineWidth: 1)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.20), lineWidth: 1)
         )
+    }
+
+    private var isCondensed: Bool {
+        layout.mode == .compact && layout.todayOverviewHeight < 440
     }
 }
 
@@ -285,14 +301,14 @@ private struct WorkbenchV2OverviewToggleRow: View {
                 .toggleStyle(SwitchToggleStyle())
         }
         .padding(.horizontal, WorkbenchV2Tokens.Spacing.sm)
-        .frame(maxWidth: .infinity, minHeight: isCompact ? 44 : WorkbenchV2Tokens.Layout.overviewToggleHeight, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: isCompact ? 40 : WorkbenchV2Tokens.Layout.overviewToggleHeight, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.surfaceSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.18), lineWidth: 1)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.20), lineWidth: 1)
         )
     }
 }
@@ -322,14 +338,14 @@ private struct WorkbenchV2OverviewStatusBlock: View {
         }
         .padding(.horizontal, WorkbenchV2Tokens.Spacing.sm)
         .padding(.vertical, isCompact ? WorkbenchV2Tokens.Spacing.xs : WorkbenchV2Tokens.Spacing.sm)
-        .frame(maxWidth: .infinity, minHeight: isCompact ? 48 : WorkbenchV2Tokens.Layout.overviewStatusHeight, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: isCompact ? 44 : WorkbenchV2Tokens.Layout.overviewStatusHeight, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
                 .fill(WorkbenchV2Tokens.Color.surfaceSoft)
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.small, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.16), lineWidth: 1)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.18), lineWidth: 1)
         )
     }
 }
@@ -346,7 +362,7 @@ struct TodayOverviewPanel_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             TodayOverviewPanel(model: WorkbenchV2DashboardData.preview().todayStatus, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 330, height: 260)))
-            TodayOverviewPanel(model: .init(state: .empty, title: "今日总览", subtitle: "暂无内容", items: [], toggles: [], statusBlocks: []), layout: WorkbenchV2Layout.resolve(for: CGSize(width: 330, height: 260)))
+            TodayOverviewPanel(model: .init(state: .empty, title: "今日总览", subtitle: "数据尚未同步", items: [], toggles: [], statusBlocks: []), layout: WorkbenchV2Layout.resolve(for: CGSize(width: 330, height: 260)))
         }
         .padding()
         .previewLayout(.sizeThatFits)

@@ -134,7 +134,7 @@ struct BatchDownloadPanel: View {
             Text("支持 `img` / `source` / `a` 中的网页资源链接。")
                 .font(.body)
 
-            Text("如果链接是相对路径，会自动按当前页面地址解析。")
+            Text("相对路径会按当前页面地址解析。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -220,7 +220,7 @@ struct BatchDownloadPanel: View {
             }
 
             if viewModel.results.isEmpty {
-                Text("还没有开始下载。")
+                Text("尚未下载。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
@@ -274,7 +274,7 @@ struct BatchDownloadResultItem: Identifiable, Hashable {
 final class BatchDownloadViewModel: ObservableObject {
     @Published var pageURLString = ""
     @Published var outputFolder: URL = ToolFileSupport.defaultDownloadDirectory(named: "BatchDownloads")
-    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("网页 URL")
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("网页地址")
     @Published var errorMessage: String?
     @Published var isRunning = false
     @Published var results: [BatchDownloadResultItem] = []
@@ -288,7 +288,7 @@ final class BatchDownloadViewModel: ObservableObject {
     func clear() {
         pageURLString = ""
         outputFolder = ToolFileSupport.defaultDownloadDirectory(named: "BatchDownloads")
-        statusText = ToolStatusLabelFormatter.waitingToInput("网页 URL")
+        statusText = ToolStatusLabelFormatter.waitingToInput("网页地址")
         errorMessage = nil
         isRunning = false
         results = []
@@ -328,7 +328,7 @@ final class BatchDownloadViewModel: ObservableObject {
                 )
                 await MainActor.run {
                     self.results = downloadResults
-                    self.statusText = ToolStatusLabelFormatter.completedDownloadCount(downloadResults.filter(\.isDownloaded).count, noun: "资源")
+                    self.statusText = ToolStatusLabelFormatter.completed("批量下载")
                     self.isRunning = false
                     ToastManager.shared.show(.success, ToolStatusLabelFormatter.completed("批量下载"))
                 }
@@ -535,7 +535,7 @@ struct VideoDownloadPanel: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("支持 `best`、`mp4`、`audio` 三种输出模式。")
                 .font(.body)
-            Text("会自动调用 `yt-dlp` 和 `ffmpeg` 完成下载与合并。")
+            Text("下载和合并由 `yt-dlp` 与 `ffmpeg` 处理。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -628,7 +628,7 @@ struct VideoDownloadPanel: View {
             }
 
             if viewModel.downloadedFiles.isEmpty {
-                Text("还没有下载结果。")
+                Text("没有下载结果。")
                     .font(.body)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
@@ -708,7 +708,7 @@ final class VideoDownloadViewModel: ObservableObject {
     @Published var videoURLString = ""
     @Published var format: VideoDownloadFormat = .best
     @Published var outputFolder: URL = ToolFileSupport.defaultDownloadDirectory(named: "VideoDownloads")
-    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("视频 URL")
+    @Published var statusText = ToolStatusLabelFormatter.waitingToInput("视频地址")
     @Published var errorMessage: String?
     @Published var isRunning = false
     @Published var downloadedFiles: [VideoDownloadItem] = []
@@ -717,7 +717,7 @@ final class VideoDownloadViewModel: ObservableObject {
         videoURLString = ""
         format = .best
         outputFolder = ToolFileSupport.defaultDownloadDirectory(named: "VideoDownloads")
-        statusText = ToolStatusLabelFormatter.waitingToInput("视频 URL")
+        statusText = ToolStatusLabelFormatter.waitingToInput("视频地址")
         errorMessage = nil
         isRunning = false
         downloadedFiles = []
@@ -736,7 +736,7 @@ final class VideoDownloadViewModel: ObservableObject {
 
     func startDownload() {
         guard let url = normalizeURL(videoURLString) else {
-            statusText = ToolStatusLabelFormatter.invalidURL("URL")
+            statusText = ToolStatusLabelFormatter.invalidURL("视频地址")
             errorMessage = "请输入有效视频地址。"
             ToastManager.shared.show(.warning, ToolStatusLabelFormatter.invalidInput("视频地址"))
             return
@@ -859,8 +859,8 @@ struct ModelManagementPanel: View {
             AppVisualBackdrop()
 
             WorkspacePageShell(
-                title: "模型管理",
-                subtitle: "管理应用里真实可用的模型。",
+                title: "模型",
+                subtitle: "管理应用中可用的模型与提供商",
                 headerActions: AnyView(
                     HStack(spacing: 12) {
                         Text(viewModel.statusText)
@@ -876,7 +876,7 @@ struct ModelManagementPanel: View {
                     }
                 ),
                 leadingRailWidth: 0,
-                trailingRailWidth: 300,
+                trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
                 leadingRail: {
                     EmptyView()
                 },
@@ -930,13 +930,13 @@ struct ModelManagementPanel: View {
 
                 if shouldShowSection(.ai) {
                     modelListSection(
-                        title: "AI 提供商",
+                        title: "智能提供商",
                         description: "真实提供商、默认项和启用状态",
                         count: viewModel.filteredAIItems.count
                     ) {
                         let items = viewModel.filteredAIItems
                         if items.isEmpty {
-                            emptyState(title: "没有匹配的 AI 提供商", subtitle: "调整筛选条件后再看。")
+                            emptyState(title: "没有匹配的智能提供商", subtitle: "调整筛选条件后再看。")
                         } else {
                             LazyVStack(spacing: 10) {
                                 ForEach(items) { item in
@@ -957,14 +957,14 @@ struct ModelManagementPanel: View {
                 if shouldShowSection(.speechRecognition) || shouldShowSection(.localModel) {
                     modelListSection(
                         title: "语音识别",
-                        description: "云端引擎、系统听写和本地 ASR",
+                        description: "云端引擎、系统听写和本地语音识别",
                         count: viewModel.filteredSpeechItems.count
                     ) {
                         let cloudItems = viewModel.filteredSpeechItems.filter { $0.deploymentKind != .local }
                         let localItems = viewModel.filteredSpeechItems.filter { $0.deploymentKind == .local }
 
                         if cloudItems.isEmpty && localItems.isEmpty {
-                            emptyState(title: "没有匹配的语音识别模型", subtitle: "当前筛选条件下没有可显示的条目。")
+                            emptyState(title: "没有匹配的语音识别模型", subtitle: "当前筛选条件下没有条目。")
                         } else {
                             if !cloudItems.isEmpty {
                                 subgroupHeader("云端 / 系统")
@@ -983,7 +983,7 @@ struct ModelManagementPanel: View {
                             }
 
                             if !localItems.isEmpty {
-                                subgroupHeader("本地 ASR")
+                                subgroupHeader("本地语音识别")
                                 LazyVStack(spacing: 10) {
                                     ForEach(localItems) { item in
                                         ModelManagementListRow(
@@ -1004,21 +1004,21 @@ struct ModelManagementPanel: View {
                 if shouldShowSection(.voiceClone) {
                     modelListSection(
                         title: "语音克隆",
-                        description: "语音克隆功能当前尚未提供",
+                        description: "语音克隆功能未开放",
                         count: 0
                     ) {
-                        emptyState(title: "暂无可用的语音克隆模型", subtitle: "语音克隆功能当前尚未提供。")
+                        emptyState(title: "没有可用的语音克隆模型", subtitle: "语音克隆功能未开放。")
                     }
                 }
             }
-            .padding(20)
+            .padding(AppSurfaceTokens.Spacing.md)
         }
     }
 
     private var detailPane: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                AppSurfaceCard(title: "当前状态", subtitle: "筛选结果与选中项摘要", padding: 12) {
+                AppSurfaceCard(title: "当前状态", subtitle: "筛选结果与选中项总览", padding: 12) {
                     HStack(alignment: .top, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("条目 \(viewModel.filteredItems.count) / \(viewModel.items.count)")
@@ -1043,7 +1043,7 @@ struct ModelManagementPanel: View {
                                     .lineLimit(1)
                             }
                         } else {
-                            Text("尚未选择条目")
+                            Text("先选择一个条目")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                         }
@@ -1060,7 +1060,7 @@ struct ModelManagementPanel: View {
                     AppSurfaceCard(title: "可用操作", subtitle: "默认项、启用状态与设置", padding: 12) {
                         detailActions(item)
                     }
-                    AppSurfaceCard(title: "简介", subtitle: "更完整的条目信息", padding: 12) {
+                    AppSurfaceCard(title: "简介", subtitle: "更详细的条目信息", padding: 12) {
                         detailNotes(item)
                     }
                 } else {
@@ -1069,7 +1069,7 @@ struct ModelManagementPanel: View {
                     }
                 }
             }
-            .padding(18)
+            .padding(AppSurfaceTokens.Spacing.md)
         }
     }
 
@@ -1100,7 +1100,7 @@ struct ModelManagementPanel: View {
                     viewModel.selectedDomain = nil
                     viewModel.selectedDeploymentKind = nil
                 }
-                filterChip(title: "AI", isSelected: viewModel.selectedDomain == .ai) {
+                filterChip(title: "智能", isSelected: viewModel.selectedDomain == .ai) {
                     viewModel.selectedDomain = .ai
                     viewModel.selectedDeploymentKind = nil
                 }
@@ -1118,7 +1118,7 @@ struct ModelManagementPanel: View {
                 }
             }
 
-            Text("统一查看本地 AI 和本地 ASR。")
+            Text("统一查看本地智能和本地语音识别。")
                 .font(.caption2)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
@@ -1249,7 +1249,7 @@ struct ModelManagementPanel: View {
 
     private func detailFacts(_ item: ModelManagementItem) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("详情")
+            Text("详细信息")
                 .font(.headline)
 
             VStack(spacing: 0) {
@@ -1328,7 +1328,7 @@ struct ModelManagementPanel: View {
 
                 if item.domain == .speechRecognition {
                     if item.deploymentKind == .local {
-                        Button(item.isDownloaded ? "删除本地 ASR" : "下载本地 ASR") {
+                        Button(item.isDownloaded ? "删除本地模型" : "下载本地模型") {
                             Task { await viewModel.toggleLocalModel(item) }
                         }
                         .buttonStyle(.bordered)
@@ -1372,10 +1372,10 @@ struct ModelManagementPanel: View {
 
     private var detailEmptyState: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("还没有选中模型")
+            Text("先选中一个模型")
                 .font(.title3)
                 .fontWeight(.semibold)
-            Text("选择左侧模型后，这里会显示状态和操作。")
+            Text("选择左侧模型后显示状态和操作。")
                 .font(.callout)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
         }
@@ -1417,9 +1417,9 @@ struct ModelManagementPanel: View {
                 return "云端语音识别。"
             }
         case .voiceClone:
-            return "语音克隆功能当前尚未提供。"
+            return "语音克隆功能未开放。"
         case .localModel:
-            return "管理本地 AI 与本地 ASR。"
+            return "管理本地智能与本地语音识别。"
         }
     }
 
@@ -1952,7 +1952,7 @@ final class ModelManagementViewModel: ObservableObject {
                 tags: [
                     provider.providerType.displayName,
                     provider.tier.displayName,
-                    models.isEmpty ? "暂无可选模型" : "\(models.count) 个可选模型"
+                    models.isEmpty ? "没有可选模型" : "\(models.count) 个可选模型"
                 ],
                 detailText: provider.baseURL.isEmpty ? "本地地址" : provider.baseURL,
                 providerId: provider.id,
@@ -2032,7 +2032,7 @@ final class ModelManagementViewModel: ObservableObject {
         case .senseVoice: return "SenseVoice"
         case .whisperKit: return "WhisperKit"
         case .funASR: return "FunASR"
-        case .qwen3ASR: return "Qwen3-ASR"
+        case .qwen3ASR: return "Qwen3 语音识别"
         case .parakeet: return "Parakeet"
         case .openAI: return "Whisper 接口"
         case .aliCloud: return "阿里云 ASR"
@@ -2105,15 +2105,15 @@ final class ModelManagementViewModel: ObservableObject {
         case .appleSpeech:
             return "使用系统听写能力。"
         case .senseVoice:
-            return "本地多语言 ASR。"
+            return "本地多语言语音识别。"
         case .whisperKit:
             return "WhisperKit 本地运行时。"
         case .funASR:
-            return "中文优化的本地 ASR。"
+            return "中文优化的本地语音识别。"
         case .qwen3ASR:
-            return "Qwen3-ASR 本地识别。"
+            return "Qwen3 语音识别本地运行。"
         case .parakeet:
-            return "英文优化的本地 ASR。"
+            return "英文优化的本地语音识别。"
         case .openAI:
             return "Whisper 接口。"
         case .aliCloud:
@@ -2123,11 +2123,11 @@ final class ModelManagementViewModel: ObservableObject {
         case .mimoASR:
             return "MiMo 云端识别。"
         case .googleCloud:
-            return "Google Cloud 语音能力当前尚未提供。"
+            return "Google Cloud 语音能力未开放。"
         case .groq:
-            return "Groq Whisper 通道当前尚未提供。"
+            return "Groq Whisper 通道未开放。"
         case .freeModel:
-            return "免费模型通道当前尚未提供。"
+            return "免费模型通道未开放。"
         }
     }
 
@@ -2316,12 +2316,12 @@ struct APITestPanel: View {
             }
 
             if viewModel.providers.isEmpty {
-                Text("请先到设置里添加提供商。")
-                    .font(.body)
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+                Text("先到设置里添加提供方。")
+                .font(.body)
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
             } else {
-                Picker("提供商", selection: $viewModel.selectedProviderId) {
+                Picker("提供方", selection: $viewModel.selectedProviderId) {
                     ForEach(viewModel.providers) { provider in
                         Text(provider.name).tag(Optional(provider.id))
                     }
@@ -2332,7 +2332,7 @@ struct APITestPanel: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("类型：\(provider.providerType.displayName)")
                         Text("模型 ID: \(ToolStatusLabelFormatter.fallbackText(value: provider.modelId))")
-                        Text("基础地址: \(provider.baseURL.isEmpty ? provider.providerType.defaultBaseURL : provider.baseURL)")
+                        Text("服务地址: \(provider.baseURL.isEmpty ? provider.providerType.defaultBaseURL : provider.baseURL)")
                     }
                     .font(.caption)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -2442,7 +2442,7 @@ final class APITestViewModel: ObservableObject {
     func refreshProviders() async {
         providers = await aiRuntime.listProviders()
         selectedProviderId = selectedProviderId ?? providers.first?.id
-            statusText = providers.isEmpty ? ToolStatusLabelFormatter.noItemsAvailable("提供商") : ToolStatusLabelFormatter.loadedCount(providers.count, noun: "提供商")
+        statusText = providers.isEmpty ? ToolStatusLabelFormatter.noItemsAvailable("提供商") : ToolStatusLabelFormatter.loadedCount(providers.count, noun: "提供方")
     }
 
     func runHealthCheck() async {

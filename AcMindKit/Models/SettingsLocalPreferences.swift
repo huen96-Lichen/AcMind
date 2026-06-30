@@ -11,7 +11,7 @@ public enum ScreenshotPresetOutputAction: String, Codable, Sendable, CaseIterabl
         switch self {
         case .saveToInbox: return "保存到收集箱"
         case .copyToClipboard: return "复制到剪贴板"
-        case .pinToDesktop: return "Pin 到桌面"
+        case .pinToDesktop: return "固定到桌面"
         }
     }
 }
@@ -329,9 +329,9 @@ public struct ScreenshotPreferencesSnapshot: Sendable, Equatable {
     public var hotkeyLabel: String {
         guard let hotkey = screenshotHotkeyText?.trimmingCharacters(in: .whitespacesAndNewlines),
               hotkey.isEmpty == false else {
-            return "全局热键 未绑定"
+            return "全局热键：未设置"
         }
-        return "全局热键 \(hotkey)"
+        return "全局热键：\(hotkey)"
     }
 }
 

@@ -17,7 +17,7 @@ struct WebDigestPanel: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    AppSurfaceCard(title: "轻量网页精读", subtitle: "解析正文并生成 Markdown 初稿", padding: 16) {
+                    AppSurfaceCard(title: "轻量网页精读", subtitle: "解析正文并生成文稿初稿", padding: 16) {
                         introCard
                     }
                     AppSurfaceCard(title: "URL 输入", subtitle: "输入网页地址后直接生成", padding: 16) {
@@ -37,11 +37,11 @@ struct WebDigestPanel: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("WebDigest｜网页精读")
+                Text("网页精读")
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("输入网页 URL，用 `defuddle parse <url> --md` 抽取正文并生成 Markdown。")
+                Text("输入网页地址，用 `defuddle parse <url> --md` 抽取正文并生成文稿。")
                     .font(.caption)
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -60,13 +60,13 @@ struct WebDigestPanel: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("如果本机还没装 `defuddle`，请先运行 `npm install -g defuddle`。")
+            Text("本机未安装 `defuddle` 时，请先运行 `npm install -g defuddle`。")
                 .font(.caption)
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
 
             HStack(spacing: 8) {
                 Label("解析正文", systemImage: "doc.text.magnifyingglass")
-                Label("输出 Markdown", systemImage: "square.and.pencil")
+                Label("输出文稿", systemImage: "square.and.pencil")
                 Label("可复制保存", systemImage: "tray.and.arrow.down")
             }
             .font(.caption2)
@@ -104,7 +104,7 @@ struct WebDigestPanel: View {
                 Button {
                     viewModel.copyMarkdown()
                 } label: {
-                    Label("复制 Markdown", systemImage: "doc.on.doc")
+                    Label("复制文稿", systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.markdown.isEmpty)
@@ -135,7 +135,7 @@ struct WebDigestPanel: View {
                 Button {
                     viewModel.saveMarkdown()
                 } label: {
-                    Label("保存为 .md", systemImage: "square.and.arrow.down")
+                    Label("保存为文稿", systemImage: "square.and.arrow.down")
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.markdown.isEmpty)
@@ -173,7 +173,7 @@ final class WebDigestViewModel: ObservableObject {
     func generateMarkdown() {
         guard let url = normalizeURL(urlString) else {
             errorMessage = "请输入有效的网址，例如 https://example.com"
-            statusText = ToolStatusLabelFormatter.failed("解析 URL")
+            statusText = ToolStatusLabelFormatter.failed("解析网页地址")
             ToastManager.shared.show(.warning, ToolStatusLabelFormatter.invalidInput("网址"))
             return
         }
@@ -197,7 +197,7 @@ final class WebDigestViewModel: ObservableObject {
                     self.isGenerating = false
                     if output.isEmpty {
                         self.statusText = ToolStatusLabelFormatter.completed("提取正文")
-                        self.errorMessage = "defuddle 没有返回可用的 Markdown 内容。"
+                        self.errorMessage = "defuddle 没有返回可用的正文内容。"
                         ToastManager.shared.show(.warning, ToolStatusLabelFormatter.noContentAvailable("正文"))
                     } else {
                         self.markdown = output
@@ -274,7 +274,7 @@ final class WebDigestViewModel: ObservableObject {
             case .transcriptionFailed(let message):
                 if message.localizedCaseInsensitiveContains("defuddle") ||
                     message.localizedCaseInsensitiveContains("command not found") {
-                    return "未找到 defuddle。请先运行 `npm install -g defuddle`。"
+                    return "未找到 defuddle，请先运行 `npm install -g defuddle`。"
                 }
                 return message
             case .providerNotAvailable(let message):
@@ -289,7 +289,7 @@ final class WebDigestViewModel: ObservableObject {
         let message = error.localizedDescription
         if message.localizedCaseInsensitiveContains("defuddle") ||
             message.localizedCaseInsensitiveContains("command not found") {
-            return "未找到 defuddle。请先运行 `npm install -g defuddle`。"
+            return "未找到 defuddle，请先运行 `npm install -g defuddle`。"
         }
         return message
     }

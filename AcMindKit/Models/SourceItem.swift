@@ -314,6 +314,10 @@ public enum CollectedItemAIError: LocalizedError, Equatable {
 }
 
 public extension CollectedItem {
+    var canOpenDesktopPin: Bool {
+        source == .screenshot || source == .screenshotOCR
+    }
+
     var workflowTitle: String {
         let candidate = title?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let candidate, candidate.isEmpty == false {
@@ -326,7 +330,7 @@ public extension CollectedItem {
         let candidates = [previewText, content.workflowText, originalURL]
         return candidates
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first(where: { $0.isEmpty == false }) ?? "暂无正文"
+            .first(where: { $0.isEmpty == false }) ?? "无正文"
     }
 
     func makeAgentTask() -> AgentTask {

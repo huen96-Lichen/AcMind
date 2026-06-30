@@ -1,4 +1,5 @@
 import SwiftUI
+import AcMindKit
 
 struct WorkbenchV2DashboardData {
     struct Header: Equatable {
@@ -135,37 +136,30 @@ struct WorkbenchV2DashboardData {
         let pending = snapshot.pendingItems.enumerated().map { index, item in
             WorkQueueItem(
                 title: item,
-                detail: index == 0 ? snapshot.nextStep : "来自真实任务与收集箱状态",
+                detail: index == 0 ? snapshot.nextStep : "来自任务和收集箱状态",
                 priority: index == 0 ? "当前" : "待办"
             )
         }
         let recent = snapshot.recentItems.map {
-            RecentCollectionItem(title: $0, detail: "收集箱内容", timeLabel: "最近")
+            RecentCollectionItem(title: $0, detail: "收集箱条目", timeLabel: "最近")
         }
-        let deviceItems = snapshot.systemMetrics.enumerated().map { index, metric -> DeviceStatusItem in
-            let parts = metric.split(separator: " ", maxSplits: 1).map(String.init)
-            return DeviceStatusItem(
-                title: parts.first ?? "状态",
-                value: parts.count > 1 ? parts[1] : metric,
-                tint: index == 0 ? .blue : index == 1 ? .green : .orange
-            )
-        }
+        let deviceItems = buildDeviceStatusItems(from: snapshot)
         let scheduleCount = snapshot.scheduleItems.count
         let permissionWarning = snapshot.unavailableReasons.isEmpty == false
 
         return WorkbenchV2DashboardData(
             header: Header(
-                title: "Workbench",
-                subtitle: snapshot.nowLabel,
+                title: "工作台",
+                subtitle: "",
                 badges: [
-                    WorkbenchV2Badge(text: "实时数据", systemImage: "bolt.horizontal.fill", tint: .green),
+                    WorkbenchV2Badge(text: "当前数据", systemImage: "bolt.horizontal.fill", tint: .green),
                     WorkbenchV2Badge(text: snapshot.currentPage, systemImage: "rectangle.on.rectangle", tint: .blue)
                 ]
             ),
             currentFocus: CurrentFocus(
                 state: snapshot.pendingItems.isEmpty && snapshot.scheduleItems.isEmpty ? .empty : .normal,
                 title: snapshot.currentFocus,
-                summary: "当前工作台根据 Agent、日程与收集箱状态自动选择焦点。",
+                summary: "工作台会根据智能体、日程和收集箱状态切换焦点。",
                 primaryMetricLabel: "待处理",
                 primaryMetricValue: "\(snapshot.pendingItems.count) 项",
                 secondaryMetricLabel: "今日日程",
@@ -188,9 +182,10 @@ struct WorkbenchV2DashboardData {
                 title: "今日总览",
                 subtitle: snapshot.nowLabel,
                 items: [
-                    .init(label: "待处理", value: "\(snapshot.pendingItems.count)", unit: "项", meta: "实时", tint: .orange, systemImage: "checklist"),
-                    .init(label: "最近收集", value: "\(snapshot.recentItems.count)", unit: "条", meta: "实时", tint: .blue, systemImage: "tray.full"),
-                    .init(label: "今日日程", value: "\(scheduleCount)", unit: "项", meta: "实时", tint: .purple, systemImage: "calendar")
+                    .init(label: "待处理", value: "\(snapshot.pendingItems.count)", unit: "项", meta: "现状", tint: .orange, systemImage: "checklist"),
+                    .init(label: "最近收集", value: "\(snapshot.recentItems.count)", unit: "条", meta: "现状", tint: .blue, systemImage: "tray.full"),
+                    .init(label: "智能体状态", value: snapshot.pendingItems.isEmpty ? "空闲" : "运行中", unit: "", meta: "\(snapshot.pendingItems.count) 个任务", tint: .green, systemImage: "command.circle.fill"),
+                    .init(label: "今日日程", value: "\(scheduleCount)", unit: "项", meta: "现状", tint: .purple, systemImage: "calendar")
                 ],
                 toggles: [],
                 statusBlocks: [
@@ -199,6 +194,12 @@ struct WorkbenchV2DashboardData {
                         value: permissionWarning ? "需要关注" : "状态正常",
                         tint: permissionWarning ? .orange : .green,
                         systemImage: permissionWarning ? "exclamationmark.circle.fill" : "checkmark.circle.fill"
+                    ),
+                    .init(
+                        title: "服务状态",
+                        value: snapshot.phase == .loaded ? "全部正常" : "同步中",
+                        tint: snapshot.phase == .loaded ? .green : .orange,
+                        systemImage: snapshot.phase == .loaded ? "checkmark.circle.fill" : "clock.fill"
                     )
                 ]
             ),
@@ -207,7 +208,7 @@ struct WorkbenchV2DashboardData {
                 title: "活动趋势",
                 primarySeries: .init(name: "CPU", tint: .blue, values: []),
                 secondarySeries: .init(name: "内存", tint: .green, values: []),
-                emptyMessage: "趋势会在积累连续采样后显示"
+                emptyMessage: "积累连续采样后显示"
             ),
             quickActions: QuickActions(
                 state: .normal,
@@ -217,7 +218,7 @@ struct WorkbenchV2DashboardData {
                     .init(title: "快速记录", subtitle: "", systemImage: "pencil", tint: .gray),
                     .init(title: "新建任务", subtitle: "", systemImage: "checkmark.square", tint: .gray),
                     .init(title: "打开收集箱", subtitle: "", systemImage: "tray.full", tint: .gray),
-                    .init(title: "启动 Agent", subtitle: "", systemImage: "command", tint: .gray),
+                    .init(title: "启动智能体", subtitle: "", systemImage: "command", tint: .gray),
                     .init(title: "导入文件", subtitle: "", systemImage: "arrow.up.doc", tint: .gray)
                 ]
             ),
@@ -229,6 +230,97 @@ struct WorkbenchV2DashboardData {
         )
     }
 
+    private static func buildDeviceStatusItems(from snapshot: WorkspaceDashboardSnapshot) -> [DeviceStatusItem] {
+        guard let system = snapshot.systemStatusSnapshot else {
+            return snapshot.systemMetrics.enumerated().map { index, metric -> DeviceStatusItem in
+                let parts = metric.split(separator: " ", maxSplits: 1).map(String.init)
+                return DeviceStatusItem(
+                    title: parts.first ?? "状态",
+                    value: parts.count > 1 ? parts[1] : metric,
+                    tint: index == 0 ? .blue : index == 1 ? .green : .orange
+                )
+            }
+        }
+
+        return [
+            DeviceStatusItem(title: "温度", value: primaryTemperatureSummary(from: system), tint: .orange),
+            DeviceStatusItem(title: "电量", value: batterySummary(from: system), tint: .green),
+            DeviceStatusItem(title: "网速", value: networkSpeedSummary(from: system), tint: .blue),
+            DeviceStatusItem(title: "开机", value: uptimeSummary(from: system), tint: .purple),
+            DeviceStatusItem(title: "负载", value: loadSummary(from: system), tint: .pink),
+            DeviceStatusItem(title: "剩余空间", value: freeDiskSummary(from: system), tint: .teal)
+        ]
+    }
+
+    private static func primaryTemperatureSummary(from snapshot: SystemStatusSnapshot) -> String {
+        if let sensor = snapshot.temperatureSensors.first(where: { $0.isAvailable && $0.value != nil }),
+           let value = sensor.value {
+            return String(format: "%.1f°C", value)
+        }
+        if let batteryTemperature = snapshot.battery?.temperatureC {
+            return String(format: "%.1f°C", batteryTemperature)
+        }
+        return "—"
+    }
+
+    private static func batterySummary(from snapshot: SystemStatusSnapshot) -> String {
+        guard let battery = snapshot.battery, battery.isAvailable else { return "无电池" }
+        if let percentage = battery.percentage {
+            return "\(Int(percentage.rounded()))%"
+        }
+        return battery.state.isEmpty ? "—" : battery.state
+    }
+
+    private static func networkSpeedSummary(from snapshot: SystemStatusSnapshot) -> String {
+        let download = snapshot.networkDownloadMBps
+        let upload = snapshot.networkUploadMBps
+        guard download != nil || upload != nil else { return "—" }
+        return "↓\(formatRate(download)) ↑\(formatRate(upload))"
+    }
+
+    private static func uptimeSummary(from snapshot: SystemStatusSnapshot) -> String {
+        guard let uptime = snapshot.hardwareInfo?.uptimeSeconds else { return "—" }
+        let total = Int(uptime)
+        let days = total / 86_400
+        let hours = (total % 86_400) / 3_600
+        let minutes = (total % 3_600) / 60
+        if days > 0 {
+            return "\(days)d \(hours)h"
+        }
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
+
+    private static func loadSummary(from snapshot: SystemStatusSnapshot) -> String {
+        if let load = snapshot.loadAverage1m {
+            return String(format: "%.1f", load)
+        }
+        if let cpu = snapshot.cpu?.value {
+            return String(format: "%.0f%%", cpu)
+        }
+        return "—"
+    }
+
+    private static func freeDiskSummary(from snapshot: SystemStatusSnapshot) -> String {
+        if let total = snapshot.diskTotalGB, let used = snapshot.diskUsedGB {
+            return "\(Int(max(total - used, 0).rounded())) GB"
+        }
+        if snapshot.diskUsagePercent > 0, let total = snapshot.diskTotalGB {
+            let freeFraction = max(1 - snapshot.diskUsagePercent / 100, 0)
+            return "\(Int((total * freeFraction).rounded())) GB"
+        }
+        return "—"
+    }
+
+    private static func formatRate(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        if value >= 10 {
+            return String(format: "%.0fM", value)
+        }
+        return String(format: "%.1fM", value)
+    }
 }
 
 struct WorkbenchTrendPoint: Identifiable, Equatable {

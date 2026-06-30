@@ -393,7 +393,7 @@ public enum ProcessJobStatus: String, Codable, Sendable, Hashable, CaseIterable 
     public var displayName: String {
         switch self {
         case .queued: return "排队中"
-        case .running: return "运行中"
+        case .running: return "进行中"
         case .succeeded: return "已完成"
         case .failed: return "失败"
         case .cancelled: return "已取消"

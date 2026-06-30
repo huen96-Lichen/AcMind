@@ -20,7 +20,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
     // MARK: - Settings
 
     @Published private(set) var settings: DesktopCapsuleSettings = .default
-    private var settingsObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var settingsObserver: NSObjectProtocol?
 
     var enabledActions: [CapsuleActionConfig] {
         settings.enabledActions
@@ -40,6 +40,12 @@ final class DesktopCapsuleViewModel: ObservableObject {
             Task { @MainActor in
                 self?.reloadSettingsFromStore()
             }
+        }
+    }
+
+    deinit {
+        if let settingsObserver {
+            NotificationCenter.default.removeObserver(settingsObserver)
         }
     }
 
@@ -167,18 +173,18 @@ final class DesktopCapsuleViewModel: ObservableObject {
     private func executeUrlToText() async {
         guard let input = await promptForWebpageURL() else { return }
         guard let url = normalizeWebpageURL(input) else {
-            Self.logger.warning("URL转换失败: 请输入有效的网页 URL")
+            Self.logger.warning("地址转换失败: 请输入有效的网页地址")
             return
         }
 
         do {
             let result = try await captureService.captureFromWebpage(url: url)
-            Self.logger.info("URL转换成功: \(result.sourceItem.id)")
+            Self.logger.info("网页地址转换成功: \(result.sourceItem.id)")
 
             settings.lastWebpageURL = url
             saveSettings()
         } catch {
-            Self.logger.error("URL转换失败: \(error)")
+            Self.logger.error("地址转换失败: \(error)")
         }
     }
 
@@ -289,8 +295,8 @@ final class DesktopCapsuleViewModel: ObservableObject {
     private func promptForWebpageURL() async -> String? {
         await MainActor.run {
             let alert = NSAlert()
-            alert.messageText = "URL转文字稿"
-            alert.informativeText = "请输入网页URL"
+            alert.messageText = "网页转文字稿"
+            alert.informativeText = "请输入网页地址"
 
             let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
             textField.stringValue = preferredWebpageInputText()

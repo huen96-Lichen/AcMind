@@ -36,17 +36,13 @@ struct SystemStatusView: View {
             title: "状态",
             subtitle: "真实采样 · \(viewModel.lastUpdatedText) · \(viewModel.refreshHint)",
             headerActions: AnyView(dashboardHeaderActions),
-            leadingRailWidth: AppSurfaceTokens.Layout.leadingRailWidth,
-            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
-            leadingRail: {
-                dashboardLeadingRail
-            },
+            leadingRailWidth: 0,
+            trailingRailWidth: 0,
+            leadingRail: { EmptyView() },
             content: {
                 dashboardContent
             },
-            trailingRail: {
-                dashboardTrailingRail
-            }
+            trailingRail: { EmptyView() }
         )
         .onAppear { viewModel.startMonitoring() }
         .onAppear {
@@ -90,15 +86,15 @@ struct SystemStatusView: View {
 
     private var dashboardContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceSectionSpacing) {
                 dashboardOverviewHeader
                 dashboardHealthSection
                 dashboardTrendSection
                 dashboardDiagnosticsSection
                 dashboardCapabilitySection
             }
-            .padding(.horizontal, AppSurfaceTokens.Spacing.lg)
-            .padding(.vertical, 0)
+            .padding(AppSurfaceTokens.Layout.workspacePagePadding)
+            .frame(maxWidth: AppSurfaceTokens.Layout.workspaceMaxWidth, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -107,24 +103,20 @@ struct SystemStatusView: View {
     }
 
     private var dashboardOverviewHeader: some View {
-        AppSurfaceCard(title: "系统概览", subtitle: "Bento 概览 + 详细仪表盘", padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
+        AppSurfaceCard(title: "系统总览", subtitle: "关键硬件与采样状态", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
                 AppSurfaceSummaryStrip(chips: [
-                    AppSurfaceSummaryChip(title: "CPU", value: viewModel.cpuSummary, tint: .blue),
+                    AppSurfaceSummaryChip(title: "处理器", value: viewModel.cpuSummary, tint: .blue),
                     AppSurfaceSummaryChip(title: "内存", value: viewModel.memoryUsagePercentSummary, tint: .purple),
                     AppSurfaceSummaryChip(title: "网络", value: viewModel.networkSummary, tint: .green)
                 ])
 
-                HStack(spacing: 10) {
+                HStack(spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
                     overviewMetric(title: "磁盘", value: viewModel.diskSummary, tint: .orange)
                     overviewMetric(title: "电源", value: viewModel.hasBattery ? viewModel.batterySummary : viewModel.thermalThrottleSummary, tint: viewModel.hasBattery ? .cyan : .red)
                     overviewMetric(title: "采样", value: viewModel.samplingStatusText, tint: viewModel.samplingStatusColor)
                 }
 
-                Text("顶部先给出关键状态总览，下面再进入 CPU、内存、网络、磁盘和权限的详细分区。")
-                    .font(.system(size: AppSurfaceTokens.Typography.caption))
-                    .foregroundStyle(AppSurfaceTokens.secondaryText)
-                    .lineLimit(2)
             }
         }
     }
@@ -156,10 +148,10 @@ struct SystemStatusView: View {
     }
 
     private var dashboardHealthSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
             SectionHeader(
-                title: "健康摘要",
-                description: "CPU、内存、网络、磁盘和电源的当前状态。",
+                title: "健康总览",
+                description: "处理器、内存、网络、磁盘和电源的当前状态。",
                 status: viewModel.healthSectionStatus,
                 actions: [SectionHeaderAction(title: "刷新", icon: "arrow.clockwise") { viewModel.refresh() }]
             )
@@ -167,9 +159,9 @@ struct SystemStatusView: View {
             GeometryReader { proxy in
                 let columns = proxy.size.width < 560 ? 1 : 2
 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: columns), spacing: 8) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: AppSurfaceTokens.Layout.workspaceGridSpacing), count: columns), spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
                     MetricCard(
-                        label: "CPU",
+                        label: "处理器",
                         primaryValue: viewModel.cpuSummary,
                         unit: "%",
                         trend: viewModel.loadAverageSummary,
@@ -252,7 +244,7 @@ struct SystemStatusView: View {
     }
 
     private var dashboardTrendSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
             SectionHeader(
                 title: "趋势区",
                 description: "60 秒窗口内的真实趋势和关键关联指标。",
@@ -264,7 +256,7 @@ struct SystemStatusView: View {
     }
 
     private var dashboardDiagnosticsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
             SectionHeader(
                 title: "诊断区",
                 description: "进程、传感器、接口和功率来源。",
@@ -277,7 +269,7 @@ struct SystemStatusView: View {
     }
 
     private var dashboardCapabilitySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
             SectionHeader(
                 title: "权限与能力",
                 description: "哪些数据因硬件、系统或授权不可用。",
@@ -303,14 +295,14 @@ struct SystemStatusView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 AppSurfaceSummaryStrip(chips: [
-                    AppSurfaceSummaryChip(title: "CPU", value: viewModel.cpuSummary, tint: .blue),
+                    AppSurfaceSummaryChip(title: "处理器", value: viewModel.cpuSummary, tint: .blue),
                     AppSurfaceSummaryChip(title: "内存", value: viewModel.memorySummary, tint: .purple),
                     AppSurfaceSummaryChip(title: "磁盘", value: viewModel.diskSummary, tint: .orange)
                 ])
 
-                AppSurfaceCard(title: "系统摘要", subtitle: "轻量概览", padding: 8) {
+                AppSurfaceCard(title: "系统总览", subtitle: "轻量总览", padding: 8) {
                     VStack(alignment: .leading, spacing: 5) {
-                        dashboardMiniLine(title: "CPU", value: viewModel.cpuSummary)
+                        dashboardMiniLine(title: "处理器", value: viewModel.cpuSummary)
                         dashboardMiniLine(title: "内存", value: viewModel.memorySummary)
                         dashboardMiniLine(title: "网络", value: viewModel.networkSummary)
                         if viewModel.hasBattery {
@@ -336,9 +328,9 @@ struct SystemStatusView: View {
                         }
 
                         if viewModel.hasGPUData {
-                            dashboardMiniLine(title: "GPU", value: viewModel.gpuSummary)
+                            dashboardMiniLine(title: "显卡", value: viewModel.gpuSummary)
                         } else {
-                            dashboardMiniLine(title: "GPU", value: "采样中")
+                            dashboardMiniLine(title: "显卡", value: "采样中")
                         }
 
                         if viewModel.hasThermalThrottleData {
@@ -396,7 +388,7 @@ struct SystemStatusView: View {
                                 icon: "internaldrive"
                             )
                             dashboardStatusRow(
-                                title: "详情",
+                                title: "信息",
                                 value: viewModel.diskStateDetail,
                                 tint: .orange,
                                 icon: "text.alignleft"
@@ -440,7 +432,7 @@ struct SystemStatusView: View {
 
         return LazyVGrid(columns: columns, spacing: 4) {
             dashboardKpiCard(
-                title: "CPU",
+                title: "处理器",
                 icon: "cpu",
                 tint: .blue,
                 mainValue: viewModel.cpuSummary,
@@ -541,7 +533,7 @@ struct SystemStatusView: View {
                 .frame(height: 76)
 
                 HStack(alignment: .center, spacing: 5) {
-                    dashboardLegendChip(title: "CPU", tint: .blue)
+                    dashboardLegendChip(title: "处理器", tint: .blue)
                     dashboardLegendChip(title: "内存", tint: .purple)
                     dashboardLegendChip(title: "网络", tint: .green)
                     if viewModel.hasBattery {
@@ -562,7 +554,7 @@ struct SystemStatusView: View {
                     dashboardMetricChip(title: "内存", value: viewModel.memoryUsagePercentSummary, tint: .purple)
                     dashboardMetricChip(title: "磁盘", value: viewModel.diskSummary, tint: .orange)
                     if viewModel.hasGPUData {
-                        dashboardMetricChip(title: "GPU", value: viewModel.gpuSummary, tint: .indigo)
+                        dashboardMetricChip(title: "显卡", value: viewModel.gpuSummary, tint: .indigo)
                     }
                     dashboardMetricChip(title: "热状态", value: viewModel.thermalThrottleSummary, tint: .red)
                 }
@@ -609,7 +601,7 @@ struct SystemStatusView: View {
                 Image(systemName: "chevron.down.circle")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
-                Text("次级详情")
+                Text("次级信息")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
                 Text("温度 / 风扇 / 进程 / 快捷操作")
@@ -658,10 +650,10 @@ struct SystemStatusView: View {
                 HStack(alignment: .top, spacing: 10) {
                     StatusBadge(text: "无明确不可用项", tone: .success, icon: "checkmark.circle.fill", compact: true)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("当前采样没有暴露硬件、授权或系统层面的降级原因。")
+                        Text("当前没有硬件、授权或系统层面的降级原因。")
                             .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
-                        Text("如果后续出现不可用项，这里会保留来源、类别和细节。")
+                        Text("出现不可用项时，这里会列出来源、类别和细节。")
                             .font(.system(size: AppSurfaceTokens.Typography.caption))
                             .foregroundStyle(AppSurfaceTokens.tertiaryText)
                     }
@@ -751,7 +743,7 @@ struct SystemStatusView: View {
                         dashboardMiniStat(title: "下载", value: viewModel.networkDownloadSummary, detail: "MB/s", tint: .green)
                         dashboardMiniStat(title: "上传", value: viewModel.networkUploadSummary, detail: "MB/s", tint: .green)
                         dashboardMiniStat(title: "延迟", value: viewModel.networkLatencySummary, detail: viewModel.networkLatencyDetail, tint: .mint)
-                        dashboardMiniStat(title: "DNS", value: viewModel.networkDNSLookupSummary, detail: viewModel.networkDNSLookupDetail, tint: .yellow)
+                        dashboardMiniStat(title: "域名解析", value: viewModel.networkDNSLookupSummary, detail: viewModel.networkDNSLookupDetail, tint: .yellow)
                         dashboardMiniStat(title: "质量", value: viewModel.networkServiceQualitySummary, detail: viewModel.networkServiceQualityDetail, tint: .teal)
                         dashboardMiniStat(title: "公网", value: viewModel.publicIPAddressSummary, detail: viewModel.publicIPAddressDetail, tint: .indigo)
                         dashboardMiniStat(title: "主接口", value: viewModel.primaryInterfaceSummary, detail: viewModel.primaryInterfaceDetail, tint: .blue)
@@ -940,7 +932,7 @@ struct SystemStatusView: View {
                 }
             }
 
-            AppSurfaceCard(title: "进程占用 Top 5", subtitle: "CPU 实时排序", padding: 4, fillHeight: true) {
+            AppSurfaceCard(title: "进程占用 Top 5", subtitle: "处理器实时排序", padding: 4, fillHeight: true) {
                 dashboardProcessList(processes: viewModel.snapshot.topProcesses)
             }
 
@@ -1331,7 +1323,7 @@ struct SystemStatusView: View {
     private var dashboardStatusMatrix: some View {
         VStack(spacing: 3) {
             HStack(spacing: 3) {
-                dashboardStatusRow(title: "CPU", value: viewModel.cpuSummary, tint: .blue, icon: "cpu")
+                dashboardStatusRow(title: "处理器", value: viewModel.cpuSummary, tint: .blue, icon: "cpu")
                 dashboardStatusRow(title: "内存", value: viewModel.memoryUsagePercentSummary, tint: .purple, icon: "memorychip")
             }
             HStack(spacing: 3) {
@@ -1552,12 +1544,12 @@ struct SystemStatusView: View {
 
     private var dashboardHelperInstallerCard: some View {
         AppSurfaceCard(
-            title: "helper 安装",
+            title: "辅助程序安装",
             subtitle: helperInstaller.helperInstallDescription,
             padding: 8
         ) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("温度、风扇和受限状态需要系统级 helper 才能稳定读取和写入。")
+                Text("温度、风扇和受限状态需要系统级辅助程序才能稳定读取和写入。")
                     .font(.system(size: 8.5, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
@@ -1567,7 +1559,7 @@ struct SystemStatusView: View {
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
-                    Button(helperInstaller.isInstalled ? "重装 helper" : "安装 helper") {
+                    Button(helperInstaller.isInstalled ? "重装辅助程序" : "安装辅助程序") {
                         Task {
                             _ = await helperInstaller.install()
                             await fanControlService.refresh()
@@ -1591,7 +1583,7 @@ struct SystemStatusView: View {
 
                     Spacer(minLength: 0)
 
-                    Text(helperInstaller.isRunning ? "运行中" : "未运行")
+                    Text(helperInstaller.isRunning ? "已启动" : "未启动")
                         .font(.system(size: 8.5, weight: .medium))
                         .foregroundStyle(helperInstaller.isRunning ? .green : AppSurfaceTokens.secondaryText)
                 }
@@ -1608,7 +1600,7 @@ struct SystemStatusView: View {
     }
 
     private var dashboardFanControlUnavailable: some View {
-        Text("当前风扇仅能读取，等 helper 通道可用后再开放手动调速。")
+        Text("当前风扇仅能读取，等辅助程序通道可用后再开放手动调速。")
             .font(.system(size: 8.5, weight: .medium))
             .foregroundStyle(AppSurfaceTokens.secondaryText)
             .padding(.top, 4)
@@ -2047,7 +2039,7 @@ final class SystemStatusViewModel: ObservableObject {
 
     func capabilityContainerPhase(refreshAction: @escaping () -> Void) -> StateContainerPhase {
         guard snapshot.lastUpdated != .distantPast else {
-            return .loading(message: "正在读取最新系统状态。")
+            return .loading(message: "正在读取系统状态。")
         }
 
         guard snapshot.unavailableReasons.isEmpty == false else {

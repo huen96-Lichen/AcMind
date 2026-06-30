@@ -91,7 +91,7 @@ public struct CloudSyncStatusSummary: Sendable, Equatable {
         guard let lastSyncDate = status.lastSyncDate else {
             return CloudSyncStatusSummary(
                 title: "云同步待首次运行",
-                detail: "开启后还没有完成过同步，可以手动触发一次。",
+                detail: "开启后尚未完成过同步，可以手动触发一次。",
                 canRetry: true,
                 retryTitle: "立即同步"
             )

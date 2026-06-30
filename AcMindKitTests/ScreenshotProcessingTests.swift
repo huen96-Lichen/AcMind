@@ -51,6 +51,26 @@ final class ScreenshotProcessingTests: XCTestCase {
         XCTAssertEqual(pinItem.isPinned, false)
     }
 
+    func testScreenshotPinItemFallsBackToSourceItemAssetIDsWhenAssetFilesMissing() {
+        let sourceItem = SourceItem(
+            id: "source-1",
+            type: .screenshot,
+            source: .screenshot,
+            status: .captured,
+            title: "截图 2026-06-11 10:00",
+            previewText: "截图预览",
+            sourceApp: "Safari",
+            assetFileIds: ["asset-1"]
+        )
+        let captureResult = CaptureResult(sourceItem: sourceItem, assetFiles: [])
+
+        let pinItem = ClipboardItem.pinItem(from: captureResult)
+
+        XCTAssertEqual(pinItem.type, .image)
+        XCTAssertEqual(pinItem.content, "asset-1")
+        XCTAssertEqual(pinItem.textContent, "截图预览")
+    }
+
     private func makeSolidImage(width: Int, height: Int, color: NSColor) -> NSImage {
         let image = NSImage(size: NSSize(width: width, height: height))
         image.lockFocus()

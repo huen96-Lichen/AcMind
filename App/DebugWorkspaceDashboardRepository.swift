@@ -20,11 +20,12 @@ struct PreviewWorkspaceDashboardRepository: WorkspaceDashboardRepositoryProtocol
                 .filter { $0.source == .screenshot || $0.type == .screenshot }
                 .prefix(3)
                 .map { item in
-                    let label = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "OCR" : "截图"
+                    let label = item.ocrText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "文字识别" : "截图"
                     return "\(label) · \(item.title ?? item.previewText ?? item.type.displayName)"
                 },
             scheduleItems: preview.scheduleItems,
             systemMetrics: preview.systemMetrics,
+            systemStatusSnapshot: preview.systemStatusSnapshot,
             currentPage: SidebarItem.home.displayName,
             permissionSummary: "已授权 3 · 未知 0 · 不可用 0",
             unavailableReasons: []

@@ -1,32 +1,28 @@
 import XCTest
 
 final class ToolWorkspaceStateTests: XCTestCase {
-    func testToolsViewSurfacesTheThreeStageWorkflow() throws {
+    func testToolsViewUsesSingleCanvasWorkspace() throws {
         let toolsView = try readSource("Features/Native/Tools/ToolsView.swift")
-        let workflowState = try readSource("Features/Native/Tools/ToolWorkspaceState.swift")
 
-        XCTAssertTrue(toolsView.contains("工具工作流"))
-        XCTAssertTrue(toolsView.contains("ToolWorkspaceStageRail"))
-        XCTAssertTrue(toolsView.contains("ToolStageHeader"))
-        XCTAssertTrue(toolsView.contains("selectionSummary"))
-        XCTAssertTrue(toolsView.contains("configurationSummary"))
-        XCTAssertTrue(toolsView.contains("reviewSummary"))
-        XCTAssertTrue(workflowState.contains("enum ToolWorkspaceFlow"))
-        XCTAssertTrue(workflowState.contains("static func activeStage"))
-        XCTAssertTrue(workflowState.contains("static func selectionSummary"))
-        XCTAssertTrue(workflowState.contains("static func configurationSummary"))
-        XCTAssertTrue(workflowState.contains("static func reviewSummary"))
+        XCTAssertTrue(toolsView.contains("headerActions"))
+        XCTAssertTrue(toolsView.contains("leadingRailWidth: 0"))
+        XCTAssertTrue(toolsView.contains("trailingRailWidth: 0"))
+        XCTAssertTrue(toolsView.contains("分类筛选"))
+        XCTAssertTrue(toolsView.contains("工具库"))
+        XCTAssertTrue(toolsView.contains("最近使用"))
+        XCTAssertTrue(toolsView.contains("sortModeMenu"))
+        XCTAssertTrue(toolsView.contains("displayedTools"))
+        XCTAssertTrue(toolsView.contains("ToolCard(tool: tool, isSelected: viewModel.activeToolRoute == tool.route)"))
+        XCTAssertTrue(toolsView.contains("RecentToolsSection("))
     }
 
     func testToolsViewUsesSharedBackdropAndCardSurfaces() throws {
         let source = try readSource("Features/Native/Tools/ToolsView.swift")
 
         XCTAssertTrue(source.contains("AppVisualBackdrop()"))
-        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"工具概览\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"分类筛选\""))
-        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"结果区\""))
+        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"工具库\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"最近使用\""))
-        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"最近控制\""))
         XCTAssertTrue(source.contains(".background(Color.clear)"))
         XCTAssertFalse(source.contains(".background(AppSurfaceTokens.background)"))
     }
@@ -36,13 +32,13 @@ final class ToolWorkspaceStateTests: XCTestCase {
 
         XCTAssertTrue(workbenchView.contains("工作流"))
         XCTAssertTrue(workbenchView.contains("项目、笔记、归档分开看"))
-        XCTAssertTrue(workbenchView.contains("工作台摘要"))
+        XCTAssertTrue(workbenchView.contains("工作台总览"))
         XCTAssertTrue(workbenchView.contains("AppVisualBackdrop()"))
         XCTAssertTrue(workbenchView.contains("今日整理"))
         XCTAssertTrue(workbenchView.contains("项目笔记"))
         XCTAssertTrue(workbenchView.contains("Obsidian"))
         XCTAssertTrue(workbenchView.contains("待归档"))
-        XCTAssertTrue(workbenchView.contains("工作台摘要"))
+        XCTAssertTrue(workbenchView.contains("工作台总览"))
     }
 
     func testWebDigestPanelUsesSharedSurfaceCards() throws {
@@ -74,7 +70,7 @@ final class ToolWorkspaceStateTests: XCTestCase {
         let source = try readSource("Features/Native/Tools/ToolPanels.swift")
 
         XCTAssertTrue(source.contains("AppVisualBackdrop()"))
-        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"格式概览\""))
+        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"格式总览\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"编解码流程\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"整理流程\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"对比流程\""))
@@ -139,7 +135,7 @@ final class ToolWorkspaceStateTests: XCTestCase {
 
         XCTAssertTrue(source.contains("WorkspacePageShell("))
         XCTAssertTrue(source.contains(".background(Color.clear)"))
-        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"系统摘要\""))
+        XCTAssertTrue(source.contains("AppSurfaceCard(title: \"系统总览\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"进程占用 Top 5\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"状态指示\""))
         XCTAssertFalse(source.contains(".background(AppSurfaceTokens.background.ignoresSafeArea())"))
@@ -148,11 +144,15 @@ final class ToolWorkspaceStateTests: XCTestCase {
     func testHomeAndSettingsUseSharedBackdropSurfaces() throws {
         let homeSource = try readSource("Features/Native/Home/WorkspaceHomeView.swift")
         let settingsSource = try readSource("Features/Native/Settings/SettingsView.swift")
+        let appSource = try readSource("App/AcMindApp.swift")
 
         XCTAssertTrue(homeSource.contains(".background(AppVisualBackdrop())"))
-        XCTAssertTrue(settingsSource.contains(".background(AppSurfaceTokens.secondarySidebarBackground)"))
-        XCTAssertTrue(settingsSource.contains("AppSurfaceCard(title: \"当前分类\""))
-        XCTAssertTrue(settingsSource.contains("AppSurfaceCard(title: \"视图状态\""))
+        XCTAssertTrue(settingsSource.contains(".background(AppSurfaceTokens.contentBackground)"))
+        XCTAssertTrue(settingsSource.contains("leadingRailWidth: 208"))
+        XCTAssertTrue(settingsSource.contains("SettingsNavigationRow("))
+        XCTAssertTrue(settingsSource.contains("compactToolbar: true"))
+        XCTAssertFalse(settingsSource.contains(".frame(minWidth: AppSurfaceTokens.Layout.minimumWindowWidth"))
+        XCTAssertTrue(appSource.contains("minWidth: AppSurfaceTokens.Layout.minimumWindowWidth"))
     }
 
     private func readSource(_ relativePath: String) throws -> String {

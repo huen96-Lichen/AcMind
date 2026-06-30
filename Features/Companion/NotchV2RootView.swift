@@ -22,6 +22,7 @@ public struct NotchV2RootView: View {
 
         ZStack(alignment: .top) {
             backdropLayer
+                .clipShape(rootShape)
 
             ZStack(alignment: .top) {
                 NotchV2CollapsedView(viewModel: viewModel)
@@ -54,8 +55,9 @@ public struct NotchV2RootView: View {
             SystemEventHUDView(center: viewModel.systemEventCenter)
                 .padding(.top, 10)
                 .allowsHitTesting(false)
+                .clipShape(rootShape)
         }
-        .clipShape(rootShape)
+        .contentShape(rootShape)
         .compositingGroup()
         .onHover(perform: handleHover(_:))
         .onDisappear {

@@ -257,7 +257,7 @@ struct NotchV2AgentPage: View {
             if isUser { Spacer(minLength: 24) }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.role == .assistant ? "AI" : "我")
+                Text(message.role == .assistant ? "智能" : "我")
                     .font(NotchV2DesignTokens.Typography.caption)
                     .foregroundStyle(message.role == .assistant ? NotchV2DesignTokens.secondaryText : NotchV2DesignTokens.secondaryText)
                 Text(message.content)
@@ -309,7 +309,7 @@ struct NotchV2AgentPage: View {
                 .frame(width: 6, height: 6)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(message.role == .assistant ? "AI" : "我")
+                Text(message.role == .assistant ? "智能" : "我")
                     .font(NotchV2DesignTokens.Typography.caption)
                     .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     .lineLimit(1)

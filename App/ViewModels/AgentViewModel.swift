@@ -117,7 +117,7 @@ class AgentViewModel: ObservableObject {
             let sessions = try await storage.listChatSessions(status: nil)
             quickAskHistory = sessions
                 .filter { $0.metadata["kind"] == "quickAsk" }
-                .prefix(5)
+                .prefix(30)
                 .map { $0 }
 
             if let selectedQuickAskSessionId,
@@ -140,6 +140,106 @@ class AgentViewModel: ObservableObject {
             errorMessage = "加载 Quick Ask 历史失败: \(error.localizedDescription)"
             showError = true
         }
+    }
+
+    func startNewConversation() {
+        selectedQuickAskSessionId = nil
+        quickAskMessages = []
+        quickAskQuestion = ""
+        quickAskAnswer = nil
+        inputText = ""
+        distilledNote = nil
+        toolCallResult = nil
+        currentTask = nil
+        clearError()
+    }
+
+    func sendMessage() async {
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.isEmpty == false, isLoading == false else { return }
+
+        isLoading = true
+        clearError()
+        quickAskAnswer = nil
+        inputText = ""
+
+        let existingSession = selectedQuickAskSessionId.flatMap { selectedId in
+            quickAskHistory.first { $0.id == selectedId }
+        }
+        let sessionId = existingSession?.id ?? UUID().uuidString
+        var session = existingSession ?? ChatSession(
+            id: sessionId,
+            title: String(text.prefix(40)),
+            providerId: selectedModelOption?.providerId,
+            modelId: selectedModelOption?.modelName,
+            metadata: ["kind": "quickAsk"]
+        )
+
+        let userMessage = ChatMessage(
+            sessionId: sessionId,
+            role: .user,
+            content: text,
+            status: .completed,
+            modelId: selectedModelOption?.modelName,
+            providerId: selectedModelOption?.providerId
+        )
+        quickAskMessages.append(userMessage)
+        selectedQuickAskSessionId = sessionId
+
+        do {
+            if existingSession == nil {
+                try await storage.insertChatSession(session)
+            }
+            try await storage.insertChatMessage(userMessage)
+
+            var requestMessages = quickAskMessages.filter { $0.role == .user || $0.role == .assistant }
+            requestMessages.insert(
+                ChatMessage(
+                    sessionId: sessionId,
+                    role: .system,
+                    content: "你是 AcWork 智能体。请结合当前对话给出直接、清晰、可执行的回答。"
+                ),
+                at: 0
+            )
+
+            let response: ChatResponse
+            if let providerId = selectedModelOption?.providerId,
+               providerId.isEmpty == false,
+               providerId != "unconfigured" {
+                response = try await aiRuntime.chat(
+                    messages: requestMessages,
+                    providerId: providerId,
+                    model: selectedModelOption?.modelName.isEmpty == true ? nil : selectedModelOption?.modelName
+                )
+            } else {
+                response = try await aiRuntime.chat(messages: requestMessages)
+            }
+            let assistantMessage = ChatMessage(
+                sessionId: sessionId,
+                role: .assistant,
+                content: response.content.trimmingCharacters(in: .whitespacesAndNewlines),
+                status: .completed,
+                modelId: response.model ?? selectedModelOption?.modelName,
+                providerId: response.providerId ?? selectedModelOption?.providerId,
+                promptTokens: response.promptTokens,
+                completionTokens: response.completionTokens,
+                latencyMs: response.latencyMs
+            )
+            quickAskMessages.append(assistantMessage)
+            quickAskAnswer = assistantMessage.content
+            try await storage.insertChatMessage(assistantMessage)
+
+            session.providerId = assistantMessage.providerId
+            session.modelId = assistantMessage.modelId
+            session.updatedAt = Date()
+            try await storage.updateChatSession(session)
+            await loadQuickAskHistory()
+        } catch {
+            errorMessage = "发送失败: \(error.localizedDescription)"
+            showError = true
+        }
+
+        isLoading = false
     }
 
     func loadAvailableModelOptions() async {

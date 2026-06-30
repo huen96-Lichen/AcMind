@@ -83,7 +83,7 @@ Hero 截图：
 
 ![AcMind 工作台截图](docs/screenshots/acwork-phase1/1500x920-workspace-populated.png)
 
-更多当前导出和参考图位于 `docs/screenshots/` 与 `docs/refactor/` 下。
+当前界面截图统一保存在 `docs/screenshots/`。
 
 ## 运行要求
 
@@ -181,8 +181,8 @@ AcMind 大致分成这些层：
 - `AcMindKit/`：可复用的核心模型、服务和基础设施
 - `Design/`：视觉和交互系统材料
 - `Resources/`：应用资源
-- `Vendor/`：第三方源码和依赖
-- `docs/`：架构说明、截图、审计和交接材料
+- `Vendor/`：直接参与编译的本地第三方源码
+- `docs/`：长期维护的架构、隐私、构建说明与一张当前界面截图
 
 这个架构的关键点是，同一套壳层和服务层支撑多个表面，而不是每个表面都重新发明一套应用结构。
 
@@ -221,7 +221,7 @@ AcMind 大致分成这些层：
 4. 持续减少源码、截图和交接文档之间的文档漂移。
 5. 在周边卫生条件就绪后准备第一个公开 alpha。
 
-草拟的 alpha 发布说明见 [`CHANGELOG.md`](CHANGELOG.md) 和 [`docs/releases/v0.1.0-alpha.md`](docs/releases/v0.1.0-alpha.md)。
+版本变化统一记录在 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ## 贡献
 

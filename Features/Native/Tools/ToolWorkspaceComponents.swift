@@ -19,7 +19,7 @@ enum ToolWorkspaceStage: String, CaseIterable, Identifiable {
         switch self {
         case .selection: return "筛选、定位并打开一个真实工具"
         case .configuration: return "输入参数、选择目录，然后开始执行"
-        case .review: return "复制结果、打开文件，或者继续交给 Agent"
+        case .review: return "复制结果、打开文件，或者继续交给智能体"
         }
     }
 

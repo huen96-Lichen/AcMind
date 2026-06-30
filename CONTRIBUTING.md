@@ -1,23 +1,23 @@
-# Contributing to AcMind
+# 参与贡献
 
-AcMind is still pre-release. Contributions are welcome, but the project should be treated as an actively evolving macOS workspace rather than a finished public product.
+AcMind 仍处于预发布阶段。欢迎贡献，但应把它看作一个持续演进中的 macOS 工作区，而不是一个已经完成的公开产品。
 
-If you plan a larger change, open an issue first so the scope, implementation path, and documentation impact can be agreed before code lands.
+如果你准备做较大的改动，请先开一个 issue，这样可以在代码落地前先对齐范围、实现路径和文档影响。
 
-## Contribution workflow
+## 贡献流程
 
-Issue
-→ branch
-→ implementation
-→ local validation
+issue
+→ 分支
+→ 实现
+→ 本地验证
 → pull request
 → review
 
-Please keep changes focused. Small, reviewable pull requests are much easier to validate than broad refactors that mix behavior, docs, and cleanup.
+请尽量让变更保持聚焦。小而可审查的 pull request，通常比混合了行为、文档和清理的大型重构更容易验证。
 
-## Clean-clone setup
+## 干净克隆环境配置
 
-From a fresh clone, use the verified baseline commands recorded in `docs/testing-and-build-baseline.md`:
+从全新的克隆开始，请使用 `docs/testing-and-build-baseline.md` 里记录的已验证基线命令：
 
 ```bash
 swift package reset
@@ -26,7 +26,7 @@ swift build
 swift test
 ```
 
-To validate the app bundle with Xcode, use:
+要用 Xcode 验证应用 bundle，请执行：
 
 ```bash
 xcodebuild \
@@ -39,35 +39,35 @@ xcodebuild \
   build
 ```
 
-The portable app path is derived from Xcode build settings, not from `.build/debug/AcMind.app`.
+可移植的 app 路径来自 Xcode build settings，而不是 `.build/debug/AcMind.app`。
 
-## Known test baseline
+## 已知测试基线
 
-`docs/testing-and-build-baseline.md` records the current baseline. At the time of writing, `swift test` still reports documented known failures across multiple suites, including `ToolWorkspaceStateTests` and other documented suites, so the full test workflow should remain visibly failing until those suites are updated.
+`docs/testing-and-build-baseline.md` 记录了当前基线。以本文撰写时为准，`swift test` 在多个 suite 上仍会报告文档化的已知失败，包括 `ToolWorkspaceStateTests` 和其他已记录的 suite，因此在这些 suite 更新之前，完整测试流程应保持可见的失败状态。
 
-Do not hide those failures, skip them silently, or introduce new unexplained failures. If your change affects a failing test or the expected surface text, update the baseline document in the same change.
+不要隐藏这些失败、静默跳过它们，也不要引入新的、无法解释的失败。如果你的改动影响了某个失败测试或预期的界面文本，请在同一个改动里更新基线文档。
 
-## Code style and documentation
+## 代码风格与文档
 
-- Keep code changes narrowly scoped.
-- Follow the existing Swift style and naming patterns in the repository.
-- Do not commit personal data, credentials, screenshots with private content, or machine-specific absolute paths.
-- If behavior changes, update the relevant documentation in the same pull request.
-- If a UI surface changes, include updated screenshots or explain why they are not needed.
-- Treat comments, docs, and README files as part of the change, not an afterthought.
+- 让代码变更保持窄范围。
+- 遵循仓库里已有的 Swift 风格和命名模式。
+- 不要提交个人数据、凭据、包含私密内容的截图或机器专属绝对路径。
+- 如果行为发生变化，请在同一个 pull request 里更新相关文档。
+- 如果 UI 表面发生变化，请附上更新后的截图，或者说明为什么不需要。
+- 把注释、文档和 README 文件当成变更的一部分，而不是事后补丁。
 
-## Validation expectations
+## 验证要求
 
-Before opening a pull request, run the verified commands that apply to your change and record the results in the PR description.
+在打开 pull request 之前，运行与你这次改动相关的已验证命令，并把结果记录在 PR 描述里。
 
-At minimum, confirm the commands relevant to your work from `docs/testing-and-build-baseline.md`. For app-facing changes, include the Xcode build command. For source-only changes, at least confirm Swift package resolution and build.
+至少要确认 `docs/testing-and-build-baseline.md` 中与你工作相关的命令。对于面向应用的改动，请包含 Xcode 构建命令。对于纯源码改动，至少要确认 Swift package 的解析和构建。
 
-Normal source contributions do not require Developer ID credentials, notarization credentials, or other release-only signing material.
+常规源码贡献不需要 Developer ID 凭据、公证凭据，或其他仅发布阶段才需要的签名材料。
 
-## Pull request process
+## Pull Request 流程
 
-- Link the issue, if one exists.
-- Summarize what changed and why.
-- List the commands you ran.
-- Call out any remaining known failures or limitations.
-- Mention documentation or screenshot updates explicitly when they are part of the change.
+- 关联 issue（如果有）。
+- 简述改了什么，以及为什么改。
+- 列出你执行过的命令。
+- 说明仍然存在的已知失败或限制。
+- 如果包含文档或截图更新，请明确写出来。

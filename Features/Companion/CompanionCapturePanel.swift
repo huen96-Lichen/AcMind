@@ -154,12 +154,12 @@ struct CompanionCapturePanel: View {
                             .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
                     }
 
-                    Text("当前所有捕获结果都会自动写入收集箱，这里仅展示当前开关状态。")
+                    Text("捕获结果会自动写入收集箱。")
                         .font(.system(size: AppSurfaceTokens.Typography.body))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
 
-                Toggle("捕获后打开详情", isOn: $viewModel.openDetailAfterCapture)
+                Toggle("捕获后打开查看", isOn: $viewModel.openDetailAfterCapture)
                     .toggleStyle(.switch)
 
                 Toggle("显示捕获通知", isOn: $viewModel.showCaptureNotification)
@@ -586,7 +586,7 @@ class CompanionCaptureViewModel: ObservableObject {
                     await finishNonScreenshotCapture(result: result, type: type)
                 case .webpage:
                     guard let url = Self.frontmostBrowserURL() else {
-                        Self.logger.warning("未检测到当前网页 URL")
+                        Self.logger.warning("未检测到当前网页地址")
                         return
                     }
                     let result = try await captureService.captureFromWebpage(url: url)

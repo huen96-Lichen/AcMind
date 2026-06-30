@@ -137,7 +137,7 @@ struct NotchV2SettingsPage: View {
                     .disabled(canMoveModule(module, offset: -1) == false)
                 Button("下移") { viewModel.moveModule(module, by: 1) }
                     .disabled(canMoveModule(module, offset: 1) == false)
-                Button(isOverviewVisible ? "隐藏概览" : "显示概览") {
+                Button(isOverviewVisible ? "隐藏总览" : "显示总览") {
                     viewModel.setModuleOverviewVisible(module, isVisible: isOverviewVisible == false)
                 }
                 Button(isEnabled ? "停用模块" : "启用模块") {

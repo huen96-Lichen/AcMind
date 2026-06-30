@@ -2,8 +2,8 @@ import AppIntents
 import Foundation
 
 struct OpenAgentIntent: AppIntent {
-    static let title: LocalizedStringResource = "打开 Agent"
-    static let description = IntentDescription("打开 AcWork 的 Agent 页面。")
+    static let title: LocalizedStringResource = "打开智能体"
+    static let description = IntentDescription("打开 AcWork 的智能体页面。")
     static let openAppWhenRun = true
 
     @MainActor

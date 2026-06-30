@@ -53,7 +53,7 @@ struct DesktopCapsuleSettingsSection: View {
                 }
 
                 if settings.actions.isEmpty {
-                    Text("暂无功能，点击上方按钮添加")
+                    Text("尚未添加功能，请点击上方按钮添加")
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)

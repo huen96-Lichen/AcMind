@@ -48,7 +48,7 @@ struct CompanionShortcutPanel: View {
                     .font(.system(size: AppSurfaceTokens.Typography.cardTitle, weight: .semibold))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                Text("系统级快捷键，保存后会在下次启动和当前会话中生效")
+                Text("系统级快捷键，保存后立即生效。")
                     .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -87,11 +87,11 @@ struct CompanionShortcutPanel: View {
                 .foregroundStyle(AppSurfaceTokens.accentBlue)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("这里展示的是可持久化的快捷键配置")
+                Text("这里显示已保存的快捷键配置")
                     .font(.system(size: AppSurfaceTokens.Typography.body, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                    Text("启用状态、快捷键文本和备注都来自设置存储，不再显示占位内容。")
+                    Text("启用状态、快捷键文本和备注都来自设置存储。")
                     .font(.system(size: AppSurfaceTokens.Typography.caption))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
             }
@@ -238,7 +238,7 @@ struct ShortcutRow: View {
         case "说入法": return "mic.fill"
         case "快速收集": return "tray.and.arrow.down"
         case "截图捕获": return "camera"
-        case "打开 Agent": return "bubble.left.fill"
+        case "打开智能体": return "bubble.left.fill"
         case "今日日程": return "calendar"
         default: return "command"
         }

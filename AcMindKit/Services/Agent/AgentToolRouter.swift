@@ -127,7 +127,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
                 toolType: .inbox,
                 action: "list",
                 success: true,
-                output: "收集箱内容:\n\(output.isEmpty ? "暂无内容" : output)"
+                output: "收集箱内容:\n\(output.isEmpty ? "收集箱暂无内容" : output)"
             )
 
         case "add":
@@ -381,7 +381,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
                 toolType: .knowledge,
                 action: "read",
                 success: true,
-                output: "知识卡片 (\(cards.count)):\n\(lines.isEmpty ? "暂无内容" : lines.joined(separator: "\n"))"
+                output: "知识卡片 (\(cards.count)):\n\(lines.isEmpty ? "暂无知识卡片" : lines.joined(separator: "\n"))"
             )
 
         case "search":
@@ -823,7 +823,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
                 toolType: .ai,
                 action: "providers",
                 success: true,
-                output: "AI Providers (\(providers.count)):\n\(lines.isEmpty ? "暂无 Provider" : lines.joined(separator: "\n"))"
+                output: "智能提供商 (\(providers.count)):\n\(lines.isEmpty ? "暂无提供商" : lines.joined(separator: "\n"))"
             )
 
         case "models", "listModels":
@@ -1261,7 +1261,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
 
         let providers = await aiRuntime.listProviders()
         let lines = providers.map { "\($0.id) | \($0.name) | \($0.modelId) | \($0.enabled ? "启用" : "停用")" }
-        return AgentToolResult(toolType: .tools, action: "modelManagement", success: true, output: lines.isEmpty ? "暂无 Provider" : lines.joined(separator: "\n"))
+        return AgentToolResult(toolType: .tools, action: "modelManagement", success: true, output: lines.isEmpty ? "暂无提供商" : lines.joined(separator: "\n"))
     }
 
     private func routeToAPITest(_ request: AgentToolRequest) async throws -> AgentToolResult {

@@ -59,7 +59,7 @@ struct NotchV2OverviewPage: View {
                         .font(NotchV2DesignTokens.Typography.caption.weight(.medium))
                         .foregroundStyle(NotchV2DesignTokens.secondaryText)
                     if activeOverviewModules.isEmpty {
-                        Text("全部待命")
+                        Text("全部空闲")
                             .font(NotchV2DesignTokens.Typography.caption)
                             .foregroundStyle(NotchV2DesignTokens.secondaryText)
                             .lineLimit(1)
@@ -102,7 +102,7 @@ struct NotchV2OverviewPage: View {
             }
 
             CompanionPanel(
-                title: "运行中",
+                title: "进行中",
                 symbol: "sparkles",
                 fillHeight: true,
             ) {
@@ -177,7 +177,7 @@ struct NotchV2OverviewPage: View {
                 idlePrefix: "音乐"
             )
         case .schedule: return "日程"
-        case .agent: return "AI"
+        case .agent: return "智能"
         case .systemStatus: return "状态"
         case .idle: return "本机"
         }

@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import AcMindKit
 
-// MARK: - Quick Note Panel
+// MARK: - 快速记录面板
 // 快速记录面板 - 轻量文本输入，保存到收集箱
 
 struct QuickNotePanel: View {
@@ -84,7 +84,7 @@ struct QuickNotePanel: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - 头部
 
     private var header: some View {
         HStack {
@@ -114,7 +114,7 @@ struct QuickNotePanel: View {
     }
 }
 
-// MARK: - View Model
+// MARK: - 视图模型
 
 @MainActor
 final class QuickNoteViewModel: ObservableObject {

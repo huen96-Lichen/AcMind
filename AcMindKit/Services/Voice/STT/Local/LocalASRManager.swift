@@ -94,12 +94,16 @@ public actor LocalASRManager: @unchecked Sendable {
     public var onDownloadComplete: ((String) -> Void)?
     public var onDownloadError: ((String, Error) -> Void)?
     
-    public init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let acmindDir = appSupport.appendingPathComponent("AcMind", isDirectory: true)
-        self.modelsDirectory = acmindDir.appendingPathComponent("LocalModels", isDirectory: true)
-        
-        try? FileManager.default.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
+    public init(modelsDirectory: URL? = nil) {
+        if let modelsDirectory {
+            self.modelsDirectory = modelsDirectory
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let acmindDir = appSupport.appendingPathComponent("AcMind", isDirectory: true)
+            self.modelsDirectory = acmindDir.appendingPathComponent("LocalModels", isDirectory: true)
+        }
+
+        try? FileManager.default.createDirectory(at: self.modelsDirectory, withIntermediateDirectories: true)
     }
     
     public func getModelsDirectory() -> URL {
@@ -119,44 +123,54 @@ public actor LocalASRManager: @unchecked Sendable {
     public func listAvailableModels() -> [LocalASRModelInfo] {
         var models: [LocalASRModelInfo] = []
         
-        let senseVoicePath = modelsDirectory.appendingPathComponent("sense_voice_small")
+        let senseVoicePath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.senseVoiceSmall.rawValue)
         models.append(LocalASRModelInfo(
             id: "sensevoice-small",
             type: .senseVoice,
             name: "SenseVoice Small",
             storagePath: senseVoicePath.path,
             version: "1.0",
-            isDownloaded: FileManager.default.fileExists(atPath: senseVoicePath.path)
+            isDownloaded: isSherpaModelInstalled(.senseVoiceSmall)
         ))
         
-        let whisperKitPath = modelsDirectory.appendingPathComponent("whisperkit")
+        let whisperKitPath = modelsDirectory.appendingPathComponent("whisperkit-medium")
         models.append(LocalASRModelInfo(
             id: "whisperkit-medium",
             type: .whisperKit,
             name: "WhisperKit Medium",
             storagePath: whisperKitPath.path,
             version: "0.10.0",
-            isDownloaded: FileManager.default.fileExists(atPath: whisperKitPath.path)
+            isDownloaded: isWhisperKitModelInstalled(at: whisperKitPath)
         ))
         
-        let funASRPath = modelsDirectory.appendingPathComponent("fun_asr")
+        let funASRPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.funASR.rawValue)
         models.append(LocalASRModelInfo(
             id: "funasr-paraformer",
             type: .funASR,
             name: "FunASR Paraformer",
             storagePath: funASRPath.path,
             version: "1.0",
-            isDownloaded: FileManager.default.fileExists(atPath: funASRPath.path)
+            isDownloaded: isSherpaModelInstalled(.funASR)
         ))
         
-        let qwen3Path = modelsDirectory.appendingPathComponent("qwen3_asr")
+        let qwen3Path = modelsDirectory.appendingPathComponent(SherpaOnnxModel.qwen3ASR.rawValue)
         models.append(LocalASRModelInfo(
             id: "qwen3-asr-0.6b",
             type: .qwen3ASR,
             name: "Qwen3-ASR 0.6B",
             storagePath: qwen3Path.path,
             version: "1.0",
-            isDownloaded: FileManager.default.fileExists(atPath: qwen3Path.path)
+            isDownloaded: isSherpaModelInstalled(.qwen3ASR)
+        ))
+
+        let parakeetPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.parakeet.rawValue)
+        models.append(LocalASRModelInfo(
+            id: "parakeet-tdt-0.6b-v2",
+            type: .parakeet,
+            name: "Parakeet TDT 0.6B v2",
+            storagePath: parakeetPath.path,
+            version: "1.0",
+            isDownloaded: isSherpaModelInstalled(.parakeet)
         ))
         
         return models
@@ -178,10 +192,6 @@ public actor LocalASRManager: @unchecked Sendable {
             return
         }
 
-        if modelId == "whisperkit-medium" {
-            throw LocalASRError.unsupportedModel("whisperkit-medium")
-        }
-        
         let task = Task<Void, Error> { [weak self] in
             guard let self = self else { return }
             try await self.performDownload(modelId: modelId)
@@ -217,15 +227,19 @@ public actor LocalASRManager: @unchecked Sendable {
         switch modelId {
         case "sensevoice-small":
             downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.1.10/sherpa-onnx-sense-voice-small-linux-x86_64.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("sense_voice_small")
+            destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.senseVoiceSmall.rawValue)
         case "whisperkit-medium":
-            throw LocalASRError.unsupportedModel(modelId)
+            try await downloadWhisperKitModel(modelName: "medium", modelId: modelId)
+            return
         case "funasr-paraformer":
             downloadURL = URL(string: "https://huggingface.co/spaces/sherpa/sherpa-onnx-int8-paraformer-zh-en/raw/main/paraformer.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("fun_asr")
+            destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.funASR.rawValue)
         case "qwen3-asr-0.6b":
             downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.1.10/sherpa-onnx-qwen3-asr.tar.bz2")!
-            destinationPath = modelsDirectory.appendingPathComponent("qwen3_asr")
+            destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.qwen3ASR.rawValue)
+        case "parakeet-tdt-0.6b-v2":
+            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nvidia-parakeet-tdt-0.6b-v2-int8.tar.bz2")!
+            destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.parakeet.rawValue)
         default:
             throw LocalASRError.unsupportedModel(modelId)
         }
@@ -277,6 +291,37 @@ public actor LocalASRManager: @unchecked Sendable {
         
         try FileManager.default.removeItem(at: tempFile)
     }
+
+    private func downloadWhisperKitModel(modelName: String, modelId: String) async throws {
+        #if canImport(WhisperKit)
+        let modelDirectory = modelsDirectory.appendingPathComponent(modelId, isDirectory: true)
+        try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
+        let transcriber = WhisperKitTranscriber(
+            modelName: modelName,
+            downloadBase: modelDirectory
+        )
+        try await transcriber.prepare { [weak self] progress, _ in
+            guard let self else { return }
+            let total: Int64 = 1_000
+            let downloaded = Int64((progress.clamped(to: 0...1) * Double(total)).rounded())
+            let update = DownloadProgress(
+                modelId: modelId,
+                bytesDownloaded: downloaded,
+                totalBytes: total
+            )
+            Task { await self.emitProgress(update) }
+        }
+        #else
+        throw LocalASRError.unsupportedModel(modelId)
+        #endif
+    }
+
+    private func emitProgress(_ progress: DownloadProgress) async {
+        let handler = onDownloadProgress
+        await MainActor.run {
+            handler?(progress)
+        }
+    }
     
     private func completeDownload(modelId: String) async {
         downloadTasks.removeValue(forKey: modelId)
@@ -292,6 +337,41 @@ public actor LocalASRManager: @unchecked Sendable {
         await MainActor.run {
             handler?(modelId, error)
         }
+    }
+
+    private func isSherpaModelInstalled(_ model: SherpaOnnxModel) -> Bool {
+        let decoder = SherpaOnnxCommandLineDecoder(
+            model: model,
+            modelIdentifier: model.defaultModelIdentifier,
+            modelFolder: modelsDirectory.path
+        )
+        return decoder.isModelInstalled(storageURL: modelsDirectory)
+    }
+
+    private func isWhisperKitModelInstalled(at url: URL) -> Bool {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return false }
+        guard let contents = try? fm.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return false
+        }
+
+        let modelArtifacts = contents.filter { child in
+            let lowercasedName = child.lastPathComponent.lowercased()
+            return lowercasedName.hasSuffix(".mlmodelc") ||
+                lowercasedName.hasSuffix(".mlpackage") ||
+                lowercasedName.hasSuffix(".bin")
+        }
+        return modelArtifacts.isEmpty == false
+    }
+}
+
+private extension Comparable {
+    func clamped(to limits: ClosedRange<Self>) -> Self {
+        min(max(self, limits.lowerBound), limits.upperBound)
     }
 }
 

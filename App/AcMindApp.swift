@@ -12,6 +12,10 @@ struct AcMindApp: App {
         // 提供真实 Settings 内容，避免用户看到空白的系统设置窗口。
         Settings {
             SettingsView(initialCategory: .general)
+                .frame(
+                    minWidth: AppSurfaceTokens.Layout.minimumWindowWidth,
+                    minHeight: AppSurfaceTokens.Layout.minimumWindowHeight
+                )
                 .background(AppSurfaceBackdrop())
         }
         .defaultSize(width: 1500, height: 920)
@@ -72,10 +76,15 @@ struct AcMindCommands: Commands {
         }
 
         CommandMenu("截图") {
-            Button("截图") {
+            Button("立即截图") {
                 (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
             }
             .keyboardShortcut("4", modifiers: [.command, .shift])
+
+            Button("截图工作区") {
+                (NSApp.delegate as? AppDelegate)?.showMainWindow()
+                appState.navigate(to: .screenshot)
+            }
 
             Button("截图历史") {
                 appState.selectInboxWorkspace("screenshotHistory")

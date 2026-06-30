@@ -5,11 +5,11 @@ struct WaveformPreview: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            Text("效果示意")
+            Text("波形预览")
                 .font(.headline)
             
             ZStack {
-                // Background
+                // 背景
                 RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
                     .fill(Color(NSColor.textBackgroundColor))
                     .frame(height: 80)
@@ -19,14 +19,14 @@ struct WaveformPreview: View {
                     )
                 
                 VStack(spacing: 0) {
-                    // Waveform Bars
+                    // 波形条
                     HStack(alignment: .center, spacing: 2) {
                         ForEach(0..<40) { index in
                             WaveformBar(height: heightForIndex(index), delay: Double(index) * 0.05)
                         }
                     }
                     
-                    // Status Text
+                    // 状态文案
                     Text("倾听中...")
                         .font(.caption)
                         .foregroundStyle(.secondary)

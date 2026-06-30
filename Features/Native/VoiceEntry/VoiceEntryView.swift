@@ -9,19 +9,13 @@ struct VoiceEntryView: View {
 
     var body: some View {
         AcWorkShell(
-            title: "说入法设置",
-            subtitle: "在这里管理语音输入链路：触发、识别、润色、输出、静音检测和连续输入。",
-            leadingRailWidth: 208,
-            trailingRailWidth: AppSurfaceTokens.Layout.summaryWidth,
-            leadingRail: {
-                voiceSummaryRail
-            },
-            content: {
-                voiceContent
-            },
-            trailingRail: {
-                voiceDetailRail
-            }
+            title: "说入法",
+            subtitle: "管理触发、识别、润色与输出",
+            leadingRailWidth: 0,
+            trailingRailWidth: 0,
+            leadingRail: { EmptyView() },
+            content: { voiceContent },
+            trailingRail: { EmptyView() }
         )
         .task {
             microphoneDevices = VoiceMicrophoneDeviceCatalog.availableInputDevices()
@@ -42,7 +36,7 @@ struct VoiceEntryView: View {
 
     private var voiceContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: AppSurfaceTokens.Spacing.md) {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceSectionSpacing) {
                 AppSurfaceSummaryStrip(
                     chips: [
                         AppSurfaceSummaryChip(
@@ -72,88 +66,17 @@ struct VoiceEntryView: View {
                 summaryGrid
                 controlSections
             }
-            .padding(AppSurfaceTokens.Spacing.lg)
-            .frame(maxWidth: AppSurfaceTokens.Layout.pageMaxWidth, alignment: .leading)
+            .padding(AppSurfaceTokens.Layout.workspacePagePadding)
+            .frame(maxWidth: AppSurfaceTokens.Layout.workspaceMaxWidth, alignment: .leading)
         }
         .background(AppSurfaceBackdrop())
     }
 
-    private var voiceSummaryRail: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                AppSurfaceCard(title: "状态概览", subtitle: "只读摘要", padding: 14) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        railSummaryRow(
-                            title: "启用",
-                            value: SettingsStatusLabelFormatter.binaryState(
-                                isEnabled: viewModel.companionVoiceEnabled,
-                                enabledText: "已启用",
-                                disabledText: "已关闭"
-                            )
-                        )
-                        railSummaryRow(title: "快捷键", value: viewModel.companionVoiceShortcut)
-                        railSummaryRow(title: "触发", value: viewModel.voiceTriggerMode.displayName)
-                    }
-                }
-
-                AppSurfaceCard(title: "识别与输出", subtitle: "真实设置状态", padding: 14) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        railSummaryRow(title: "ASR", value: providerDisplayName(viewModel.voiceDefaultProvider))
-                        railSummaryRow(
-                            title: "润色",
-                            value: SettingsStatusLabelFormatter.binaryState(
-                                isEnabled: viewModel.voiceAutoPolish,
-                                enabledText: viewModel.voicePolishMode.displayName,
-                                disabledText: "关闭"
-                            )
-                        )
-                        railSummaryRow(title: "输出", value: viewModel.voiceOutputMode.displayName)
-                        railSummaryRow(
-                            title: "收集箱",
-                            value: SettingsStatusLabelFormatter.binaryState(
-                                isEnabled: viewModel.voiceSaveToInbox,
-                                enabledText: "写入",
-                                disabledText: "不写入"
-                            )
-                        )
-                    }
-                }
-            }
-            .padding(16)
-        }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-    }
-
-    private var voiceDetailRail: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                runtimeCard
-                statusEntryCard
-                microphoneCard
-            }
-            .padding(AppSurfaceTokens.Spacing.lg)
-        }
-        .background(AppSurfaceTokens.cardBackgroundSoft)
-    }
-
-    private func railSummaryRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: AppSurfaceTokens.Typography.caption))
-                .foregroundStyle(AppSurfaceTokens.secondaryText)
-            Spacer()
-            Text(value)
-                .font(.system(size: AppSurfaceTokens.Typography.caption, weight: .semibold))
-                .foregroundStyle(AppSurfaceTokens.primaryText)
-                .lineLimit(1)
-        }
-    }
-
     private var workflowCard: some View {
-        AppSurfaceCard(title: "当前工作流", subtitle: "监听 → 转写 → 修正 → 发送", padding: 16) {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
+        AppSurfaceCard(title: "当前工作流", subtitle: "监听 → 转写 → 修正 → 发送", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+            HStack(alignment: .top, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                    HStack(spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
                         statePill(
                             title: viewModel.companionVoiceEnabled ? "已启用" : "已关闭",
                             accent: viewModel.companionVoiceEnabled ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentSecondary
@@ -190,7 +113,7 @@ struct VoiceEntryView: View {
 
                 Spacer(minLength: 0)
 
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
                     workflowFactRow(title: "麦克风", value: viewModel.microphonePermissionStatus.displayName)
                     workflowFactRow(title: "输出方式", value: viewModel.voiceOutputMode.displayName)
                     workflowFactRow(title: "连续输入", value: continuationText)
@@ -207,20 +130,20 @@ struct VoiceEntryView: View {
     }
 
     private var summaryGrid: some View {
-        AppSurfaceCard(title: "关键摘要", subtitle: "触发、识别与输出", padding: 14) {
-            VStack(alignment: .leading, spacing: 12) {
+        AppSurfaceCard(title: "关键总览", subtitle: "触发、识别与输出", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
                 SectionHeader(
-                    title: "摘要概览",
+                    title: "总览",
                     description: "这些卡片对应说入法实际控制的链路。",
                     status: viewModel.companionVoiceEnabled ? "已启用" : "已关闭"
                 )
 
                 LazyVGrid(
                     columns: [
-                        GridItem(.flexible(), spacing: 12),
-                        GridItem(.flexible(), spacing: 12)
+                        GridItem(.flexible(), spacing: AppSurfaceTokens.Layout.workspaceGridSpacing),
+                        GridItem(.flexible(), spacing: AppSurfaceTokens.Layout.workspaceGridSpacing)
                     ],
-                    spacing: 12
+                    spacing: AppSurfaceTokens.Layout.workspaceGridSpacing
                 ) {
                     MetricCard(
                         label: "触发",
@@ -285,7 +208,7 @@ struct VoiceEntryView: View {
     }
 
     private var controlSections: some View {
-        VStack(alignment: .leading, spacing: AppSurfaceTokens.Spacing.md) {
+        VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceSectionSpacing) {
             settingCard(title: "触发与行为", description: "说入法的触发方式和输出行为。") {
                 toggleRow(title: "启用说入法", description: "控制快捷键是否可用。", isOn: persistedBinding(\.companionVoiceEnabled))
                 divider
@@ -311,13 +234,13 @@ struct VoiceEntryView: View {
             }
 
             settingCard(title: "识别与润色", description: "这些字段会直接参与识别与润色配置。") {
-                pickerRow(title: "ASR 引擎", description: "当前默认语音识别提供方。", selection: persistedBinding(\.voiceDefaultProvider)) {
+                pickerRow(title: "语音识别引擎", description: "当前默认语音识别提供方。", selection: persistedBinding(\.voiceDefaultProvider)) {
                     ForEach(asrProviderOptions, id: \.id) { option in
                         Text(option.title).tag(option.id)
                     }
                 }
                 if viewModel.voiceDefaultProvider == "qwen3ASR" {
-                    Text("Qwen3-ASR 以分段结果呈现，不提供真正的实时流式输出。")
+                    Text("Qwen3 语音识别以分段结果呈现，不提供真正的实时流式输出。")
                         .font(.system(size: 11))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
@@ -337,7 +260,7 @@ struct VoiceEntryView: View {
                 }
             }
 
-            settingCard(title: "纠错规则", description: "ASR 转写后、润色前自动应用的确定性文本替换。") {
+            settingCard(title: "纠错规则", description: "语音识别转写后、润色前自动应用的确定性文本替换。") {
                 correctionRulesSection
             }
 
@@ -363,7 +286,7 @@ struct VoiceEntryView: View {
                 toggleRow(title: "补全结尾标点", description: "结束时自动补充基础句末标点。", isOn: persistedBinding(\.enablePunctuationAppend))
             }
 
-            settingCard(title: "静音检测与注入", description: "静音检测已接入；麦克风设备偏好会在开始录音时自动应用。") {
+            settingCard(title: "静音检测与注入", description: "静音检测已接入，录音时会自动应用麦克风偏好。") {
                 toggleRow(title: "启用静音检测", description: "检测长静音后自动停止录音。", isOn: persistedBinding(\.voiceEnableSilenceDetection))
                 divider
                 stepperRow(title: "静音超时", description: "达到该时长后自动停录。", value: persistedBinding(\.voiceSilenceTimeout), range: 1...10, step: 0.5, format: { "\($0.formatted(.number.precision(.fractionLength(1))))s" })
@@ -380,7 +303,7 @@ struct VoiceEntryView: View {
     }
 
     private var runtimeCard: some View {
-        settingCard(title: "当前链路", description: "这张卡展示当前页面真正控制的运行链。") {
+        settingCard(title: "当前链路", description: "这张卡展示当前页面控制的运行链。") {
             pipelineRow(
                 "快捷键触发",
                 SettingsStatusLabelFormatter.binaryState(
@@ -390,7 +313,7 @@ struct VoiceEntryView: View {
                 )
             )
             divider
-            pipelineRow("悬浮面板", "CompanionVoicePanel")
+            pipelineRow("悬浮入口", "CompanionVoicePanel")
             divider
             pipelineRow("录音协调", "SayInputCoordinator")
             divider
@@ -401,7 +324,7 @@ struct VoiceEntryView: View {
     }
 
     private var statusEntryCard: some View {
-        settingCard(title: "状态概览", description: "完整本机状态集中在主侧边栏的「状态」。") {
+        settingCard(title: "状态总览", description: "完整本机状态集中在主侧边栏的「状态」。") {
             Button("查看状态") {
                 (NSApp.delegate as? AppDelegate)?.showSystemStatus()
             }
@@ -410,7 +333,7 @@ struct VoiceEntryView: View {
     }
 
     private var microphoneCard: some View {
-        settingCard(title: "录音输入设备", description: "这里选择的设备会在开始录音时写入系统默认输入；找不到时会回退自动选择。") {
+        settingCard(title: "录音输入设备", description: "这里选择的设备会在开始录音时写入系统默认输入；找不到时会自动退回。") {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 8) {
                     Picker("输入设备", selection: $preferredMicrophoneSelection) {
@@ -435,7 +358,7 @@ struct VoiceEntryView: View {
                 .buttonStyle(.bordered)
             }
 
-            Text("如果选中的设备在系统里不存在，会自动退回到默认输入。")
+            Text("选中的设备若不存在，会自动退回默认输入。")
                 .font(.system(size: 11))
                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -581,7 +504,7 @@ struct VoiceEntryView: View {
     }
 
     private var workflowDetailText: String {
-        "录音中的实时反馈会出现在浮窗里，这个页面只负责配置和解释说入法链路。"
+        "录音中的实时反馈会出现在浮窗里，这个页面只负责配置说入法。"
     }
 
     private var divider: some View {
@@ -610,7 +533,7 @@ struct VoiceEntryView: View {
             ("senseVoice", "SenseVoice"),
             ("whisperKit", "WhisperKit"),
             ("funASR", "FunASR"),
-            ("qwen3ASR", "Qwen3-ASR"),
+            ("qwen3ASR", "Qwen3 语音识别"),
             ("parakeet", "Parakeet"),
             ("mimo_asr", "MiMo ASR")
         ]
@@ -620,7 +543,7 @@ struct VoiceEntryView: View {
         [
             ("auto", "自动"),
             ("zh", "中文"),
-            ("en", "English"),
+            ("en", "英文"),
             ("ja", "日本語"),
             ("ko", "한국어"),
             ("yue", "粤语")

@@ -47,7 +47,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public static var coreWorkflow: [SidebarItem] {
-        [.home, .agent, .inbox, .screenshot, .screenshotHistory, .schedule, .workbench]
+        [.home, .agent, .inbox, .screenshot, .schedule, .workbench]
     }
 
     public static var companionCapabilities: [SidebarItem] {
@@ -63,7 +63,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     }
 
     public static var shortcutItems: [SidebarItem] {
-        [.home, .agent, .inbox, .screenshot, .screenshotHistory, .schedule, .workbench, .dynamicContinent, .voiceEntry, .systemStatus, .modelManagement, .settings]
+        [.home, .agent, .inbox, .screenshot, .schedule, .workbench, .dynamicContinent, .voiceEntry, .systemStatus, .modelManagement, .settings]
     }
 
     public var displayName: String {
@@ -109,7 +109,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
         case .home: return "前往工作台"
         case .agent: return "前往 Agent"
         case .inbox: return "前往收集箱"
-        case .screenshot: return "打开截图查看"
+        case .screenshot: return "打开截图工作区"
         case .screenshotHistory: return "前往截图历史"
         case .clipboard: return "前往收集箱"
         case .schedule: return "前往日程"

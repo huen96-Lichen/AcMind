@@ -62,7 +62,7 @@ struct NotchV2TopBar: View {
             }
 
             if viewModel.isModuleEnabled(.agent) {
-                topNavPill(title: "AI", icon: "sparkles", selected: viewModel.effectiveSelectedPage == .agent) {
+                topNavPill(title: "智能", icon: "sparkles", selected: viewModel.effectiveSelectedPage == .agent) {
                     viewModel.select(.agent)
                 }
             }
@@ -115,7 +115,7 @@ struct NotchV2TopBar: View {
                 accent: NotchV2DesignTokens.innerCardBackground,
                 isSelected: viewModel.effectiveSelectedPage == .settings,
                 action: {
-                    openSettingsWindow()
+                    viewModel.select(.settings)
                 }
             )
 

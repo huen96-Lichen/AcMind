@@ -1,41 +1,41 @@
-# AcMind Testing and Build Baseline
+# AcMind 构建与测试基线
 
-Date: 2026-06-24
+日期：2026-06-24
 
-This document records the currently verified build and test baseline for AcMind. It is intentionally factual, conservative, and explicit about known failures.
+本文记录 AcMind 当前已经验证过的构建与测试基线。它保持事实化、保守，并明确写出已知失败。
 
-## Environment
+## 环境
 
-| Item | Value |
+| 项目 | 值 |
 |---|---|
 | macOS | 26.5.1 (25F80) |
 | Xcode | 26.5 (17F42) |
 | Swift | Apple Swift 6.3.2, swift-driver 1.148.6 |
-| Architecture | arm64 |
-| Xcode command-line tools | `/Applications/Xcode.app/Contents/Developer` |
-| Repository SHA | `1109c5ebea12968aab2ce0334a44b7d9739e5ccd` |
+| 架构 | arm64 |
+| Xcode 命令行工具 | `/Applications/Xcode.app/Contents/Developer` |
+| 仓库 SHA | `1109c5ebea12968aab2ce0334a44b7d9739e5ccd` |
 
-The clean validation pass was run from a detached clean worktree derived from the same commit, without relying on pre-existing `.build` or DerivedData state.
+这次干净验证是在一个从同一提交派生出来的、没有依赖既有 `.build` 或 DerivedData 状态的干净工作区里完成的。
 
-## Supported build commands
+## 支持的构建命令
 
-| Command | Result | Notes |
+| 命令 | 结果 | 备注 |
 |---|---|---|
-| `swift package reset` | Pass | Cleans SwiftPM state before resolution. |
-| `swift package resolve` | Pass | Resolves dependencies successfully. |
-| `swift build` | Pass | Builds the Swift package successfully. |
-| `swift test` | Fail | Fails with 63 failed assertions across 9 suites in `AcMindKitTests`; `ToolWorkspaceStateTests` accounts for 18 of them. |
-| `xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build` | Pass | Produces the macOS app bundle. |
-| `bash scripts/build.sh --clean` | Pass | Removes `build/`, `.build/`, and `DerivedData/`. |
-| `bash scripts/build.sh` | Pass | Debug build succeeds and injects the helper into the app bundle. |
-| `bash scripts/build.sh --release` | Pass | Release build succeeds and injects the helper into the app bundle. |
-| `bash scripts/build.sh --release --package` | Fail on machines without a Developer ID cert | The script currently aborts during signing lookup because of `set -euo pipefail`. |
-| `DEVELOPER_ID=- bash scripts/build.sh --release --package` | Pass | Ad-hoc signing and DMG creation succeed. |
-| `bash scripts/build.sh --release --notarize` | Not verified | Requires Apple ID, app-specific password, Team ID, and a notarization-ready signing setup. |
+| `swift package reset` | 通过 | 在解析前清理 SwiftPM 状态。 |
+| `swift package resolve` | 通过 | 成功解析依赖。 |
+| `swift build` | 通过 | 成功构建 Swift package。 |
+| `swift test` | 失败 | 在 `AcMindKitTests` 的 9 个 suite 中出现 63 个失败断言；其中 `ToolWorkspaceStateTests` 占 18 个。 |
+| `xcodebuild -project AcMind.xcodeproj -scheme AcMind -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build` | 通过 | 成功产出 macOS app bundle。 |
+| `bash scripts/build.sh --clean` | 通过 | 清理 `build/`、`.build/` 和 `DerivedData/`。 |
+| `bash scripts/build.sh` | 通过 | Debug 构建成功，并把 helper 注入到 app bundle。 |
+| `bash scripts/build.sh --release` | 通过 | Release 构建成功，并把 helper 注入到 app bundle。 |
+| `bash scripts/build.sh --release --package` | 在没有 Developer ID 证书的机器上失败 | 由于 `set -euo pipefail`，签名查找流程会提前退出。 |
+| `DEVELOPER_ID=- bash scripts/build.sh --release --package` | 通过 | 以 ad-hoc 签名方式成功生成 DMG。 |
+| `bash scripts/build.sh --release --notarize` | 未验证 | 需要 Apple ID、应用专用密码、Team ID，以及可用于公证的签名配置。 |
 
-## Application build output
+## 应用构建产物
 
-The verified direct Xcode build command is:
+已验证的直接 Xcode 构建命令如下：
 
 ```bash
 xcodebuild \
@@ -48,191 +48,173 @@ xcodebuild \
   build
 ```
 
-The portable way to derive the app path is to inspect build settings and combine:
+可移植的 app 路径应通过查看 build settings 并组合以下值来得到：
 
 - `TARGET_BUILD_DIR`
 - `WRAPPER_NAME`
 - `FULL_PRODUCT_NAME`
 - `CONFIGURATION_BUILD_DIR`
 
-The verified build settings in this environment reported:
+在当前环境里，已验证的 build settings 为：
 
 - `TARGET_BUILD_DIR = .../Build/Products/Debug`
 - `CONFIGURATION_BUILD_DIR = .../Build/Products/Debug`
 - `WRAPPER_NAME = AcMind.app`
 - `FULL_PRODUCT_NAME = AcMind.app`
 
-A portable path expression is:
+可移植的路径表达式是：
 
 ```bash
 "$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME"
 ```
 
-For this project, Xcode and the release script both produced an unsigned app bundle successfully. The build output is valid, and the bundle exists at the derived path, but this checkpoint did not perform an interactive GUI launch test.
+对于这个项目，Xcode 和 release script 都成功产出了未签名的 app bundle。构建产物是有效的，bundle 也存在于推导出的路径上，但这个检查点没有执行交互式 GUI 启动测试。
 
-The helper installation is part of the verified build path. The app build includes a helper target and a script phase that places the helper binary at:
+helper 安装是已验证构建路径的一部分。应用构建会包含一个 helper target，以及一个脚本阶段，把 helper 二进制放到：
 
 ```text
 Contents/Library/LaunchServices/com.acmind.systemstatus.helper
 ```
 
-## Test status
+## 测试状态
 
-| Suite | Status | Classification | CI treatment |
+| 套件 | 状态 | 分类 | CI 处理 |
 |---|---|---|---|
-| Swift package resolution | Passing | Stable | Required |
-| Swift package build | Passing | Stable | Required |
-| Core non-UI test suites | Passing | Stable | Required |
-| `AcMindKitTests` known-failure suites | Mixed | Pending analysis | Keep the full suite blocking until the failures are fixed |
+| Swift package 解析 | 通过 | 稳定 | 必需 |
+| Swift package 构建 | 通过 | 稳定 | 必需 |
+| 核心非 UI 测试套件 | 通过 | 稳定 | 必需 |
+| `AcMindKitTests` 已知失败套件 | 混合 | 待分析 | 在失败修复前，保持整个 suite 处于阻断状态 |
 
-## Known failures
+## 已知失败
 
-The full test target `AcMindKitTests` has 624 executed tests and 63 failed assertions. Those 63 failures are spread across 9 test suites and 39 failing test methods. They are not all attributable to `ToolWorkspaceStateTests`.
+完整的 `AcMindKitTests` 目标共有 624 个已执行测试和 63 个失败断言。这 63 个失败分布在 9 个 test suite 和 39 个失败的 test method 中，并不全都来自 `ToolWorkspaceStateTests`。
 
-Suite-level breakdown:
+套件级别分布如下：
 
-| Test target | Test suite | Failing test methods | Failed assertions | Classification |
+| Test target | Test suite | 失败方法数 | 失败断言数 | 分类 |
 |---|---|---:|---:|---|
-| `AcMindKitTests` | `SystemStatusCleanupTests` | 21 | 36 | A, stale snapshot / expectation drift |
-| `AcMindKitTests` | `ToolWorkspaceStateTests` | 10 | 18 | A, stale snapshot / expectation drift |
-| `AcMindKitTests` | `MusicNowPlayingParserTests` | 1 | 2 | A, expectation drift |
-| `AcMindKitTests` | `MusicSurfacePolishTests` | 2 | 2 | A, expectation drift |
-| `AcMindKitTests` | `AppNotificationServiceTests` | 1 | 1 | A, expectation drift |
-| `AcMindKitTests` | `ScreenshotProcessingTests` | 1 | 1 | A, expectation drift |
-| `AcMindKitTests` | `SettingsMigrationServiceTests` | 1 | 1 | A, expectation drift |
-| `AcMindKitTests` | `SettingsPluginCopyTests` | 1 | 1 | A, expectation drift |
-| `AcMindKitTests` | `SystemHardwareAccessTests` | 1 | 1 | A, expectation drift |
+| `AcMindKitTests` | `SystemStatusCleanupTests` | 21 | 36 | A，过时的截图 / 期望漂移 |
+| `AcMindKitTests` | `ToolWorkspaceStateTests` | 10 | 18 | A，过时的截图 / 期望漂移 |
+| `AcMindKitTests` | `MusicNowPlayingParserTests` | 1 | 2 | A，期望漂移 |
+| `AcMindKitTests` | `MusicSurfacePolishTests` | 2 | 2 | A，期望漂移 |
+| `AcMindKitTests` | `AppNotificationServiceTests` | 1 | 1 | A，期望漂移 |
+| `AcMindKitTests` | `ScreenshotProcessingTests` | 1 | 1 | A，期望漂移 |
+| `AcMindKitTests` | `SettingsMigrationServiceTests` | 1 | 1 | A，期望漂移 |
+| `AcMindKitTests` | `SettingsPluginCopyTests` | 1 | 1 | A，期望漂移 |
+| `AcMindKitTests` | `SystemHardwareAccessTests` | 1 | 1 | A，期望漂移 |
 
-The test-method breakdown for the failing suites is:
+失败 test method 的细分如下：
 
 ### `SystemStatusCleanupTests`
 
-| Test method | Failed assertions | Classification | Evidence / suspected cause |
+| Test method | 失败断言数 | 分类 | 证据 / 可能原因 |
 |---|---:|---|---|
-| `testAgentDashboardUsesCollaborativeWorkspaceSections` | 1 | A, stale test expectation | Surface and layout strings differ from the current implementation. |
-| `testAgentDashboardUsesSharedCardSurfaces` | 2 | A, stale test expectation | The expected card-surface strings no longer match current source. |
-| `testAgentPageCenterCardUsesRemainingHeight` | 1 | A, stale test expectation | Snapshot expectation is older than the current page layout. |
-| `testAgentPageRightColumnIsMoreCompact` | 2 | A, stale test expectation | The expected compact-column strings no longer match current source. |
-| `testClipboardViewUsesSharedBackdropAndSidebarCards` | 1 | A, stale test expectation | Backdrop and sidebar surface strings have changed. |
-| `testCompanionVoicePanelSupportsEditableDraftAndStageFlow` | 1 | A, stale test expectation | Voice-panel wording / stage flow snapshot is stale. |
-| `testContentViewUsesSharedSidebarView` | 1 | A, stale test expectation | Sidebar view expectations no longer match the current implementation. |
-| `testLightStatusStripUsesStrongerHighlightedFeedback` | 2 | A, stale test expectation | Highlighted-feedback strings have diverged. |
-| `testMainContentRoutesHomeToTheWorkspaceDashboard` | 1 | A, stale test expectation | Current routing strings no longer match the test fixture. |
-| `testMainWindowPrunesPlaceholderAcMindWindows` | 2 | A, stale test expectation | Placeholder-window pruning output differs from the snapshot. |
-| `testNotchAgentPageUsesComposerStyleQuickAsk` | 4 | A, stale test expectation | Several composer / quick-ask strings are outdated. |
-| `testNotchCardsUseSofterPanelShadowAndFill` | 4 | A, stale test expectation | Panel shadow / fill expectations are outdated. |
-| `testNotchOverviewUsesAdaptiveActionTiles` | 1 | A, stale test expectation | Adaptive-action-tile strings have drifted. |
-| `testNotchTopBarUsesUnifiedStatusPills` | 1 | A, stale test expectation | Top-bar pill strings are stale. |
-| `testScheduleDashboardUsesSharedCardShells` | 1 | A, stale test expectation | Card-shell strings differ from current source. |
-| `testSettingsViewUsesSharedWorkspaceComponents` | 3 | A, stale test expectation | Multiple workspace-component strings are outdated. |
-| `testStatusPillSupportsSelectedFeedback` | 2 | A, stale test expectation | Selected-feedback strings have drifted. |
-| `testSystemStatusPageUsesSixCoreTilesAndNarrowRails` | 2 | A, stale test expectation | Tile / rail strings no longer match current source. |
-| `testSystemStatusViewDoesNotUseSystemStatusSingleton` | 2 | A, stale test expectation | Singleton-usage expectations are outdated. |
-| `testTopBarStatusButtonPrefersSystemStatusPage` | 1 | A, stale test expectation | Status-button routing text no longer matches the snapshot. |
-| `testWorkspaceSharedComponentsUseSharedBackdropAndCardSurfaces` | 1 | A, stale test expectation | Shared surface strings are stale. |
+| `testAgentDashboardUsesCollaborativeWorkspaceSections` | 1 | A，过时的测试期望 | 表面和布局字符串与当前实现不同。 |
+| `testAgentDashboardUsesSharedCardSurfaces` | 2 | A，过时的测试期望 | 期望的 card-surface 字符串已不再匹配当前源码。 |
+| `testAgentPageCenterCardUsesRemainingHeight` | 1 | A，过时的测试期望 | 截图期望比当前页面布局更旧。 |
+| `testAgentPageRightColumnIsMoreCompact` | 2 | A，过时的测试期望 | 期望的紧凑列字符串与当前源码不同。 |
+| `testClipboardViewUsesSharedBackdropAndSidebarCards` | 1 | A，过时的测试期望 | 背景层和侧边栏 surface 字符串已变化。 |
+| `testCompanionVoicePanelSupportsEditableDraftAndStageFlow` | 1 | A，过时的测试期望 | 语音面板文案 / stage flow 截图已经过时。 |
+| `testContentViewUsesSharedSidebarView` | 1 | A，过时的测试期望 | 侧边栏视图期望已不再匹配当前实现。 |
+| `testLightStatusStripUsesStrongerHighlightedFeedback` | 2 | A，过时的测试期望 | 高亮反馈字符串已漂移。 |
+| `testMainContentRoutesHomeToTheWorkspaceDashboard` | 1 | A，过时的测试期望 | 当前路由字符串与测试夹具不再一致。 |
+| `testMainWindowPrunesPlaceholderAcMindWindows` | 2 | A，过时的测试期望 | 占位窗口清理输出与快照不同。 |
+| `testNotchAgentPageUsesComposerStyleQuickAsk` | 4 | A，过时的测试期望 | 多个 composer / quick-ask 字符串已经过时。 |
+| `testNotchCardsUseSofterPanelShadowAndFill` | 4 | A，过时的测试期望 | 面板阴影 / 填充期望已经过时。 |
+| `testNotchOverviewUsesAdaptiveActionTiles` | 1 | A，过时的测试期望 | 自适应 action tile 字符串已经漂移。 |
+| `testNotchTopBarUsesUnifiedStatusPills` | 1 | A，过时的测试期望 | 顶栏 pill 字符串已过时。 |
+| `testScheduleDashboardUsesSharedCardShells` | 1 | A，过时的测试期望 | card-shell 字符串与当前源码不同。 |
+| `testSettingsViewUsesSharedWorkspaceComponents` | 3 | A，过时的测试期望 | 多个 workspace component 字符串已过时。 |
+| `testStatusPillSupportsSelectedFeedback` | 2 | A，过时的测试期望 | 选中反馈字符串已漂移。 |
+| `testSystemStatusPageUsesSixCoreTilesAndNarrowRails` | 2 | A，过时的测试期望 | tile / rail 字符串与当前源码不一致。 |
+| `testSystemStatusViewDoesNotUseSystemStatusSingleton` | 2 | A，过时的测试期望 | 单例使用期望已过时。 |
+| `testTopBarStatusButtonPrefersSystemStatusPage` | 1 | A，过时的测试期望 | 状态按钮路由文本与快照不同。 |
+| `testWorkspaceSharedComponentsUseSharedBackdropAndCardSurfaces` | 1 | A，过时的测试期望 | 共享 surface 字符串已过时。 |
 
 ### `ToolWorkspaceStateTests`
 
-| Test method | Failed assertions | Classification | Evidence / suspected cause |
+| Test method | 失败断言数 | 分类 | 证据 / 可能原因 |
 |---|---:|---|---|
-| `testAdvancedToolPanelsUseSharedBackdropAndCards` | 1 | A, stale test expectation | The test expects `AppVisualBackdrop()`, but current source uses `AppSurfaceBackdrop()`. |
-| `testCompletionToolPanelsUseSharedBackdropAndCards` | 2 | A, stale test expectation | The test expects `AppVisualBackdrop()` and `WorkspacePageShell(`, but current source no longer matches those strings. |
-| `testCoreToolPanelsUseSharedBackdropAndCards` | 1 | A, stale test expectation | The test expects `AppVisualBackdrop()`, but current source uses `AppSurfaceBackdrop()`. |
-| `testHomeAndSettingsUseSharedBackdropSurfaces` | 1 | A, stale test expectation | The test expects older home/settings backdrop wiring. |
-| `testModelManagementPanelUsesDetailSurfaceCards` | 1 | A, stale test expectation | The test expects `WorkspacePageShell(`, but current source no longer contains that shell string. |
-| `testSystemStatusViewKeepsBackdropVisible` | 2 | A, stale test expectation | The test expects `WorkspacePageShell(`, but the current source no longer contains that shell string. |
-| `testToolsViewSurfacesTheThreeStageWorkflow` | 2 | A, stale test expectation | The test still looks for `工具工作流` and `ToolStageHeader`, but `Features/Native/Tools/ToolsView.swift` now uses `AcWorkShell` and `ToolWorkspaceStageRail`. |
-| `testToolsViewUsesSharedBackdropAndCardSurfaces` | 6 | A, stale test expectation | The test expects `AppVisualBackdrop()`, but the current source uses `AppSurfaceBackdrop()` and `AcSection` / `AppSurfaceCard` combinations. |
-| `testWebDigestPanelUsesSharedSurfaceCards` | 1 | A, stale test expectation | The test expects `AppVisualBackdrop()`, but `Features/Native/Tools/WebDigestPanel.swift` now uses `AppSurfaceBackdrop()`. |
-| `testWorkbenchViewShowsProjectNoteArchiveWorkflow` | 1 | A, stale test expectation | The test expects `AppVisualBackdrop()`, but `Features/Native/Workbench/WorkbenchView.swift` now uses `AppSurfaceBackdrop()`. |
+| `testAdvancedToolPanelsUseSharedBackdropAndCards` | 1 | A，过时的测试期望 | 测试期待 `AppVisualBackdrop()`，但当前源码使用的是 `AppSurfaceBackdrop()`。 |
+| `testCompletionToolPanelsUseSharedBackdropAndCards` | 2 | A，过时的测试期望 | 测试期待 `AppVisualBackdrop()` 和 `WorkspacePageShell(`，但当前源码已不再匹配这些字符串。 |
+| `testCoreToolPanelsUseSharedBackdropAndCards` | 1 | A，过时的测试期望 | 测试期待 `AppVisualBackdrop()`，但当前源码使用的是 `AppSurfaceBackdrop()`。 |
+| `testHomeAndSettingsUseSharedBackdropSurfaces` | 1 | A，过时的测试期望 | 测试期待的是旧版 home/settings 背景层连接方式。 |
+| `testModelManagementPanelUsesDetailSurfaceCards` | 1 | A，过时的测试期望 | 测试期待 `WorkspacePageShell(`，但当前源码中已经没有这个 shell 字符串。 |
+| `testSystemStatusViewKeepsBackdropVisible` | 2 | A，过时的测试期望 | 测试期待 `WorkspacePageShell(`，但当前源码中没有这个 shell 字符串。 |
+| `testToolsViewSurfacesTheThreeStageWorkflow` | 2 | A，过时的测试期望 | 测试仍在找 `工具工作流` 和 `ToolStageHeader`，但 `Features/Native/Tools/ToolsView.swift` 现在使用的是 `AcWorkShell` 和 `ToolWorkspaceStageRail`。 |
+| `testToolsViewUsesSharedBackdropAndCardSurfaces` | 6 | A，过时的测试期望 | 测试期待 `AppVisualBackdrop()`，但当前源码使用的是 `AppSurfaceBackdrop()` 和 `AcSection` / `AppSurfaceCard` 的组合。 |
+| `testWebDigestPanelUsesSharedSurfaceCards` | 1 | A，过时的测试期望 | 测试期待 `AppVisualBackdrop()`，但 `Features/Native/Tools/WebDigestPanel.swift` 现在使用的是 `AppSurfaceBackdrop()`。 |
+| `testWorkbenchViewShowsProjectNoteArchiveWorkflow` | 1 | A，过时的测试期望 | 测试期待 `AppVisualBackdrop()`，但 `Features/Native/Workbench/WorkbenchView.swift` 现在使用的是 `AppSurfaceBackdrop()`。 |
 
-### Other failing suites
+### 其他失败的 suite
 
-| Test method | Failed assertions | Classification | Evidence / suspected cause |
+| Test method | 失败断言数 | 分类 | 证据 / 可能原因 |
 |---|---:|---|---|
-| `MusicNowPlayingParserTests.testMusicPageEmptyStateDoesNotPresentAcMindAsPlaybackSource` | 2 | A, expectation drift | Empty-state copy / playback-source wording changed. |
-| `MusicSurfacePolishTests.testMusicPageQueueEmptyStateUsesSharedContextText` | 1 | A, expectation drift | Shared context text has drifted. |
-| `MusicSurfacePolishTests.testMusicPageUsesThreeColumnWorkspace` | 1 | A, expectation drift | Workspace layout text has drifted. |
-| `AppNotificationServiceTests.testPlanPrefersInlineToastWhenAcMindIsFrontmostEvenIfDenied` | 1 | A, expectation drift | The expectation still prefers `inlineToast`, but the current implementation returns `appleScriptFallback`. |
-| `ScreenshotProcessingTests.testScreenshotPostProcessorResizesAndRoundsCorners` | 1 | A, expectation drift | The expected rounded-corner pixel value no longer matches the current processor output. |
-| `SettingsMigrationServiceTests.testRunIfNeededMigratesLegacyPreferencesHotkeysAndVoiceSettings` | 1 | A, expectation drift | The legacy-migration expectation for the voice setting no longer matches current behavior. |
-| `SettingsPluginCopyTests.testSettingsViewContainsPluginOverviewCard` | 1 | A, expectation drift | The plugin-overview card string is stale. |
-| `SystemHardwareAccessTests.testHelperTransportWinsWhenAvailable` | 1 | A, expectation drift | The helper-transport preference expectation no longer matches the current transport selection. |
+| `MusicNowPlayingParserTests.testMusicPageEmptyStateDoesNotPresentAcMindAsPlaybackSource` | 2 | A，期望漂移 | 空状态文案 / 播放源表述已经变化。 |
+| `MusicSurfacePolishTests.testMusicPageQueueEmptyStateUsesSharedContextText` | 1 | A，期望漂移 | 共享上下文文案已漂移。 |
+| `MusicSurfacePolishTests.testMusicPageUsesThreeColumnWorkspace` | 1 | A，期望漂移 | 工作区布局文案已漂移。 |
+| `AppNotificationServiceTests.testPlanPrefersInlineToastWhenAcMindIsFrontmostEvenIfDenied` | 1 | A，期望漂移 | 测试仍然偏向 `inlineToast`，但当前实现返回的是 `appleScriptFallback`。 |
+| `ScreenshotProcessingTests.testScreenshotPostProcessorResizesAndRoundsCorners` | 1 | A，期望漂移 | 预期的圆角像素值已不再匹配当前处理器输出。 |
+| `SettingsMigrationServiceTests.testRunIfNeededMigratesLegacyPreferencesHotkeysAndVoiceSettings` | 1 | A，期望漂移 | 对旧偏好迁移中语音设置的期望已不匹配当前行为。 |
+| `SettingsPluginCopyTests.testSettingsViewContainsPluginOverviewCard` | 1 | A，期望漂移 | 插件概览卡片字符串已过时。 |
+| `SystemHardwareAccessTests.testHelperTransportWinsWhenAvailable` | 1 | A，期望漂移 | helper transport 优先级期望已不再匹配当前 transport 选择。 |
 
-The failures are reproducible on every run captured in this checkpoint:
+这些失败在当前 checkpoint 中的每次运行都会稳定复现：
 
-- Run 1, full `swift test`: 624 tests, 63 failures
-- Run 2, `swift test --filter ToolWorkspaceStateTests`: 12 tests, 18 failures
-- Run 3, `swift test --filter ToolWorkspaceStateTests`: 12 tests, 18 failures
-- Run 4, clean-clone `swift test`: 624 tests, 63 failures
+- 第 1 次运行，完整 `swift test`：624 个测试，63 个失败
+- 第 2 次运行，`swift test --filter ToolWorkspaceStateTests`：12 个测试，18 个失败
+- 第 3 次运行，`swift test --filter ToolWorkspaceStateTests`：12 个测试，18 个失败
+- 第 4 次运行，干净克隆环境下的 `swift test`：624 个测试，63 个失败
 
-The 63 failures are 63 failed assertions, not 63 distinct failing test methods. The full run has 39 failing test methods across 9 suites, and the 18 `ToolWorkspaceStateTests` failures are only part of the total.
+这 63 个失败是 63 个失败断言，不是 63 个独立失败的 test method。完整运行里有 39 个失败的 test method，分布在 9 个 suite 中，而 `ToolWorkspaceStateTests` 里的 18 个失败只是一部分。
 
-## Repeatability results
+## 可重复性结果
 
-- The same 39 failing test methods appear every time.
-- The actual result is consistently `false` for the failing `contains(...)` assertions.
-- The failure set does not appear order-dependent.
-- Running the suite individually does not make the failures disappear.
-- The failures do not look timing-sensitive.
+- 同样的 39 个失败 test method 每次都会出现。
+- 实际结果对这些 `contains(...)` 断言来说都稳定为 `false`。
+- 失败集合看起来不依赖执行顺序。
+- 单独运行某个 suite 并不会让失败消失。
+- 这些失败不像是时序敏感问题。
 
-## CI policy recommendation
+## CI 策略建议
 
-Recommended temporary policy: keep the full `swift test` run blocking and let GitHub Actions stay red until the documented baseline is fixed.
+建议的临时策略是：让完整 `swift test` 继续阻断，并保持 GitHub Actions 处于红色，直到文档化的基线被修复。
 
-This policy is the most honest because 63 failed assertions remain across 9 suites. It also avoids pretending that `ToolWorkspaceStateTests` is the only open issue.
+这个策略最诚实，因为当前还有 63 个失败断言分布在 9 个 suite 中。它也避免了假装只有 `ToolWorkspaceStateTests` 一个未解决问题。
 
-The CI policy should not:
+CI 策略不应：
 
-- swallow exit codes;
-- use `swift test || true`;
-- disable the entire test target;
-- delete assertions;
-- exclude all UI or layout tests;
-- treat the baseline as green while the documented failures still exist.
+- 吞掉退出码；
+- 使用 `swift test || true`；
+- 禁用整个 test target；
+- 删除断言；
+- 排除所有 UI 或布局测试；
+- 在文档化失败仍然存在时，把基线当成绿色。
 
-## Build script validation
+## 构建脚本验证
 
-Verified:
+已验证：
 
 - `bash scripts/build.sh`
 - `bash scripts/build.sh --release`
-- `bash scripts/build.sh --release --package` with `DEVELOPER_ID=-`
+- `bash scripts/build.sh --release --package`（使用 `DEVELOPER_ID=-`）
 - `bash scripts/build.sh --clean`
 
-Not yet verified:
+尚未验证：
 
 - `bash scripts/build.sh --release --notarize`
 
-Important behavior note:
+重要行为说明：
 
-- `bash scripts/build.sh --release --package` currently fails on a machine without a Developer ID certificate because the signing lookup pipeline exits early under `set -euo pipefail`.
-- Supplying `DEVELOPER_ID=-` makes the same mode complete with ad-hoc signing and DMG generation.
+- `bash scripts/build.sh --release --package` 在没有 Developer ID 证书的机器上会失败，因为 `set -euo pipefail` 会让签名查找流程提前退出。
+- 传入 `DEVELOPER_ID=-` 后，同一个模式可以通过 ad-hoc 签名和 DMG 生成完成。
 
-## Issue drafts
+## issue 草稿
 
-These items remain open and should be tracked explicitly if they are not fixed in this checkpoint:
+如果这些项没有在本 checkpoint 中修复，就应明确跟踪它们：
 
-1. Known-failure suite baseline reconciliation
-   - Reproduction: run `swift test`
-   - Actual: 624 tests, 63 failures
-   - Expected: the full failure map in this document should remain accurate and attributable
-   - Classification: stale test expectations across multiple suites
-   - Acceptance: refresh or replace the snapshots only after a current source of truth is confirmed
-   - Relevant files: `AcMindKitTests/AppNotificationServiceTests.swift`, `AcMindKitTests/MusicNowPlayingParserTests.swift`, `AcMindKitTests/MusicSurfacePolishTests.swift`, `AcMindKitTests/ScreenshotProcessingTests.swift`, `AcMindKitTests/SettingsMigrationServiceTests.swift`, `AcMindKitTests/SettingsPluginCopyTests.swift`, `AcMindKitTests/SystemHardwareAccessTests.swift`, `AcMindKitTests/SystemStatusCleanupTests.swift`, `AcMindKitTests/ToolWorkspaceStateTests.swift`
-
-2. Supported macOS and architecture matrix
-   - Reproduction: run the verified build commands on a non-arm64 host or different macOS version
-   - Actual: this checkpoint only validated macOS 26.5.1 on arm64
-   - Expected: documented minimums and supported host architectures
-   - Classification: incomplete documentation
-   - Acceptance: README and community docs should list the supported matrix and any unsupported combinations
-   - Relevant files: `README.md`, `README.zh-CN.md`, `docs/testing-and-build-baseline.md`
-
-3. Helper installation and signing behavior
-   - Reproduction: run `bash scripts/build.sh --release --package` on a machine without a Developer ID cert
-   - Actual: the script aborts during signing lookup unless `DEVELOPER_ID=-` is supplied
-   - Expected: documented credential requirements and a predictable failure mode
-   - Classification: incomplete scripting and documentation contract
-   - Acceptance: the script should either handle missing certificates gracefully or document the requirement clearly
-   - Relevant files: `scripts/build.sh`, `AcMind.xcodeproj/project.pbxproj`, `Config/Entitlements/*.entitlements`
+1. 已知失败 suite 基线对齐
+   - 复现：运行 `swift test`
+   - 实际：624 个测试，63 个失败
+   - 期望：本文中的完整失败清单应保持准确且可归因
+   - 分类：多个 suite 上的过时测试期望

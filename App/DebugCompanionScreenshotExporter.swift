@@ -15,7 +15,7 @@ enum DebugCompanionScreenshotExporter {
             .init(page: .overview, fileName: "companion-local-880x300.png", title: "本机"),
             .init(page: .launcher, fileName: "companion-launcher-880x300.png", title: "启动器"),
             .init(page: .music, fileName: "companion-music-880x300.png", title: "音乐"),
-            .init(page: .agent, fileName: "companion-ai-880x300.png", title: "AI"),
+            .init(page: .agent, fileName: "companion-ai-880x300.png", title: "智能体"),
             .init(page: .systemStatus, fileName: "companion-status-880x300.png", title: "状态"),
             .init(page: .settings, fileName: "companion-settings-880x300.png", title: "设置")
         ]

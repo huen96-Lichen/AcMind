@@ -620,7 +620,7 @@ public final class CaptureService: CaptureServiceProtocol, @unchecked Sendable {
         await MainActor.run {
             let alert = NSAlert()
             alert.messageText = "需要屏幕录制权限"
-            alert.informativeText = "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcMind 权限"
+            alert.informativeText = "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 \(AcWorkBrand.displayName) 权限"
             alert.addButton(withTitle: "打开设置")
             alert.addButton(withTitle: "取消")
             
@@ -686,7 +686,7 @@ public enum CaptureError: Error, LocalizedError {
     public var recoverySuggestion: String? {
         switch self {
         case .permissionDenied:
-            return "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 AcMind 权限"
+            return "请前往系统设置 > 隐私与安全性 > 屏幕录制，授予 \(AcWorkBrand.displayName) 权限"
         case .captureFailed:
             return "请重试或尝试其他截图模式"
         case .downloadFailed:

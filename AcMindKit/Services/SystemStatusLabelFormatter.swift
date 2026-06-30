@@ -78,7 +78,7 @@ public enum SystemStatusLabelFormatter {
     }
 
     public static func permissionOverviewSummary(_ permissions: [SystemPermissionSnapshot]) -> String {
-        guard permissions.isEmpty == false else { return "暂无权限项" }
+        guard permissions.isEmpty == false else { return "无权限项" }
 
         let authorizedCount = permissions.filter { permissionStateLabel(for: $0) == "已授权" }.count
         let unknownCount = permissions.filter { permissionStateLabel(for: $0) == "未知" }.count

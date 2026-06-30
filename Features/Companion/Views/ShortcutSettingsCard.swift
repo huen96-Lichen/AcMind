@@ -18,7 +18,7 @@ struct ShortcutSettingsCard: View {
             toggleEnabled: $isEnabled
         ) {
             VStack(alignment: .leading, spacing: 0) {
-                // Shortcut List
+                // 快捷键列表
                 ForEach(shortcuts) { shortcut in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -42,7 +42,7 @@ struct ShortcutSettingsCard: View {
                     }
                     .padding(.vertical, 8)
                     
-                    // Divider (except last)
+                    // 分隔线（最后一项除外）
                     if shortcuts.last?.id != shortcut.id {
                         Divider()
                     }

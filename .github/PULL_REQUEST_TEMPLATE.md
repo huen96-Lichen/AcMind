@@ -1,29 +1,29 @@
-# Pull Request
+# 提交请求
 
-## Summary
+## 概要
 
-Describe the change and the user impact.
+简述这次变更，以及对用户的影响。
 
-## Validation
+## 验证
 
 - [ ] `swift package resolve`
 - [ ] `swift build`
 - [ ] `swift test`
-- [ ] Xcode app build with signing disabled, when relevant
+- [ ] 如适用，执行关闭签名的 Xcode 应用构建
 
-## Documentation
+## 文档
 
-- [ ] README updated, if needed
-- [ ] `docs/testing-and-build-baseline.md` updated, if needed
-- [ ] Permissions or privacy documentation updated, if needed
-- [ ] Screenshots or visual notes updated, if needed
+- [ ] 如需要，更新 README
+- [ ] 如需要，更新 `docs/testing-and-build-baseline.md`
+- [ ] 如需要，更新权限或隐私相关文档
+- [ ] 如需要，更新截图或视觉说明
 
-## Safety and data handling
+## 安全与数据处理
 
-- [ ] No credentials, tokens, or private data were added
-- [ ] No machine-specific absolute paths were added
-- [ ] Privacy or permission changes were reviewed
+- [ ] 未引入凭据、令牌或隐私数据
+- [ ] 未引入机器专属的绝对路径
+- [ ] 已审查隐私或权限变更
 
-## Notes
+## 备注
 
-Call out any known failures, follow-ups, or release impacts here.
+在这里说明已知失败项、后续事项或发布影响。

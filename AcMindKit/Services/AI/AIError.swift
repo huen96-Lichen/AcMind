@@ -26,7 +26,7 @@ public enum AIError: Error, LocalizedError {
         case .noProvider:
             return "未配置 AI Provider"
         case .providerNotFound(let id):
-            return "Provider 未找到: \(id)"
+            return "未找到 Provider: \(id)"
         case .requestFailed(let message):
             return "请求失败: \(message)"
         case .rateLimited:
@@ -34,7 +34,7 @@ public enum AIError: Error, LocalizedError {
         case .timeout:
             return "请求超时"
         case .modelNotFound(let model):
-            return "模型未找到: \(model)"
+            return "未找到模型: \(model)"
         case .contextTooLong:
             return "上下文长度超限"
         case .contentFiltered(let reason):

@@ -7,20 +7,34 @@
     <key>CFBundleExecutable</key>
     <string>AcMind</string>
     <key>CFBundleIdentifier</key>
-    <string>com.acore.acmind</string>
+    <string>com.acmind.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
     <string>AcWork</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
     <key>CFBundleVersion</key>
     <string>7</string>
     <key>CFBundleShortVersionString</key>
     <string>0.0.7</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSUserNotificationAlertStyle</key>
+    <string>alert</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2024 AcWork. All rights reserved.</string>
-    
+
+    <!-- Apple Events 权限 -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>AcWork 需要与系统和其他应用协作，以完成自动化和快捷操作。</string>
+
+    <!-- 摄像头权限 -->
+    <key>NSCameraUsageDescription</key>
+    <string>AcWork 可能需要使用摄像头进行图像输入。</string>
+
     <!-- 语音识别权限 -->
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>AcWork 需要使用语音识别功能来进行语音转文字，以便您可以通过语音输入快速记录想法和笔记。</string>

@@ -9,7 +9,7 @@ enum WorkbenchV2Metrics {
     static let titleBarHeight: CGFloat = 32
     static let minimumWindowWidth: CGFloat = 1180
     static let minimumWindowHeight: CGFloat = 720
-    static let sidebarWidth: CGFloat = 216
+    static let sidebarWidth: CGFloat = AppSurfaceTokens.Layout.sidebarWidth
     static let separatorWidth: CGFloat = 1
 }
 
@@ -22,38 +22,42 @@ enum WorkbenchV2Routing {
 }
 
 enum WorkbenchV2Tokens {
+    // 所有有独立表面的容器，共享同一圆角、间距和外层内边距尺度。
+    static let containerGeometry: CGFloat = 12
+
     enum Layout {
         static let sidebarWidth: CGFloat = WorkbenchV2Metrics.sidebarWidth
         static let separatorWidth: CGFloat = WorkbenchV2Metrics.separatorWidth
-        // 16pt leaves a visible 12pt rhythm after the soft card shadows overlap the gutter.
         static let containerGap: CGFloat = 16
         static let pagePaddingTop: CGFloat = containerGap
-        static let pagePaddingLeading: CGFloat = 24
+        static let pagePaddingLeading: CGFloat = containerGap
         static let pagePaddingBottom: CGFloat = containerGap
-        static let pagePaddingTrailing: CGFloat = 24
+        static let pagePaddingTrailing: CGFloat = containerGap
         static let contentWidth: CGFloat = 1235
         static let headerHeight: CGFloat = 48
         static let headerBottomGap: CGFloat = containerGap
         static let dashboardColumnGap: CGFloat = containerGap
         static let dashboardRowGap: CGFloat = containerGap
-        static let footerHeight: CGFloat = 56
-        static let compactContentPadding: CGFloat = 16
-        static let compactRightColumnWidth: CGFloat = 252
+        static let footerHeight: CGFloat = 64
+        static let compactContentPadding: CGFloat = containerGap
+        static let compactRightColumnWidth: CGFloat = 292
         static let compactColumnGap: CGFloat = containerGap
-        static let compactInnerPadding: CGFloat = 16
-        static let compactBodyHeight: CGFloat = 520
-        static let compactFooterHeight: CGFloat = 52
+        static let compactInnerPadding: CGFloat = containerGap
+        static let compactBodyHeight: CGFloat = 568
+        static let compactFooterHeight: CGFloat = 48
         static let compactHeaderHeight: CGFloat = 44
-        static let heroHeight: CGFloat = 232
-        static let secondaryCardHeight: CGFloat = 196
-        static let trendHeight: CGFloat = 170
-        static let compactHeroHeight: CGFloat = 204
-        static let compactSecondaryCardHeight: CGFloat = 196
+        static let heroHeight: CGFloat = 280
+        static let secondaryCardHeight: CGFloat = 200
+        static let trendHeight: CGFloat = 200
+        static let compactHeroHeight: CGFloat = 220
+        static let compactSecondaryCardHeight: CGFloat = 142
         static let compactTrendHeight: CGFloat = 128
-        static let todayOverviewHeight: CGFloat = 480
-        static let quickActionsHeight: CGFloat = 210
-        static let compactTodayOverviewHeight: CGFloat = 366
-        static let compactQuickActionsHeight: CGFloat = 188
+        static let rightColumnWidth: CGFloat = 320
+        static let todayOverviewHeight: CGFloat = 512
+        static let quickActionsHeight: CGFloat = 240
+        static let compactTodayOverviewHeight: CGFloat = 410
+        static let compactQuickActionsHeight: CGFloat = 228
+        static let compactQuickActionTileHeight: CGFloat = 64
         static let heroButtonHeight: CGFloat = 26
         static let heroPrimaryActionHeight: CGFloat = 34
         static let heroSecondaryActionHeight: CGFloat = 34
@@ -62,9 +66,9 @@ enum WorkbenchV2Tokens {
         static let overviewTileHeight: CGFloat = 66
         static let overviewToggleHeight: CGFloat = 46
         static let overviewStatusHeight: CGFloat = 56
-        static let quickActionTileHeight: CGFloat = 46
-        static let quickActionGridSpacing: CGFloat = 10
-        static let overviewTileSpacing: CGFloat = 8
+        static let quickActionTileHeight: CGFloat = 78
+        static let quickActionGridSpacing: CGFloat = containerGap
+        static let overviewTileSpacing: CGFloat = containerGap
         static let deviceStatusDotSize: CGFloat = 7
         static let deviceStatusDividerHeight: CGFloat = 22
         static let deviceStatusDetailsButtonHeight: CGFloat = 28
@@ -81,10 +85,10 @@ enum WorkbenchV2Tokens {
     }
 
     enum Radius {
-        static let panel: CGFloat = 16
-        static let card: CGFloat = 16
-        static let chip: CGFloat = 12
-        static let small: CGFloat = 12
+        static let panel: CGFloat = WorkbenchV2Tokens.containerGeometry
+        static let card: CGFloat = WorkbenchV2Tokens.containerGeometry
+        static let chip: CGFloat = WorkbenchV2Tokens.containerGeometry
+        static let small: CGFloat = WorkbenchV2Tokens.containerGeometry
         static let control: CGFloat = 10
     }
 
@@ -103,8 +107,8 @@ enum WorkbenchV2Tokens {
     enum Color {
         static let background = SwiftUI.Color(nsColor: .windowBackgroundColor)
         static let surface = SwiftUI.Color(nsColor: .controlBackgroundColor)
-        static let surfaceSoft = SwiftUI.Color(nsColor: .underPageBackgroundColor)
-        static let surfaceStrong = SwiftUI.Color(nsColor: .textBackgroundColor)
+        static let surfaceSoft = SwiftUI.Color(nsColor: .textBackgroundColor)
+        static let surfaceStrong = SwiftUI.Color(nsColor: .underPageBackgroundColor)
         static let separator = SwiftUI.Color(nsColor: .separatorColor)
         static let textPrimary = SwiftUI.Color(nsColor: .labelColor)
         static let textSecondary = SwiftUI.Color(nsColor: .secondaryLabelColor)
@@ -136,10 +140,10 @@ enum WorkbenchV2Tokens {
     }
 
     enum Shadow {
-        static let radius: CGFloat = 0
+        static let radius: CGFloat = 8
         static let x: CGFloat = 0
-        static let y: CGFloat = 0
-        static let opacity: Double = 0.0
+        static let y: CGFloat = 3
+        static let opacity: Double = 0.10
     }
 }
 

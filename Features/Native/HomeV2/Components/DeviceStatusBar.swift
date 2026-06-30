@@ -30,7 +30,7 @@ struct DeviceStatusBar: View {
             }
             .buttonStyle(WorkbenchV2DeviceDetailsButtonStyle())
         }
-        .padding(.horizontal, WorkbenchV2Tokens.Spacing.lg)
+        .padding(.horizontal, WorkbenchV2Tokens.Layout.containerGap)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .background(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
@@ -38,7 +38,7 @@ struct DeviceStatusBar: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.card, style: .continuous)
-                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.34), lineWidth: WorkbenchV2Tokens.Border.width)
+                .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.26), lineWidth: WorkbenchV2Tokens.Border.width)
         )
         .shadow(
             color: Color.black.opacity(WorkbenchV2Tokens.Shadow.opacity),
@@ -50,9 +50,7 @@ struct DeviceStatusBar: View {
 
     private var visibleItems: [WorkbenchV2DashboardData.DeviceStatusItem] {
         if layout.mode == .compact {
-            return model.items.filter { item in
-                ["CPU", "内存", "电源", "权限"].contains(item.title)
-            }
+            return Array(model.items.prefix(4))
         }
 
         return model.items
@@ -98,11 +96,11 @@ private struct WorkbenchV2DeviceDetailsButtonStyle: ButtonStyle {
             .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
             .background(
                 RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.control, style: .continuous)
-                    .fill(WorkbenchV2Tokens.Color.surfaceSoft.opacity(configuration.isPressed ? 1.0 : 0.88))
+                    .fill(WorkbenchV2Tokens.Color.surfaceSoft.opacity(configuration.isPressed ? 1.0 : 0.92))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: WorkbenchV2Tokens.Radius.control, style: .continuous)
-                    .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.18), lineWidth: WorkbenchV2Tokens.Border.width)
+                    .stroke(WorkbenchV2Tokens.Color.separator.opacity(0.22), lineWidth: WorkbenchV2Tokens.Border.width)
             )
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)

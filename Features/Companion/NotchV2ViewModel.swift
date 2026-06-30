@@ -53,9 +53,9 @@ enum NotchCloseBlocker: Equatable {
     var displayName: String {
         switch self {
         case .voice:
-            return "说入法运行中"
+            return "说入法进行中"
         case .screenshot:
-            return "截图处理中"
+            return "截图进行中"
         }
     }
 }
@@ -221,9 +221,9 @@ final class NotchV2ViewModel: ObservableObject {
 
     private lazy var allQuickActions: [QuickAction] = [
         QuickAction(icon: "camera.viewfinder", title: "截图", module: nil, action: { [weak self] in self?.captureScreenshot() }),
-        QuickAction(icon: "doc.text", title: "MD", module: nil, action: { [weak self] in self?.quickMarkdown() }),
-        QuickAction(icon: "pin.fill", title: "Pin", module: .agent, action: { [weak self] in self?.showAgent() }),
-        QuickAction(icon: "waveform", title: "SRPT", module: nil, action: { [weak self] in self?.showVoicePanel() })
+        QuickAction(icon: "doc.text", title: "文档", module: nil, action: { [weak self] in self?.quickMarkdown() }),
+        QuickAction(icon: "pin.fill", title: "固定", module: .agent, action: { [weak self] in self?.showAgent() }),
+        QuickAction(icon: "waveform", title: "语音", module: nil, action: { [weak self] in self?.showVoicePanel() })
     ]
 
     var quickActions: [QuickAction] {
@@ -267,10 +267,10 @@ final class NotchV2ViewModel: ObservableObject {
 
     var overviewAgentStatusRows: [OverviewStatusRow] {
         [
-            .init(icon: status.icon, title: "Agent", value: status.displayName, accent: status.color),
+            .init(icon: status.icon, title: "智能体", value: status.displayName, accent: status.color),
             .init(icon: "cpu", title: "模型", value: activeModelLabel, accent: NotchV2DesignTokens.accentBlue),
-            .init(icon: "mic.fill", title: "说入法", value: ActivityStateLabelFormatter.activityLabel(isActive: isVoiceRecording, activeLabel: "正在收音", idleLabel: "待命"), accent: isVoiceRecording ? .red : NotchV2DesignTokens.secondaryText),
-            .init(icon: "camera.viewfinder", title: "截图", value: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "处理中", idleLabel: "待命"), accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText)
+            .init(icon: "mic.fill", title: "说入法", value: ActivityStateLabelFormatter.activityLabel(isActive: isVoiceRecording, activeLabel: "正在收音", idleLabel: "空闲"), accent: isVoiceRecording ? .red : NotchV2DesignTokens.secondaryText),
+            .init(icon: "camera.viewfinder", title: "截图", value: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "进行中", idleLabel: "空闲"), accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText)
         ]
     }
 
@@ -328,6 +328,12 @@ final class NotchV2ViewModel: ObservableObject {
         bindMusicService()
         syncSystemStatus()
         Task { await syncAIState() }
+    }
+
+    deinit {
+        voiceStateResetTask?.cancel()
+        presentationStateTransitionTask?.cancel()
+        NotificationCenter.default.removeObserver(self)
     }
 
     func toggleExpansion() {
@@ -789,7 +795,7 @@ final class NotchV2ViewModel: ObservableObject {
         ActivityStateLabelFormatter.activityLabel(
             isActive: voiceSurfaceState.isActive,
             activeLabel: voiceSurfaceState.displaySubtitle ?? "等待输入",
-            idleLabel: "待命"
+            idleLabel: "空闲"
         )
     }
 
@@ -1277,7 +1283,7 @@ final class NotchV2ViewModel: ObservableObject {
         setPresentationState(.hidden)
         systemEventCenter.publish(
             .screenshot,
-            title: "截图处理中",
+            title: "截图进行中",
             detail: "正在截取当前屏幕",
             duration: 1.6
         )
@@ -1295,7 +1301,7 @@ final class NotchV2ViewModel: ObservableObject {
 
     private func quickMarkdown() {
         NotificationCenter.default.post(name: Notification.Name("companion.quickMarkdown"), object: nil)
-        ToastManager.shared.show(.info, "打开 MD")
+        ToastManager.shared.show(.info, "打开文稿")
         requestCompact()
     }
 

@@ -765,9 +765,9 @@ public enum TextInjectionError: Error, LocalizedError {
         case .permissionDenied:
             return "需要辅助功能权限"
         case .noFocusedApplication:
-            return "没有焦点应用"
+            return "未检测到焦点应用"
         case .insertionFailed(let message):
-            return "插入失败: \(message)"
+            return "插入失败：\(message)"
         }
     }
     

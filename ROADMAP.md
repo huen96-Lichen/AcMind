@@ -1,30 +1,30 @@
-# Roadmap
+# 路线图
 
-## Current stabilization
+## 当前收口
 
-- Reconcile stale layout and snapshot tests with the current UI source of truth.
-- Keep the known-failure baseline visible and documented until those tests are updated or retired.
-- Preserve clean-clone build reproducibility.
-- Keep helper installation, code signing, and bundle layout documentation aligned with the actual build path.
+- 将过时的布局和截图测试与当前 UI 真相重新对齐。
+- 在这些测试被更新或下线之前，持续保留并文档化已知失败基线。
+- 保持干净克隆环境下的构建可复现性。
+- 让辅助程序安装、代码签名和 bundle 布局文档与实际构建路径保持一致。
 
-## Near-term
+## 近期
 
-- Improve privacy and permission onboarding for microphone, accessibility, screen recording, clipboard, and input monitoring paths.
-- Tighten the local and cloud data-flow documentation.
-- Improve the contributor experience for source-only changes, especially clean-clone validation.
-- Continue making AcMindKit easier to reuse as a standalone service layer.
+- 改进麦克风、辅助功能、屏幕录制、剪贴板和输入监控路径的隐私与权限引导。
+- 收紧本地与云端数据流文档。
+- 改善只改源码时的贡献体验，尤其是干净克隆验证。
+- 继续让 AcMindKit 更容易作为独立服务层复用。
 
-## Later exploration
+## 后续探索
 
-- Verify Intel support or document where support stops.
-- Improve helper signing and installation behavior for release packaging.
-- Revisit release packaging so it is predictable on machines without release credentials.
-- Expand public docs where the codebase needs a clearer explanation of ownership, state, and data flow.
+- 验证 Intel 支持，或者明确文档说明支持终止的位置。
+- 改进辅助程序签名和安装行为，以适配发布打包。
+- 重新审视发布打包，让没有发布凭据的机器上也更可预测。
+- 在代码库需要更清楚说明所有权、状态和数据流的地方，继续扩展公开文档。
 
-## Non-goals for the current phase
+## 当前阶段非目标
 
-- Promise dates.
-- Claim full release stability before the known failures are resolved.
-- Rewrite Git history.
-- Change application behavior just to simplify documentation.
-- Remove vendored dependencies or archival design assets without a separate review.
+- 承诺时间点。
+- 在已知失败项解决前声称已经完全达到发布稳定性。
+- 重写 Git 历史。
+- 为了简化文档而改变应用行为。
+- 未经单独审查就移除 vendored 依赖或归档设计资产。

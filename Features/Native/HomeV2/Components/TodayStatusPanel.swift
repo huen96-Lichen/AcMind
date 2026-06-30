@@ -9,7 +9,7 @@ struct TodayStatusPanel: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(model.subtitle)
                     .font(.system(size: WorkbenchV2Tokens.Typography.caption))
-                    .foregroundStyle(layout.showSecondaryCopy ? WorkbenchV2Tokens.Color.textSecondary : WorkbenchV2Tokens.Color.textTertiary)
+                    .foregroundStyle(layout.showSecondaryCopy ? WorkbenchV2Tokens.Color.textSecondary : WorkbenchV2Tokens.Color.textSecondary.opacity(0.88))
                     .lineLimit(layout.showSecondaryCopy ? 2 : 1)
 
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
@@ -47,7 +47,7 @@ struct TodayStatusPanel_Previews: PreviewProvider {
         Group {
             TodayStatusPanel(model: WorkbenchV2DashboardData.preview().todayStatus, layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220)))
             TodayStatusPanel(
-                model: .init(state: .empty, title: "今日状态", subtitle: "暂无内容", items: [], toggles: [], statusBlocks: []),
+                model: .init(state: .empty, title: "今日状态", subtitle: "数据尚未同步", items: [], toggles: [], statusBlocks: []),
                 layout: WorkbenchV2Layout.resolve(for: CGSize(width: 292, height: 220))
             )
         }

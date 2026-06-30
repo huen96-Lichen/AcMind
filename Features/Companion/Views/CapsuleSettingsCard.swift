@@ -17,9 +17,9 @@ struct CapsuleSettingsCard: View {
             toggleEnabled: $isEnabled
         ) {
             HStack(spacing: 24) {
-                // Left: Settings
+                // 左侧：设置
                 VStack(alignment: .leading, spacing: 16) {
-                    // Display Position
+                    // 展示位置
                     VStack(alignment: .leading, spacing: 8) {
                         Text("展示位置")
                             .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
@@ -33,14 +33,14 @@ struct CapsuleSettingsCard: View {
                         .pickerStyle(.segmented)
                     }
                     
-                    // Default Expanded
-                    Toggle("启动后默认展开随身面板", isOn: $isExpanded)
+                    // 默认展开
+                    Toggle("启动后默认展开随身入口", isOn: $isExpanded)
                         .disabled(!isEnabled)
                 }
                 
                 Spacer()
                 
-                // Right: Preview
+                // 右侧：预览
                 CapsulePreview(position: position, isEnabled: isEnabled)
                     .frame(width: 200)
             }

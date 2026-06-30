@@ -220,7 +220,7 @@ struct CompanionVoicePanel: View {
                                     .foregroundStyle(AppSurfaceTokens.primaryText)
                             }
 
-                            Text("按住 Fn 开始说话，松开后会自动整理成可直接使用的修正版。")
+                            Text("按住 Fn 说话，松开后会自动整理。")
                                 .font(.system(size: AppSurfaceTokens.Typography.body))
                                 .foregroundStyle(AppSurfaceTokens.secondaryText)
                                 .lineSpacing(3)

@@ -1,97 +1,97 @@
-name: Bug report
-description: Report a reproducible problem or regression in AcMind.
-title: "[Bug]: "
+name: 缺陷反馈
+description: 反馈 AcMind 中可复现的问题或回归。
+title: "[缺陷]: "
 labels:
   - bug
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug. Please include as much verified context as you can.
+        感谢你花时间反馈问题。请尽量提供已经核实过的上下文信息。
   - type: textarea
     id: summary
     attributes:
-      label: Summary
-      description: One short sentence describing the issue.
-      placeholder: AcMind crashes when...
+      label: 问题概述
+      description: 用一句话描述问题。
+      placeholder: AcMind 在……时崩溃
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Reproduction steps
-      description: List the steps needed to reproduce the issue.
+      label: 复现步骤
+      description: 按步骤列出如何复现问题。
       placeholder: |
-        1. Open...
-        2. Click...
-        3. Observe...
+        1. 打开……
+        2. 点击……
+        3. 观察……
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Expected behavior
-      description: What should have happened?
+      label: 期望行为
+      description: 你预期应该发生什么？
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: Actual behavior
-      description: What happened instead?
+      label: 实际行为
+      description: 实际发生了什么？
     validations:
       required: true
   - type: input
     id: feature
     attributes:
-      label: Affected feature
-      description: Which area of the app is affected?
-      placeholder: Clipboard, system status, voice input, settings, build, etc.
+      label: 受影响功能
+      description: 应用中哪个区域受影响？
+      placeholder: 剪贴板、系统状态、语音输入、设置、构建等
     validations:
       required: true
   - type: input
     id: macos
     attributes:
-      label: macOS version
+      label: macOS 版本
       placeholder: 26.5.1 (25F80)
     validations:
       required: true
   - type: input
     id: architecture
     attributes:
-      label: Mac architecture
+      label: Mac 架构
       placeholder: arm64
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: Commit or release version
-      description: Provide the commit SHA or release tag you tested.
+      label: 提交或发布版本
+      description: 请提供你测试时对应的提交 SHA 或发布标签。
       placeholder: 1109c5e...
     validations:
       required: true
   - type: input
     id: xcode-swift
     attributes:
-      label: Xcode and Swift version
+      label: Xcode 与 Swift 版本
       placeholder: Xcode 26.5, Swift 6.3.2
     validations:
       required: true
   - type: dropdown
     id: regression
     attributes:
-      label: Regression status
-      description: Is this a new regression?
+      label: 回归状态
+      description: 这是新出现的回归吗？
       options:
-        - New regression
-        - Existing issue
-        - Not sure
+        - 新回归
+        - 已存在问题
+        - 不确定
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
-      label: Logs, screenshots, or notes
-      description: Add any relevant logs or screenshots, but avoid secrets or private data.
-      placeholder: Paste logs here or attach a screenshot.
+      label: 日志、截图或备注
+      description: 补充相关日志或截图，但请避免包含密钥或隐私数据。
+      placeholder: 在这里粘贴日志，或附上截图。

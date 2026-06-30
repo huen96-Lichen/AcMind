@@ -6,7 +6,7 @@ struct SchedulePlanningSnapshotCard: View {
 
     var body: some View {
         AppSurfaceCard(
-            title: "规划摘要",
+            title: "规划总览",
             subtitle: snapshot.selectedDateLabel,
             padding: 16
         ) {
@@ -21,7 +21,7 @@ struct SchedulePlanningSnapshotCard: View {
                             .font(.system(size: 20, weight: .semibold, design: .rounded))
                             .foregroundStyle(AppSurfaceTokens.primaryText)
 
-                        Text(snapshot.currentEvent.map { "正在进行：\($0.title)" } ?? "当前没有进行中的任务")
+                        Text(snapshot.currentEvent.map { "正在进行：\($0.title)" } ?? "没有进行中任务")
                             .font(.system(size: 12))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -31,14 +31,14 @@ struct SchedulePlanningSnapshotCard: View {
                     VStack(alignment: .leading, spacing: 8) {
                         planningMetric(
                             label: "下一件",
-                            value: snapshot.nextEvent?.title ?? "暂无",
-                            subtitle: snapshot.nextEvent.map { $0.displayTimeRange() } ?? "今天没有后续安排"
+                            value: snapshot.nextEvent?.title ?? "未安排",
+                            subtitle: snapshot.nextEvent.map { $0.displayTimeRange() } ?? "今天没有后续"
                         )
 
                         planningMetric(
                             label: "空闲窗口",
-                            value: snapshot.freeWindow.map { scheduleFreeWindowTitle(for: $0) } ?? "未找到",
-                            subtitle: snapshot.freeWindow.map { "\($0.durationMinutes) 分钟" } ?? "今天没有符合条件的空闲窗口"
+                            value: snapshot.freeWindow.map { scheduleFreeWindowTitle(for: $0) } ?? "没有空闲窗口",
+                            subtitle: snapshot.freeWindow.map { "\($0.durationMinutes) 分钟" } ?? "今天没有可用空闲窗口"
                         )
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

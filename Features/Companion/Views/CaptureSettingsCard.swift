@@ -19,7 +19,7 @@ struct CaptureSettingsCard: View {
             toggleEnabled: $isEnabled
         ) {
             HStack(spacing: 24) {
-                // Left: Settings
+                // 左侧：设置
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
@@ -42,15 +42,15 @@ struct CaptureSettingsCard: View {
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
                     
-                    // Text Capture
+                    // 文本捕获
                     Toggle("复制文本后支持快速收集", isOn: $textCaptureEnabled)
                         .disabled(!isEnabled)
                     
-                    // Link Capture
+                    // 链接捕获
                     Toggle("复制链接后支持快速收集", isOn: $linkCaptureEnabled)
                         .disabled(!isEnabled)
                     
-                    // Save Location
+                    // 保存位置
                     VStack(alignment: .leading, spacing: 8) {
                         Text("结果去向")
                             .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
@@ -71,7 +71,7 @@ struct CaptureSettingsCard: View {
                 
                 Spacer()
                 
-                // Right: Flow Preview
+                // 右侧：流程预览
                 VStack(spacing: 8) {
                     Text("内容流向")
                         .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
@@ -88,7 +88,7 @@ struct CaptureSettingsCard: View {
                         
                         VStack {
                             HStack(alignment: .center, spacing: 4) {
-                                // Sources
+                                // 来源
                                 HStack(spacing: 2) {
                                     Image(systemName: "camera")
                                         .font(.system(size: AppSurfaceTokens.Typography.badge))
@@ -129,6 +129,6 @@ struct CaptureSettingsCard: View {
     }
 
     private func selectedSaveDestinationDescription(for index: Int) -> String {
-        CompanionCaptureSaveDestination(rawValue: index)?.description ?? "当前设置尚未识别，默认视为收集箱。"
+        CompanionCaptureSaveDestination(rawValue: index)?.description ?? "当前设置尚未识别，先按收集箱处理。"
     }
 }

@@ -58,15 +58,22 @@ final class OOBEWindowController: NSObject {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        
-        // 加载当前设置
+
+        // 先立刻建窗，避免启动阶段因为异步设置读取而出现“无窗口”空白期
+        buildWindow()
+
+        // 后台加载当前设置，加载完成后刷新当前步骤内容
         Task {
             let voiceSettings = await settingsService.getVoiceSettings()
-            selectedEngine = STTProvider(rawValue: voiceSettings.defaultProvider) ?? .appleSpeech
-            selectedPolishMode = voiceSettings.voicePolishMode
-            
+            let engine = STTProvider(rawValue: voiceSettings.defaultProvider) ?? .appleSpeech
+            let polishMode = voiceSettings.voicePolishMode
+
             await MainActor.run {
-                buildWindow()
+                selectedEngine = engine
+                selectedPolishMode = polishMode
+                showStep(currentStep)
+                window?.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
             }
         }
     }
@@ -82,11 +89,13 @@ final class OOBEWindowController: NSObject {
         )
         w.title = "\(AcWorkBrand.displayName) 设置向导"
         w.isReleasedWhenClosed = false
-        w.isOpaque = false
-        w.backgroundColor = .clear
+        w.isOpaque = true
+        w.backgroundColor = .windowBackgroundColor
         w.delegate = self
         
         guard let cv = w.contentView else { return }
+        cv.wantsLayer = true
+        cv.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         
         // 顶部步骤指示器
         let dotRow = NSStackView()

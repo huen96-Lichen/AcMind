@@ -295,7 +295,7 @@ public enum ModelRoutingStrategy: String, Codable, Sendable, Hashable, CaseItera
     public var subtitle: String {
         switch self {
         case .automatic: return "按任务类型自动路由"
-        case .localPriority: return "优先选择本地 AI / ASR"
+        case .localPriority: return "优先选择本地智能 / 语音识别"
         case .cloudPriority: return "优先选择云端模型"
         case .costPriority: return "优先选择更便宜的模型"
         case .qualityPriority: return "优先选择更高质量的模型"
@@ -331,10 +331,10 @@ public enum ModelManagementDomain: String, Codable, Sendable, Hashable, CaseIter
 
     public var displayName: String {
         switch self {
-        case .ai: return "AI"
+        case .ai: return "智能"
         case .speechRecognition: return "语音识别"
         case .voiceClone: return "语音克隆"
-        case .localModel: return "本地 AI / ASR"
+        case .localModel: return "本地智能 / 语音识别"
         }
     }
 }
