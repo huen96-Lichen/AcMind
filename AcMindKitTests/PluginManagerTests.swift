@@ -125,7 +125,7 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertEqual(result, "来自磁盘插件")
     }
 
-    func testLoadingUnsupportedDiskCapabilityFailsHonestly() async throws {
+    func testLoadingExecutableASRPluginActivatesAndTranscribes() async throws {
         let pluginRoot = try makePluginRoot()
         defer { try? FileManager.default.removeItem(at: pluginRoot) }
         let pluginDirectory = pluginRoot.appendingPathComponent("disk-asr", isDirectory: true)
@@ -135,6 +135,53 @@ final class PluginManagerTests: XCTestCase {
             name: "Disk ASR",
             version: "1.0.0",
             capabilities: [.customASR],
+            entryPoint: "plugin.sh",
+            configPath: pluginDirectory.appendingPathComponent("plugin.json").path
+        )
+        try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+        let script = """
+        #!/bin/sh
+        input=$(cat)
+        case "$input" in
+          *'\"action\":\"transcribe\"'*)
+            case "$input" in
+              *'\"audioPath\":'*'.wav'*) printf '{"success":true,"text":"磁盘 ASR 结果"}' ;;
+              *) printf '{"success":false,"error":"missing audio path"}' ;;
+            esac
+            ;;
+          *) printf '{"success":true}' ;;
+        esac
+        """
+        let executable = pluginDirectory.appendingPathComponent("plugin.sh")
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
+        let audioURL = pluginRoot.appendingPathComponent("sample.wav")
+        try Data().write(to: audioURL)
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        try await manager.loadPlugin(at: pluginDirectory)
+        let asrPlugins = await manager.getASRPlugins()
+        let plugin = try XCTUnwrap(asrPlugins[descriptor.id])
+        let transcriber = try plugin.createTranscriber()
+        let result = try await transcriber.transcribe(
+            audioFile: AudioFile(url: audioURL, sampleRate: 16_000, channels: 1)
+        )
+
+        XCTAssertEqual(result, "磁盘 ASR 结果")
+        let activeCount = await manager.getActivePluginCount()
+        XCTAssertEqual(activeCount, 1)
+    }
+
+    func testLoadingDiskInjectionCapabilityFailsHonestly() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let pluginDirectory = pluginRoot.appendingPathComponent("disk-injection", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "disk-injection",
+            name: "Disk Injection",
+            version: "1.0.0",
+            capabilities: [.customInjection],
             entryPoint: "plugin.sh",
             configPath: pluginDirectory.appendingPathComponent("plugin.json").path
         )

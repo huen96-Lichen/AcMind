@@ -169,7 +169,7 @@ public actor PluginManager {
         }
 
         do {
-            let runtime = try DiskPolishPlugin(descriptor: descriptor, pluginDirectory: url)
+            let runtime = try DiskProcessPlugin(descriptor: descriptor, pluginDirectory: url)
             try await activateAndRegister(plugin: runtime, descriptor: descriptor)
         } catch {
             pluginStatuses[descriptor.id] = .error

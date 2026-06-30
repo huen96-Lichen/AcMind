@@ -1,9 +1,9 @@
 # Plugin Runtime
 
 AcMind loads executable plugins from `~/Library/Application Support/AcMind/Plugins/<plugin-id>`.
-The directory name and the manifest `id` must match. A disk plugin currently supports the
-`customPolish` capability; unsupported capabilities fail during loading instead of being shown
-as active.
+The directory name and the manifest `id` must match. A disk plugin supports `customASR` and
+`customPolish`, separately or together. Unsupported capabilities fail during loading instead of
+being shown as active.
 
 ## Manifest
 
@@ -28,8 +28,8 @@ resolve outside that directory are rejected.
 ## Process protocol
 
 AcMind starts a fresh process for every operation, writes one JSON object to standard input,
-closes standard input, and reads one JSON object from standard output. The process must finish
-within 15 seconds and return exit status zero. Responses larger than 1 MiB are rejected.
+closes standard input, and reads one JSON object from standard output. The process must return
+exit status zero. Responses larger than 1 MiB are rejected.
 
 Activation request:
 
@@ -43,14 +43,21 @@ Polish request:
 {"protocolVersion":1,"action":"polish","text":"input","mode":"light"}
 ```
 
+ASR request:
+
+```json
+{"protocolVersion":1,"action":"transcribe","audioPath":"/path/to/audio.wav","sampleRate":16000,"channels":1}
+```
+
 Deactivation request:
 
 ```json
 {"protocolVersion":1,"action":"deactivate"}
 ```
 
-A successful lifecycle response is `{"success":true}`. A polish response also contains the
-result, for example `{"success":true,"text":"output"}`. Return a non-zero exit status or
+A successful lifecycle response is `{"success":true}`. Polish and ASR responses also contain
+the result, for example `{"success":true,"text":"output"}`. ASR calls may run for up to five
+minutes; other calls must finish within 15 seconds. Return a non-zero exit status or
 `{"success":false,"error":"reason"}` to report a failure.
 
 Valid polish modes are `raw`, `light`, `structured`, `aiPrompt`, `formal`, and `none`.
