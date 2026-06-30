@@ -52,8 +52,6 @@ public final class SherpaOnnxCommandLineDecoder: Sendable {
     // MARK: - Directory Names
 
     private static let runtimeDirectoryName = "sherpa-onnx-macos"
-    private static let runtimeVersionedLibraryName = "libonnxruntime.1.21.0.dylib"
-
     // MARK: - Initialization
 
     public init(
@@ -158,7 +156,10 @@ public final class SherpaOnnxCommandLineDecoder: Sendable {
             return [
                 "--print-args=false",
                 "--tokens=\(modelDirectory.appendingPathComponent("tokens.txt").path)",
-                "--paraformer=\(modelDirectory.appendingPathComponent("model.int8.onnx").path)",
+                "--encoder=\(modelDirectory.appendingPathComponent("encoder.int8.onnx").path)",
+                "--decoder=\(modelDirectory.appendingPathComponent("decoder.int8.onnx").path)",
+                "--joiner=\(modelDirectory.appendingPathComponent("joiner.int8.onnx").path)",
+                "--model-type=nemo_transducer",
                 "--provider=cpu",
                 audioURL.path,
             ]
@@ -271,7 +272,9 @@ public final class SherpaOnnxCommandLineDecoder: Sendable {
                    fm.fileExists(atPath: modelDir.appendingPathComponent("tokens.txt").path)
 
         case .parakeet:
-            return fm.fileExists(atPath: modelDir.appendingPathComponent("model.int8.onnx").path) &&
+            return fm.fileExists(atPath: modelDir.appendingPathComponent("encoder.int8.onnx").path) &&
+                   fm.fileExists(atPath: modelDir.appendingPathComponent("decoder.int8.onnx").path) &&
+                   fm.fileExists(atPath: modelDir.appendingPathComponent("joiner.int8.onnx").path) &&
                    fm.fileExists(atPath: modelDir.appendingPathComponent("tokens.txt").path)
         }
     }
@@ -282,8 +285,29 @@ public final class SherpaOnnxCommandLineDecoder: Sendable {
         let executableURL = runtimeExecutableURL(storageURL: storageURL)
         let libraryURL = runtimeLibraryURL(storageURL: storageURL)
 
+        let runtimeLibraries = (try? fm.contentsOfDirectory(atPath: libraryURL.path)) ?? []
         return fm.isExecutableFile(atPath: executableURL.path) &&
                fm.fileExists(atPath: libraryURL.appendingPathComponent("libsherpa-onnx-c-api.dylib").path) &&
-               fm.fileExists(atPath: libraryURL.appendingPathComponent(Self.runtimeVersionedLibraryName).path)
+               runtimeLibraries.contains(where: { $0.hasPrefix("libonnxruntime") && $0.hasSuffix(".dylib") })
     }
+}
+
+public final class SherpaOnnxFileTranscriber: Transcriber, RecordingPrewarmingTranscriber {
+    private let decoder: SherpaOnnxCommandLineDecoder
+
+    public init(model: SherpaOnnxModel, modelFolder: String, processRunner: ProcessCommandRunning = ProcessCommandRunner()) {
+        decoder = SherpaOnnxCommandLineDecoder(
+            model: model,
+            modelIdentifier: model.defaultModelIdentifier,
+            modelFolder: modelFolder,
+            processRunner: processRunner
+        )
+    }
+
+    public func transcribe(audioFile: AudioFile) async throws -> String {
+        try await decoder.decode(audioFile: audioFile)
+    }
+
+    public func prepareForRecording() async {}
+    public func cancelPreparedRecording() async {}
 }

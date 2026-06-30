@@ -33,7 +33,7 @@ public enum LocalASRModelType: String, Codable, CaseIterable, Sendable {
         case .whisperKit: return "多语言（英语优化）"
         case .funASR: return "中文（优化）"
         case .qwen3ASR: return "中文（上下文理解）"
-        case .parakeet: return "英文（优化）、中文"
+        case .parakeet: return "英文（优化）"
         }
     }
 }
@@ -188,7 +188,8 @@ public actor LocalASRManager: @unchecked Sendable {
     }
     
     public func downloadModel(_ modelId: String) async throws {
-        guard downloadTasks[modelId] == nil else {
+        if let existingTask = downloadTasks[modelId] {
+            try await existingTask.value
             return
         }
 
@@ -226,24 +227,63 @@ public actor LocalASRManager: @unchecked Sendable {
         
         switch modelId {
         case "sensevoice-small":
-            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.1.10/sherpa-onnx-sense-voice-small-linux-x86_64.tar.bz2")!
+            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2")!
             destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.senseVoiceSmall.rawValue)
         case "whisperkit-medium":
             try await downloadWhisperKitModel(modelName: "medium", modelId: modelId)
             return
         case "funasr-paraformer":
-            downloadURL = URL(string: "https://huggingface.co/spaces/sherpa/sherpa-onnx-int8-paraformer-zh-en/raw/main/paraformer.tar.bz2")!
+            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2")!
             destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.funASR.rawValue)
         case "qwen3-asr-0.6b":
-            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.1.10/sherpa-onnx-qwen3-asr.tar.bz2")!
+            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2")!
             destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.qwen3ASR.rawValue)
         case "parakeet-tdt-0.6b-v2":
-            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nvidia-parakeet-tdt-0.6b-v2-int8.tar.bz2")!
+            downloadURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2")!
             destinationPath = modelsDirectory.appendingPathComponent(SherpaOnnxModel.parakeet.rawValue)
         default:
             throw LocalASRError.unsupportedModel(modelId)
         }
-        
+
+        try await ensureSherpaRuntime(modelId: modelId)
+        try await downloadAndInstallArchive(
+            from: downloadURL,
+            destination: destinationPath,
+            modelId: modelId
+        )
+
+        guard isSherpaModelInstalled(modelType(for: modelId)) else {
+            throw LocalASRError.extractionFailed("模型包缺少所需文件")
+        }
+    }
+
+    private func ensureSherpaRuntime(modelId: String) async throws {
+        let decoder = SherpaOnnxCommandLineDecoder(
+            model: .senseVoiceSmall,
+            modelIdentifier: SherpaOnnxModel.senseVoiceSmall.defaultModelIdentifier,
+            modelFolder: modelsDirectory.path
+        )
+        guard !decoder.isRuntimeInstalled(storageURL: modelsDirectory) else { return }
+
+        #if arch(arm64)
+        let archiveName = "sherpa-onnx-v1.13.2-osx-arm64-shared-no-tts.tar.bz2"
+        #else
+        let archiveName = "sherpa-onnx-v1.13.2-osx-x64-shared-no-tts.tar.bz2"
+        #endif
+        let url = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/\(archiveName)")!
+        let destination = modelsDirectory.appendingPathComponent("sherpa-onnx-macos", isDirectory: true)
+        try await downloadAndInstallArchive(from: url, destination: destination, modelId: modelId)
+
+        guard decoder.isRuntimeInstalled(storageURL: modelsDirectory) else {
+            throw LocalASRError.extractionFailed("sherpa-onnx macOS 运行时文件不完整")
+        }
+    }
+
+    private func downloadAndInstallArchive(
+        from downloadURL: URL,
+        destination: URL,
+        modelId: String
+    ) async throws {
         let session = URLSession(configuration: .default)
         let (asyncBytes, response) = try await session.bytes(from: downloadURL)
         
@@ -255,16 +295,24 @@ public actor LocalASRManager: @unchecked Sendable {
         let expectedLength = response.expectedContentLength
         var downloadedBytes: Int64 = 0
         
-        let tempFile = modelsDirectory.appendingPathComponent("\(modelId).tar.bz2.tmp")
+        let tempFile = modelsDirectory.appendingPathComponent("\(UUID().uuidString).tar.bz2.tmp")
+        let staging = modelsDirectory.appendingPathComponent(".install-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempFile)
+            try? FileManager.default.removeItem(at: staging)
+        }
         try Data().write(to: tempFile)
         let fileHandle = try FileHandle(forWritingTo: tempFile)
-        defer { try? fileHandle.close() }
-        
+        var buffer = Data()
+        buffer.reserveCapacity(64 * 1024)
+
         for try await byte in asyncBytes {
-            try fileHandle.write(contentsOf: Data([byte]))
+            try Task.checkCancellation()
+            buffer.append(byte)
             downloadedBytes += 1
-            
-            if downloadedBytes % 1024 == 0 {
+            if buffer.count == 64 * 1024 {
+                try fileHandle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
                 let progress = DownloadProgress(
                     modelId: modelId,
                     bytesDownloaded: downloadedBytes,
@@ -276,20 +324,62 @@ public actor LocalASRManager: @unchecked Sendable {
                 }
             }
         }
-        
-        try FileManager.default.createDirectory(at: destinationPath, withIntermediateDirectories: true)
-        
+        if !buffer.isEmpty { try fileHandle.write(contentsOf: buffer) }
+        try fileHandle.close()
+
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-        process.arguments = ["-xjf", tempFile.path, "-C", destinationPath.path]
+        process.arguments = ["-xjf", tempFile.path, "-C", staging.path]
         try process.run()
         process.waitUntilExit()
-        
+
         guard process.terminationStatus == 0 else {
             throw LocalASRError.extractionFailed("tar 解压失败")
         }
-        
-        try FileManager.default.removeItem(at: tempFile)
+
+        try Self.installExtractedContents(from: staging, to: destination)
+    }
+
+    static func installExtractedContents(from staging: URL, to destination: URL) throws {
+        let fm = FileManager.default
+        let entries = try fm.contentsOfDirectory(
+            at: staging,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+        guard !entries.isEmpty else { throw LocalASRError.extractionFailed("压缩包为空") }
+
+        let source: URL
+        if entries.count == 1,
+           (try entries[0].resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            source = entries[0]
+        } else {
+            source = staging
+        }
+
+        let replacement = destination.deletingLastPathComponent()
+            .appendingPathComponent(".replacement-\(UUID().uuidString)", isDirectory: true)
+        if source == staging {
+            try fm.createDirectory(at: replacement, withIntermediateDirectories: true)
+            for entry in entries {
+                try fm.moveItem(at: entry, to: replacement.appendingPathComponent(entry.lastPathComponent))
+            }
+        } else {
+            try fm.moveItem(at: source, to: replacement)
+        }
+        if fm.fileExists(atPath: destination.path) { try fm.removeItem(at: destination) }
+        try fm.moveItem(at: replacement, to: destination)
+    }
+
+    private func modelType(for modelId: String) -> SherpaOnnxModel {
+        switch modelId {
+        case "sensevoice-small": return .senseVoiceSmall
+        case "funasr-paraformer": return .funASR
+        case "qwen3-asr-0.6b": return .qwen3ASR
+        case "parakeet-tdt-0.6b-v2": return .parakeet
+        default: preconditionFailure("validated model id")
+        }
     }
 
     private func downloadWhisperKitModel(modelName: String, modelId: String) async throws {
@@ -351,21 +441,19 @@ public actor LocalASRManager: @unchecked Sendable {
     private func isWhisperKitModelInstalled(at url: URL) -> Bool {
         let fm = FileManager.default
         guard fm.fileExists(atPath: url.path) else { return false }
-        guard let contents = try? fm.contentsOfDirectory(
+        guard let enumerator = fm.enumerator(
             at: url,
             includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
             options: [.skipsHiddenFiles]
-        ) else {
-            return false
-        }
+        ) else { return false }
 
-        let modelArtifacts = contents.filter { child in
-            let lowercasedName = child.lastPathComponent.lowercased()
-            return lowercasedName.hasSuffix(".mlmodelc") ||
-                lowercasedName.hasSuffix(".mlpackage") ||
-                lowercasedName.hasSuffix(".bin")
+        for case let child as URL in enumerator {
+            let name = child.lastPathComponent.lowercased()
+            if name.hasSuffix(".mlmodelc") || name.hasSuffix(".mlpackage") || name.hasSuffix(".bin") {
+                return true
+            }
         }
-        return modelArtifacts.isEmpty == false
+        return false
     }
 }
 

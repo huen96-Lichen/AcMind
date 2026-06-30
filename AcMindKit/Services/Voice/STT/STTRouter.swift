@@ -16,6 +16,7 @@ public final class STTRouter: @unchecked Sendable {
     private var senseVoiceTranscriber: Transcriber?
     private var whisperKitTranscriber: Transcriber?
     private var qwen3ASRTranscriber: Transcriber?
+    private var funASRTranscriber: Transcriber?
     private var parakeetTranscriber: Transcriber?
     private var appleSpeechTranscriber: Transcriber?
     private var openAITranscriber: Transcriber?
@@ -24,7 +25,7 @@ public final class STTRouter: @unchecked Sendable {
     private var mimoTranscriber: Transcriber?
 
     // Configuration
-    private var whisperKitModelName: String = "large-v3-turbo"
+    private var whisperKitModelName: String = "medium"
     private var sherpaOnnxModelFolder: String?
     
     // MARK: - Initialization
@@ -32,7 +33,7 @@ public final class STTRouter: @unchecked Sendable {
     public init(
         provider: STTProvider = .appleSpeech,
         settingsService: SettingsServiceProtocol? = nil,
-        whisperKitModelName: String = "large-v3-turbo",
+        whisperKitModelName: String = "medium",
         sherpaOnnxModelFolder: String? = nil
     ) {
         self.currentProvider = provider
@@ -126,6 +127,8 @@ public final class STTRouter: @unchecked Sendable {
             await (whisperKitTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
         case .qwen3ASR:
             await (qwen3ASRTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
+        case .funASR:
+            await (funASRTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
         case .parakeet:
             await (parakeetTranscriber as? RecordingPrewarmingTranscriber)?.prepareForRecording()
         default:
@@ -141,6 +144,8 @@ public final class STTRouter: @unchecked Sendable {
             await (whisperKitTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
         case .qwen3ASR:
             await (qwen3ASRTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
+        case .funASR:
+            await (funASRTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
         case .parakeet:
             await (parakeetTranscriber as? RecordingPrewarmingTranscriber)?.cancelPreparedRecording()
         default:
@@ -175,6 +180,12 @@ public final class STTRouter: @unchecked Sendable {
             }
             let transcriber = try await createQwen3ASRTranscriber()
             qwen3ASRTranscriber = transcriber
+            return transcriber
+
+        case .funASR:
+            if let transcriber = funASRTranscriber { return transcriber }
+            let transcriber = try await createFunASRTranscriber()
+            funASRTranscriber = transcriber
             return transcriber
             
         case .parakeet:
@@ -225,14 +236,8 @@ public final class STTRouter: @unchecked Sendable {
             mimoTranscriber = transcriber
             return transcriber
             
-        default:
-            // 兼容路径：Apple Speech
-            if let transcriber = appleSpeechTranscriber {
-                return transcriber
-            }
-            let transcriber = AppleSpeechTranscriber()
-            appleSpeechTranscriber = transcriber
-            return transcriber
+        case .googleCloud, .groq, .freeModel:
+            throw STTError.providerNotAvailable("\(provider.displayName) 尚未接入可执行转写适配器")
         }
     }
     
@@ -273,7 +278,9 @@ public final class STTRouter: @unchecked Sendable {
 
     private func createWhisperKitTranscriber() async throws -> Transcriber {
         #if canImport(WhisperKit)
-        return WhisperKitTranscriber(modelName: whisperKitModelName)
+        let root = URL(fileURLWithPath: sherpaOnnxModelFolder ?? "", isDirectory: true)
+        let downloadBase = root.appendingPathComponent("whisperkit-medium", isDirectory: true)
+        return WhisperKitTranscriber(modelName: whisperKitModelName, downloadBase: downloadBase)
         #else
         throw STTError.providerNotAvailable(
             "WhisperKit 依赖尚未集成。需要在 Package.swift 中添加:\n" +
@@ -323,6 +330,25 @@ public final class STTRouter: @unchecked Sendable {
         )
     }
 
+    private func createFunASRTranscriber() async throws -> Transcriber {
+        guard let modelFolder = sherpaOnnxModelFolder else {
+            throw STTError.providerNotAvailable("sherpa-onnx 模型目录未配置")
+        }
+        let storageURL = URL(fileURLWithPath: modelFolder, isDirectory: true)
+        let decoder = SherpaOnnxCommandLineDecoder(
+            model: .funASR,
+            modelIdentifier: SherpaOnnxModel.funASR.defaultModelIdentifier,
+            modelFolder: modelFolder
+        )
+        guard decoder.isRuntimeInstalled(storageURL: storageURL) else {
+            throw STTError.modelNotDownloaded("sherpa-onnx 运行时尚未下载。请先在模型管理中下载 FunASR。")
+        }
+        guard decoder.isModelInstalled(storageURL: storageURL) else {
+            throw STTError.modelNotDownloaded("FunASR Paraformer 模型尚未下载。")
+        }
+        return SherpaOnnxFileTranscriber(model: .funASR, modelFolder: modelFolder)
+    }
+
     private func createParakeetTranscriber() async throws -> Transcriber {
         guard let modelFolder = sherpaOnnxModelFolder else {
             throw STTError.providerNotAvailable("sherpa-onnx 模型目录未配置")
@@ -349,7 +375,9 @@ public final class STTRouter: @unchecked Sendable {
             throw STTError.modelNotDownloaded(
                 "Parakeet 模型文件不完整。\n" +
                 "需要以下文件:\n" +
-                "  - parakeet/model.int8.onnx\n" +
+                "  - parakeet/encoder.int8.onnx\n" +
+                "  - parakeet/decoder.int8.onnx\n" +
+                "  - parakeet/joiner.int8.onnx\n" +
                 "  - parakeet/tokens.txt\n" +
                 "下载地址: https://github.com/k2-fsa/sherpa-onnx/releases"
             )

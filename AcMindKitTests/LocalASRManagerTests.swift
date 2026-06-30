@@ -50,6 +50,51 @@ final class LocalASRManagerTests: XCTestCase {
         XCTAssertTrue(downloadedAfterArtifact)
     }
 
+    func testWhisperKitDetectsArtifactsInDownloadedNestedLayout() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let nested = root
+            .appendingPathComponent("whisperkit-medium/models/argmaxinc/whisperkit-coreml/openai_whisper-medium", isDirectory: true)
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        try Data().write(to: nested.appendingPathComponent("AudioEncoder.mlmodelc"))
+
+        let manager = LocalASRManager(modelsDirectory: root)
+        let isDownloaded = await manager.isModelDownloaded("whisperkit-medium")
+        XCTAssertTrue(isDownloaded)
+    }
+
+    func testArchiveInstallerFlattensSingleTopLevelDirectory() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let staging = root.appendingPathComponent("staging", isDirectory: true)
+        let archiveRoot = staging.appendingPathComponent("upstream-versioned-name", isDirectory: true)
+        let destination = root.appendingPathComponent("sense_voice_small", isDirectory: true)
+        try FileManager.default.createDirectory(at: archiveRoot, withIntermediateDirectories: true)
+        try Data().write(to: archiveRoot.appendingPathComponent("model.int8.onnx"))
+        try Data().write(to: archiveRoot.appendingPathComponent("tokens.txt"))
+
+        try LocalASRManager.installExtractedContents(from: staging, to: destination)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("model.int8.onnx").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent("upstream-versioned-name").path))
+    }
+
+    func testParakeetRequiresTransducerArtifacts() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = root.appendingPathComponent("parakeet", isDirectory: true)
+        try FileManager.default.createDirectory(at: model, withIntermediateDirectories: true)
+        for name in ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"] {
+            try Data().write(to: model.appendingPathComponent(name))
+        }
+        let decoder = SherpaOnnxCommandLineDecoder(
+            model: .parakeet,
+            modelIdentifier: SherpaOnnxModel.parakeet.defaultModelIdentifier,
+            modelFolder: root.path
+        )
+        XCTAssertTrue(decoder.isModelInstalled(storageURL: root))
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("AcMind-LocalASRManagerTests-\(UUID().uuidString)", isDirectory: true)
