@@ -726,11 +726,11 @@ private final class SayInputTextInjectorStub: TextInjector, @unchecked Sendable 
         nil
     }
 
-    func insert(text: String) throws {
+    func insert(text: String) async throws {
         insertedTexts.append(text)
     }
 
-    func replaceSelection(text: String) throws {
+    func replaceSelection(text: String) async throws {
         replacedTexts.append(text)
     }
 }

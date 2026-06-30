@@ -1,9 +1,9 @@
 # Plugin Runtime
 
 AcMind loads executable plugins from `~/Library/Application Support/AcMind/Plugins/<plugin-id>`.
-The directory name and the manifest `id` must match. A disk plugin supports `customASR` and
-`customPolish`, separately or together. Unsupported capabilities fail during loading instead of
-being shown as active.
+The directory name and the manifest `id` must match. A disk plugin supports `customASR`,
+`customPolish`, and `customInjection`, separately or together. Unsupported capabilities fail
+during loading instead of being shown as active.
 
 ## Manifest
 
@@ -47,6 +47,15 @@ ASR request:
 
 ```json
 {"protocolVersion":1,"action":"transcribe","audioPath":"/path/to/audio.wav","sampleRate":16000,"channels":1}
+```
+
+Injection requests use actions `selectionSnapshot`, `currentInputSnapshot`, `insert`, and
+`replaceSelection`. Insert and replace requests include the `text` field. Snapshot responses use
+the following shapes (all fields are optional except `success`):
+
+```json
+{"success":true,"selection":{"selectedText":"old","selectedRange":{"location":0,"length":3},"source":"accessibility","isEditable":true,"isFocusedTarget":true}}
+{"success":true,"currentInput":{"text":"document text","selectedRange":{"location":0,"length":3},"isEditable":true,"isFocusedTarget":true,"textSource":"accessibility"}}
 ```
 
 Deactivation request:

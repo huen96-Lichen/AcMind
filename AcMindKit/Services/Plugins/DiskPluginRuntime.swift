@@ -6,7 +6,7 @@ import Foundation
 /// Each invocation starts the manifest's executable, sends one JSON request on
 /// stdin and expects one JSON response on stdout. Keeping the executable out of
 /// the AcMind address space means a plugin cannot corrupt the host process.
-final class DiskProcessPlugin: ASRPlugin, PolishPlugin, @unchecked Sendable {
+final class DiskProcessPlugin: ASRPlugin, PolishPlugin, InjectionPlugin, @unchecked Sendable {
     let id: String
     let name: String
     let version: String
@@ -16,7 +16,7 @@ final class DiskProcessPlugin: ASRPlugin, PolishPlugin, @unchecked Sendable {
 
     init(descriptor: PluginDescriptor, pluginDirectory: URL) throws {
         let declaredCapabilities = Set(descriptor.capabilities)
-        let supportedCapabilities: Set<PluginCapability> = [.customASR, .customPolish]
+        let supportedCapabilities: Set<PluginCapability> = [.customASR, .customPolish, .customInjection]
         guard !declaredCapabilities.isEmpty,
               declaredCapabilities.isSubset(of: supportedCapabilities) else {
             let unsupported = descriptor.capabilities
@@ -78,6 +78,10 @@ final class DiskProcessPlugin: ASRPlugin, PolishPlugin, @unchecked Sendable {
     func createTranscriber() throws -> Transcriber {
         DiskPluginTranscriber(executor: executor)
     }
+
+    func createInjector() throws -> TextInjector {
+        DiskPluginTextInjector(executor: executor)
+    }
 }
 
 private struct DiskPluginRequest: Codable {
@@ -94,6 +98,73 @@ private struct DiskPluginResponse: Codable {
     let success: Bool
     let text: String?
     let error: String?
+    let selection: DiskPluginSelectionSnapshot?
+    let currentInput: DiskPluginCurrentInputSnapshot?
+}
+
+private struct DiskPluginRange: Codable {
+    let location: Int
+    let length: Int
+
+    var cfRange: CFRange { CFRange(location: location, length: length) }
+}
+
+private struct DiskPluginSelectionSnapshot: Codable {
+    let processID: Int32?
+    let processName: String?
+    let bundleIdentifier: String?
+    let selectedRange: DiskPluginRange?
+    let selectedText: String?
+    let source: String?
+    let isEditable: Bool?
+    let role: String?
+    let windowTitle: String?
+    let isFocusedTarget: Bool?
+
+    var snapshot: TextSelectionSnapshot {
+        var result = TextSelectionSnapshot()
+        result.processID = processID
+        result.processName = processName
+        result.bundleIdentifier = bundleIdentifier
+        result.selectedRange = selectedRange?.cfRange
+        result.selectedText = selectedText
+        result.source = source ?? "plugin"
+        result.isEditable = isEditable ?? false
+        result.role = role
+        result.windowTitle = windowTitle
+        result.isFocusedTarget = isFocusedTarget ?? false
+        return result
+    }
+}
+
+private struct DiskPluginCurrentInputSnapshot: Codable {
+    let processID: Int32?
+    let processName: String?
+    let bundleIdentifier: String?
+    let role: String?
+    let text: String?
+    let selectedRange: DiskPluginRange?
+    let isEditable: Bool?
+    let isFocusedTarget: Bool?
+    let failureReason: String?
+    let documentURL: String?
+    let textSource: String?
+
+    var snapshot: CurrentInputTextSnapshot {
+        var result = CurrentInputTextSnapshot()
+        result.processID = processID
+        result.processName = processName
+        result.bundleIdentifier = bundleIdentifier
+        result.role = role
+        result.text = text
+        result.selectedRange = selectedRange?.cfRange
+        result.isEditable = isEditable ?? false
+        result.isFocusedTarget = isFocusedTarget ?? false
+        result.failureReason = failureReason
+        result.documentURL = documentURL.flatMap(URL.init(string:))
+        result.textSource = textSource ?? "plugin"
+        return result
+    }
 }
 
 fileprivate final class DiskPluginExecutor: @unchecked Sendable {
@@ -218,5 +289,45 @@ private final class DiskPluginTranscriber: Transcriber, @unchecked Sendable {
             throw PluginError.loadFailed("ASR 插件响应缺少 text")
         }
         return text
+    }
+}
+
+private final class DiskPluginTextInjector: TextInjector, @unchecked Sendable {
+    private let executor: DiskPluginExecutor
+
+    init(executor: DiskPluginExecutor) {
+        self.executor = executor
+    }
+
+    func getSelectionSnapshot() async -> TextSelectionSnapshot {
+        do {
+            return try await executor.invoke(action: "selectionSnapshot").selection?.snapshot
+                ?? TextSelectionSnapshot()
+        } catch {
+            return TextSelectionSnapshot()
+        }
+    }
+
+    func currentInputTextSnapshot() async -> CurrentInputTextSnapshot {
+        do {
+            return try await executor.invoke(action: "currentInputSnapshot").currentInput?.snapshot
+                ?? CurrentInputTextSnapshot()
+        } catch {
+            var snapshot = CurrentInputTextSnapshot()
+            snapshot.failureReason = error.localizedDescription
+            return snapshot
+        }
+    }
+
+    func currentInputText() async -> String? {
+        await currentInputTextSnapshot().text
+    }
+
+    func insert(text: String) async throws {
+        _ = try await executor.invoke(action: "insert", text: text)
+    }
+
+    func replaceSelection(text: String) async throws {
+        _ = try await executor.invoke(action: "replaceSelection", text: text)
     }
 }

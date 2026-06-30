@@ -69,9 +69,9 @@ public protocol TextInjector: Sendable {
     
     /// 插入文本到光标位置
     /// - Parameter text: 要插入的文本
-    func insert(text: String) throws
+    func insert(text: String) async throws
     
     /// 替换当前选区
     /// - Parameter text: 替换文本
-    func replaceSelection(text: String) throws
+    func replaceSelection(text: String) async throws
 }

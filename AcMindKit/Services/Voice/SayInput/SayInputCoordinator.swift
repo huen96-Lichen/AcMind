@@ -653,9 +653,9 @@ public actor SayInputCoordinator {
         } else if snapshot.isFocusedTarget {
             do {
                 if snapshot.canReplaceSelection {
-                    try textInjector.replaceSelection(text: outputText)
+                    try await textInjector.replaceSelection(text: outputText)
                 } else {
-                    try textInjector.insert(text: outputText)
+                    try await textInjector.insert(text: outputText)
                 }
                 deliveryState = .insertedIntoFocusedField
                 lastClipboardText = outputText

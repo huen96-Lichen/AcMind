@@ -670,7 +670,7 @@ public actor VoiceService: VoiceServiceProtocol {
 
         // 插入到光标位置
         if let injector = textInjector {
-            try injector.insert(text: polished)
+            try await injector.insert(text: polished)
         }
     }
 

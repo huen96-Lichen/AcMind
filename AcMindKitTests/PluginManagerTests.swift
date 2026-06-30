@@ -172,7 +172,7 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertEqual(activeCount, 1)
     }
 
-    func testLoadingDiskInjectionCapabilityFailsHonestly() async throws {
+    func testLoadingExecutableInjectionPluginActivatesAndRuns() async throws {
         let pluginRoot = try makePluginRoot()
         defer { try? FileManager.default.removeItem(at: pluginRoot) }
         let pluginDirectory = pluginRoot.appendingPathComponent("disk-injection", isDirectory: true)
@@ -186,19 +186,41 @@ final class PluginManagerTests: XCTestCase {
             configPath: pluginDirectory.appendingPathComponent("plugin.json").path
         )
         try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+        let script = """
+        #!/bin/sh
+        input=$(cat)
+        printf '%s\n' "$input" >> calls.log
+        case "$input" in
+          *'\"action\":\"selectionSnapshot\"'*) printf '{"success":true,"selection":{"selectedText":"旧文本","selectedRange":{"location":2,"length":3},"source":"plugin","isEditable":true,"isFocusedTarget":true}}' ;;
+          *'\"action\":\"currentInputSnapshot\"'*) printf '{"success":true,"currentInput":{"text":"全文","isEditable":true,"isFocusedTarget":true,"textSource":"plugin"}}' ;;
+          *) printf '{"success":true}' ;;
+        esac
+        """
+        let executable = pluginDirectory.appendingPathComponent("plugin.sh")
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
 
         let manager = PluginManager(pluginsDirectory: pluginRoot)
-        do {
-            try await manager.loadPlugin(at: pluginDirectory)
-            XCTFail("unsupported runtime should fail")
-        } catch {
-            let status = await manager.getPluginStatus(id: descriptor.id)
-            let pluginError = await manager.getPluginError(id: descriptor.id)
-            let activeCount = await manager.getActivePluginCount()
-            XCTAssertEqual(status, .error)
-            XCTAssertNotNil(pluginError)
-            XCTAssertEqual(activeCount, 0)
-        }
+        try await manager.loadPlugin(at: pluginDirectory)
+        let injectionPlugins = await manager.getInjectionPlugins()
+        let plugin = try XCTUnwrap(injectionPlugins[descriptor.id])
+        let injector = try plugin.createInjector()
+        let selection = await injector.getSelectionSnapshot()
+        let currentInput = await injector.currentInputTextSnapshot()
+        try await injector.insert(text: "新文本")
+        try await injector.replaceSelection(text: "替换文本")
+
+        XCTAssertEqual(selection.selectedText, "旧文本")
+        XCTAssertEqual(selection.selectedRange?.location, 2)
+        XCTAssertEqual(selection.selectedRange?.length, 3)
+        XCTAssertTrue(selection.canReplaceSelection)
+        XCTAssertEqual(currentInput.text, "全文")
+        XCTAssertTrue(currentInput.isFocusedTarget)
+        let calls = try String(contentsOf: pluginDirectory.appendingPathComponent("calls.log"), encoding: .utf8)
+        XCTAssertTrue(calls.contains("新文本"))
+        XCTAssertTrue(calls.contains("替换文本"))
+        let activeCount = await manager.getActivePluginCount()
+        XCTAssertEqual(activeCount, 1)
     }
 
     func testDiskPluginRejectsEntryPointSymlinkOutsidePluginDirectory() async throws {
