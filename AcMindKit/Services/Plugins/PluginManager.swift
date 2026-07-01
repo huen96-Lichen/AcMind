@@ -120,6 +120,7 @@ public actor PluginManager {
     public func discoverPlugins() async {
         guard fileManager.fileExists(atPath: pluginsDirectory.path) else {
             try? fileManager.createDirectory(at: pluginsDirectory, withIntermediateDirectories: true)
+            await pruneMissingDiscoveredPlugins(keeping: [])
             await postChangeNotification()
             return
         }
@@ -130,6 +131,7 @@ public actor PluginManager {
             options: [.skipsHiddenFiles]
         ) else { return }
 
+        var discoveredIDs = Set<String>()
         for itemURL in contents {
             let configURL = itemURL.appendingPathComponent("plugin.json")
             guard fileManager.fileExists(atPath: configURL.path) else { continue }
@@ -137,6 +139,7 @@ public actor PluginManager {
             do {
                 let data = try Data(contentsOf: configURL)
                 let descriptor = try JSONDecoder().decode(PluginDescriptor.self, from: data)
+                discoveredIDs.insert(descriptor.id)
                 discoveredDescriptors[descriptor.id] = descriptor
                 discoveredPluginURLs[descriptor.id] = itemURL
                 if pluginStatuses[descriptor.id] == nil {
@@ -149,7 +152,24 @@ public actor PluginManager {
             }
         }
 
+        await pruneMissingDiscoveredPlugins(keeping: discoveredIDs)
         await postChangeNotification()
+    }
+
+    private func pruneMissingDiscoveredPlugins(keeping discoveredIDs: Set<String>) async {
+        let staleIDs = Set(discoveredDescriptors.keys).subtracting(discoveredIDs)
+        for id in staleIDs {
+            if let plugin = plugins.removeValue(forKey: id) {
+                await plugin.deactivate()
+            }
+            asrPlugins.removeValue(forKey: id)
+            polishPlugins.removeValue(forKey: id)
+            injectionPlugins.removeValue(forKey: id)
+            discoveredDescriptors.removeValue(forKey: id)
+            discoveredPluginURLs.removeValue(forKey: id)
+            pluginErrors.removeValue(forKey: id)
+            pluginStatuses.removeValue(forKey: id)
+        }
     }
 
     // MARK: - Lifecycle

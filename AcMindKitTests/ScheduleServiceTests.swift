@@ -102,8 +102,8 @@ final class ScheduleServiceTests: XCTestCase {
     func testSearchEvents() async throws {
         let id1 = "search-\(UUID().uuidString)"
         let id2 = "search-\(UUID().uuidString)"
-        try await scheduleService.createEvent(makeEvent(id: id1, title: "产品评审会议", tag: "产品", description: "讨论Q3规划"))
-        try await scheduleService.createEvent(makeEvent(id: id2, title: "代码审查", tag: "工程", description: "Review PR #123"))
+        try await scheduleService.createEvent(makeEvent(id: id1, title: "产品评审会议", startHour: 8, endHour: 9, tag: "产品", description: "讨论Q3规划"))
+        try await scheduleService.createEvent(makeEvent(id: id2, title: "代码审查", startHour: 10, endHour: 11, tag: "工程", description: "Review PR #123"))
 
         let results = try await scheduleService.searchEvents(query: "评审")
         XCTAssertTrue(results.contains { $0.id == id1 })
@@ -140,8 +140,8 @@ final class ScheduleServiceTests: XCTestCase {
 
     func testGetStats() async throws {
         let base = UUID().uuidString
-        try await scheduleService.createEvent(makeEvent(id: "stats-todo-\(base)", title: "待办", status: .todo))
-        try await scheduleService.createEvent(makeEvent(id: "stats-done-\(base)", title: "已完成", status: .done))
+        try await scheduleService.createEvent(makeEvent(id: "stats-todo-\(base)", title: "待办", startHour: 12, endHour: 13, status: .todo))
+        try await scheduleService.createEvent(makeEvent(id: "stats-done-\(base)", title: "已完成", startHour: 14, endHour: 15, status: .done))
 
         let stats = try await scheduleService.getStats()
         XCTAssertGreaterThanOrEqual(stats.todayEvents, 2)

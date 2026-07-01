@@ -100,6 +100,39 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertNil(summary.errorMessage)
     }
 
+    func testDiscoverPluginsPrunesDescriptorsRemovedFromDisk() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let pluginDirectory = pluginRoot.appendingPathComponent("stale-plugin", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "stale-plugin",
+            name: "Stale Plugin",
+            version: "1.0.0",
+            capabilities: [.customPolish],
+            entryPoint: "plugin.sh",
+            configPath: pluginDirectory.appendingPathComponent("plugin.json").path
+        )
+        try JSONEncoder().encode(descriptor).write(to: pluginDirectory.appendingPathComponent("plugin.json"))
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        await manager.discoverPlugins()
+        let discoveredBeforeRemoval = await manager.getDiscoveredDescriptors()
+        let statusBeforeRemoval = await manager.getPluginStatus(id: "stale-plugin")
+        XCTAssertNotNil(discoveredBeforeRemoval["stale-plugin"])
+        XCTAssertEqual(statusBeforeRemoval, .discovered)
+
+        try FileManager.default.removeItem(at: pluginDirectory)
+        await manager.discoverPlugins()
+
+        let discoveredAfterRemoval = await manager.getDiscoveredDescriptors()
+        let summariesAfterRemoval = await manager.getManagementSummaries()
+        let statusAfterRemoval = await manager.getPluginStatus(id: "stale-plugin")
+        XCTAssertNil(discoveredAfterRemoval["stale-plugin"])
+        XCTAssertFalse(summariesAfterRemoval.contains { $0.id == "stale-plugin" })
+        XCTAssertEqual(statusAfterRemoval, .discovered)
+    }
+
     func testLoadingExecutablePolishPluginActivatesAndRuns() async throws {
         let pluginRoot = try makePluginRoot()
         defer { try? FileManager.default.removeItem(at: pluginRoot) }
