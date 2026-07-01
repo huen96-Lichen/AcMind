@@ -31,7 +31,7 @@ public actor TaskQueue {
     
     // MARK: - Set Callback
     
-    public func setOnJobStatusChanged(_ handler: @escaping (ProcessJob) -> Void) {
+    private func setOnJobStatusChanged(_ handler: @escaping (ProcessJob) -> Void) {
         self.onJobStatusChanged = handler
     }
     
@@ -52,7 +52,7 @@ public actor TaskQueue {
         return job.id
     }
     
-    public func enqueueBatch(_ jobList: [ProcessJob]) -> [String] {
+    private func enqueueBatch(_ jobList: [ProcessJob]) -> [String] {
         var ids: [String] = []
         
         for var job in jobList {
@@ -76,11 +76,11 @@ public actor TaskQueue {
         Array(jobs.values).sorted { $0.createdAt > $1.createdAt }
     }
     
-    public func list(status: ProcessJobStatus) -> [ProcessJob] {
+    private func list(status: ProcessJobStatus) -> [ProcessJob] {
         jobs.values.filter { $0.status == status }.sorted { $0.createdAt > $1.createdAt }
     }
     
-    public func get(id: String) -> ProcessJob? {
+    private func get(id: String) -> ProcessJob? {
         jobs[id]
     }
     
@@ -106,7 +106,7 @@ public actor TaskQueue {
         notifyStatusChanged(job)
     }
     
-    public func cancelAll() {
+    private func cancelAll() {
         for id in queue {
             if var job = jobs[id] {
                 job.status = .cancelled
@@ -157,7 +157,7 @@ public actor TaskQueue {
         }
     }
     
-    public func updateProgress(id: String, progress: Double) throws {
+    private func updateProgress(id: String, progress: Double) throws {
         guard var job = jobs[id] else {
             throw TaskQueueError.jobNotFound
         }
@@ -167,7 +167,7 @@ public actor TaskQueue {
         notifyStatusChanged(job)
     }
     
-    public func updateResult(id: String, result: String) throws {
+    private func updateResult(id: String, result: String) throws {
         guard var job = jobs[id] else {
             throw TaskQueueError.jobNotFound
         }
@@ -222,7 +222,7 @@ public actor TaskQueue {
     
     // MARK: - Retry
     
-    public func retry(id: String) throws {
+    private func retry(id: String) throws {
         guard var job = jobs[id] else {
             throw TaskQueueError.jobNotFound
         }
@@ -248,7 +248,7 @@ public actor TaskQueue {
     
     // MARK: - Clear
     
-    public func clearCompleted() {
+    private func clearCompleted() {
         let completedIds = jobs.filter { 
             $0.value.status == .succeeded || $0.value.status == .failed || $0.value.status == .cancelled
         }.keys
@@ -260,7 +260,7 @@ public actor TaskQueue {
     
     // MARK: - Stats
     
-    public func stats() -> TaskQueueStats {
+    private func stats() -> TaskQueueStats {
         let all = Array(jobs.values)
         return TaskQueueStats(
             total: all.count,

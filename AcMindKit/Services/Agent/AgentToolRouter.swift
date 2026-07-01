@@ -108,11 +108,11 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         return results
     }
 
-    public func enableTool(_ type: AgentToolType) {
+    private func enableTool(_ type: AgentToolType) {
         enabledTools.insert(type)
     }
 
-    public func disableTool(_ type: AgentToolType) {
+    private func disableTool(_ type: AgentToolType) {
         enabledTools.remove(type)
     }
 
