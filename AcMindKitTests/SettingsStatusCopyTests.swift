@@ -24,6 +24,7 @@ final class SettingsStatusCopyTests: XCTestCase {
         XCTAssertTrue(settingsSuiteView.contains("SettingsStatusLabelFormatter.binaryState("))
         XCTAssertTrue(voiceEntryView.contains("SettingsStatusLabelFormatter.binaryState"))
         XCTAssertTrue(voiceEntryView.contains("outputSummaryText"))
+        XCTAssertFalse(voiceEntryView.contains("当前未开放"))
     }
 
     private func readSource(_ relativePath: String) throws -> String {

@@ -2096,7 +2096,7 @@ final class ModelManagementViewModel: ObservableObject {
                 (apiKeyAvailabilityByProviderID["doubao_token"] ?? false)
         case .mimoASR:
             return apiKeyAvailabilityByProviderID["mimo"] ?? false
-        case .googleCloud, .groq, .freeModel:
+        default:
             return false
         }
     }
@@ -2117,7 +2117,7 @@ final class ModelManagementViewModel: ObservableObject {
             return "~600 MB"
         case .openAI, .aliCloud, .doubao, .mimoASR:
             return "在线接口"
-        case .googleCloud, .groq, .freeModel:
+        default:
             return "未提供"
         }
     }
@@ -2144,12 +2144,8 @@ final class ModelManagementViewModel: ObservableObject {
             return "火山引擎语音识别。"
         case .mimoASR:
             return "MiMo 云端识别。"
-        case .googleCloud:
-            return "Google Cloud 语音能力未开放。"
-        case .groq:
-            return "Groq Whisper 通道未开放。"
-        case .freeModel:
-            return "免费模型通道未开放。"
+        default:
+            return "当前提供方已预留，等待后续接入。"
         }
     }
 

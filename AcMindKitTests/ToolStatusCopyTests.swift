@@ -93,6 +93,7 @@ final class ToolStatusCopyTests: XCTestCase {
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.availabilityState"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.invalidInput(\"网页地址\")"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.invalidInput(\"视频地址\")"))
+        XCTAssertFalse(completionSource.contains("未开放"))
         XCTAssertTrue(webDigestSource.contains("ToolStatusLabelFormatter.waitingToInput(\"URL\")"))
         XCTAssertTrue(webDigestSource.contains("ToolStatusLabelFormatter.running(\"调用 defuddle\")"))
         XCTAssertTrue(webDigestSource.contains("ToolStatusLabelFormatter.completed(\"生成 Markdown\")"))

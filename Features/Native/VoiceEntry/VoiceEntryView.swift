@@ -748,12 +748,6 @@ struct VoiceEntryView: View {
             return "依赖火山引擎 ASR 凭证。"
         case .mimoASR:
             return "依赖 MiMo ASR 凭证。"
-        case .googleCloud:
-            return "当前未开放。"
-        case .groq:
-            return "当前未开放。"
-        case .freeModel:
-            return "当前未开放。"
         default:
             return "当前引擎已配置。"
         }
