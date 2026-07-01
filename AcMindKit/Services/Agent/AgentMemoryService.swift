@@ -23,6 +23,7 @@ public actor AgentMemoryService: AgentMemoryServiceProtocol {
 
     public func saveMemory(_ memory: AgentMemory) async throws {
         try await storage.setSetting(key: "memory_\(memory.id)", value: encodeMemory(memory))
+        await updateMemoryIndex(memoryId: memory.id, add: true)
     }
 
     public func getMemory(id: String) async throws -> AgentMemory? {
@@ -68,6 +69,7 @@ public actor AgentMemoryService: AgentMemoryServiceProtocol {
 
     public func deleteMemory(id: String) async throws {
         try await storage.setSetting(key: "memory_\(id)", value: "")
+        await updateMemoryIndex(memoryId: id, add: false)
     }
 
     public func getMemoryContext(types: [MemoryType]?, query: String?) async throws -> MemoryContext {
@@ -118,6 +120,26 @@ public actor AgentMemoryService: AgentMemoryServiceProtocol {
             index += 1
         }
         return memories
+    }
+
+    private func updateMemoryIndex(memoryId: String, add: Bool) async {
+        let indexKey = "memory_index_0"
+        let currentIndex = (try? await storage.getSetting(key: indexKey)) ?? ""
+        var memoryIds = currentIndex
+            .split(separator: ",")
+            .map(String.init)
+            .filter { $0.isEmpty == false }
+
+        if add {
+            if memoryIds.contains(memoryId) == false {
+                memoryIds.append(memoryId)
+            }
+        } else {
+            memoryIds.removeAll { $0 == memoryId }
+        }
+
+        let serializedIndex = memoryIds.joined(separator: ",")
+        try? await storage.setSetting(key: indexKey, value: serializedIndex)
     }
 
     private func encodeMemory(_ memory: AgentMemory) -> String {

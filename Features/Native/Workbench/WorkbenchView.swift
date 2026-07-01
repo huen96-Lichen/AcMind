@@ -89,6 +89,9 @@ struct WorkbenchView: View {
             )
         }
         .background(AppVisualBackdrop())
+        .onReceive(NotificationCenter.default.publisher(for: .knowledgeDidChange)) { _ in
+            Task { await viewModel.refresh() }
+        }
     }
 
     // MARK: - Sidebar
@@ -689,6 +692,10 @@ class WorkbenchViewModel: ObservableObject {
                 Self.logger.error("Workbench 数据加载失败: \(error.localizedDescription)")
             }
         }
+    }
+
+    func refresh() async {
+        loadData()
     }
 
     func presentNewProjectEditor() {

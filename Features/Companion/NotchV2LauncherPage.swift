@@ -13,6 +13,7 @@ struct NotchV2LauncherPage: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 toolbarRow
+                quickEntryRow
 
                 compactSectionLabel(title: "常用应用", detail: "拖入置顶，最多 10 个")
                 favoriteSection
@@ -61,6 +62,48 @@ struct NotchV2LauncherPage: View {
             moreMenu
         }
         .frame(height: CompanionLayoutTokens.controlHeightSmall)
+    }
+
+    private var quickEntryRow: some View {
+        HStack(spacing: 8) {
+            Text("快速入口")
+                .font(.system(size: CompanionLayoutTokens.sectionTitleSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+
+            Spacer(minLength: 0)
+
+            launcherQuickButton(title: "首页", icon: "house", action: { viewModel.showMainHome() })
+            launcherQuickButton(title: "设置", icon: "gearshape", action: { viewModel.showMainSettings() })
+            launcherQuickButton(title: "模型", icon: "brain", action: { viewModel.showMainSettings(category: .aiModels) })
+            launcherQuickButton(title: "收件箱", icon: "tray.full", action: { viewModel.showInbox() })
+            launcherQuickButton(title: "模型管理", icon: "square.grid.2x2", action: { viewModel.showModelManagement() })
+        }
+        .frame(height: 20)
+    }
+
+    private func launcherQuickButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(NotchV2DesignTokens.primaryText)
+            .padding(.horizontal, 9)
+            .frame(height: 20)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(NotchV2DesignTokens.panelBackground.opacity(0.92))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(NotchV2DesignTokens.separator.opacity(0.34), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .help(title)
     }
 
     private var searchField: some View {

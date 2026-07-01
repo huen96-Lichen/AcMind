@@ -216,30 +216,144 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             appState.navigate(to: .home)
         case .inbox:
             appState.navigate(to: .inbox)
+        case .phoneSync:
+            appState.selectInboxWorkspace("phoneSync")
+        case .screenshotHistory:
+            appState.selectInboxWorkspace("screenshotHistory")
         case .agent:
             appState.navigate(to: .agent)
+        case .clipboard:
+            appState.navigate(to: .clipboard)
+        case .screenshot:
+            appState.navigate(to: .screenshot)
         case .schedule:
             appState.navigate(to: .schedule)
+        case .workbench:
+            appState.navigate(to: .workbench)
+        case .workbenchApiTest:
+            appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)
+        case .workbenchWebDigest:
+            appState.navigate(to: .workbench, workbenchToolRoute: .webDigest)
+        case .workbenchJsonFormatter:
+            appState.navigate(to: .workbench, workbenchToolRoute: .jsonFormatter)
+        case .workbenchOcr:
+            appState.navigate(to: .workbench, workbenchToolRoute: .ocr)
+        case .dynamicContinent:
+            appState.navigate(to: .dynamicContinent)
         case .systemStatus:
             appState.navigate(to: .systemStatus)
+        case .voiceEntry:
+            appState.navigate(to: .voiceEntry)
+        case .modelManagement:
+            appState.navigate(to: .modelManagement)
         case .settings:
             appState.navigate(to: .settings)
+        case .settingsGeneral:
+            appState.navigate(to: .settings, settingsCategory: .general)
+        case .settingsCompanion:
+            appState.navigate(to: .settings, settingsCategory: .companion)
+        case .settingsAiModels:
+            appState.navigate(to: .settings, settingsCategory: .aiModels)
+        case .settingsDataKnowledge:
+            appState.navigate(to: .settings, settingsCategory: .dataKnowledge)
+        case .settingsCaptureInput:
+            appState.navigate(to: .settings, settingsCategory: .captureInput)
+        case .settingsSecurity:
+            appState.navigate(to: .settings, settingsCategory: .security)
+        case .settingsAbout:
+            appState.navigate(to: .settings, settingsCategory: .about)
         }
     }
 
     private static func initialOpenRoute(from argument: String) -> InitialOpenRoute? {
         guard argument.hasPrefix("--acwork-open=") else { return nil }
         let value = String(argument.dropFirst("--acwork-open=".count))
-        return InitialOpenRoute(rawValue: value)
+        return InitialOpenRoute.parse(value)
     }
 
     private enum InitialOpenRoute: String {
         case home
         case inbox
+        case phoneSync
+        case screenshotHistory
         case agent
+        case clipboard
+        case screenshot
         case schedule
+        case workbench
+        case workbenchApiTest
+        case workbenchWebDigest
+        case workbenchJsonFormatter
+        case workbenchOcr
+        case dynamicContinent
         case systemStatus
+        case voiceEntry
+        case modelManagement
         case settings
+        case settingsGeneral
+        case settingsCompanion
+        case settingsAiModels
+        case settingsDataKnowledge
+        case settingsCaptureInput
+        case settingsSecurity
+        case settingsAbout
+
+        static func parse(_ value: String) -> InitialOpenRoute? {
+            switch value {
+            case "home":
+                return .home
+            case "inbox":
+                return .inbox
+            case "phoneSync", "phone-sync":
+                return .phoneSync
+            case "screenshotHistory", "screenshot-history":
+                return .screenshotHistory
+            case "agent":
+                return .agent
+            case "clipboard":
+                return .clipboard
+            case "screenshot":
+                return .screenshot
+            case "schedule":
+                return .schedule
+            case "workbench":
+                return .workbench
+            case "workbenchApiTest", "workbench-api-test":
+                return .workbenchApiTest
+            case "workbenchWebDigest", "workbench-web-digest":
+                return .workbenchWebDigest
+            case "workbenchJsonFormatter", "workbench-json-formatter":
+                return .workbenchJsonFormatter
+            case "workbenchOcr", "workbench-ocr":
+                return .workbenchOcr
+            case "dynamicContinent", "dynamic-continent":
+                return .dynamicContinent
+            case "systemStatus", "system-status":
+                return .systemStatus
+            case "voiceEntry", "voice-entry":
+                return .voiceEntry
+            case "modelManagement", "model-management":
+                return .modelManagement
+            case "settings":
+                return .settings
+            case "settingsGeneral", "settings-general":
+                return .settingsGeneral
+            case "settingsCompanion", "settings-companion":
+                return .settingsCompanion
+            case "settingsAiModels", "settings-ai-models":
+                return .settingsAiModels
+            case "settingsDataKnowledge", "settings-data-knowledge":
+                return .settingsDataKnowledge
+            case "settingsCaptureInput", "settings-capture-input":
+                return .settingsCaptureInput
+            case "settingsSecurity", "settings-security":
+                return .settingsSecurity
+            case "settingsAbout", "settings-about":
+                return .settingsAbout
+            default:
+                return InitialOpenRoute(rawValue: value)
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -1614,6 +1728,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func openInternalRoute(_ routeIdentifier: String) {
+        if routeIdentifier == "phoneSync" {
+            appState.selectInboxWorkspace("phoneSync")
+            showMainWindow()
+            return
+        }
+
         if let item = SidebarItem(rawValue: routeIdentifier) {
             showPreferredSurface(for: item)
         } else {
@@ -1697,8 +1817,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.toggleFullScreen(nil)
     }
 
-    func openSettingsWindow() {
-        notchPanelController.show(page: .settings)
+    func openSettingsWindow(category: SettingsCategory? = nil) {
+        if let category {
+            appState.navigate(to: .settings, settingsCategory: category)
+            showMainWindow()
+        } else {
+            notchPanelController.show(page: .settings)
+        }
     }
 
     @objc private func showSettings() {
@@ -1723,7 +1848,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleOpenSettingsNotification(_ notification: Notification) {
-        showSettings()
+        if let category = notification.userInfo?["category"] as? SettingsCategory {
+            openSettingsWindow(category: category)
+        } else {
+            showSettings()
+        }
     }
 
     @objc private func handleGlobalShortcut(_ notification: Notification) {

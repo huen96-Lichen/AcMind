@@ -50,6 +50,7 @@ public actor AgentTaskBoardService: AgentTaskBoardServiceProtocol {
         )
         try await storage.setSetting(key: "task_\(newTask.id)", value: encodeTask(newTask))
         await updateTaskIndex(taskId: newTask.id, add: true)
+        await postChangeNotification()
         return newTask
     }
 
@@ -93,11 +94,13 @@ public actor AgentTaskBoardService: AgentTaskBoardServiceProtocol {
         var updated = task
         updated.updatedAt = Date()
         try await storage.setSetting(key: "task_\(task.id)", value: encodeTask(updated))
+        await postChangeNotification()
     }
 
     public func deleteTask(id: String) async throws {
         try await storage.setSetting(key: "task_\(id)", value: "")
         await updateTaskIndex(taskId: id, add: false)
+        await postChangeNotification()
     }
 
     public func startTask(id: String) async throws {
@@ -185,7 +188,29 @@ public actor AgentTaskBoardService: AgentTaskBoardServiceProtocol {
     }
 
     private func updateTaskIndex(taskId: String, add: Bool) async {
-        // 简化版索引更新
+        let indexKey = "task_index_0"
+        let currentIndex = (try? await storage.getSetting(key: indexKey)) ?? ""
+        var taskIds = currentIndex
+            .split(separator: ",")
+            .map(String.init)
+            .filter { $0.isEmpty == false }
+
+        if add {
+            if taskIds.contains(taskId) == false {
+                taskIds.append(taskId)
+            }
+        } else {
+            taskIds.removeAll { $0 == taskId }
+        }
+
+        let serializedIndex = taskIds.joined(separator: ",")
+        try? await storage.setSetting(key: indexKey, value: serializedIndex)
+    }
+
+    private func postChangeNotification() async {
+        await MainActor.run {
+            NotificationCenter.default.post(name: .agentTaskBoardDidChange, object: nil)
+        }
     }
 
     private func encodeTask(_ task: AgentTask) -> String {

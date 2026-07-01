@@ -65,12 +65,13 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         offset: Int? = nil
     ) async throws -> [KnowledgeCard] {
         var result = Array(cards.values)
-        
-        // 过滤状态
+
         if let status = status {
             result = result.filter { $0.status == status }
+        } else {
+            result = result.filter { $0.status != .deleted }
         }
-        
+
         // 过滤分类
         if let category = category {
             result = result.filter { $0.category == category }
@@ -107,6 +108,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         
         // 持久化
         try? await storage.insertKnowledgeCard(newCard)
+        await postChangeNotification()
     }
     
     public func createCardFromNote(_ note: DistilledNote) async throws -> KnowledgeCard {
@@ -130,6 +132,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         cards[card.id] = updated
         
         try? await storage.updateKnowledgeCard(updated)
+        await postChangeNotification()
     }
     
     public func deleteCard(id: String) async throws {
@@ -142,12 +145,14 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         cards[id] = card
 
         try? await storage.updateKnowledgeCard(card)
+        await postChangeNotification()
     }
 
     // MARK: - Knowledge Edges
 
     public func addEdge(_ edge: KnowledgeEdge) async throws {
         try await storage.insertKnowledgeEdge(edge)
+        await postChangeNotification()
     }
 
     public func listEdges(fromCardId: String?, toCardId: String?) async throws -> [KnowledgeEdge] {
@@ -156,6 +161,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
 
     public func deleteEdge(id: String) async throws {
         try await storage.deleteKnowledgeEdge(id: id)
+        await postChangeNotification()
     }
     
     public func archiveCard(id: String) async throws {
@@ -168,6 +174,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         cards[id] = card
         
         try? await storage.updateKnowledgeCard(card)
+        await postChangeNotification()
     }
     
     public func restoreCard(id: String) async throws {
@@ -180,6 +187,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         cards[id] = card
         
         try? await storage.updateKnowledgeCard(card)
+        await postChangeNotification()
     }
     
     // MARK: - Search
@@ -315,6 +323,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
             updated.searchVector = buildSearchVector(card: updated)
             cards[id] = updated
             try? await storage.updateKnowledgeCard(updated)
+            await postChangeNotification()
         }
     }
 
@@ -336,6 +345,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
             updated.searchVector = buildSearchVector(card: updated)
             cards[id] = updated
             try? await storage.updateKnowledgeCard(updated)
+            await postChangeNotification()
         }
     }
 
@@ -360,6 +370,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
             card.updatedAt = Date()
             cards[id] = card
             try? await storage.updateKnowledgeCard(card)
+            await postChangeNotification()
         }
     }
 
@@ -440,6 +451,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         cards[cardId] = card
         
         try? await storage.updateKnowledgeCard(card)
+        await postChangeNotification()
     }
     
     public func setVaultPath(cardId: String, path: String) async throws {
@@ -452,6 +464,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         cards[cardId] = card
         
         try? await storage.updateKnowledgeCard(card)
+        await postChangeNotification()
     }
     
     // MARK: - Helpers
@@ -524,6 +537,12 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         }
         
         return score
+    }
+
+    private func postChangeNotification() async {
+        await MainActor.run {
+            NotificationCenter.default.post(name: .knowledgeDidChange, object: nil)
+        }
     }
 }
 

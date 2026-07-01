@@ -103,6 +103,7 @@ public actor PluginManager {
     private var injectionPlugins: [String: InjectionPlugin] = [:]
     private var pluginStatuses: [String: PluginStatus] = [:]
     private var discoveredDescriptors: [String: PluginDescriptor] = [:]
+    private var discoveredPluginURLs: [String: URL] = [:]
     private var pluginErrors: [String: String] = [:]
 
     private let pluginsDirectory: URL
@@ -119,6 +120,7 @@ public actor PluginManager {
     public func discoverPlugins() async {
         guard fileManager.fileExists(atPath: pluginsDirectory.path) else {
             try? fileManager.createDirectory(at: pluginsDirectory, withIntermediateDirectories: true)
+            await postChangeNotification()
             return
         }
 
@@ -136,6 +138,7 @@ public actor PluginManager {
                 let data = try Data(contentsOf: configURL)
                 let descriptor = try JSONDecoder().decode(PluginDescriptor.self, from: data)
                 discoveredDescriptors[descriptor.id] = descriptor
+                discoveredPluginURLs[descriptor.id] = itemURL
                 if pluginStatuses[descriptor.id] == nil {
                     pluginStatuses[descriptor.id] = .discovered
                 }
@@ -145,6 +148,8 @@ public actor PluginManager {
                 pluginErrors[pluginId] = "配置文件解析失败: \(error.localizedDescription)"
             }
         }
+
+        await postChangeNotification()
     }
 
     // MARK: - Lifecycle
@@ -160,20 +165,28 @@ public actor PluginManager {
 
         pluginStatuses[descriptor.id] = .loading
         discoveredDescriptors[descriptor.id] = descriptor
+        discoveredPluginURLs[descriptor.id] = url
 
-        let sandbox = PluginSandbox(pluginId: descriptor.id, pluginsDirectory: pluginsDirectory)
+        let sandbox = PluginSandbox(
+            pluginId: descriptor.id,
+            pluginsDirectory: pluginsDirectory,
+            pluginDirectory: url
+        )
         guard await sandbox.validateAccess(path: url) else {
             pluginStatuses[descriptor.id] = .error
             pluginErrors[descriptor.id] = "路径不在沙盒允许范围内"
+            await postChangeNotification()
             throw PluginError.sandboxViolation
         }
 
         do {
             let runtime = try DiskProcessPlugin(descriptor: descriptor, pluginDirectory: url)
             try await activateAndRegister(plugin: runtime, descriptor: descriptor)
+            await postChangeNotification()
         } catch {
             pluginStatuses[descriptor.id] = .error
             pluginErrors[descriptor.id] = error.localizedDescription
+            await postChangeNotification()
             throw error
         }
     }
@@ -190,16 +203,15 @@ public actor PluginManager {
         polishPlugins.removeValue(forKey: id)
         injectionPlugins.removeValue(forKey: id)
         pluginStatuses[id] = .inactive
+        await postChangeNotification()
     }
 
     public func reloadPlugin(id: String) async throws {
-        guard discoveredDescriptors[id] != nil else {
+        guard let pluginURL = discoveredPluginURLs[id] else {
             throw PluginError.pluginNotFound(id)
         }
 
         try await unloadPlugin(id: id)
-
-        let pluginURL = pluginsDirectory.appendingPathComponent(id)
         try await loadPlugin(at: pluginURL)
     }
 
@@ -217,6 +229,7 @@ public actor PluginManager {
         }
 
         try await activateAndRegister(plugin: plugin, descriptor: nil)
+        await postChangeNotification()
     }
 
     private func activateAndRegister(plugin: Plugin, descriptor: PluginDescriptor?) async throws {
@@ -252,6 +265,8 @@ public actor PluginManager {
         injectionPlugins.removeValue(forKey: pluginId)
         pluginStatuses.removeValue(forKey: pluginId)
         pluginErrors.removeValue(forKey: pluginId)
+        discoveredPluginURLs.removeValue(forKey: pluginId)
+        await postChangeNotification()
     }
 
     // MARK: - Query
@@ -268,7 +283,11 @@ public actor PluginManager {
     public func getManagementSummaries() async -> [PluginManagementSummary] {
         var summaries: [PluginManagementSummary] = []
         for descriptor in discoveredDescriptors.values {
-            let sandbox = PluginSandbox(pluginId: descriptor.id, pluginsDirectory: pluginsDirectory)
+            let sandbox = PluginSandbox(
+                pluginId: descriptor.id,
+                pluginsDirectory: pluginsDirectory,
+                pluginDirectory: discoveredPluginURLs[descriptor.id]
+            )
             let policy = await sandbox.policySnapshot()
             summaries.append(
                 PluginManagementSummary(
@@ -310,6 +329,12 @@ public actor PluginManager {
                 return lhs.status.sortOrder < rhs.status.sortOrder
             }
             return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private func postChangeNotification() async {
+        await MainActor.run {
+            NotificationCenter.default.post(name: .pluginManagerDidChange, object: nil)
         }
     }
 }

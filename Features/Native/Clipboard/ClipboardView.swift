@@ -3,6 +3,7 @@ import AppKit
 import AcMindKit
 
 struct ClipboardView: View {
+    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var serviceContainer: ServiceContainer
     @StateObject private var viewModel: ClipboardViewModel
     let clipboardPinActions: ClipboardPinActions
@@ -41,14 +42,14 @@ struct ClipboardView: View {
                 title: "时间",
                 items: [
                     SecondarySidebarItem(id: "recent", title: "最近 24 小时", icon: "clock"),
-                    SecondarySidebarItem(id: "favorite", title: "已收藏", icon: "star")
+                    SecondarySidebarItem(id: "favorite", title: "已固定", icon: "star")
                 ]
             ),
             SecondarySidebarSection(
-                id: "experimental",
-                title: "实验功能",
+                id: "sync",
+                title: "同步",
                 items: [
-                    SecondarySidebarItem(id: "phoneSync", title: "手机同步（实验）", icon: "iphone")
+                    SecondarySidebarItem(id: "phoneSync", title: "手机同步", icon: "iphone")
                 ]
             )
         ]
@@ -57,7 +58,7 @@ struct ClipboardView: View {
     var body: some View {
         AcWorkShell(
             title: "剪贴板 & 手机同步",
-            subtitle: "\(viewModel.items.count) 条内容",
+            subtitle: "\(displayedItems.count) 条内容",
             headerActions: AnyView(headerActions),
             leadingRailWidth: 208,
             trailingRailWidth: 224,
@@ -125,6 +126,20 @@ struct ClipboardView: View {
             Spacer()
 
             HStack(spacing: 8) {
+                Button {
+                    appState.navigate(to: .inbox)
+                } label: {
+                    Label("收集箱", systemImage: "tray.full")
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    appState.navigate(to: .screenshot)
+                } label: {
+                    Label("截图工作区", systemImage: "camera.viewfinder")
+                }
+                .buttonStyle(.bordered)
+
                 pinWindowCountBadge
                 searchField
                 viewModePicker
@@ -160,7 +175,7 @@ struct ClipboardView: View {
                             color: AppSurfaceTokens.accentBlue
                         )
                         statBadge(
-                            count: viewModel.filteredItems.count,
+                            count: displayedItems.count,
                             label: "显示",
                             color: AppSurfaceTokens.accentGreen
                         )
@@ -413,11 +428,11 @@ struct ClipboardView: View {
             }
 
             VStack(spacing: 6) {
-                Text(viewModel.searchQuery.isEmpty ? "剪贴板为空" : "未找到匹配内容")
+                Text(emptyStateTitle)
                     .font(.system(size: AppSurfaceTokens.Typography.bodyLarge, weight: .medium))
                     .foregroundStyle(AppSurfaceTokens.secondaryText)
 
-                Text(viewModel.searchQuery.isEmpty ? "复制内容后会出现在这里" : "试试改一下搜索关键词或筛选条件")
+                Text(emptyStateMessage)
                     .font(.system(size: AppSurfaceTokens.Typography.body))
                     .foregroundStyle(AppSurfaceTokens.tertiaryText)
             }
@@ -443,6 +458,40 @@ struct ClipboardView: View {
         .transition(.opacity)
     }
 
+    private var emptyStateTitle: String {
+        if viewModel.searchQuery.isEmpty == false {
+            return "未找到匹配内容"
+        }
+
+        switch selectedSidebarItem {
+        case "recent":
+            return "最近 24 小时内没有内容"
+        case "favorite":
+            return "当前没有已固定内容"
+        case "phoneSync":
+            return "当前没有手机同步内容"
+        default:
+            return "剪贴板为空"
+        }
+    }
+
+    private var emptyStateMessage: String {
+        if viewModel.searchQuery.isEmpty == false {
+            return "试试改一下搜索关键词或筛选条件"
+        }
+
+        switch selectedSidebarItem {
+        case "recent":
+            return "新的复制内容会自动出现在这里。"
+        case "favorite":
+            return "把常用内容固定后，就会在这里显示。"
+        case "phoneSync":
+            return "来自 iPhone 的复制内容会自动归到这个工作区。"
+        default:
+            return "复制内容后会出现在这里"
+        }
+    }
+
     private var clipboardContent: some View {
         GeometryReader { proxy in
             ScrollView {
@@ -451,7 +500,7 @@ struct ClipboardView: View {
                     minimumWidth: viewMode == .list ? 240 : 220
                 )
                 LazyVGrid(columns: columns, spacing: ContentCardPresentation.cardSpacing) {
-                    ForEach(viewModel.filteredItems) { item in
+                    ForEach(displayedItems) { item in
                         ClipboardItemCard(
                             item: item,
                             isSelected: selectedItem?.id == item.id,
@@ -471,8 +520,37 @@ struct ClipboardView: View {
                     }
                 }
                 .padding(16)
-                .animation(.easeOut(duration: 0.2), value: viewModel.filteredItems.map(\.id))
+                .animation(.easeOut(duration: 0.2), value: displayedItems.map(\.id))
             }
+        }
+    }
+
+    private var displayedItems: [ClipboardItem] {
+        let baseItems = viewModel.filteredItems
+
+        switch selectedSidebarItem {
+        case "text":
+            return baseItems.filter { $0.type == .text }
+        case "link":
+            return baseItems.filter { $0.type == .url }
+        case "image":
+            return baseItems.filter { $0.type == .image }
+        case "richText":
+            return baseItems.filter { $0.type == .richText }
+        case "code":
+            return baseItems.filter { $0.type == .code }
+        case "video":
+            return baseItems.filter { $0.type == .video }
+        case "recent":
+            return baseItems.filter { Date().timeIntervalSince($0.createdAt) <= 24 * 60 * 60 }
+        case "favorite":
+            return baseItems.filter(\.isPinned)
+        case "phoneSync":
+            return baseItems.filter {
+                $0.sourceApp == "iPhone" || $0.tags.contains("phone-sync")
+            }
+        default:
+            return baseItems
         }
     }
 

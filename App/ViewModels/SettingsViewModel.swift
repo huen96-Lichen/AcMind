@@ -513,6 +513,7 @@ public final class SettingsViewModel: ObservableObject {
     public func addProvider(_ config: ProviderConfig, apiKey: String? = nil) async {
         do {
             try await settings.addProvider(config, apiKey: apiKey)
+            await loadSettings()
             await loadProviders()
             await loadUsageSummary()
             await loadUsageBurnSnapshot()
@@ -524,6 +525,7 @@ public final class SettingsViewModel: ObservableObject {
     public func updateProvider(_ config: ProviderConfig, apiKey: String? = nil) async {
         do {
             try await settings.updateProvider(config, apiKey: apiKey)
+            await loadSettings()
             await loadProviders()
             await loadUsageSummary()
             await loadUsageBurnSnapshot()
@@ -535,6 +537,7 @@ public final class SettingsViewModel: ObservableObject {
     public func removeProvider(id: String) async {
         do {
             try await settings.removeProvider(id: id)
+            await loadSettings()
             await loadProviders()
             await loadUsageSummary()
             await loadUsageBurnSnapshot()

@@ -37,7 +37,9 @@ public actor ScheduleService: ScheduleServiceProtocol {
     // MARK: - CRUD
 
     public func createEvent(_ event: ScheduleEvent) async throws {
+        try await validate(event, ignoringEventID: nil)
         try await storage.insertScheduleEvent(event)
+        await postChangeNotification()
     }
 
     public func getEvent(id: String) async throws -> ScheduleEvent? {
@@ -82,7 +84,9 @@ public actor ScheduleService: ScheduleServiceProtocol {
         guard existing != nil else {
             throw ScheduleError.eventNotFound
         }
+        try await validate(event, ignoringEventID: event.id)
         try await storage.updateScheduleEvent(event)
+        await postChangeNotification()
     }
 
     public func deleteEvent(id: String) async throws {
@@ -91,6 +95,7 @@ public actor ScheduleService: ScheduleServiceProtocol {
             throw ScheduleError.eventNotFound
         }
         try await storage.deleteScheduleEvent(id: id)
+        await postChangeNotification()
     }
 
     // MARK: - Query
@@ -152,6 +157,29 @@ public actor ScheduleService: ScheduleServiceProtocol {
             completedToday: completedToday,
             focusMinutesToday: focusMinutes
         )
+    }
+
+    // MARK: - Validation
+
+    private func validate(_ event: ScheduleEvent, ignoringEventID: String?) async throws {
+        guard event.endAt > event.startAt else {
+            throw ScheduleError.invalidDateRange
+        }
+
+        let events = try await storage.listScheduleEvents()
+        if let conflict = events.first(where: { candidate in
+            candidate.id != ignoringEventID
+                && candidate.status != .cancelled
+                && candidate.overlaps(with: event)
+        }) {
+            throw ScheduleError.conflict(conflict)
+        }
+    }
+
+    private func postChangeNotification() async {
+        await MainActor.run {
+            NotificationCenter.default.post(name: .scheduleDidChange, object: nil)
+        }
     }
 }
 

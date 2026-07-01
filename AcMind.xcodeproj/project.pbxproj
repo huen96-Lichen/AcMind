@@ -249,6 +249,8 @@
 		A10000000000000000000511 /* AcMindKit/Services/Agent/AgentQuickAskService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000510 /* AcMindKit/Services/Agent/AgentQuickAskService.swift */; };
 		A10000000000000000000513 /* AcMindKit/Models/AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000512 /* AcMindKit/Models/AgentTool.swift */; };
 		A10000000000000000000514 /* AcMindKit/Services/Agent/AgentToolRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000515 /* AcMindKit/Services/Agent/AgentToolRouter.swift */; };
+		A10000000000000000000694 /* AcMindKit/Services/Agent/AgentToolCallParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000695 /* AcMindKit/Services/Agent/AgentToolCallParser.swift */; };
+		A10000000000000000000696 /* AcMindKitTests/AgentToolCallParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000697 /* AcMindKitTests/AgentToolCallParserTests.swift */; };
 		A10000000000000000000517 /* AcMindKitTests/CaptureServiceScreenshotPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000516 /* AcMindKitTests/CaptureServiceScreenshotPolicyTests.swift */; };
 		A10000000000000000000519 /* AcMindKitTests/DesktopCapsuleConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000518 /* AcMindKitTests/DesktopCapsuleConfigTests.swift */; };
 		A1000000000000000000051A /* AcMindKit/Services/Input/Capture/ScrollCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000051B /* AcMindKit/Services/Input/Capture/ScrollCaptureService.swift */; };
@@ -649,6 +651,8 @@
 		A10000000000000000000510 /* AcMindKit/Services/Agent/AgentQuickAskService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentQuickAskService.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000512 /* AcMindKit/Models/AgentTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Models/AgentTool.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000515 /* AcMindKit/Services/Agent/AgentToolRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentToolRouter.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000695 /* AcMindKit/Services/Agent/AgentToolCallParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Agent/AgentToolCallParser.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000697 /* AgentToolCallParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentToolCallParserTests.swift; path = AcMindKitTests/AgentToolCallParserTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000516 /* AcMindKitTests/CaptureServiceScreenshotPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/CaptureServiceScreenshotPolicyTests.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000518 /* AcMindKitTests/DesktopCapsuleConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKitTests/DesktopCapsuleConfigTests.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000051B /* AcMindKit/Services/Input/Capture/ScrollCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcMindKit/Services/Input/Capture/ScrollCaptureService.swift; sourceTree = SOURCE_ROOT; };
@@ -1141,6 +1145,7 @@
 				A10000000000000000000088 /* AcMindKit/Services/AI/AIError.swift */,
 				A10000000000000000000089 /* AcMindKit/Services/AI/AIRuntimeService.swift */,
 				A10000000000000000000510 /* AcMindKit/Services/Agent/AgentQuickAskService.swift */,
+				A10000000000000000000695 /* AcMindKit/Services/Agent/AgentToolCallParser.swift */,
 				A10000000000000000000515 /* AcMindKit/Services/Agent/AgentToolRouter.swift */,
 				A10000000000000000000670 /* AcMindKit/Services/Agent/AgentTraceRenderer.swift */,
 				A10000000000000000000619 /* AcMindKit/Services/Agent/AgentMemoryService.swift */,
@@ -1378,6 +1383,7 @@
 				171E8A706237B677507CE8B8 /* AgentQuickAskServiceTests.swift */,
 				7F1A0128C3DDCBD32AEEA7A0 /* AgentSkillServiceTests.swift */,
 				65ED0234D0F001D276EB1DF9 /* AgentTaskBoardServiceTests.swift */,
+				A10000000000000000000697 /* AgentToolCallParserTests.swift */,
 				D45E075A17DA8C41A0644786 /* AgentToolRouterTests.swift */,
 				82DA4FD07A1D2DD16C15DD05 /* AudioMuteGuardTests.swift */,
 				5BEF1FF81194780A42C81D3D /* BatteryStatusReaderTests.swift */,
@@ -1919,6 +1925,7 @@
 				A10000000000000000000078 /* AcMindKit/Services/AI/AIError.swift in Sources */,
 				A10000000000000000000079 /* AcMindKit/Services/AI/AIRuntimeService.swift in Sources */,
 				A10000000000000000000511 /* AcMindKit/Services/Agent/AgentQuickAskService.swift in Sources */,
+				A10000000000000000000694 /* AcMindKit/Services/Agent/AgentToolCallParser.swift in Sources */,
 				A10000000000000000000514 /* AcMindKit/Services/Agent/AgentToolRouter.swift in Sources */,
 				A10000000000000000000671 /* AcMindKit/Services/Agent/AgentTraceRenderer.swift in Sources */,
 				A100000000000000000004A3 /* AcMindKit/Services/Agent/AgentModelRouter.swift in Sources */,
@@ -2096,6 +2103,7 @@
 				0E43A7A1E470D167AFAD33C9 /* AgentQuickAskServiceTests.swift in Sources */,
 				A36F21286046CE6D62F32B11 /* AgentSkillServiceTests.swift in Sources */,
 				36B3456AE74DB54C25D82288 /* AgentTaskBoardServiceTests.swift in Sources */,
+				A10000000000000000000696 /* AcMindKitTests/AgentToolCallParserTests.swift in Sources */,
 				F36BEBE5989125BD0823753A /* AgentToolRouterTests.swift in Sources */,
 				2B71F15C1A813719590C8600 /* AudioMuteGuardTests.swift in Sources */,
 				9D7F26D2D89EBB50A2AE8FBD /* BatteryStatusReaderTests.swift in Sources */,

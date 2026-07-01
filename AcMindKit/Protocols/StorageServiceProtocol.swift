@@ -472,6 +472,7 @@ public enum InboxQuickFilter: String, Codable, Sendable, Hashable, CaseIterable 
     case all
     case pending
     case screenshotHistory
+    case phoneSync
     case pinned
     case favorites
     case recent
@@ -569,6 +570,8 @@ public struct InboxFilterState: Sendable, Equatable {
         case .screenshotHistory:
             resolvedSources.insert(.screenshot)
             resolvedSources.insert(.screenshotOCR)
+        case .phoneSync:
+            resolvedSources.insert(.phoneSync)
         case .pinned:
             pinnedOnly = true
         case .favorites:
@@ -771,6 +774,7 @@ public final class CollectedInboxViewModel: ObservableObject {
         case .all: return allItems.count
         case .pending: return allItems.filter { $0.processingStatus == .pending || $0.processingStatus == .captured }.count
         case .screenshotHistory: return allItems.filter { $0.source == .screenshot || $0.source == .screenshotOCR }.count
+        case .phoneSync: return allItems.filter { $0.source == .phoneSync }.count
         case .pinned: return allItems.filter(\.isPinned).count
         case .favorites: return allItems.filter(\.isFavorite).count
         case .recent:
@@ -1113,6 +1117,7 @@ public protocol AIRuntimeProtocol: Sendable {
     func removeProvider(id: String) async throws
     func setDefaultProvider(id: String) throws
     func healthCheck(providerId: String) async throws -> Bool
+    func healthCheckAll() async -> [String: Bool]
     func listModels(providerId: String) async throws -> [String]
     func listJobs() async throws -> [ProcessJob]
     func cancelJob(id: String) async throws
@@ -1120,6 +1125,20 @@ public protocol AIRuntimeProtocol: Sendable {
     func chat(messages: [ChatMessage]) async throws -> ChatResponse
     func chat(messages: [ChatMessage], providerId: String, model: String?) async throws -> ChatResponse
     func chatStream(messages: [ChatMessage]) -> AsyncThrowingStream<ChatResponse, Error>
+}
+
+public extension AIRuntimeProtocol {
+    func healthCheckAll() async -> [String: Bool] {
+        let providers = await listProviders()
+        guard providers.isEmpty == false else { return [:] }
+
+        var result: [String: Bool] = [:]
+        for provider in providers {
+            let ok = (try? await healthCheck(providerId: provider.id)) ?? false
+            result[provider.id] = ok
+        }
+        return result
+    }
 }
 
 // MARK: - AIProvider

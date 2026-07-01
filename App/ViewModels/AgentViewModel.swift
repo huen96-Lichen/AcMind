@@ -1,7 +1,7 @@
 import Foundation
 import AcMindKit
 
-enum AgentMode: String, Hashable {
+enum AgentMode: String, Hashable, CaseIterable {
     case normal
     case task
     case quickAsk
@@ -270,6 +270,10 @@ class AgentViewModel: ObservableObject {
     func selectModel(_ option: ModelOption) {
         selectedModelOption = option
         selectedModelLabel = option.displayName
+    }
+
+    func setMode(_ mode: AgentMode) {
+        selectedMode = mode
     }
 
     var currentWorkspaceTitle: String {

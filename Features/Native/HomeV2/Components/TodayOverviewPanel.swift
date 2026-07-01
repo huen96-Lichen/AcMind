@@ -4,9 +4,6 @@ struct TodayOverviewPanel: View {
     let model: WorkbenchV2DashboardData.TodayStatus
     let layout: WorkbenchV2ResolvedLayout
 
-    @State private var islandEnabled = true
-    @State private var speechEnabled = true
-
     var body: some View {
         VStack(alignment: .leading, spacing: sectionSpacing) {
             header
@@ -26,14 +23,12 @@ struct TodayOverviewPanel: View {
 
             VStack(spacing: overviewSpacing) {
                 WorkbenchV2OverviewToggleRow(
-                    item: model.toggle(at: 0) ?? .init(title: "灵动大陆", subtitle: "已开启", isOn: true, systemImage: "circle"),
-                    isOn: $islandEnabled,
+                    item: model.toggle(at: 0) ?? .init(title: "灵动大陆", subtitle: "已开启", isOn: true, systemImage: "bubble.left.and.bubble.right"),
                     isCompact: layout.mode == .compact
                 )
 
                 WorkbenchV2OverviewToggleRow(
-                    item: model.toggle(at: 1) ?? .init(title: "说人法", subtitle: "已开启", isOn: true, systemImage: "music.note"),
-                    isOn: $speechEnabled,
+                    item: model.toggle(at: 1) ?? .init(title: "说人法", subtitle: "已开启", isOn: true, systemImage: "waveform"),
                     isCompact: layout.mode == .compact
                 )
             }
@@ -269,7 +264,6 @@ private struct WorkbenchV2OverviewMetricTile: View {
 
 private struct WorkbenchV2OverviewToggleRow: View {
     let item: WorkbenchV2DashboardData.TodayStatusToggle
-    @Binding var isOn: Bool
     let isCompact: Bool
 
     var body: some View {
@@ -288,7 +282,7 @@ private struct WorkbenchV2OverviewToggleRow: View {
                     .font(.system(size: WorkbenchV2Tokens.Typography.body, weight: .semibold))
                     .foregroundStyle(WorkbenchV2Tokens.Color.textPrimary)
                     .lineLimit(1)
-                Text(isOn ? "已开启" : "已关闭")
+                Text(item.isOn ? "已开启" : "已关闭")
                     .font(.system(size: WorkbenchV2Tokens.Typography.caption))
                     .foregroundStyle(WorkbenchV2Tokens.Color.textSecondary)
                     .lineLimit(1)
@@ -296,9 +290,10 @@ private struct WorkbenchV2OverviewToggleRow: View {
 
             Spacer(minLength: 0)
 
-            Toggle("", isOn: $isOn)
+            Toggle("", isOn: .constant(item.isOn))
                 .labelsHidden()
                 .toggleStyle(SwitchToggleStyle())
+                .disabled(true)
         }
         .padding(.horizontal, WorkbenchV2Tokens.Spacing.sm)
         .frame(maxWidth: .infinity, minHeight: isCompact ? 40 : WorkbenchV2Tokens.Layout.overviewToggleHeight, alignment: .leading)

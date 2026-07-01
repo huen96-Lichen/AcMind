@@ -19,10 +19,12 @@ final class AgentTaskBoardServiceTests: XCTestCase {
     }
 
     func testCreateAndGetTask() async throws {
+        let expectation = expectation(forNotification: .agentTaskBoardDidChange, object: nil, handler: nil)
         let id = "task-\(UUID().uuidString)"
         let task = AgentTask(id: id, title: "Build feature X", description: "Implement the new feature")
 
         let created = try await service.createTask(task)
+        await fulfillment(of: [expectation], timeout: 1.0)
 
         XCTAssertEqual(created.id, id)
         XCTAssertEqual(created.title, "Build feature X")
@@ -57,12 +59,16 @@ final class AgentTaskBoardServiceTests: XCTestCase {
         XCTAssertEqual(initial?.status, .pending)
         XCTAssertNil(initial?.startedAt)
 
+        let runningExpectation = expectation(forNotification: .agentTaskBoardDidChange, object: nil, handler: nil)
         try await service.startTask(id: id)
+        await fulfillment(of: [runningExpectation], timeout: 1.0)
         let running = try await service.getTask(id: id)
         XCTAssertEqual(running?.status, .running)
         XCTAssertNotNil(running?.startedAt)
 
+        let completedExpectation = expectation(forNotification: .agentTaskBoardDidChange, object: nil, handler: nil)
         try await service.completeTask(id: id)
+        await fulfillment(of: [completedExpectation], timeout: 1.0)
         let completed = try await service.getTask(id: id)
         XCTAssertEqual(completed?.status, .completed)
         XCTAssertNotNil(completed?.completedAt)
@@ -83,6 +89,21 @@ final class AgentTaskBoardServiceTests: XCTestCase {
         XCTAssertEqual(retried?.status, .pending)
         XCTAssertNil(retried?.errorMessage)
         XCTAssertEqual(retried?.retryCount, 1)
+    }
+
+    func testDeleteTaskRemovesItFromPersistedIndex() async throws {
+        let id = "task-\(UUID().uuidString)"
+        _ = try await service.createTask(AgentTask(id: id, title: "Delete Me"))
+
+        let beforeDelete = try await service.listTasks(filter: nil)
+        XCTAssertTrue(beforeDelete.contains { $0.id == id })
+
+        try await service.deleteTask(id: id)
+
+        let afterDelete = try await service.listTasks(filter: nil)
+        XCTAssertFalse(afterDelete.contains { $0.id == id })
+        let deletedTask = try await service.getTask(id: id)
+        XCTAssertNil(deletedTask)
     }
 
     func testTaskClosureSummaryShowsTimelineAndNextActionForRunningTask() {
@@ -151,24 +172,12 @@ final class AgentTaskBoardServiceTests: XCTestCase {
 
 final class MockTaskStorage: StorageServiceProtocol, @unchecked Sendable {
     private var settings: [String: String] = [:]
-    private var taskIds: [String] = []
 
     func setSetting(key: String, value: String) async throws {
         settings[key] = value
-        if key.hasPrefix("task_") && !key.contains("index") && !value.isEmpty {
-            let id = String(key.dropFirst("task_".count))
-            if !taskIds.contains(id) {
-                taskIds.append(id)
-            }
-        }
     }
 
     func getSetting(key: String) async throws -> String? {
-        if key.hasPrefix("task_index_") {
-            let indexStr = String(key.dropFirst("task_index_".count))
-            guard let index = Int(indexStr), index == 0 else { return nil }
-            return taskIds.joined(separator: ",")
-        }
         return settings[key]
     }
 

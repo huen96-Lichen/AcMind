@@ -160,12 +160,12 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains(".accessibilityLabel(\"\\(item.displayName)\\(isSelected ? \"，当前页面\" : \"\")\")"))
         XCTAssertTrue(source.contains("capabilityState: capabilityState(for: item)"))
         XCTAssertFalse(source.contains("openScreenshotOptions()"))
-        XCTAssertTrue(appStateSource.contains("public func navigate(to item: SidebarItem)"))
-        XCTAssertTrue(appStateSource.contains("public func navigateToInbox(workspace selection: String? = \"all\")"))
+        XCTAssertTrue(appStateSource.contains("public func navigate("))
+        XCTAssertTrue(appStateSource.contains("public func navigateToInbox("))
         XCTAssertTrue(contentSource.contains("case .screenshot:"))
         XCTAssertTrue(contentSource.contains("ScreenshotWorkspaceView(clipboardPinActions: clipboardPinActions)"))
         XCTAssertTrue(contentSource.contains(".navigationTitle(\"截图工作区\")"))
-        XCTAssertTrue(screenshotWorkspaceSource.contains("recentCaptureCard"))
+        XCTAssertTrue(screenshotWorkspaceSource.contains("recentScreenshotCard"))
         XCTAssertTrue(screenshotWorkspaceSource.contains("postScreenshotCapture(mode:"))
         XCTAssertTrue(screenshotWorkspaceSource.contains("打开胶囊截图"))
         XCTAssertTrue(screenshotWorkspaceSource.contains("继续处理最近一次截图"))
@@ -613,6 +613,12 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(exporterSource.contains("companion-six-pages-contact-sheet.png"))
         XCTAssertTrue(exporterSource.contains("CompanionScreenshotPanelController"))
         XCTAssertTrue(launcherSource.contains("DebugPreviewLaunchCommand.isCompanionSixPagesExport()"))
+        XCTAssertTrue(launcherSource.contains("quickEntryRow"))
+        XCTAssertTrue(launcherSource.contains("launcherQuickButton(title: \"首页\""))
+        XCTAssertTrue(launcherSource.contains("launcherQuickButton(title: \"设置\""))
+        XCTAssertTrue(launcherSource.contains("launcherQuickButton(title: \"模型\""))
+        XCTAssertTrue(launcherSource.contains("launcherQuickButton(title: \"收件箱\""))
+        XCTAssertTrue(launcherSource.contains("launcherQuickButton(title: \"模型管理\""))
         XCTAssertFalse(launcherSource.contains("ProcessInfo.processInfo.arguments.contains(\"--companion-six-pages-export\")"))
         XCTAssertTrue(projectSource.contains("DebugCompanionScreenshotExporter.swift in Sources"))
     }
@@ -811,7 +817,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("case .systemStatus:"))
         XCTAssertTrue(source.contains("SystemStatusView("))
         XCTAssertTrue(source.contains("case .inbox:"))
-        XCTAssertTrue(source.contains("InboxView(clipboardPinActions: clipboardPinActions)"))
+        XCTAssertTrue(source.contains("InboxView(clipboardPinActions: clipboardPinActions, previewScenario: inboxPreviewScenario)"))
         XCTAssertTrue(source.contains("case .clipboard:"))
         XCTAssertFalse(source.contains("CaptureWorkspaceView(mode:"))
     }
@@ -838,12 +844,294 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(itemSource.contains("case .settings: return \"前往设置\""))
     }
 
+    func testInitialOpenRouteSupportsPrimaryAcWorkSurfaces() throws {
+        let source = try readSource("App/AppDelegate.swift")
+
+        XCTAssertTrue(source.contains("case clipboard"))
+        XCTAssertTrue(source.contains("case screenshot"))
+        XCTAssertTrue(source.contains("case screenshotHistory"))
+        XCTAssertTrue(source.contains("case workbench"))
+        XCTAssertTrue(source.contains("case dynamicContinent"))
+        XCTAssertTrue(source.contains("case voiceEntry"))
+        XCTAssertTrue(source.contains("case modelManagement"))
+        XCTAssertTrue(source.contains("case .clipboard:"))
+        XCTAssertTrue(source.contains("case .screenshot:"))
+        XCTAssertTrue(source.contains("case .screenshotHistory:"))
+        XCTAssertTrue(source.contains("case .workbench:"))
+        XCTAssertTrue(source.contains("case .dynamicContinent:"))
+        XCTAssertTrue(source.contains("case .voiceEntry:"))
+        XCTAssertTrue(source.contains("case .modelManagement:"))
+    }
+
+    func testInitialOpenRouteSupportsWorkbenchAndSettingsSubpages() throws {
+        let source = try readSource("App/AppDelegate.swift")
+
+        XCTAssertTrue(source.contains("case .workbenchApiTest:"))
+        XCTAssertTrue(source.contains("case .workbenchWebDigest:"))
+        XCTAssertTrue(source.contains("case .workbenchJsonFormatter:"))
+        XCTAssertTrue(source.contains("case .workbenchOcr:"))
+        XCTAssertTrue(source.contains("case .settingsGeneral:"))
+        XCTAssertTrue(source.contains("case .settingsCompanion:"))
+        XCTAssertTrue(source.contains("case .settingsAiModels:"))
+        XCTAssertTrue(source.contains("case .settingsDataKnowledge:"))
+        XCTAssertTrue(source.contains("case .settingsCaptureInput:"))
+        XCTAssertTrue(source.contains("case .settingsSecurity:"))
+        XCTAssertTrue(source.contains("case .settingsAbout:"))
+        XCTAssertTrue(source.contains("workbenchApiTest"))
+        XCTAssertTrue(source.contains("workbench-api-test"))
+        XCTAssertTrue(source.contains("settingsCaptureInput"))
+        XCTAssertTrue(source.contains("settings-capture-input"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .settings, settingsCategory: .captureInput)"))
+    }
+
+    func testAppCommandsExposeWorkbenchAndSettingsSubmenus() throws {
+        let source = try readSource("App/AcMindApp.swift")
+
+        XCTAssertTrue(source.contains("CommandMenu(\"工具\")"))
+        XCTAssertTrue(source.contains("CommandMenu(\"设置\")"))
+        XCTAssertTrue(source.contains("接口测试"))
+        XCTAssertTrue(source.contains("网页精读"))
+        XCTAssertTrue(source.contains("JSON 格式化"))
+        XCTAssertTrue(source.contains("文字识别"))
+        XCTAssertTrue(source.contains("通用"))
+        XCTAssertTrue(source.contains("随身能力"))
+        XCTAssertTrue(source.contains("智能与模型"))
+        XCTAssertTrue(source.contains("数据与知识库"))
+        XCTAssertTrue(source.contains("捕获与输入"))
+        XCTAssertTrue(source.contains("权限与安全"))
+        XCTAssertTrue(source.contains("关于"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .workbench, workbenchToolRoute: .webDigest)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .settings, settingsCategory: .captureInput)"))
+    }
+
+    func testNotchTopBarExposesSettingsSubpageShortcuts() throws {
+        let source = try readSource("Features/Companion/NotchV2TopBar.swift")
+
+        XCTAssertTrue(source.contains("openSettingsWindow(category: .aiModels)"))
+        XCTAssertTrue(source.contains("openSettingsWindow(category: .captureInput)"))
+        XCTAssertTrue(source.contains("openSettingsWindow(category: .security)"))
+        XCTAssertTrue(source.contains("Button(\"设置首页\")"))
+        XCTAssertTrue(source.contains("Button(\"智能与模型\")"))
+        XCTAssertTrue(source.contains("Button(\"捕获与输入\")"))
+        XCTAssertTrue(source.contains("Button(\"权限与安全\")"))
+        XCTAssertTrue(source.contains("func openSettingsWindow(category: SettingsCategory)"))
+    }
+
+    func testDesktopCapsuleAndToolSettingsOpenSpecificCategories() throws {
+        let capsuleSource = try readSource("Features/Native/DesktopCapsule/DesktopCapsuleViewModel.swift")
+        let toolSource = try readSource("Features/Native/Tools/ToolCompletionPanels.swift")
+        let capsuleSettingsSource = try readSource("Features/Native/DesktopCapsule/DesktopCapsuleSettingsSection.swift")
+        let appDelegateSource = try readSource("App/AppDelegate.swift")
+
+        XCTAssertTrue(capsuleSource.contains("userInfo: [\"category\": SettingsCategory.companion]"))
+        XCTAssertTrue(toolSource.contains("AppState.shared.navigate(to: .settings, settingsCategory: .aiModels)"))
+        XCTAssertTrue(capsuleSettingsSource.contains("快速入口"))
+        XCTAssertTrue(capsuleSettingsSource.contains("quickEntryButton(title: \"随身能力\", category: .companion)"))
+        XCTAssertTrue(capsuleSettingsSource.contains("quickEntryButton(title: \"智能与模型\", category: .aiModels)"))
+        XCTAssertTrue(capsuleSettingsSource.contains("quickEntryButton(title: \"捕获与输入\", category: .captureInput)"))
+        XCTAssertTrue(capsuleSettingsSource.contains("openSettingsWindow(category: category)"))
+        XCTAssertTrue(appDelegateSource.contains("if let category = notification.userInfo?[\"category\"] as? SettingsCategory"))
+        XCTAssertTrue(appDelegateSource.contains("openSettingsWindow(category: category)"))
+    }
+
+    func testNotchOverviewExposesActionableQuickEntries() throws {
+        let source = try readSource("Features/Companion/NotchV2OverviewPage.swift")
+
+        XCTAssertTrue(source.contains("快捷入口"))
+        XCTAssertTrue(source.contains("设置首页"))
+        XCTAssertTrue(source.contains("智能与模型"))
+        XCTAssertTrue(source.contains("捕获与输入"))
+        XCTAssertTrue(source.contains("showMainSettings()"))
+        XCTAssertTrue(source.contains("showMainSettings(category: .aiModels)"))
+        XCTAssertTrue(source.contains("showMainSettings(category: .captureInput)"))
+    }
+
+    func testNotchAgentPageExposesModelAndInboxShortcuts() throws {
+        let pageSource = try readSource("Features/Companion/NotchV2AgentPage.swift")
+        let viewModelSource = try readSource("Features/Companion/NotchV2ViewModel.swift")
+
+        XCTAssertTrue(pageSource.contains("模型管理"))
+        XCTAssertTrue(pageSource.contains("收集箱"))
+        XCTAssertTrue(pageSource.contains("智能与模型"))
+        XCTAssertTrue(pageSource.contains("showModelManagement()"))
+        XCTAssertTrue(pageSource.contains("showInbox()"))
+        XCTAssertTrue(pageSource.contains("showMainSettings(category: .aiModels)"))
+        XCTAssertTrue(viewModelSource.contains("func showModelManagement()"))
+        XCTAssertTrue(viewModelSource.contains("func showInbox()"))
+        XCTAssertTrue(viewModelSource.contains("AppState.shared.navigate(to: .modelManagement)"))
+        XCTAssertTrue(viewModelSource.contains("NotificationCenter.default.post(name: .companionShowInbox, object: nil)"))
+    }
+
+    func testDynamicContinentStatusStripProvidesDirectFixActions() throws {
+        let source = try readSource("Features/Companion/DynamicContinent/DynamicContinentTemplateV2.swift")
+
+        XCTAssertTrue(source.contains("模型管理"))
+        XCTAssertTrue(source.contains("捕获与输入"))
+        XCTAssertTrue(source.contains("设置首页"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .modelManagement)"))
+        XCTAssertTrue(source.contains("viewModel.showMainSettings(category: .captureInput)"))
+        XCTAssertTrue(source.contains("viewModel.showMainSettings()"))
+    }
+
+    func testCompanionShortcutPanelExposesQuickSettingsLinks() throws {
+        let source = try readSource("Features/Companion/CompanionShortcutPanel.swift")
+
+        XCTAssertTrue(source.contains("快速入口"))
+        XCTAssertTrue(source.contains("设置首页"))
+        XCTAssertTrue(source.contains("随身能力"))
+        XCTAssertTrue(source.contains("捕获与输入"))
+        XCTAssertTrue(source.contains("智能与模型"))
+        XCTAssertTrue(source.contains("quickSettingsButton(title: \"随身能力\", category: .companion)"))
+        XCTAssertTrue(source.contains("quickSettingsButton(title: \"智能与模型\", category: .aiModels)"))
+        XCTAssertTrue(source.contains("openSettingsWindow(category: category)"))
+    }
+
+    func testNotchLightStatusStripExposesDirectActionHooks() throws {
+        let source = try readSource("Features/Companion/NotchV2StatusStrip.swift")
+
+        XCTAssertTrue(source.contains("let action: (() -> Void)?"))
+        XCTAssertTrue(source.contains("if let action = item.action"))
+        XCTAssertTrue(source.contains("help(item.highlighted ? \"点击处理\" : item.detail)"))
+        XCTAssertTrue(source.contains("showMainSettings(category: .captureInput)"))
+        XCTAssertTrue(source.contains("showVoicePanel()"))
+        XCTAssertTrue(source.contains("showMainHome()"))
+        XCTAssertTrue(source.contains("showMainSettings()"))
+    }
+
+    func testSettingsScreenSurfacesScreenshotHistoryDirectly() throws {
+        let source = try readSource("Features/Native/Settings/SettingsView.swift")
+
+        XCTAssertTrue(source.contains("打开截图历史"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .screenshotHistory)"))
+        XCTAssertTrue(source.contains("打开截图工作区"))
+    }
+
+    func testAIModelSettingsSurfaceToolWorkspaceEntryPoints() throws {
+        let source = try readSource("Features/Native/Settings/SettingsView.swift")
+
+        XCTAssertTrue(source.contains("打开模型管理"))
+        XCTAssertTrue(source.contains("打开说入法"))
+        XCTAssertTrue(source.contains("验证接口"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .workbench, workbenchToolRoute: .apiTest)"))
+    }
+
+    func testVoiceScreenSurfacesQuickJumpActions() throws {
+        let source = try readSource("Features/Native/VoiceEntry/VoiceEntryView.swift")
+
+        XCTAssertTrue(source.contains("打开说入法面板"))
+        XCTAssertTrue(source.contains("验证接口"))
+        XCTAssertTrue(source.contains("查看设置首页"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .workbench, workbenchToolRoute: .apiTest)"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .settings)"))
+    }
+
+    func testVoiceEntryRefreshesLiveSettingsState() throws {
+        let source = try readSource("Features/Native/VoiceEntry/VoiceEntryView.swift")
+
+        XCTAssertTrue(source.contains(".settingsDidChange"))
+        XCTAssertTrue(source.contains(".companionConfigurationDidChange"))
+        XCTAssertTrue(source.contains(".companionShortcutsDidChange"))
+        XCTAssertTrue(source.contains("await viewModel.loadSettings()"))
+        XCTAssertTrue(source.contains("await viewModel.loadCompanionSettings()"))
+        XCTAssertTrue(source.contains("await viewModel.loadPermissions()"))
+    }
+
+    func testToolsScreenSurfacesQuickJumpActions() throws {
+        let source = try readSource("Features/Native/Tools/ToolsView.swift")
+
+        XCTAssertTrue(source.contains("验证接口"))
+        XCTAssertTrue(source.contains("模型设置"))
+        XCTAssertTrue(source.contains("说入法"))
+        XCTAssertTrue(source.contains("设置首页"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .settings, settingsCategory: .aiModels)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .voiceEntry)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .settings)"))
+    }
+
+    func testScreenshotWorkspaceSurfacesInboxAndHistoryShortcuts() throws {
+        let source = try readSource("Features/Native/Shared/ScreenshotWorkspaceView.swift")
+
+        XCTAssertTrue(source.contains("历史"))
+        XCTAssertTrue(source.contains("收集箱"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .screenshotHistory)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .inbox)"))
+    }
+
+    func testAgentScreenSurfacesResultRecoveryShortcuts() throws {
+        let source = try readSource("Features/Native/Agent/AgentDashboardView.swift")
+
+        XCTAssertTrue(source.contains("收集箱"))
+        XCTAssertTrue(source.contains("截图历史"))
+        XCTAssertTrue(source.contains("工具台"))
+        XCTAssertTrue(source.contains("设置首页"))
+        XCTAssertTrue(source.contains("AppState.shared.navigateToInbox()"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .screenshotHistory)"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .workbench)"))
+        XCTAssertTrue(source.contains("AppState.shared.navigate(to: .settings)"))
+    }
+
+    func testWorkbenchV2ViewSendsDetailsToInbox() throws {
+        let source = try readSource("Features/Native/HomeV2/WorkbenchV2View.swift")
+
+        XCTAssertTrue(source.contains("viewDetails: { AppState.shared.navigateToInbox() }"))
+        XCTAssertTrue(source.contains("continueWork: { AppState.shared.navigate(to: .agent) }"))
+    }
+
+    func testWorkbenchViewsRefreshOnScheduleAndTaskChanges() throws {
+        let workbenchV2 = try readSource("Features/Native/HomeV2/WorkbenchV2View.swift")
+        let workspaceHome = try readSource("Features/Native/Home/WorkspaceHomeView.swift")
+
+        XCTAssertTrue(workbenchV2.contains("scheduleDidChange"))
+        XCTAssertTrue(workbenchV2.contains("agentTaskBoardDidChange"))
+        XCTAssertTrue(workspaceHome.contains("scheduleDidChange"))
+        XCTAssertTrue(workspaceHome.contains("agentTaskBoardDidChange"))
+    }
+
+    func testWorkbenchV2UsesRealSettingsState() throws {
+        let dashboardDataSource = try readSource("Features/Native/HomeV2/WorkbenchV2DashboardData.swift")
+        let todayOverviewSource = try readSource("Features/Native/HomeV2/Components/TodayOverviewPanel.swift")
+        let deviceStatusSource = try readSource("Features/Native/HomeV2/Components/DeviceStatusBar.swift")
+        let workbenchV2Source = try readSource("Features/Native/HomeV2/WorkbenchV2View.swift")
+
+        XCTAssertTrue(dashboardDataSource.contains("CompanionDisplaySettingsStore.load()"))
+        XCTAssertTrue(dashboardDataSource.contains("SettingsLocalPreferences.loadOrDefault()"))
+        XCTAssertTrue(dashboardDataSource.contains("subtitle: companionSettings.isEnabled ? \"已开启\" : \"已关闭\""))
+        XCTAssertTrue(dashboardDataSource.contains("subtitle: localPreferences.voiceInputEnabled ? \"已开启\" : \"已关闭\""))
+        XCTAssertTrue(todayOverviewSource.contains("Toggle(\"\", isOn: .constant(item.isOn))"))
+        XCTAssertTrue(todayOverviewSource.contains(".disabled(true)"))
+        XCTAssertFalse(todayOverviewSource.contains("@State private var islandEnabled"))
+        XCTAssertFalse(todayOverviewSource.contains("@State private var speechEnabled"))
+        XCTAssertTrue(deviceStatusSource.contains("detailsAction: @escaping () -> Void = {}"))
+        XCTAssertTrue(deviceStatusSource.contains("Button(action: detailsAction)"))
+        XCTAssertTrue(workbenchV2Source.contains(".settingsDidChange"))
+        XCTAssertTrue(workbenchV2Source.contains(".companionConfigurationDidChange"))
+    }
+
+    func testClipboardScreenSurfacesInboxAndScreenshotShortcuts() throws {
+        let source = try readSource("Features/Native/Clipboard/ClipboardView.swift")
+
+        XCTAssertTrue(source.contains("收集箱"))
+        XCTAssertTrue(source.contains("截图工作区"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .inbox)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .screenshot)"))
+    }
+
+    func testInboxScreenSurfacesClipboardAndScreenshotShortcuts() throws {
+        let source = try readSource("Features/Native/Inbox/InboxView.swift")
+
+        XCTAssertTrue(source.contains("剪贴板"))
+        XCTAssertTrue(source.contains("截图工作区"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .clipboard)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .screenshot)"))
+    }
+
     func testAppStateKeepsInboxSelectionCanonical() throws {
         let source = try readSource("App/AppState.swift")
         XCTAssertTrue(source.contains("public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem"))
-        XCTAssertTrue(source.contains("item == .clipboard ? .inbox : item"))
-        XCTAssertTrue(source.contains("public func navigate(to item: SidebarItem)"))
-        XCTAssertTrue(source.contains("public func navigateToInbox(workspace selection: String? = \"all\")"))
+        XCTAssertTrue(source.contains("public func navigate("))
+        XCTAssertTrue(source.contains("public func navigateToInbox("))
         XCTAssertTrue(source.contains("selectInboxWorkspace(selection)"))
         XCTAssertTrue(source.contains("sidebarSelection = canonicalSidebarItem(for: item)"))
         XCTAssertTrue(source.contains("public func selectInboxWorkspace(_ selection: String?)"))
@@ -918,6 +1206,17 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("立即截图"))
         XCTAssertTrue(source.contains("打开截图工作区"))
         XCTAssertTrue(source.contains("关闭截图入口提示"))
+    }
+
+    func testWorkspaceHomeViewQuickActionsExposeSubpageShortcuts() throws {
+        let source = try readSource("Features/Native/Home/WorkspaceHomeView.swift")
+
+        XCTAssertTrue(source.contains("模型设置"))
+        XCTAssertTrue(source.contains("接口测试"))
+        XCTAssertTrue(source.contains("kind: .settingsAiModels"))
+        XCTAssertTrue(source.contains("kind: .workbenchApiTest"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .settings, settingsCategory: .aiModels)"))
+        XCTAssertTrue(source.contains("appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)"))
     }
 
     func testCaptureWorkspaceViewIsOnlyACompatibilityProxy() throws {

@@ -62,6 +62,7 @@ struct ToolWorkspacePreviewRoot: View {
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             }
         }
+        .environmentObject(AppState.shared)
     }
 
     private static func configureTools(viewModel: ToolsViewModel) {

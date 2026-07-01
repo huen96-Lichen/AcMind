@@ -117,6 +117,24 @@ final class AgentToolRouterTests: XCTestCase {
         }
     }
 
+    func testFileDeleteReturnsStructuredFailureForMissingPath() async throws {
+        let storage = AgentToolRouterStorageStub()
+        let router = AgentToolRouter(storage: storage)
+        let missingURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AcMind-AgentToolRouterTests-\(UUID().uuidString).txt")
+
+        let result = try await router.routeTool(
+            request: AgentToolRequest(
+                toolType: .file,
+                action: "delete",
+                parameters: ["path": missingURL.path]
+            )
+        )
+
+        XCTAssertFalse(result.success)
+        XCTAssertTrue(result.errorMessage?.contains("文件不存在") == true)
+    }
+
     func testAIChatUsesInjectedRuntimeWithPromptAndProvider() async throws {
         let storage = AgentToolRouterStorageStub()
         let aiRuntime = MockAIRuntime(
@@ -194,6 +212,45 @@ final class AgentToolRouterTests: XCTestCase {
         XCTAssertEqual(aiRuntime.lastModel, "gpt-test")
         XCTAssertTrue(aiRuntime.lastMessages?.last?.content.contains("我该怎么开始？") == true)
         XCTAssertTrue(aiRuntime.lastMessages?.last?.content.contains("项目目标是尽快验证方向") == true)
+    }
+
+    func testAIAutomationDraftUsesDedicatedRoute() async throws {
+        let storage = AgentToolRouterStorageStub()
+        let aiRuntime = MockAIRuntime(
+            providers: [
+                ProviderConfig(
+                    id: "provider-1",
+                    name: "测试 Provider",
+                    providerType: .ollama,
+                    tier: .localLight,
+                    baseURL: "http://localhost:11434",
+                    modelId: "llama3.1",
+                    enabled: true
+                )
+            ],
+            response: ChatResponse(content: "1. 收集需求\n2. 拆解步骤")
+        )
+        let router = AgentToolRouter(storage: storage, aiRuntime: aiRuntime)
+
+        let result = try await router.routeTool(
+            request: AgentToolRequest(
+                toolType: .ai,
+                action: "automationDraft",
+                parameters: [
+                    "goal": "整理今天的待办并发给团队",
+                    "providerId": "provider-1",
+                    "model": "gpt-test",
+                    "context": "自动化草案"
+                ]
+            )
+        )
+
+        XCTAssertTrue(result.success)
+        XCTAssertTrue(result.output?.contains("1. 收集需求") == true)
+        XCTAssertEqual(aiRuntime.lastProviderId, "provider-1")
+        XCTAssertEqual(aiRuntime.lastModel, "gpt-test")
+        XCTAssertTrue(aiRuntime.lastMessages?.last?.content.contains("自动化草案") == true)
+        XCTAssertTrue(aiRuntime.lastMessages?.last?.content.contains("整理今天的待办并发给团队") == true)
     }
 
     func testAIChatParsesMessagesPayload() async throws {
@@ -445,6 +502,64 @@ final class AgentToolRouterTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: folderURL.appendingPathComponent("new.txt").path))
     }
 
+    func testToolsModelManagementAndAPITestRoutesExposeProviderState() async throws {
+        let storage = AgentToolRouterStorageStub()
+        let aiRuntime = MockAIRuntime(
+            providers: [
+                ProviderConfig(
+                    id: "provider-1",
+                    name: "本地模型",
+                    providerType: .ollama,
+                    tier: .localLight,
+                    baseURL: "http://localhost:11434",
+                    modelId: "llama3.1",
+                    enabled: true
+                ),
+                ProviderConfig(
+                    id: "provider-2",
+                    name: "停用提供商",
+                    providerType: .openAICompatible,
+                    tier: .cloudLight,
+                    baseURL: "https://example.com",
+                    modelId: "gpt-test",
+                    enabled: false
+                )
+            ],
+            models: ["llama3.1", "qwen2.5"]
+        )
+        let router = AgentToolRouter(storage: storage, aiRuntime: aiRuntime)
+
+        let managementResult = try await router.routeTool(
+            request: AgentToolRequest(
+                toolType: .tools,
+                action: "modelManagement",
+                parameters: [
+                    "name": "modelManagement",
+                    "providerId": "provider-1"
+                ]
+            )
+        )
+
+        XCTAssertTrue(managementResult.success)
+        XCTAssertTrue(managementResult.output?.contains("provider-1") == true)
+        XCTAssertTrue(managementResult.output?.contains("llama3.1") == true)
+
+        let apiTestResult = try await router.routeTool(
+            request: AgentToolRequest(
+                toolType: .tools,
+                action: "apiTest",
+                parameters: [
+                    "name": "apiTest",
+                    "providerId": "provider-1"
+                ]
+            )
+        )
+
+        XCTAssertTrue(apiTestResult.success)
+        XCTAssertTrue(apiTestResult.output?.contains("provider-1: 可用") == true)
+        XCTAssertTrue(apiTestResult.output?.contains("llama3.1") == true)
+    }
+
     func testAvailableToolsIncludesAI() async {
         let storage = AgentToolRouterStorageStub()
         let router = AgentToolRouter(storage: storage)
@@ -617,6 +732,32 @@ final class AgentToolRouterTests: XCTestCase {
         XCTAssertTrue(result.success)
         XCTAssertTrue(result.output?.contains("待蒸馏条目") == true)
         XCTAssertEqual(storage.distilledNotes.count, 1)
+    }
+
+    func testKnowledgeReadHidesDeletedCardsFromDefaultListing() async throws {
+        let storage = AgentToolRouterStorageStub()
+        storage.knowledgeCards["active-card"] = KnowledgeCard(
+            id: "active-card",
+            sourceItemId: "source-active",
+            canonicalTitle: "活跃卡片",
+            status: .active
+        )
+        storage.knowledgeCards["deleted-card"] = KnowledgeCard(
+            id: "deleted-card",
+            sourceItemId: "source-deleted",
+            canonicalTitle: "已删除卡片",
+            status: .deleted
+        )
+
+        let router = AgentToolRouter(storage: storage)
+        let result = try await router.routeTool(
+            request: AgentToolRequest(toolType: .knowledge, action: "read")
+        )
+
+        XCTAssertTrue(result.success)
+        XCTAssertTrue(result.output?.contains("活跃卡片") == true)
+        XCTAssertFalse(result.output?.contains("已删除卡片") == true)
+        XCTAssertTrue(result.output?.contains("知识卡片 (1)") == true)
     }
 }
 

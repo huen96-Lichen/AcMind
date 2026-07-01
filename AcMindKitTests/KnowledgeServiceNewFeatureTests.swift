@@ -131,6 +131,21 @@ final class KnowledgeServiceNewFeatureTests: XCTestCase {
         XCTAssertEqual(kept?.status, .active)
     }
 
+    func testListCardsHidesDeletedCardsByDefaultButKeepsExplicitDeletedFilter() async throws {
+        let activeID = try await makeCard(title: "默认可见")
+        let deletedID = try await makeCard(title: "删除后隐藏")
+
+        try await knowledgeService.setup()
+        try await knowledgeService.deleteCard(id: deletedID)
+
+        let defaultCards = try await knowledgeService.listCards(filter: nil)
+        XCTAssertTrue(defaultCards.contains { $0.id == activeID })
+        XCTAssertFalse(defaultCards.contains { $0.id == deletedID })
+
+        let deletedCards = try await knowledgeService.listCards(filter: KnowledgeCardFilter(status: .deleted))
+        XCTAssertTrue(deletedCards.contains { $0.id == deletedID })
+    }
+
     func testGetGraphData() async throws {
         let cardId1 = try await makeCard(title: "图节点A", tags: ["graph"])
         let cardId2 = try await makeCard(title: "图节点B", tags: ["graph"])

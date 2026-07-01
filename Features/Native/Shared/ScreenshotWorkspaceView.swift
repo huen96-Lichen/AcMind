@@ -5,6 +5,18 @@ import AcMindKit
 struct ScreenshotWorkspaceView: View {
     @EnvironmentObject private var appState: AppState
     let clipboardPinActions: ClipboardPinActions
+    private let storageService: any StorageServiceProtocol
+    @State private var latestScreenshot: CollectedItem?
+    @State private var latestScreenshotError: String?
+    @State private var isLoadingLatestScreenshot = false
+
+    init(
+        clipboardPinActions: ClipboardPinActions,
+        storageService: any StorageServiceProtocol = StorageService()
+    ) {
+        self.clipboardPinActions = clipboardPinActions
+        self.storageService = storageService
+    }
 
     private var screenshotSnapshot: ScreenshotPreferencesSnapshot {
         SettingsLocalPreferences.screenshotSnapshot()
@@ -17,7 +29,7 @@ struct ScreenshotWorkspaceView: View {
                 capturePanel
 
                 HStack(alignment: .top, spacing: 16) {
-                    recentCaptureCard
+                    recentScreenshotCard
                     preferencesCard
                 }
             }
@@ -27,6 +39,9 @@ struct ScreenshotWorkspaceView: View {
             .frame(maxWidth: .infinity, alignment: .top)
         }
         .background(AppSurfaceBackdrop())
+        .task {
+            await loadLatestScreenshot()
+        }
     }
 
     private var pageHeader: some View {
@@ -51,6 +66,13 @@ struct ScreenshotWorkspaceView: View {
             .buttonStyle(.borderless)
 
             Button {
+                appState.navigate(to: .inbox)
+            } label: {
+                Label("收集箱", systemImage: "tray.full")
+            }
+            .buttonStyle(.borderless)
+
+            Button {
                 openScreenshotOptionsPanel()
             } label: {
                 Label("打开胶囊截图", systemImage: "capsule")
@@ -58,9 +80,9 @@ struct ScreenshotWorkspaceView: View {
             .buttonStyle(.borderless)
 
             Button {
-                appState.navigate(to: .settings)
+                appState.navigate(to: .settings, settingsCategory: .captureInput)
             } label: {
-                Label("设置", systemImage: "slider.horizontal.3")
+                Label("捕获设置", systemImage: "slider.horizontal.3")
             }
             .buttonStyle(.borderless)
         }
@@ -154,7 +176,7 @@ struct ScreenshotWorkspaceView: View {
         }
     }
 
-    private var recentCaptureCard: some View {
+    private var recentScreenshotCard: some View {
         ScreenshotWorkspaceCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
@@ -163,10 +185,43 @@ struct ScreenshotWorkspaceView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("最近截图")
                             .font(.system(size: 14, weight: .semibold))
-                        Text("继续编辑、固定或回看上一张截图。")
+                        Text(latestScreenshotSubtitle)
                             .font(.system(size: 11))
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
                     }
+                }
+
+                if let latestScreenshot {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            screenshotBadge(title: latestScreenshot.source.displayName, icon: latestScreenshot.source.iconName)
+                            screenshotBadge(
+                                title: processingStatusTitle(latestScreenshot.processingStatus),
+                                icon: processingStatusIcon(latestScreenshot.processingStatus)
+                            )
+                            if let mode = screenshotModeLabel(for: latestScreenshot) {
+                                screenshotBadge(title: mode, icon: "camera.viewfinder")
+                            }
+                        }
+
+                        Text(latestScreenshot.workflowTitle)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                            .lineLimit(2)
+
+                        Text(latestScreenshot.workflowBody)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .lineLimit(3)
+                    }
+                } else if isLoadingLatestScreenshot {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text(latestScreenshotError ?? "暂无最近截图")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 HStack(spacing: 8) {
@@ -297,6 +352,77 @@ struct ScreenshotWorkspaceView: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func screenshotBadge(title: String, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.system(size: 10.5, weight: .medium))
+            .foregroundStyle(AppSurfaceTokens.secondaryText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(AppSurfaceTokens.cardBackground.opacity(0.58))
+            )
+    }
+
+    private var latestScreenshotSubtitle: String {
+        if isLoadingLatestScreenshot {
+            return "正在加载最近截图"
+        }
+        if let latestScreenshot {
+            return latestScreenshot.createdAt.formatted(date: .abbreviated, time: .shortened)
+        }
+        return latestScreenshotError ?? "继续编辑、固定或回看上一张截图。"
+    }
+
+    private func loadLatestScreenshot() async {
+        isLoadingLatestScreenshot = true
+        defer { isLoadingLatestScreenshot = false }
+
+        let repository = CollectedItemRepository(storage: storageService)
+        let result = await repository.list(
+            filter: CollectedItemFilter(
+                sources: [.screenshot, .screenshotOCR],
+                limit: 1
+            ),
+            sort: .newestFirst
+        )
+        latestScreenshot = result.items.first
+        latestScreenshotError = result.partialErrors.first
+    }
+
+    private func processingStatusTitle(_ status: ProcessingStatus) -> String {
+        switch status {
+        case .pending: return "待整理"
+        case .captured: return "已采集"
+        case .processing: return "处理中"
+        case .refined: return "已整理"
+        case .archived: return "已归档"
+        case .exported: return "已导出"
+        case .deleted: return "已删除"
+        }
+    }
+
+    private func processingStatusIcon(_ status: ProcessingStatus) -> String {
+        switch status {
+        case .pending: return "clock"
+        case .captured: return "tray.and.arrow.down"
+        case .processing: return "gearshape.2"
+        case .refined: return "checkmark.circle"
+        case .archived: return "archivebox"
+        case .exported: return "square.and.arrow.up"
+        case .deleted: return "trash"
+        }
+    }
+
+    private func screenshotModeLabel(for item: CollectedItem) -> String? {
+        guard item.source == .screenshot,
+              let rawValue = item.metadata[CaptureService.screenshotModeMetadataKey],
+              let mode = ScreenshotMode(rawValue: rawValue) else {
+            return nil
+        }
+        return "\(mode.displayName)截图"
     }
 
     private var compactHotkeyLabel: String {

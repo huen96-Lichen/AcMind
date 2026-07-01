@@ -290,44 +290,77 @@ struct InboxView: View {
 
     @ViewBuilder
     private var inboxHeaderActions: some View {
-        if appState.inboxWorkspaceSelection == "screenshotHistory" {
-            Menu {
-                Button("返回收集箱") {
-                    appState.selectInboxWorkspace("all")
-                }
+        HStack(spacing: 8) {
+            Button {
+                appState.navigate(to: .clipboard)
+            } label: {
+                Label("剪贴板", systemImage: "doc.on.clipboard")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.bordered)
 
-                Button("继续处理最近一次截图") {
-                    (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
-                }
+            Button {
+                appState.navigate(to: .screenshot)
             } label: {
-                Label("截图历史", systemImage: "camera.viewfinder")
-                    .font(.system(size: 12, weight: .semibold))
+                Label("截图工作区", systemImage: "camera.viewfinder")
+                    .font(.system(size: 12, weight: .medium))
             }
-            .menuStyle(.borderlessButton)
-            .accessibilityLabel("截图历史操作")
-        } else {
-            Menu {
-                Button {
-                    NotificationCenter.default.post(name: .companionShowQuickNote, object: nil)
+            .buttonStyle(.bordered)
+
+            if appState.inboxWorkspaceSelection == "screenshotHistory" {
+                Menu {
+                    Button("返回收集箱") {
+                        appState.selectInboxWorkspace("all")
+                    }
+
+                    Button("继续处理最近一次截图") {
+                        (NSApp.delegate as? AppDelegate)?.openLatestScreenshotPreviewFromMenu()
+                    }
                 } label: {
-                    Label("快速记录", systemImage: "square.and.pencil")
+                    Label("截图历史", systemImage: "camera.viewfinder")
+                        .font(.system(size: 12, weight: .semibold))
                 }
-                Button {
-                    NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+                .menuStyle(.borderlessButton)
+                .accessibilityLabel("截图历史操作")
+            } else if appState.inboxWorkspaceSelection == "phoneSync" {
+                Menu {
+                    Button("返回收集箱") {
+                        appState.selectInboxWorkspace("all")
+                    }
+
+                    Button("只看手机同步") {
+                        appState.selectInboxWorkspace("phoneSync")
+                    }
                 } label: {
-                    Label("截图或文件", systemImage: "viewfinder")
+                    Label("手机同步", systemImage: "iphone")
+                        .font(.system(size: 12, weight: .semibold))
                 }
-                Button {
-                    NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+                .menuStyle(.borderlessButton)
+                .accessibilityLabel("手机同步操作")
+            } else {
+                Menu {
+                    Button {
+                        NotificationCenter.default.post(name: .companionShowQuickNote, object: nil)
+                    } label: {
+                        Label("快速记录", systemImage: "square.and.pencil")
+                    }
+                    Button {
+                        NotificationCenter.default.post(name: .companionShowCapturePanel, object: nil)
+                    } label: {
+                        Label("截图或文件", systemImage: "viewfinder")
+                    }
+                    Button {
+                        NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+                    } label: {
+                        Label("语音记录", systemImage: "mic")
+                    }
                 } label: {
-                    Label("语音记录", systemImage: "mic")
+                    Label("添加内容", systemImage: "plus")
+                        .font(.system(size: 12, weight: .semibold))
                 }
-            } label: {
-                Label("添加内容", systemImage: "plus")
-                    .font(.system(size: 12, weight: .semibold))
+                .menuStyle(.borderlessButton)
+                .accessibilityLabel("添加收集内容")
             }
-            .menuStyle(.borderlessButton)
-            .accessibilityLabel("添加收集内容")
         }
     }
 
@@ -387,7 +420,7 @@ struct InboxView: View {
                     .frame(width: 0, height: 0)
                     .accessibilityHidden(true)
 
-                    ForEach([InboxQuickFilter.all, .pending, .screenshotHistory, .recent], id: \.self) { filter in
+                    ForEach([InboxQuickFilter.all, .pending, .screenshotHistory, .phoneSync, .recent], id: \.self) { filter in
                         quickFilterButton(filter)
                     }
 
@@ -589,13 +622,25 @@ struct InboxView: View {
     }
 
     private func selectQuickFilter(_ filter: InboxQuickFilter) {
-        appState.selectInboxWorkspace(filter == .screenshotHistory ? "screenshotHistory" : "all")
+        switch filter {
+        case .screenshotHistory:
+            appState.selectInboxWorkspace("screenshotHistory")
+        case .phoneSync:
+            appState.selectInboxWorkspace("phoneSync")
+        default:
+            appState.selectInboxWorkspace("all")
+        }
         updateFilter { $0.quickFilter = filter }
     }
 
     private func clearFilters() {
         if appState.inboxWorkspaceSelection == "screenshotHistory" {
             Task { await viewModel.updateFilter(InboxFilterState(quickFilter: .screenshotHistory)) }
+        } else if appState.inboxWorkspaceSelection == "phoneSync" {
+            Task {
+                var next = InboxFilterState(quickFilter: .phoneSync)
+                await viewModel.updateFilter(next)
+            }
         } else {
             Task { await viewModel.updateFilter(InboxFilterState()) }
         }
@@ -605,6 +650,8 @@ struct InboxView: View {
         switch appState.inboxWorkspaceSelection {
         case "screenshotHistory":
             return "截图历史"
+        case "phoneSync":
+            return "手机同步"
         default:
             return "收集箱"
         }
@@ -614,6 +661,8 @@ struct InboxView: View {
         switch appState.inboxWorkspaceSelection {
         case "screenshotHistory":
             return "只看截图与截图文字识别结果"
+        case "phoneSync":
+            return "只看来自 iPhone 的收集内容"
         default:
             return "\(viewModel.items.count) 条内容"
         }
@@ -623,9 +672,19 @@ struct InboxView: View {
         switch selection {
         case "screenshotHistory":
             updateFilter { $0.quickFilter = .screenshotHistory }
+        case "phoneSync":
+            updateFilter {
+                $0.quickFilter = .phoneSync
+            }
         default:
             if viewModel.filterState.quickFilter == .screenshotHistory {
                 updateFilter { $0.quickFilter = .all }
+            }
+            if viewModel.filterState.quickFilter == .phoneSync {
+                updateFilter { $0.quickFilter = .all }
+            }
+            if viewModel.filterState.sources == [.phoneSync] {
+                updateFilter { $0.sources.remove(.phoneSync) }
             }
         }
     }
@@ -2222,6 +2281,7 @@ private extension InboxQuickFilter {
         case .all: return "全部"
         case .pending: return "待整理"
         case .screenshotHistory: return "截图历史"
+        case .phoneSync: return "手机同步"
         case .pinned: return "固定"
         case .favorites: return "收藏"
         case .recent: return "最近更新"
@@ -2233,6 +2293,7 @@ private extension InboxQuickFilter {
         case .all: return "tray"
         case .pending: return "clock"
         case .screenshotHistory: return "camera.viewfinder"
+        case .phoneSync: return "iphone"
         case .pinned: return "pin"
         case .favorites: return "star"
         case .recent: return "clock.arrow.circlepath"

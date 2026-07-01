@@ -338,4 +338,9 @@ public extension SystemPermission {
 
 public extension Notification.Name {
     static let settingsDidChange = Notification.Name("AcMind.settingsDidChange")
+    static let scheduleDidChange = Notification.Name("AcMind.scheduleDidChange")
+    static let agentTaskBoardDidChange = Notification.Name("AcMind.agentTaskBoardDidChange")
+    static let cloudSyncDidChange = Notification.Name("AcMind.cloudSyncDidChange")
+    static let pluginManagerDidChange = Notification.Name("AcMind.pluginManagerDidChange")
+    static let knowledgeDidChange = Notification.Name("AcMind.knowledgeDidChange")
 }

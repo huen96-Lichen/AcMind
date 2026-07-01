@@ -448,12 +448,16 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
         try await storage.updateProvider(configToSave)
 
         providersCache = (try? await storage.listProviders()) ?? []
+        if config.enabled == false {
+            try await clearDefaultAISelectionIfNeeded(for: config.id)
+        }
     }
 
     public func removeProvider(id: String) async throws {
         try await deleteAPIKey(for: id)
         try await storage.removeProvider(id: id)
         providersCache = (try? await storage.listProviders()) ?? []
+        try await clearDefaultAISelectionIfNeeded(for: id)
     }
 
     public func getAPIKey(for providerId: String) async -> String? {
@@ -468,6 +472,25 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
 
     private func loadAPIKey(for providerId: String) async -> String? {
         await SecretStore.shared.getAPIKey(for: providerId)
+    }
+
+    private func clearDefaultAISelectionIfNeeded(for providerId: String) async throws {
+        let currentSettings: AppSettings
+        if let cached = settingsCache {
+            currentSettings = cached
+        } else {
+            currentSettings = try await loadSettings()
+        }
+        guard currentSettings.defaultProviderId == providerId else { return }
+
+        var updatedSettings = currentSettings
+        updatedSettings.defaultProviderId = nil
+        updatedSettings.defaultModelId = nil
+        settingsCache = updatedSettings
+        try await saveSettingsToStorage(updatedSettings)
+        await MainActor.run {
+            NotificationCenter.default.post(name: .settingsDidChange, object: nil)
+        }
     }
 
     private func deleteAPIKey(for providerId: String) async throws {

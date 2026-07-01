@@ -1,7 +1,7 @@
 import SwiftUI
 import AcMindKit
 
-struct NotchV2LightStatusItem: Identifiable, Equatable {
+struct NotchV2LightStatusItem: Identifiable {
     let id = UUID()
     let icon: String
     let title: String
@@ -9,6 +9,7 @@ struct NotchV2LightStatusItem: Identifiable, Equatable {
     let accent: Color
     let highlighted: Bool
     let priority: Int
+    let action: (() -> Void)?
 }
 
 struct NotchV2LightStatusStrip: View {
@@ -54,6 +55,20 @@ struct NotchV2LightStatusStrip: View {
     }
 
     private func statusChip(_ item: NotchV2LightStatusItem) -> some View {
+        Group {
+            if let action = item.action {
+                Button(action: action) {
+                    chipContent(for: item)
+                }
+                .buttonStyle(.plain)
+            } else {
+                chipContent(for: item)
+            }
+        }
+        .help(item.highlighted ? "点击处理" : item.detail)
+    }
+
+    private func chipContent(for item: NotchV2LightStatusItem) -> some View {
         HStack(spacing: 5) {
             NotchV2Glyph(
                 symbol: item.icon,
@@ -100,7 +115,8 @@ extension NotchV2ViewModel {
                 detail: batteryDisplayText,
                 accent: batteryStatusAccent,
                 highlighted: batteryInfo.isAvailable && (batteryInfo.isInLowPowerMode || batteryInfo.percentage <= 20),
-                priority: 0
+                priority: 0,
+                action: batteryInfo.isAvailable && batteryInfo.isInLowPowerMode ? { [weak self] in self?.showMainSettings(category: .security) } : nil
             )
         )
 
@@ -111,7 +127,8 @@ extension NotchV2ViewModel {
                 detail: batteryInfo.isAvailable == false ? "无电池" : batteryInfo.powerSourceState.isEmpty ? "电池供电" : batteryInfo.powerSourceState,
                 accent: NotchV2DesignTokens.secondaryText,
                 highlighted: batteryInfo.isCharging,
-                priority: 1
+                priority: 1,
+                action: nil
             )
         )
 
@@ -122,7 +139,8 @@ extension NotchV2ViewModel {
                 detail: microphonePermissionStatus.displayName,
                 accent: microphoneAccent,
                 highlighted: microphonePermissionStatus == .denied || microphonePermissionStatus == .restricted,
-                priority: 2
+                priority: 2,
+                action: microphonePermissionStatus == .authorized ? nil : { [weak self] in self?.showMainSettings(category: .captureInput) }
             )
         )
 
@@ -133,7 +151,8 @@ extension NotchV2ViewModel {
                 detail: voiceDisplaySubtitle,
                 accent: voiceDisplayAccent,
                 highlighted: isVoicePriorityActive,
-                priority: voiceDisplayPriority.rawValue
+                priority: voiceDisplayPriority.rawValue,
+                action: { [weak self] in self?.showVoicePanel() }
             )
         )
 
@@ -144,15 +163,16 @@ extension NotchV2ViewModel {
                     detail: ActivityStateLabelFormatter.activityLabel(isActive: isCapturing, activeLabel: "进行中", idleLabel: "空闲"),
                     accent: isCapturing ? .orange : NotchV2DesignTokens.secondaryText,
                     highlighted: isCapturing,
-                    priority: 4
+                    priority: 4,
+                    action: { [weak self] in self?.showMainSettings(category: .captureInput) }
                 )
             )
 
         if playbackState.isPlaying || playbackState.title.isEmpty == false {
             items.append(
-                NotchV2LightStatusItem(
-                    icon: playbackState.isPlaying ? "play.fill" : "pause.fill",
-                    title: NowPlayingSourceLabelFormatter.playbackStateLabel(
+                    NotchV2LightStatusItem(
+                        icon: playbackState.isPlaying ? "play.fill" : "pause.fill",
+                        title: NowPlayingSourceLabelFormatter.playbackStateLabel(
                         isPlaying: playbackState.isPlaying,
                         bundleIdentifier: playbackState.bundleIdentifier,
                         source: playbackState.sourceLabel,
@@ -164,51 +184,55 @@ extension NotchV2ViewModel {
                         bundleIdentifier: playbackState.bundleIdentifier,
                         source: playbackState.sourceLabel
                     ),
-                    accent: playbackState.isPlaying ? NotchV2DesignTokens.accentGreen : NotchV2DesignTokens.secondaryText,
-                    highlighted: playbackState.isPlaying || playbackState.title.isEmpty == false,
-                    priority: NotchV2SurfacePriority.music.rawValue
+                        accent: playbackState.isPlaying ? NotchV2DesignTokens.accentGreen : NotchV2DesignTokens.secondaryText,
+                        highlighted: playbackState.isPlaying || playbackState.title.isEmpty == false,
+                        priority: NotchV2SurfacePriority.music.rawValue,
+                        action: { [weak self] in self?.showMainHome() }
+                    )
                 )
-            )
-        }
+            }
 
         if let volume = eventCenter.volumeLevel {
             items.append(
-                NotchV2LightStatusItem(
-                    icon: "speaker.wave.2.fill",
-                    title: "音量",
-                    detail: "\(Int(volume.rounded()))%",
-                    accent: NotchV2DesignTokens.secondaryText,
-                    highlighted: volume < 30,
-                    priority: 5
+                    NotchV2LightStatusItem(
+                        icon: "speaker.wave.2.fill",
+                        title: "音量",
+                        detail: "\(Int(volume.rounded()))%",
+                        accent: NotchV2DesignTokens.secondaryText,
+                        highlighted: volume < 30,
+                        priority: 5,
+                        action: nil
+                    )
                 )
-            )
-        }
+            }
 
         if let brightness = eventCenter.brightnessLevel {
             items.append(
-                NotchV2LightStatusItem(
-                    icon: "sun.max.fill",
-                    title: "亮度",
-                    detail: "\(Int(brightness.rounded()))%",
-                    accent: NotchV2DesignTokens.secondaryText,
-                    highlighted: brightness < 30,
-                    priority: 6
+                    NotchV2LightStatusItem(
+                        icon: "sun.max.fill",
+                        title: "亮度",
+                        detail: "\(Int(brightness.rounded()))%",
+                        accent: NotchV2DesignTokens.secondaryText,
+                        highlighted: brightness < 30,
+                        priority: 6,
+                        action: nil
+                    )
                 )
-            )
-        }
+            }
 
         if items.count < 4 {
             items.append(
-                NotchV2LightStatusItem(
-                    icon: "shield.checkerboard",
-                    title: "权限",
-                    detail: "已接入",
-                    accent: NotchV2DesignTokens.secondaryText,
-                    highlighted: false,
-                    priority: 99
+                    NotchV2LightStatusItem(
+                        icon: "shield.checkerboard",
+                        title: "权限",
+                        detail: "已接入",
+                        accent: NotchV2DesignTokens.secondaryText,
+                        highlighted: false,
+                        priority: 99,
+                        action: { [weak self] in self?.showMainSettings() }
+                    )
                 )
-            )
-        }
+            }
 
         return Array(items.sorted {
             if $0.highlighted != $1.highlighted {

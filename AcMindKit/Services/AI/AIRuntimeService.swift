@@ -75,10 +75,14 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         }
 
         try await storage.addProvider(config)
-        try await initProvider(config)
+        if config.enabled {
+            try await initProvider(config)
+        } else {
+            providers.removeValue(forKey: config.id)
+        }
         configs.append(config)
 
-        if configs.count == 1 {
+        if defaultProviderId == nil, config.enabled, providers[config.id] != nil {
             defaultProviderId = config.id
         }
     }
@@ -93,9 +97,15 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         providers.removeValue(forKey: config.id)
 
         try await storage.updateProvider(config)
-        try await initProvider(config)
+        if config.enabled {
+            try await initProvider(config)
+        }
 
         configs[index] = config
+
+        if defaultProviderId == config.id, config.enabled == false {
+            defaultProviderId = preferredAvailableProviderId()
+        }
     }
 
     public func removeProvider(id: String) async throws {
@@ -109,7 +119,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         providers.removeValue(forKey: id)
 
         if defaultProviderId == id {
-            defaultProviderId = configs.first?.id
+            defaultProviderId = nil
         }
 
         try await storage.removeProvider(id: id)
@@ -117,14 +127,14 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     }
     
     public func healthCheck(providerId: String) async throws -> Bool {
-        guard let provider = providers[providerId] else {
+        guard let provider = availableProvider(for: providerId) else {
             throw AIError.providerNotFound(providerId)
         }
         return try await provider.healthCheck()
     }
 
     public func listModels(providerId: String) async throws -> [String] {
-        guard let provider = providers[providerId] else {
+        guard let provider = availableProvider(for: providerId) else {
             throw AIError.providerNotFound(providerId)
         }
         return try await provider.listModels()
@@ -139,7 +149,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     }
     
     public func setDefaultProvider(id: String) throws {
-        guard configs.contains(where: { $0.id == id }) else {
+        guard availableProvider(for: id) != nil else {
             throw AIError.providerNotFound(id)
         }
         defaultProviderId = id
@@ -152,8 +162,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Chat
     
     public func chat(messages: [ChatMessage]) async throws -> ChatResponse {
-        guard let providerId = preferredProviderId(),
-              providers[providerId] != nil else {
+        guard let providerId = preferredAvailableProviderId() else {
             throw AIError.noProvider
         }
 
@@ -169,7 +178,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         providerId: String,
         model: String? = nil
     ) async throws -> ChatResponse {
-        guard let provider = providers[providerId] else {
+        guard let provider = availableProvider(for: providerId) else {
             throw AIError.providerNotFound(providerId)
         }
 
@@ -215,8 +224,11 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let providerId = self.preferredProviderId(),
-                          let provider = providers[providerId] else {
+                    guard let providerId = self.preferredAvailableProviderId() else {
+                        continuation.finish(throwing: AIError.noProvider)
+                        return
+                    }
+                    guard let provider = self.availableProvider(for: providerId) else {
                         continuation.finish(throwing: AIError.noProvider)
                         return
                     }
@@ -238,7 +250,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
                     logAI("chat stream success provider=\(providerId) model=\(modelId) chunks=\(chunkCount)")
                     continuation.finish()
                 } catch {
-                    if let providerId = self.preferredProviderId() {
+                    if let providerId = self.preferredAvailableProviderId() {
                         let modelId = configs.first(where: { $0.id == providerId })?.modelId ?? "unknown"
                         logError("chat stream failed provider=\(providerId) model=\(modelId) error=\(error.localizedDescription)")
                     }
@@ -251,8 +263,10 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     // MARK: - Distillation
     
     public func runDistillation(sourceItem: SourceItem) async throws -> DistilledNote {
-        guard let providerId = preferredProviderId(),
-              let provider = providers[providerId] else {
+        guard let providerId = preferredAvailableProviderId() else {
+            throw AIError.noProvider
+        }
+        guard let provider = availableProvider(for: providerId) else {
             throw AIError.noProvider
         }
 
@@ -537,6 +551,7 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         providers = [:]
 
         for config in storedConfigs {
+            guard config.enabled else { continue }
             do {
                 try await initProvider(config)
             } catch {
@@ -545,25 +560,53 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
             }
         }
 
-        if let currentDefaultProviderId = defaultProviderId,
-           configs.contains(where: { $0.id == currentDefaultProviderId }) == false {
-            defaultProviderId = configs.first?.id
-        } else if defaultProviderId == nil {
-            defaultProviderId = configs.first?.id
-        }
+        defaultProviderId = preferredAvailableProviderId(currentDefaultProviderId: defaultProviderId)
     }
 
     func preferredProviderId(explicitProviderId: String? = nil) -> String? {
-        if let explicitProviderId {
+        preferredAvailableProviderId(explicitProviderId: explicitProviderId)
+    }
+
+    private func preferredAvailableProviderId(
+        explicitProviderId: String? = nil,
+        currentDefaultProviderId: String? = nil
+    ) -> String? {
+        if let explicitProviderId, availableProvider(for: explicitProviderId) != nil {
             return explicitProviderId
         }
 
+        let availableConfigs = availableProviderConfigs()
+        guard availableConfigs.isEmpty == false else {
+            return nil
+        }
+
         let prefersLocal = SettingsLocalPreferences.loadOrDefault(from: settingsDefaults).localFirstMode
-        if prefersLocal, let localProvider = configs.first(where: { $0.tier.isLocal }) {
+        if prefersLocal, let localProvider = availableConfigs.first(where: { $0.tier.isLocal }) {
             return localProvider.id
         }
 
-        return defaultProviderId ?? configs.first?.id
+        if let currentDefaultProviderId,
+           availableConfigs.contains(where: { $0.id == currentDefaultProviderId }) {
+            return currentDefaultProviderId
+        }
+
+        if let defaultProviderId,
+           availableConfigs.contains(where: { $0.id == defaultProviderId }) {
+            return defaultProviderId
+        }
+
+        return availableConfigs.first?.id
+    }
+
+    private func availableProviderConfigs() -> [ProviderConfig] {
+        configs.filter { $0.enabled && providers[$0.id] != nil }
+    }
+
+    private func availableProvider(for providerId: String) -> (any AIProvider)? {
+        guard let config = configs.first(where: { $0.id == providerId }), config.enabled else {
+            return nil
+        }
+        return providers[providerId]
     }
 
     // MARK: - Test Support

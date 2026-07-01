@@ -111,6 +111,10 @@ public struct ScheduleEvent: Codable, Identifiable, Equatable, Hashable, Sendabl
         Calendar.current.isDate(startAt, inSameDayAs: date)
     }
 
+    public func overlaps(with other: ScheduleEvent) -> Bool {
+        startAt < other.endAt && other.startAt < endAt
+    }
+
     public func isIn(weekOf date: Date) -> Bool {
         let cal = Calendar.current
         guard let weekStart = cal.dateInterval(of: .weekOfYear, for: date)?.start,

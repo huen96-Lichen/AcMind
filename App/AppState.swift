@@ -32,6 +32,8 @@ public final class AppState: ObservableObject, Sendable {
     @Published public var sidebarCollapsed = false
     @Published public var inboxWorkspaceSelection: String? = "all"
     @Published public var pendingInboxDetailSourceItemID: String?
+    @Published var pendingWorkbenchToolRoute: ToolRoute?
+    @Published var pendingSettingsCategory: SettingsCategory?
 
     // MARK: - Window State
 
@@ -105,13 +107,36 @@ public final class AppState: ObservableObject, Sendable {
     // MARK: - Navigation
 
     public func navigate(to item: SidebarItem) {
-        if item == .clipboard {
-            selectInboxWorkspace("all")
-            return
-        }
+        navigate(to: item, workbenchToolRoute: nil, settingsCategory: nil)
+    }
+
+    func navigate(to item: SidebarItem, workbenchToolRoute: ToolRoute) {
+        navigate(to: item, workbenchToolRoute: workbenchToolRoute, settingsCategory: nil)
+    }
+
+    func navigate(to item: SidebarItem, settingsCategory: SettingsCategory) {
+        navigate(to: item, workbenchToolRoute: nil, settingsCategory: settingsCategory)
+    }
+
+    func navigate(
+        to item: SidebarItem,
+        workbenchToolRoute: ToolRoute?,
+        settingsCategory: SettingsCategory?
+    ) {
         if item == .screenshotHistory {
+            pendingWorkbenchToolRoute = nil
+            pendingSettingsCategory = nil
             selectInboxWorkspace("screenshotHistory")
             return
+        }
+        if item == .workbench {
+            pendingWorkbenchToolRoute = workbenchToolRoute
+            pendingSettingsCategory = nil
+        } else if item == .settings {
+            pendingSettingsCategory = settingsCategory
+        } else {
+            pendingWorkbenchToolRoute = nil
+            pendingSettingsCategory = nil
         }
         sidebarSelection = canonicalSidebarItem(for: item)
     }
@@ -127,6 +152,8 @@ public final class AppState: ObservableObject, Sendable {
     public func selectInboxWorkspace(_ selection: String?) {
         let resolvedSelection = selection ?? "all"
         inboxWorkspaceSelection = resolvedSelection
+        pendingWorkbenchToolRoute = nil
+        pendingSettingsCategory = nil
         sidebarSelection = .inbox
     }
 
@@ -134,7 +161,7 @@ public final class AppState: ObservableObject, Sendable {
         if item == .screenshotHistory {
             return .inbox
         }
-        return item == .clipboard ? .inbox : item
+        return item
     }
 
     public func toggleSidebar() {

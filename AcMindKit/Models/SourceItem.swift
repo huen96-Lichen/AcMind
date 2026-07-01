@@ -593,6 +593,24 @@ private extension CollectionSource {
     }
 }
 
+public extension CollectionSource {
+    var iconName: String {
+        switch self {
+        case .clipboard: return "doc.on.clipboard"
+        case .phoneSync: return "iphone"
+        case .voice: return "mic"
+        case .screenshot: return "camera.viewfinder"
+        case .screenshotOCR: return "text.viewfinder"
+        case .agent: return "sparkles"
+        case .manual: return "square.and.pencil"
+        case .webpage: return "globe"
+        case .file: return "doc"
+        case .capsule: return "capsule"
+        case .imported: return "tray.and.arrow.down"
+        }
+    }
+}
+
 public extension SourceItem {
     init(clipboardItem item: ClipboardItem) {
         let sourceType: SourceType
@@ -846,6 +864,21 @@ public enum SourceOrigin: String, Codable, Sendable, Hashable, CaseIterable {
 
     public var displayLabel: String {
         displayName
+    }
+
+    public var iconName: String {
+        switch self {
+        case .manual: return "keyboard"
+        case .clipboard: return "doc.on.clipboard"
+        case .agent: return "sparkles"
+        case .screenshot: return "camera.viewfinder"
+        case .screenshotOCR: return "text.viewfinder"
+        case .webpage: return "globe"
+        case .file: return "doc"
+        case .voice: return "waveform"
+        case .capsule: return "capsule"
+        case .imported: return "square.and.arrow.down"
+        }
     }
 }
 

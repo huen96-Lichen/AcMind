@@ -161,8 +161,8 @@ struct WorkspaceHomeView: View {
         [
             HomeAction(title: "立即截图", icon: "camera.viewfinder", tint: AppSurfaceTokens.secondaryText, kind: .capture),
             HomeAction(title: "说入法", icon: "mic.fill", tint: AppSurfaceTokens.secondaryText, kind: .voice),
-            HomeAction(title: "收集箱", icon: "tray.full", tint: AppSurfaceTokens.secondaryText, kind: .inbox),
-            HomeAction(title: "设置", icon: "gearshape.fill", tint: AppSurfaceTokens.secondaryText, kind: .settings)
+            HomeAction(title: "模型设置", icon: "brain", tint: AppSurfaceTokens.secondaryText, kind: .settingsAiModels),
+            HomeAction(title: "接口测试", icon: "checkmark.shield", tint: AppSurfaceTokens.secondaryText, kind: .workbenchApiTest)
         ]
     }
 
@@ -243,6 +243,12 @@ struct WorkspaceHomeView: View {
         }
         .onDisappear { viewModel.stopMonitoring() }
         .onReceive(NotificationCenter.default.publisher(for: .acmindSourceItemsDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .scheduleDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .agentTaskBoardDidChange)) { _ in
             dashboardViewModel.refresh()
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidChange)) { _ in
@@ -797,12 +803,18 @@ struct WorkspaceHomeView: View {
             return "进入收集箱"
         case .settings:
             return "打开设置"
+        case .settingsAiModels:
+            return "检查模型与语音配置"
+        case .settingsCaptureInput:
+            return "配置截图与输入入口"
         case .agent:
             return "进入协作"
         case .schedule:
             return "查看日程"
         case .systemStatus:
             return "查看监控台"
+        case .workbenchApiTest:
+            return "验证模型接口"
         }
     }
 
@@ -2259,9 +2271,12 @@ private struct HomeAction: Identifiable {
         case capture
         case inbox
         case settings
+        case settingsAiModels
+        case settingsCaptureInput
         case agent
         case schedule
         case systemStatus
+        case workbenchApiTest
 
         @MainActor
         func perform(using appState: AppState) {
@@ -2277,12 +2292,18 @@ private struct HomeAction: Identifiable {
                 appState.navigate(to: .inbox)
             case .settings:
                 appState.navigate(to: .settings)
+            case .settingsAiModels:
+                appState.navigate(to: .settings, settingsCategory: .aiModels)
+            case .settingsCaptureInput:
+                appState.navigate(to: .settings, settingsCategory: .captureInput)
             case .agent:
                 appState.navigate(to: .agent)
             case .schedule:
                 appState.navigate(to: .schedule)
             case .systemStatus:
                 appState.navigate(to: .systemStatus)
+            case .workbenchApiTest:
+                appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)
             }
         }
     }

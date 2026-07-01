@@ -80,10 +80,35 @@ struct DynamicContinentTemplateV2: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             if shouldShowStatusStrip {
-                NotchV2LightStatusStrip(items: statusItems)
-                    .padding(.horizontal, NotchV2DesignTokens.pagePadding)
-                    .padding(.bottom, 4)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                VStack(alignment: .leading, spacing: 6) {
+                    NotchV2LightStatusStrip(items: statusItems)
+
+                    HStack(spacing: 8) {
+                        quickActionButton(
+                            title: "模型管理",
+                            systemImage: "square.stack.3d.up"
+                        ) {
+                            AppState.shared.navigate(to: .modelManagement)
+                        }
+
+                        quickActionButton(
+                            title: "捕获与输入",
+                            systemImage: "camera.viewfinder"
+                        ) {
+                            viewModel.showMainSettings(category: .captureInput)
+                        }
+
+                        quickActionButton(
+                            title: "设置首页",
+                            systemImage: "gearshape"
+                        ) {
+                            viewModel.showMainSettings()
+                        }
+                    }
+                }
+                .padding(.horizontal, DynamicContinentLayoutMetrics.pageHorizontalPadding)
+                .padding(.bottom, 4)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .frame(
@@ -119,5 +144,24 @@ struct DynamicContinentTemplateV2: View {
         case .settings:
             NotchV2SettingsPage(viewModel: viewModel)
         }
+    }
+
+    private func quickActionButton(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(NotchV2DesignTokens.primaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(NotchV2DesignTokens.panelBackground.opacity(0.86))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(NotchV2DesignTokens.separator.opacity(0.18), lineWidth: 0.8)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }

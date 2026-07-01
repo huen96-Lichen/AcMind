@@ -139,6 +139,69 @@ final class CloudSyncMergeTests: XCTestCase {
         XCTAssertEqual(pushed.settings.theme, .dark)
         XCTAssertEqual(pushed.settings.language, "zh-CN")
         XCTAssertEqual(pushed.updatedAt, local.updatedAt)
+
+        let status = await service.getSyncStatus()
+        XCTAssertNotNil(status.lastSyncByType[.settings])
+    }
+
+    func testPendingChangesReflectLocalUpdatesAfterSync() async throws {
+        let cloud = InMemoryCloudStore()
+        let storage = InMemoryCloudSyncStorage()
+        let dictionary = InMemoryDictionary()
+        let service = makeService(storage: storage, cloud: cloud, suite: "pending", dictionary: dictionary)
+
+        await service.sync()
+
+        let updatedAt = Date(timeIntervalSince1970: 1_800_000_200)
+        await dictionary.replaceWords([
+            PersonalWord(
+                word: "AcMind",
+                category: .product,
+                priority: .critical,
+                usageCount: 7,
+                lastUsed: updatedAt,
+                createdAt: updatedAt
+            )
+        ])
+
+        await storage.saveKnowledgeCard(
+            KnowledgeCard(
+                id: "pending-card",
+                sourceItemId: "pending-source",
+                canonicalTitle: "待同步知识",
+                updatedAt: updatedAt
+            )
+        )
+        await storage.saveDistilledNote(
+            DistilledNote(
+                id: "pending-note",
+                sourceItemId: "pending-source",
+                title: "待同步蒸馏",
+                updatedAt: updatedAt
+            )
+        )
+        await storage.saveScheduledAgentTask(
+            ScheduledAgentTask(
+                id: "pending-task",
+                name: "待同步任务",
+                cronExpression: "0 9 * * *",
+                skillName: "pending",
+                updatedAt: updatedAt
+            )
+        )
+        await storage.saveSettingsSnapshot(
+            CloudSettingsSnapshot(
+                settings: AppSettings(theme: .dark, language: "zh-CN"),
+                updatedAt: updatedAt
+            )
+        )
+
+        let status = await service.getSyncStatus()
+        XCTAssertGreaterThanOrEqual(status.pendingChanges, 5)
+
+        let summary = CloudSyncStatusSummary.make(from: status, now: updatedAt.addingTimeInterval(60))
+        XCTAssertTrue(summary.detail.contains("待同步"))
+        XCTAssertTrue(summary.detail.contains("5") || summary.detail.contains("\(status.pendingChanges)"))
     }
 
     func testScheduledAgentTaskHasUpdatedAt() {

@@ -134,7 +134,23 @@ public actor AgentSkillService: AgentSkillServiceProtocol {
     }
 
     private func updateSkillIndex(skillId: String, add: Bool) async {
-        // 简化版索引更新
+        let indexKey = "skill_index_0"
+        let currentIndex = (try? await storage.getSetting(key: indexKey)) ?? ""
+        var skillIds = currentIndex
+            .split(separator: ",")
+            .map(String.init)
+            .filter { $0.isEmpty == false }
+
+        if add {
+            if skillIds.contains(skillId) == false {
+                skillIds.append(skillId)
+            }
+        } else {
+            skillIds.removeAll { $0 == skillId }
+        }
+
+        let serializedIndex = skillIds.joined(separator: ",")
+        try? await storage.setSetting(key: indexKey, value: serializedIndex)
     }
 
     private func encodeSkill(_ skill: AgentSkill) -> String {

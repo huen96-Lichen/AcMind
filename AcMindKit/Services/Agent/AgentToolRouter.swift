@@ -703,6 +703,9 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
             guard let fileURL = resolveURL(from: request.parameters) else {
                 return unsupportedToolResult(toolType: .file, action: request.action, message: "请提供 path")
             }
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                return unsupportedToolResult(toolType: .file, action: request.action, message: "文件不存在: \(fileURL.path)")
+            }
             try FileManager.default.removeItem(at: fileURL)
             return AgentToolResult(
                 toolType: .file,
@@ -714,6 +717,9 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         case "open", "reveal":
             guard let fileURL = resolveURL(from: request.parameters) else {
                 return unsupportedToolResult(toolType: .file, action: request.action, message: "请提供 path")
+            }
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                return unsupportedToolResult(toolType: .file, action: request.action, message: "文件不存在: \(fileURL.path)")
             }
             if request.action == "open" {
                 NSWorkspace.shared.open(fileURL)
@@ -792,6 +798,58 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
             let context = request.parameters["context"].flatMap { $0.isEmpty ? nil : $0 }
             let response = try await quickAskService.ask(
                 question: question,
+                providerId: providerId,
+                model: model,
+                context: context
+            )
+
+            var outputLines: [String] = []
+            if let providerId = response.providerId ?? providerId {
+                outputLines.append("provider: \(providerId)")
+            }
+            if let model = response.model {
+                outputLines.append("model: \(model)")
+            }
+            outputLines.append(response.content)
+
+            return AgentToolResult(
+                toolType: .ai,
+                action: request.action,
+                success: true,
+                output: outputLines.joined(separator: "\n")
+            )
+
+        case "automation", "automationDraft", "draftAutomation":
+            let goal = request.parameters["goal"]
+                ?? request.parameters["question"]
+                ?? request.parameters["prompt"]
+                ?? request.parameters["input"]
+                ?? ""
+            guard goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+                return AgentToolResult(
+                    toolType: .ai,
+                    action: request.action,
+                    success: false,
+                    errorMessage: "请提供 goal、question 或 prompt"
+                )
+            }
+
+            let providerId = request.parameters["providerId"].flatMap { $0.isEmpty ? nil : $0 }
+            let model = request.parameters["model"].flatMap { $0.isEmpty ? nil : $0 }
+            let context = request.parameters["context"].flatMap { $0.isEmpty ? nil : $0 }
+            let instruction = """
+            请把下面的目标拆解成可执行的自动化草案。
+            要求：
+            1. 输出 3 到 7 个步骤。
+            2. 每一步尽量标注可以调用的工具类型或产物。
+            3. 如果目标存在不确定点，请在最后单独列出待确认项。
+            4. 使用简洁、可落地的中文。
+
+            目标：
+            \(goal)
+            """
+            let response = try await quickAskService.ask(
+                question: instruction,
                 providerId: providerId,
                 model: model,
                 context: context

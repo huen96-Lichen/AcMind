@@ -98,28 +98,38 @@ final class AgentMemoryServiceTests: XCTestCase {
         let afterTwice = try await service.getMemory(id: id)
         XCTAssertEqual(afterTwice?.accessCount, 2)
     }
+
+    func testDeleteMemoryRemovesItFromPersistedIndex() async throws {
+        let id = "mem-\(UUID().uuidString)"
+        let memory = AgentMemory(
+            id: id,
+            type: .task,
+            key: "task",
+            value: "build"
+        )
+
+        try await service.saveMemory(memory)
+
+        let beforeDelete = try await service.listMemories(filter: nil)
+        XCTAssertTrue(beforeDelete.contains { $0.id == id })
+
+        try await service.deleteMemory(id: id)
+
+        let afterDelete = try await service.listMemories(filter: nil)
+        XCTAssertFalse(afterDelete.contains { $0.id == id })
+        let deletedMemory = try await service.getMemory(id: id)
+        XCTAssertNil(deletedMemory)
+    }
 }
 
 final class MockMemoryStorage: StorageServiceProtocol, @unchecked Sendable {
     private var settings: [String: String] = [:]
-    private var memoryIds: [String] = []
 
     func setSetting(key: String, value: String) async throws {
         settings[key] = value
-        if key.hasPrefix("memory_") && !key.contains("index") && !value.isEmpty {
-            let id = String(key.dropFirst("memory_".count))
-            if !memoryIds.contains(id) {
-                memoryIds.append(id)
-            }
-        }
     }
 
     func getSetting(key: String) async throws -> String? {
-        if key.hasPrefix("memory_index_") {
-            let indexStr = String(key.dropFirst("memory_index_".count))
-            guard let index = Int(indexStr), index == 0 else { return nil }
-            return memoryIds.joined(separator: ",")
-        }
         return settings[key]
     }
 

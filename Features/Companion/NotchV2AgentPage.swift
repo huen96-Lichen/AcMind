@@ -50,6 +50,35 @@ struct NotchV2AgentPage: View {
                     )
                 }
 
+                VStack(alignment: .leading, spacing: 6) {
+                    NotchV2StatusPill(
+                        icon: "square.stack.3d.up",
+                        title: "模型管理",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.showModelManagement()
+                        }
+                    )
+
+                    NotchV2StatusPill(
+                        icon: "tray.full",
+                        title: "收集箱",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.showInbox()
+                        }
+                    )
+
+                    NotchV2StatusPill(
+                        icon: "brain",
+                        title: "智能与模型",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.showMainSettings(category: .aiModels)
+                        }
+                    )
+                }
+
                 Divider()
                     .overlay(NotchV2DesignTokens.separator.opacity(0.45))
 

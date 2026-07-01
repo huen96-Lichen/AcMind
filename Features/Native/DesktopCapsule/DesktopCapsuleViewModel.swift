@@ -244,7 +244,7 @@ final class DesktopCapsuleViewModel: ObservableObject {
         NotificationCenter.default.post(
             name: Notification.Name("AcMind.openSettings"),
             object: nil,
-            userInfo: ["tab": "capsule"]
+            userInfo: ["category": SettingsCategory.companion]
         )
     }
 

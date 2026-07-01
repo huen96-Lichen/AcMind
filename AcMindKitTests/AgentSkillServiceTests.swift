@@ -92,28 +92,37 @@ final class AgentSkillServiceTests: XCTestCase {
         XCTAssertNotNil(codexSkill)
         XCTAssertEqual(codexSkill?.name, "Codex 核验")
     }
+
+    func testDeleteSkillRemovesItFromPersistedIndex() async throws {
+        let id = "skill-\(UUID().uuidString)"
+        let skill = AgentSkill(
+            id: id,
+            name: "Delete Me",
+            category: .execution
+        )
+
+        try await service.saveSkill(skill)
+
+        let beforeDelete = try await service.listSkills(filter: nil)
+        XCTAssertTrue(beforeDelete.contains { $0.id == id })
+
+        try await service.deleteSkill(id: id)
+
+        let afterDelete = try await service.listSkills(filter: nil)
+        XCTAssertFalse(afterDelete.contains { $0.id == id })
+        let deletedSkill = try await service.getSkill(id: id)
+        XCTAssertNil(deletedSkill)
+    }
 }
 
 final class MockSkillStorage: StorageServiceProtocol, @unchecked Sendable {
     private var settings: [String: String] = [:]
-    private var skillIds: [String] = []
 
     func setSetting(key: String, value: String) async throws {
         settings[key] = value
-        if key.hasPrefix("skill_") && !key.contains("index") && !value.isEmpty {
-            let id = String(key.dropFirst("skill_".count))
-            if !skillIds.contains(id) {
-                skillIds.append(id)
-            }
-        }
     }
 
     func getSetting(key: String) async throws -> String? {
-        if key.hasPrefix("skill_index_") {
-            let indexStr = String(key.dropFirst("skill_index_".count))
-            guard let index = Int(indexStr), index == 0 else { return nil }
-            return skillIds.joined(separator: ",")
-        }
         return settings[key]
     }
 

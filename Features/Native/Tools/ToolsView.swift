@@ -5,9 +5,12 @@ import AcMindKit
 // 工具 - 具体小工具集合
 
 struct ToolsView: View {
+    @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel: ToolsViewModel
     @FocusState private var searchFieldFocused: Bool
-    @State private var sortMode: ToolSortMode = .recent
+    @AppStorage("ToolsView.sortMode") private var storedSortModeRawValue: String = ToolSortMode.recent.rawValue
+    @AppStorage("ToolsView.selectedCategory") private var storedSelectedCategoryRawValue: String = ToolCategory.all.rawValue
+    @AppStorage("ToolsView.searchQuery") private var storedSearchQuery: String = ""
 
     init(viewModel: ToolsViewModel = ToolsViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -36,6 +39,19 @@ struct ToolsView: View {
             viewModel.activeToolRoute = nil
         }) { route in
             toolSheet(for: route)
+        }
+        .onAppear {
+            consumePendingWorkbenchToolRoute()
+            restoreWorkspaceState()
+        }
+        .onChange(of: appState.pendingWorkbenchToolRoute) { _, _ in
+            consumePendingWorkbenchToolRoute()
+        }
+        .onChange(of: viewModel.selectedCategory) { _, newValue in
+            storedSelectedCategoryRawValue = newValue.rawValue
+        }
+        .onChange(of: viewModel.searchQuery) { _, newValue in
+            storedSearchQuery = newValue
         }
         .background(AppVisualBackdrop())
         .background(searchKeyboardShortcut)
@@ -72,6 +88,34 @@ struct ToolsView: View {
                 }
             } label: {
                 Label("新建工作流", systemImage: "plus")
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)
+            } label: {
+                Label("验证接口", systemImage: "checkmark.shield")
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                appState.navigate(to: .settings, settingsCategory: .aiModels)
+            } label: {
+                Label("模型设置", systemImage: "brain")
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                appState.navigate(to: .voiceEntry)
+            } label: {
+                Label("说入法", systemImage: "waveform")
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                appState.navigate(to: .settings)
+            } label: {
+                Label("设置首页", systemImage: "gearshape")
             }
             .buttonStyle(.bordered)
         }
@@ -155,9 +199,9 @@ struct ToolsView: View {
         Menu {
             ForEach(ToolSortMode.allCases) { mode in
                 Button {
-                    sortMode = mode
+                    storedSortModeRawValue = mode.rawValue
                 } label: {
-                    if sortMode == mode {
+                    if resolvedSortMode == mode {
                         Label(mode.title, systemImage: "checkmark")
                     } else {
                         Text(mode.title)
@@ -165,7 +209,7 @@ struct ToolsView: View {
                 }
             }
         } label: {
-            Label(sortMode.title, systemImage: "chevron.down")
+            Label(resolvedSortMode.title, systemImage: "chevron.down")
                 .font(.system(size: 12, weight: .semibold))
         }
         .buttonStyle(.bordered)
@@ -204,7 +248,7 @@ struct ToolsView: View {
     }
 
     private func sortTools(_ tools: [Tool]) -> [Tool] {
-        switch sortMode {
+        switch resolvedSortMode {
         case .recent:
             let recentRoutes = Dictionary(uniqueKeysWithValues: viewModel.recentTools.enumerated().map { ($1.route, $0) })
             return tools.sorted {
@@ -227,6 +271,15 @@ struct ToolsView: View {
                 return $0.name < $1.name
             }
         }
+    }
+
+    private var resolvedSortMode: ToolSortMode {
+        ToolSortMode(rawValue: storedSortModeRawValue) ?? .recent
+    }
+
+    private func restoreWorkspaceState() {
+        viewModel.selectedCategory = ToolCategory(rawValue: storedSelectedCategoryRawValue) ?? .all
+        viewModel.searchQuery = storedSearchQuery
     }
 
     @ViewBuilder
@@ -269,6 +322,12 @@ struct ToolsView: View {
         .frame(width: 0, height: 0)
         .opacity(0)
         .accessibilityHidden(true)
+    }
+
+    private func consumePendingWorkbenchToolRoute() {
+        guard let route = appState.pendingWorkbenchToolRoute else { return }
+        viewModel.openTool(route)
+        appState.pendingWorkbenchToolRoute = nil
     }
 }
 
@@ -545,7 +604,7 @@ struct Tool: Identifiable {
     let route: ToolRoute
 }
 
-enum ToolRoute: Identifiable, Sendable {
+enum ToolRoute: Identifiable, Sendable, Equatable {
     case webDigest
     case jsonFormatter
     case base64Codec
@@ -778,6 +837,13 @@ class ToolsViewModel: ObservableObject {
     func openTool(_ tool: Tool) {
         activeToolRoute = tool.route
         recordRecentTool(tool)
+    }
+
+    func openTool(_ route: ToolRoute) {
+        activeToolRoute = route
+        if let tool = tools.first(where: { $0.route == route }) {
+            recordRecentTool(tool)
+        }
     }
 
     func openRecentTool(_ recentTool: RecentTool) {

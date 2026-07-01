@@ -6,6 +6,7 @@ struct VoiceEntryView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @State private var preferredMicrophoneSelection = VoiceMicrophonePreferenceStore.defaultName
     @State private var microphoneDevices: [VoiceMicrophoneDevice] = []
+    @State private var localASRModels: [LocalASRModelInfo] = []
 
     var body: some View {
         AcWorkShell(
@@ -19,6 +20,7 @@ struct VoiceEntryView: View {
         )
         .task {
             microphoneDevices = VoiceMicrophoneDeviceCatalog.availableInputDevices()
+            localASRModels = await LocalASRManager.shared.listAvailableModels()
             let storedSelection = VoiceMicrophonePreferenceStore.load()
             if storedSelection == VoiceMicrophonePreferenceStore.defaultName {
                 preferredMicrophoneSelection = storedSelection
@@ -28,6 +30,22 @@ struct VoiceEntryView: View {
                 preferredMicrophoneSelection = storedSelection
             }
             await viewModel.loadPermissions()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsDidChange)) { _ in
+            Task {
+                await viewModel.loadSettings()
+                await viewModel.loadPermissions()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionConfigurationDidChange)) { _ in
+            Task {
+                await viewModel.loadCompanionSettings()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionShortcutsDidChange)) { _ in
+            Task {
+                await viewModel.loadCompanionSettings()
+            }
         }
         .onChange(of: preferredMicrophoneSelection) { _, newValue in
             VoiceMicrophonePreferenceStore.save(newValue)
@@ -64,6 +82,8 @@ struct VoiceEntryView: View {
 
                 workflowCard
                 summaryGrid
+                asrReadinessCard
+                quickLaunchCard
                 controlSections
             }
             .padding(AppSurfaceTokens.Layout.workspacePagePadding)
@@ -203,6 +223,125 @@ struct VoiceEntryView: View {
                             .background(AppSurfaceTokens.cardBackgroundSoft)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
+            }
+        }
+    }
+
+    private var asrReadinessCard: some View {
+        AppSurfaceCard(title: "识别就绪度", subtitle: "当前识别引擎、凭证与本地模型状态", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+            VStack(alignment: .leading, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                HStack(spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                    statePill(title: selectedASRProvider.displayName, accent: AppSurfaceTokens.accentBlue)
+                    statePill(title: asrReadinessText, accent: asrReadinessTint)
+                    statePill(title: "\(localASRModels.filter { $0.isDownloaded }.count)/\(localASRModels.count) 本地模型", accent: AppSurfaceTokens.accentOrange)
+                }
+
+                HStack(alignment: .top, spacing: AppSurfaceTokens.Layout.workspaceGridSpacing) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("当前默认引擎")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Text(selectedASRProviderDescription)
+                            .font(.system(size: 13))
+                            .foregroundStyle(AppSurfaceTokens.primaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("本地模型")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        Text(localASRModels.isEmpty ? "未发现本地模型" : localASRModels.map { "\($0.name)：\($0.isDownloaded ? "已下载" : "未下载")" }.joined(separator: " · "))
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(AppSurfaceTokens.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Button {
+                        AppState.shared.navigate(to: .modelManagement)
+                    } label: {
+                        Label("打开模型管理", systemImage: "square.stack.3d.up")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button {
+                        AppState.shared.navigate(to: .settings, settingsCategory: .aiModels)
+                    } label: {
+                        Label("查看模型设置", systemImage: "slider.horizontal.3")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        AppState.shared.navigate(to: .settings, settingsCategory: .captureInput)
+                    } label: {
+                        Label("查看捕获设置", systemImage: "camera.viewfinder")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+    }
+
+    private var quickLaunchCard: some View {
+        AppSurfaceCard(title: "快速进入", subtitle: "从设置页直接打开说入法面板", padding: AppSurfaceTokens.Layout.workspaceCardPadding) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("当前设备")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                    Text(VoiceMicrophoneDeviceCatalog.displayName(for: preferredMicrophoneSelection))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppSurfaceTokens.primaryText)
+                    Text(selectedMicrophoneStatusText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(selectedMicrophoneIsAvailable ? AppSurfaceTokens.secondaryText : AppSurfaceTokens.accentOrange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 12)
+
+                Button {
+                    NotificationCenter.default.post(name: .companionShowVoicePanel, object: nil)
+                } label: {
+                    Label("打开说入法面板", systemImage: "mic.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(height: 34)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    AppState.shared.navigate(to: .workbench, workbenchToolRoute: .apiTest)
+                } label: {
+                    Label("验证接口", systemImage: "checkmark.shield")
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(height: 34)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    AppState.shared.navigate(to: .settings)
+                } label: {
+                    Label("查看设置首页", systemImage: "gearshape")
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(height: 34)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    (NSApp.delegate as? AppDelegate)?.showSystemStatus()
+                } label: {
+                    Label("查看状态", systemImage: "cpu")
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(height: 34)
+                }
+                .buttonStyle(.bordered)
             }
         }
     }
@@ -348,6 +487,13 @@ struct VoiceEntryView: View {
                         .font(.system(size: 12))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if selectedMicrophoneIsAvailable == false {
+                        Text("当前选择的麦克风未在系统设备中找到，录音时会自动回退到默认输入。")
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppSurfaceTokens.accentOrange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer()
@@ -526,6 +672,23 @@ struct VoiceEntryView: View {
         )
     }
 
+    private var selectedMicrophoneIsAvailable: Bool {
+        guard preferredMicrophoneSelection != VoiceMicrophonePreferenceStore.defaultName else {
+            return true
+        }
+        return microphoneDevices.contains(where: { $0.id == preferredMicrophoneSelection || $0.name == preferredMicrophoneSelection })
+    }
+
+    private var selectedMicrophoneStatusText: String {
+        if preferredMicrophoneSelection == VoiceMicrophonePreferenceStore.defaultName {
+            return "使用系统默认输入"
+        }
+        if selectedMicrophoneIsAvailable {
+            return "设备可用，录音时会临时切换"
+        }
+        return "设备未找到，录音时自动回退"
+    }
+
     private var asrProviderOptions: [(id: String, title: String)] {
         STTProvider.selectableCases.map { ($0.rawValue, $0.displayName) }
     }
@@ -555,6 +718,84 @@ struct VoiceEntryView: View {
             ("ja", "日文"),
             ("ko", "韩文")
         ]
+    }
+
+    private var selectedASRProvider: STTProvider {
+        STTProvider(rawValue: STTProvider.selectableIdentifier(from: viewModel.voiceDefaultProvider)) ?? .appleSpeech
+    }
+
+    private var selectedASRProviderDescription: String {
+        let provider = selectedASRProvider
+        if provider == .appleSpeech {
+            return "系统听写，开箱即用。"
+        }
+
+        if provider.isLocal {
+            if let localModel = localASRModels.first(where: { localASRProviderID(for: $0.type) == provider.rawValue }) {
+                return localModel.isDownloaded
+                    ? "\(localModel.name) 已安装，可直接用于本地识别。"
+                    : "\(localModel.name) 未下载，去模型管理下载后可用。"
+            }
+            return "本地模型信息未就绪，请打开模型管理检查。"
+        }
+
+        switch provider {
+        case .openAI:
+            return "依赖 OpenAI 兼容接口和 API Key。"
+        case .aliCloud:
+            return "依赖阿里云 ASR 凭证。"
+        case .doubao:
+            return "依赖火山引擎 ASR 凭证。"
+        case .mimoASR:
+            return "依赖 MiMo ASR 凭证。"
+        case .googleCloud:
+            return "当前未开放。"
+        case .groq:
+            return "当前未开放。"
+        case .freeModel:
+            return "当前未开放。"
+        default:
+            return "当前引擎已配置。"
+        }
+    }
+
+    private var asrReadinessText: String {
+        let provider = selectedASRProvider
+        if provider == .appleSpeech {
+            return "系统可用"
+        }
+        if provider.isLocal {
+            let installed = localASRModels.contains { localASRProviderID(for: $0.type) == provider.rawValue && $0.isDownloaded }
+            return installed ? "本地就绪" : "待下载"
+        }
+        return viewModel.voiceDefaultProvider.isEmpty ? "未配置" : "待验证"
+    }
+
+    private var asrReadinessTint: Color {
+        let provider = selectedASRProvider
+        if provider == .appleSpeech {
+            return AppSurfaceTokens.accentGreen
+        }
+        if provider.isLocal {
+            let installed = localASRModels.contains { localASRProviderID(for: $0.type) == provider.rawValue && $0.isDownloaded }
+            return installed ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange
+        }
+        return AppSurfaceTokens.accentBlue
+    }
+
+    private func localASRProviderID(for type: LocalASRModelType) -> String {
+        switch type {
+        case .senseVoice:
+            return STTProvider.senseVoice.rawValue
+        case .whisperKit:
+            return STTProvider.whisperKit.rawValue
+        case .funASR:
+            return STTProvider.funASR.rawValue
+        case .qwen3ASR:
+            return STTProvider.qwen3ASR.rawValue
+        case .parakeet:
+            return STTProvider.parakeet.rawValue
+        }
     }
 
     private func providerDisplayName(_ id: String) -> String {

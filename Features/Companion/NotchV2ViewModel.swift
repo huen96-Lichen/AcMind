@@ -1336,6 +1336,25 @@ final class NotchV2ViewModel: ObservableObject {
         requestCompact()
     }
 
+    func showMainSettings(category: SettingsCategory) {
+        NotificationCenter.default.post(
+            name: Notification.Name("AcMind.openSettings"),
+            object: nil,
+            userInfo: ["category": category]
+        )
+        requestCompact()
+    }
+
+    func showModelManagement() {
+        AppState.shared.navigate(to: .modelManagement)
+        requestCompact()
+    }
+
+    func showInbox() {
+        NotificationCenter.default.post(name: .companionShowInbox, object: nil)
+        requestCompact()
+    }
+
     private func snapshot() -> PlaybackState {
         let service = musicService
         return PlaybackState(

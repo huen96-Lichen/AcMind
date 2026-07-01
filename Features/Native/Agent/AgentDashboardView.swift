@@ -16,10 +16,11 @@ struct AgentDashboardView: View {
         previewSidebarSelection: String? = nil,
         shouldLoadDashboardData: Bool = true
     ) {
+        let resolvedMode = Self.resolveMode(from: previewSidebarSelection ?? selectedSidebarItem)
+        viewModel.setMode(resolvedMode)
         _viewModel = StateObject(wrappedValue: viewModel)
-        _showInspector = State(initialValue: showRightPanel || previewSidebarSelection == "task")
+        _showInspector = State(initialValue: showRightPanel || resolvedMode == .task)
         self.shouldLoadDashboardData = shouldLoadDashboardData
-        _ = selectedSidebarItem
     }
 
     var body: some View {
@@ -62,6 +63,8 @@ struct AgentDashboardView: View {
 
     private var headerActions: some View {
         HStack(spacing: 10) {
+            modeSelector
+
             if viewModel.isLoading {
                 ProgressView()
                     .controlSize(.small)
@@ -90,6 +93,51 @@ struct AgentDashboardView: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
 
+            Button {
+                AppState.shared.navigate(to: .modelManagement)
+            } label: {
+                Label("模型管理", systemImage: "square.stack.3d.up")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.bordered)
+            .help("打开模型管理")
+
+            Button {
+                AppState.shared.navigateToInbox()
+            } label: {
+                Label("收集箱", systemImage: "tray.full")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.bordered)
+            .help("打开收集箱")
+
+            Button {
+                AppState.shared.navigate(to: .screenshotHistory)
+            } label: {
+                Label("截图历史", systemImage: "camera.viewfinder")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.bordered)
+            .help("打开截图历史")
+
+            Button {
+                AppState.shared.navigate(to: .workbench)
+            } label: {
+                Label("工具台", systemImage: "wrench.and.screwdriver")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.bordered)
+            .help("打开工具台")
+
+            Button {
+                AppState.shared.navigate(to: .settings)
+            } label: {
+                Label("设置首页", systemImage: "gearshape")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.bordered)
+            .help("打开设置首页")
+
             iconButton(
                 symbol: showInspector ? "sidebar.trailing" : "sidebar.right",
                 help: showInspector ? "收起任务与上下文" : "显示任务与上下文"
@@ -99,6 +147,37 @@ struct AgentDashboardView: View {
                 }
             }
 
+        }
+    }
+
+    private var modeSelector: some View {
+        HStack(spacing: 4) {
+            ForEach(AgentMode.allCases, id: \.self) { mode in
+                Button {
+                    viewModel.setMode(mode)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: mode.iconName)
+                            .font(.system(size: 10.5, weight: .semibold))
+                        Text(mode.displayName)
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 11.5, weight: viewModel.selectedMode == mode ? .semibold : .medium))
+                    .foregroundStyle(viewModel.selectedMode == mode ? AppSurfaceTokens.primaryText : AppSurfaceTokens.secondaryText)
+                    .padding(.horizontal, 9)
+                    .frame(height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
+                            .fill(viewModel.selectedMode == mode ? AppSurfaceTokens.accentBlue.opacity(0.12) : AppSurfaceTokens.cardBackground)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
+                            .stroke(viewModel.selectedMode == mode ? AppSurfaceTokens.accentBlue.opacity(0.28) : AppSurfaceTokens.separator.opacity(0.7), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .help(mode.description)
+            }
         }
     }
 
@@ -243,6 +322,7 @@ struct AgentDashboardView: View {
                 stages: composerStages,
                 suggestions: composerSuggestions,
                 isProcessing: viewModel.isLoading,
+                primaryActionLabel: primaryActionLabel,
                 primaryAction: performComposerPrimaryAction
             ) {
                 chatComposer
@@ -282,6 +362,24 @@ struct AgentDashboardView: View {
                 }
             }
 
+            AppSurfaceCard(title: "当前模式", subtitle: viewModel.selectedMode.displayName, padding: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    metadataCard([
+                        ("模式", viewModel.selectedMode.displayName),
+                        ("主动作", primaryActionLabel),
+                        ("说明", viewModel.selectedMode.description)
+                    ])
+
+                    if viewModel.selectedMode == .automation {
+                        bulletListCard([
+                            "自动化模式会把输入整理为可执行的目标。",
+                            "如果需要追踪执行过程，可以切到任务模式。",
+                            "如果要直接调用工具，可以切到工具模式。"
+                        ])
+                    }
+                }
+            }
+
             HStack(alignment: .top, spacing: 12) {
                 AppSurfaceCard(title: "任务看板", subtitle: "当前任务 / 待确认问题 / 权限确认", padding: 14) {
                     bulletListCard(viewModel.recentTaskSummaries.prefix(3).map { "\($0.title)：\($0.stateLabel)" }.ifEmpty(["暂无任务，发送目标后会自动进入任务区。"]))
@@ -308,6 +406,44 @@ struct AgentDashboardView: View {
                     promptButton("分析当前项目", symbol: "folder")
                     promptButton("整理最近结果", symbol: "tray.full")
                     promptButton("生成待办", symbol: "checklist")
+                    toolShortcutButton("检查模型", symbol: "square.stack.3d.up") {
+                        performModelManagementCheck()
+                    }
+                    toolShortcutButton("验证接口", symbol: "checkmark.shield") {
+                        performAPITest()
+                    }
+                }
+            }
+
+            AppSurfaceCard(title: "工具示例", subtitle: "直接点一下就能改写输入内容", padding: 14) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("这些示例会自动切换到工具调用模式，并把提示语填进输入框。")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+
+                    FlowLayout(spacing: 8) {
+                        toolExampleButton("网页 https://example.com", symbol: "globe") {
+                            applyToolExample("网页 https://example.com")
+                        }
+                        toolExampleButton("文档 /tmp/demo.txt", symbol: "doc.text") {
+                            applyToolExample("文档 /tmp/demo.txt")
+                        }
+                        toolExampleButton("重命名 /tmp/old.txt 为 new.txt", symbol: "pencil") {
+                            applyToolExample("重命名 /tmp/old.txt 为 new.txt")
+                        }
+                        toolExampleButton("批量下载 https://example.com 预览", symbol: "square.stack.down") {
+                            applyToolExample("批量下载 https://example.com 预览")
+                        }
+                        toolExampleButton("导出 note-1", symbol: "square.and.arrow.up") {
+                            applyToolExample("导出 note-1")
+                        }
+                        toolExampleButton("复制 /tmp/old.txt 到 /tmp/new.txt", symbol: "doc.on.doc") {
+                            applyToolExample("复制 /tmp/old.txt 到 /tmp/new.txt")
+                        }
+                        toolExampleButton("查看 /tmp/demo.txt 详情", symbol: "info.circle") {
+                            applyToolExample("查看 /tmp/demo.txt 详情")
+                        }
+                    }
                 }
             }
         }
@@ -407,6 +543,98 @@ struct AgentDashboardView: View {
         .buttonStyle(.plain)
     }
 
+    private func toolExampleButton(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
+                        .stroke(AppSurfaceTokens.separator.opacity(0.65), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func applyToolExample(_ prompt: String) {
+        viewModel.selectedMode = .toolCall
+        viewModel.inputText = prompt
+    }
+
+    private func toolShortcutButton(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.primaryText)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: AppSurfaceTokens.Radius.control, style: .continuous)
+                        .fill(AppSurfaceTokens.cardBackground)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func performModelManagementCheck() {
+        guard let providerId = currentProviderID else {
+            viewModel.errorMessage = "请先选择一个有效模型提供商"
+            viewModel.showError = true
+            return
+        }
+
+        Task {
+            await viewModel.runToolAction(
+                toolType: .tools,
+                action: "modelManagement",
+                parameters: [
+                    "providerId": providerId
+                ],
+                context: [
+                    "source": "AgentDashboard",
+                    "mode": viewModel.selectedMode.displayName
+                ]
+            )
+        }
+    }
+
+    private func performAPITest() {
+        guard let providerId = currentProviderID else {
+            viewModel.errorMessage = "请先选择一个有效模型提供商"
+            viewModel.showError = true
+            return
+        }
+
+        Task {
+            await viewModel.runToolAction(
+                toolType: .tools,
+                action: "apiTest",
+                parameters: [
+                    "providerId": providerId
+                ],
+                context: [
+                    "source": "AgentDashboard",
+                    "mode": viewModel.selectedMode.displayName
+                ]
+            )
+        }
+    }
+
+    private var currentProviderID: String? {
+        guard let providerId = viewModel.selectedModelOption?.providerId,
+              providerId.isEmpty == false,
+              providerId != "unconfigured" else {
+            return nil
+        }
+        return providerId
+    }
+
     private var assistantThinkingRow: some View {
         HStack(alignment: .top, spacing: 10) {
             agentAvatar
@@ -444,7 +672,7 @@ struct AgentDashboardView: View {
                     .padding(.bottom, 2)
 
                 if viewModel.inputText.isEmpty {
-                    Text("给 Agent 发消息")
+                    Text(composerPlaceholder)
                         .font(.system(size: 13.5))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .padding(.horizontal, 15)
@@ -547,8 +775,93 @@ struct AgentDashboardView: View {
         ["当前任务", "待确认问题", "权限确认", "工具调用结果"]
     }
 
+    private var composerPlaceholder: String {
+        switch viewModel.selectedMode {
+        case .normal: return "给 Agent 发消息"
+        case .quickAsk: return "输入一个快速问题"
+        case .task: return "描述要整理成任务的内容"
+        case .toolCall: return "描述要调用工具的目标"
+        case .automation: return "描述要拆解成自动化步骤的目标"
+        }
+    }
+
+    private var primaryActionLabel: String {
+        switch viewModel.selectedMode {
+        case .normal: return "发送"
+        case .quickAsk: return "提问"
+        case .task: return "整理"
+        case .toolCall: return "调用"
+        case .automation: return "生成"
+        }
+    }
+
     private func performComposerPrimaryAction() {
-        sendCurrentMessage()
+        switch viewModel.selectedMode {
+        case .normal:
+            sendCurrentMessage()
+        case .quickAsk:
+            performQuickAsk()
+        case .task:
+            Task { await viewModel.distill() }
+        case .toolCall:
+            performToolCall()
+        case .automation:
+            performAutomationDraft()
+        }
+    }
+
+    private func performQuickAsk() {
+        let question = trimmedInput
+        guard question.isEmpty == false else { return }
+        viewModel.quickAskQuestion = question
+        Task { await viewModel.quickAsk() }
+    }
+
+    private func performToolCall() {
+        let prompt = trimmedInput
+        guard prompt.isEmpty == false else { return }
+
+        if let toolCall = AgentToolCallParser.parse(prompt: prompt) {
+            Task {
+                await viewModel.runToolAction(
+                    toolType: toolCall.toolType,
+                    action: toolCall.action,
+                    parameters: toolCall.parameters,
+                    context: [
+                        "source": "AgentDashboard",
+                        "mode": viewModel.selectedMode.displayName,
+                        "originalPrompt": prompt
+                    ]
+                )
+            }
+            return
+        }
+
+        Task {
+            await viewModel.runToolAction(
+                toolType: .ai,
+                action: "prompt",
+                parameters: [
+                    "prompt": prompt,
+                    "context": "来自 Agent 工具调用模式，未能自动识别具体工具"
+                ]
+            )
+        }
+    }
+
+    private func performAutomationDraft() {
+        let prompt = trimmedInput
+        guard prompt.isEmpty == false else { return }
+        Task {
+            await viewModel.runToolAction(
+                toolType: .ai,
+                action: "automationDraft",
+                parameters: [
+                    "goal": prompt,
+                    "context": "自动化草案"
+                ]
+            )
+        }
     }
 
     private func applyPreviewSelectionIfNeeded() {
@@ -657,10 +970,11 @@ struct AgentDashboardView: View {
     }
 }
 
-private struct ConversationComposerCard<Content: View>: View {
+    private struct ConversationComposerCard<Content: View>: View {
     let stages: [String]
     let suggestions: [String]
     let isProcessing: Bool
+    let primaryActionLabel: String
     let primaryAction: () -> Void
     @ViewBuilder var content: Content
 
@@ -673,7 +987,7 @@ private struct ConversationComposerCard<Content: View>: View {
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                 }
                 Spacer()
-                Button(isProcessing ? ToolStatusLabelFormatter.processingText : "发送") {
+                Button(isProcessing ? ToolStatusLabelFormatter.processingText : primaryActionLabel) {
                     primaryAction()
                 }
                 .buttonStyle(.borderless)
@@ -727,6 +1041,55 @@ private func nonEmptyText(_ value: String?) -> String? {
 private extension Collection {
     func ifEmpty(_ fallback: [Element]) -> [Element] {
         isEmpty ? fallback : Array(self)
+    }
+}
+
+private extension AgentMode {
+    var displayName: String {
+        switch self {
+        case .normal: return "对话"
+        case .task: return "任务"
+        case .quickAsk: return "Quick Ask"
+        case .toolCall: return "工具"
+        case .automation: return "自动化"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .normal: return "bubble.left.and.bubble.right"
+        case .task: return "checklist"
+        case .quickAsk: return "sparkles"
+        case .toolCall: return "wrench.and.screwdriver"
+        case .automation: return "gearshape.2"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .normal: return "保持对话式协作，继续追问和整理。"
+        case .task: return "把输入整理成任务并记录到任务板。"
+        case .quickAsk: return "走一次性问答，快速获取结果。"
+        case .toolCall: return "直接调用工具并查看结果。"
+        case .automation: return "拆解自动化目标，生成可执行草案。"
+        }
+    }
+}
+
+private extension AgentDashboardView {
+    static func resolveMode(from identifier: String?) -> AgentMode {
+        switch identifier {
+        case "task":
+            return .task
+        case "quickAsk":
+            return .quickAsk
+        case "toolCall":
+            return .toolCall
+        case "automation":
+            return .automation
+        default:
+            return .normal
+        }
     }
 }
 

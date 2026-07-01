@@ -38,6 +38,19 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertTrue(plugin.deactivateCalled)
     }
 
+    func testPluginLifecyclePostsChangeNotifications() async throws {
+        let manager = PluginManager()
+        let plugin = TestPlugin(id: "test-plugin-notify-\(UUID().uuidString)")
+
+        let registerExpectation = expectation(forNotification: .pluginManagerDidChange, object: nil, handler: nil)
+        try await manager.register(plugin: plugin)
+        await fulfillment(of: [registerExpectation], timeout: 1.0)
+
+        let unregisterExpectation = expectation(forNotification: .pluginManagerDidChange, object: nil, handler: nil)
+        await manager.unregister(pluginId: plugin.id)
+        await fulfillment(of: [unregisterExpectation], timeout: 1.0)
+    }
+
     func testFailedActivationDoesNotRegisterPluginAsActive() async {
         let manager = PluginManager()
         let plugin = FailingPlugin(id: "failing-plugin-\(UUID().uuidString)")
@@ -170,6 +183,45 @@ final class PluginManagerTests: XCTestCase {
         XCTAssertEqual(result, "磁盘 ASR 结果")
         let activeCount = await manager.getActivePluginCount()
         XCTAssertEqual(activeCount, 1)
+    }
+
+    func testReloadPluginUsesDiscoveredDirectoryPath() async throws {
+        let pluginRoot = try makePluginRoot()
+        defer { try? FileManager.default.removeItem(at: pluginRoot) }
+        let actualDirectory = pluginRoot.appendingPathComponent("custom-folder-name", isDirectory: true)
+        try FileManager.default.createDirectory(at: actualDirectory, withIntermediateDirectories: true)
+        let descriptor = PluginDescriptor(
+            id: "plugin-id-does-not-match-folder",
+            name: "Mismatch Reload",
+            version: "1.0.0",
+            capabilities: [.customPolish],
+            entryPoint: "plugin.sh",
+            configPath: actualDirectory.appendingPathComponent("plugin.json").path
+        )
+        try JSONEncoder().encode(descriptor).write(to: actualDirectory.appendingPathComponent("plugin.json"))
+        let script = """
+        #!/bin/sh
+        input=$(cat)
+        case "$input" in
+          *'\"action\":\"polish\"'*) printf '{"success":true,"text":"reload-ok"}' ;;
+          *) printf '{"success":true}' ;;
+        esac
+        """
+        let executable = actualDirectory.appendingPathComponent("plugin.sh")
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
+
+        let manager = PluginManager(pluginsDirectory: pluginRoot)
+        try await manager.loadPlugin(at: actualDirectory)
+        try await manager.reloadPlugin(id: descriptor.id)
+
+        let status = await manager.getPluginStatus(id: descriptor.id)
+        let activeCount = await manager.getActivePluginCount()
+        let polishPlugin = await manager.getPolishPlugins()[descriptor.id]
+        let result = try await polishPlugin?.polish(text: "原文", mode: .light)
+        XCTAssertEqual(status, .active)
+        XCTAssertEqual(activeCount, 1)
+        XCTAssertEqual(result, "reload-ok")
     }
 
     func testLoadingExecutableInjectionPluginActivatesAndRuns() async throws {

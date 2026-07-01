@@ -9,6 +9,8 @@ final class SettingsPluginCopyTests: XCTestCase {
         XCTAssertTrue(source.contains("pluginSummaryHeadline"))
         XCTAssertTrue(source.contains("pluginSummaryRow"))
         XCTAssertTrue(source.contains("pluginPolicySummary"))
+        XCTAssertTrue(source.contains(".pluginManagerDidChange"))
+        XCTAssertTrue(source.contains("loadPluginSummaries()"))
     }
 
     private func readSource(_ relativePath: String) throws -> String {

@@ -115,7 +115,7 @@ struct NotchV2TopBar: View {
                 accent: NotchV2DesignTokens.innerCardBackground,
                 isSelected: viewModel.effectiveSelectedPage == .settings,
                 action: {
-                    viewModel.select(.settings)
+                    openSettingsWindow()
                 }
             )
 
@@ -160,6 +160,24 @@ struct NotchV2TopBar: View {
 
                 Button("打开设置") {
                     openSettingsWindow()
+                }
+
+                Divider()
+
+                Button("设置首页") {
+                    openSettingsWindow()
+                }
+
+                Button("智能与模型") {
+                    openSettingsWindow(category: .aiModels)
+                }
+
+                Button("捕获与输入") {
+                    openSettingsWindow(category: .captureInput)
+                }
+
+                Button("权限与安全") {
+                    openSettingsWindow(category: .security)
                 }
 
                 Button("收起") {
@@ -246,6 +264,10 @@ struct NotchV2TopBar: View {
 
     private func openSettingsWindow() {
         (NSApp.delegate as? AppDelegate)?.openSettingsWindow()
+    }
+
+    private func openSettingsWindow(category: SettingsCategory) {
+        (NSApp.delegate as? AppDelegate)?.openSettingsWindow(category: category)
     }
 
     private var batteryText: String {

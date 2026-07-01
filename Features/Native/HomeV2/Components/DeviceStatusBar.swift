@@ -3,6 +3,17 @@ import SwiftUI
 struct DeviceStatusBar: View {
     let model: WorkbenchV2DashboardData.DeviceStatus
     let layout: WorkbenchV2ResolvedLayout
+    let detailsAction: () -> Void
+
+    init(
+        model: WorkbenchV2DashboardData.DeviceStatus,
+        layout: WorkbenchV2ResolvedLayout,
+        detailsAction: @escaping () -> Void = {}
+    ) {
+        self.model = model
+        self.layout = layout
+        self.detailsAction = detailsAction
+    }
 
     var body: some View {
         HStack(alignment: .center, spacing: WorkbenchV2Tokens.Spacing.md) {
@@ -23,7 +34,7 @@ struct DeviceStatusBar: View {
 
             Spacer(minLength: WorkbenchV2Tokens.Spacing.sm)
 
-            Button(action: {}) {
+            Button(action: detailsAction) {
                 Label("查看详情", systemImage: "arrow.right.circle")
                     .labelStyle(.titleAndIcon)
                     .font(.system(size: WorkbenchV2Tokens.Typography.caption, weight: .semibold))
@@ -112,7 +123,8 @@ struct DeviceStatusBar_Previews: PreviewProvider {
     static var previews: some View {
         DeviceStatusBar(
             model: WorkbenchV2DashboardData.preview().deviceStatus,
-            layout: WorkbenchV2Layout.resolve(for: CGSize(width: 1235, height: 68))
+            layout: WorkbenchV2Layout.resolve(for: CGSize(width: 1235, height: 68)),
+            detailsAction: {}
         )
         .padding()
         .previewLayout(.sizeThatFits)

@@ -868,11 +868,20 @@ struct ModelManagementPanel: View {
                             .foregroundStyle(AppSurfaceTokens.secondaryText)
 
                         Button {
+                            Task { await viewModel.runHealthChecks() }
+                        } label: {
+                            Label("全部检测", systemImage: "checklist")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isRefreshing || viewModel.items.isEmpty)
+
+                        Button {
                             Task { await viewModel.refresh() }
                         } label: {
                             Label("刷新", systemImage: "arrow.clockwise")
                         }
                         .buttonStyle(.bordered)
+                        .disabled(viewModel.isRefreshing)
                     }
                 ),
                 leadingRailWidth: 0,
@@ -1689,6 +1698,7 @@ final class ModelManagementViewModel: ObservableObject {
     @Published var items: [ModelManagementItem] = []
     @Published var statusText = ToolStatusLabelFormatter.waitingToLoad("")
     @Published var busyItemID: String?
+    @Published var isRefreshing = false
     @Published var errorMessage: String?
     @Published var searchQuery = ""
     @Published var selectedDomain: ModelManagementDomain?
@@ -1705,6 +1715,7 @@ final class ModelManagementViewModel: ObservableObject {
     private var appSettings = AppSettings()
     private var voiceSettings = VoiceSettings()
     private var apiKeyAvailabilityByProviderID: [String: Bool] = [:]
+    private var providerHealthByID: [String: Bool] = [:]
 
     init(
         settingsService: SettingsServiceProtocol = SettingsService(),
@@ -1810,6 +1821,7 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     func refresh() async {
+        isRefreshing = true
         statusText = ToolStatusLabelFormatter.loading("模型数据")
         errorMessage = nil
 
@@ -1817,17 +1829,20 @@ final class ModelManagementViewModel: ObservableObject {
         async let voiceTask = settingsService.getVoiceSettings()
         async let providersTask = settingsService.listProviders()
         async let localTask = LocalASRManager.shared.listAvailableModels()
+        async let healthTask = aiRuntime.healthCheckAll()
 
         do {
             let settings = await settingsTask
             let voice = await voiceTask
             let providers = try await providersTask
             let local = await localTask
+            let health = await healthTask
 
             appSettings = settings
             voiceSettings = voice
             providerConfigs = providers
             localModels = local
+            providerHealthByID = health
             providerModelsByID = await loadAvailableModels(for: providers)
             apiKeyAvailabilityByProviderID = await loadKeyAvailability(for: keyProbeIDs(for: providers))
             items = buildItems()
@@ -1837,6 +1852,27 @@ final class ModelManagementViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             statusText = ToolStatusLabelFormatter.failed("加载")
         }
+        isRefreshing = false
+    }
+
+    func runHealthChecks() async {
+        guard providerConfigs.isEmpty == false else {
+            statusText = ToolStatusLabelFormatter.noItemsAvailable("提供商")
+            return
+        }
+
+        isRefreshing = true
+        statusText = ToolStatusLabelFormatter.loading("连通性")
+        errorMessage = nil
+
+        let health = await aiRuntime.healthCheckAll()
+        providerHealthByID = health
+        items = buildItems()
+        ensureSelectionVisible()
+
+        let healthyCount = health.values.filter { $0 }.count
+        statusText = ToolStatusLabelFormatter.completed("连通性 \(healthyCount)/\(health.count)")
+        isRefreshing = false
     }
 
     func setDefaultAIProvider(_ item: ModelManagementItem) async {
@@ -1922,18 +1958,21 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     func openSettings() {
-        AppState.shared.navigate(to: .settings)
+        AppState.shared.navigate(to: .settings, settingsCategory: .aiModels)
     }
 
     private func buildItems() -> [ModelManagementItem] {
         let aiItems = providerConfigs.map { provider in
             let models = providerModelsByID[provider.id] ?? []
             let hasKey = apiKeyAvailabilityByProviderID[provider.id] ?? false
+            let isHealthy = providerHealthByID[provider.id]
             let status = provider.enabled == false
                 ? "已停用"
-                : ToolStatusLabelFormatter.availabilityState(
-                    isAvailable: provider.providerType == .local || hasKey
-                )
+                : (isHealthy == nil
+                    ? ToolStatusLabelFormatter.availabilityState(
+                        isAvailable: provider.providerType == .local || hasKey
+                    )
+                    : (isHealthy == true ? "连通" : "不可用"))
 
             return ModelManagementItem(
                 id: "ai.\(provider.id)",
@@ -1942,7 +1981,7 @@ final class ModelManagementViewModel: ObservableObject {
                 deploymentKind: provider.tier.isLocal ? .local : .cloud,
                 isDefault: appSettings.defaultProviderId == provider.id,
                 isEnabled: provider.enabled,
-                isAvailable: provider.enabled && (provider.providerType == .local || hasKey),
+                isAvailable: provider.enabled && (isHealthy ?? (provider.providerType == .local || hasKey)),
                 isDownloaded: provider.providerType == .local || provider.tier.isLocal,
                 sizeLabel: ToolStatusLabelFormatter.fallbackText(
                     value: provider.modelId,
@@ -2350,6 +2389,14 @@ struct APITestPanel: View {
                 .disabled(viewModel.isRunning || viewModel.selectedProviderId == nil)
 
                 Button {
+                    Task { await viewModel.runHealthCheckAll() }
+                } label: {
+                    Label("全部检查", systemImage: "checklist")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.isRunning || viewModel.providers.isEmpty)
+
+                Button {
                     Task { await viewModel.listModels() }
                 } label: {
                     Label("获取模型", systemImage: "list.bullet")
@@ -2450,6 +2497,26 @@ final class APITestViewModel: ObservableObject {
             outputText = error.localizedDescription
             statusText = ToolStatusLabelFormatter.failed("连通检查")
         }
+        isRunning = false
+    }
+
+    func runHealthCheckAll() async {
+        guard providers.isEmpty == false else { return }
+        isRunning = true
+        lastSavedURL = nil
+        statusText = ToolStatusLabelFormatter.running("检查全部提供商")
+        outputText = ""
+
+        let results = await aiRuntime.healthCheckAll()
+        let providerNameByID = Dictionary(uniqueKeysWithValues: providers.map { ($0.id, $0.name) })
+        let lines = providers.map { provider in
+            let ok = results[provider.id] ?? false
+            return "\(providerNameByID[provider.id] ?? provider.id)：\(ok ? "正常" : "失败")"
+        }
+
+        outputText = lines.isEmpty ? "没有可检查的提供商" : lines.joined(separator: "\n")
+        let successCount = results.values.filter { $0 }.count
+        statusText = ToolStatusLabelFormatter.completed("全部检查 \(successCount)/\(providers.count)")
         isRunning = false
     }
 

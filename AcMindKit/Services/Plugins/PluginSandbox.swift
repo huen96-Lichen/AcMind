@@ -60,12 +60,13 @@ public actor PluginSandbox {
         permissions: Set<PluginPermission> = [.fileRead],
         maxMemoryMB: Int = 256,
         maxCPUPercent: Int = 25,
-        pluginsDirectory: URL? = nil
+        pluginsDirectory: URL? = nil,
+        pluginDirectory: URL? = nil
     ) {
         self.pluginId = pluginId
         let root = pluginsDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("AcMind/Plugins")
-        let base = root.appendingPathComponent(pluginId, isDirectory: true)
+        let base = pluginDirectory ?? root.appendingPathComponent(pluginId, isDirectory: true)
         self.allowedPaths = [base]
         self.grantedPermissions = permissions
         self.maxMemoryMB = maxMemoryMB

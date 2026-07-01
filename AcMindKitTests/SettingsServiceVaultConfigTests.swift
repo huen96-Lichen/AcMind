@@ -145,6 +145,106 @@ final class SettingsServiceVaultConfigTests: XCTestCase {
         let remainingProviders = try await service.listProviders()
         XCTAssertTrue(remainingProviders.isEmpty)
     }
+
+    func testRemovingDefaultProviderClearsDefaultSelection() async throws {
+        let storage = SettingsStorageStub()
+        let permissionManager = PermissionManager()
+        let service = SettingsService(storage: storage, permissionManager: permissionManager)
+
+        var settings = AppSettings()
+        settings.defaultProviderId = "provider-a"
+        settings.defaultModelId = "llama3"
+        try await service.updateSettings(settings)
+
+        let provider = ProviderConfig(
+            id: "provider-a",
+            name: "Local Ollama",
+            providerType: .ollama,
+            tier: .localLight,
+            baseURL: "http://127.0.0.1:11434",
+            modelId: "llama3",
+            enabled: true
+        )
+        try await service.addProvider(provider, apiKey: nil)
+        try await service.removeProvider(id: provider.id)
+
+        let loaded = await service.getSettings()
+        XCTAssertNil(loaded.defaultProviderId)
+        XCTAssertNil(loaded.defaultModelId)
+        XCTAssertNil(storage.settings["app.defaultProviderId"])
+        XCTAssertNil(storage.settings["app.defaultModelId"])
+    }
+
+    func testDisablingDefaultProviderClearsDefaultSelection() async throws {
+        let storage = SettingsStorageStub()
+        let permissionManager = PermissionManager()
+        let service = SettingsService(storage: storage, permissionManager: permissionManager)
+
+        var settings = AppSettings()
+        settings.defaultProviderId = "provider-b"
+        settings.defaultModelId = "qwen2.5"
+        try await service.updateSettings(settings)
+
+        let provider = ProviderConfig(
+            id: "provider-b",
+            name: "Cloud Provider",
+            providerType: .openAICompatible,
+            tier: .cloudLight,
+            baseURL: "https://example.com",
+            modelId: "qwen2.5",
+            enabled: true
+        )
+        try await service.addProvider(provider, apiKey: nil)
+
+        var disabledProvider = provider
+        disabledProvider.enabled = false
+        try await service.updateProvider(disabledProvider, apiKey: nil)
+
+        let loaded = await service.getSettings()
+        XCTAssertNil(loaded.defaultProviderId)
+        XCTAssertNil(loaded.defaultModelId)
+        XCTAssertNil(storage.settings["app.defaultProviderId"])
+        XCTAssertNil(storage.settings["app.defaultModelId"])
+    }
+
+    func testSelectableSpeechProvidersOnlyIncludeRoutableProviders() {
+        let providers = Set(STTProvider.selectableCases)
+
+        XCTAssertTrue(providers.contains(.appleSpeech))
+        XCTAssertTrue(providers.contains(.whisperKit))
+        XCTAssertTrue(providers.contains(.openAI))
+        XCTAssertFalse(providers.contains(.googleCloud))
+        XCTAssertFalse(providers.contains(.groq))
+        XCTAssertFalse(providers.contains(.freeModel))
+    }
+
+    func testVoiceSettingsNormalizeLegacyAndUnsupportedProviders() async throws {
+        let storage = SettingsStorageStub()
+        storage.settings["voice.defaultProvider"] = "qwen3ASR"
+        let firstService = SettingsService(storage: storage, permissionManager: PermissionManager())
+
+        let loadedLegacy = await firstService.getVoiceSettings()
+        XCTAssertEqual(loadedLegacy.defaultProvider, STTProvider.qwen3ASR.rawValue)
+
+        let secondStorage = SettingsStorageStub()
+        secondStorage.settings["voice.defaultProvider"] = STTProvider.groq.rawValue
+        let secondService = SettingsService(storage: secondStorage, permissionManager: PermissionManager())
+
+        let loadedUnsupported = await secondService.getVoiceSettings()
+        XCTAssertEqual(loadedUnsupported.defaultProvider, STTProvider.appleSpeech.rawValue)
+
+        var settings = VoiceSettings(defaultProvider: STTProvider.googleCloud.rawValue)
+        try await secondService.updateVoiceSettings(settings)
+        XCTAssertEqual(secondStorage.settings["voice.defaultProvider"], STTProvider.appleSpeech.rawValue)
+        let cachedUnsupported = await secondService.getVoiceSettings()
+        XCTAssertEqual(cachedUnsupported.defaultProvider, STTProvider.appleSpeech.rawValue)
+
+        settings.defaultProvider = "whisper"
+        try await secondService.updateVoiceSettings(settings)
+        XCTAssertEqual(secondStorage.settings["voice.defaultProvider"], STTProvider.openAI.rawValue)
+        let cachedLegacy = await secondService.getVoiceSettings()
+        XCTAssertEqual(cachedLegacy.defaultProvider, STTProvider.openAI.rawValue)
+    }
 }
 
 private final class SettingsStorageStub: StorageServiceProtocol, @unchecked Sendable {
@@ -201,6 +301,9 @@ private final class SettingsStorageStub: StorageServiceProtocol, @unchecked Send
 
     func getSetting(key: String) async throws -> String? {
         settings[key]
+    }
+    func deleteSetting(key: String) async throws {
+        settings.removeValue(forKey: key)
     }
 
     func insertScheduleEvent(_ event: ScheduleEvent) async throws {}

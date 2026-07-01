@@ -75,6 +75,65 @@ struct AcMindCommands: Commands {
             }
         }
 
+        CommandMenu("工具") {
+            Button("接口测试") {
+                appState.navigate(to: .workbench, workbenchToolRoute: .apiTest)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("网页精读") {
+                appState.navigate(to: .workbench, workbenchToolRoute: .webDigest)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("JSON 格式化") {
+                appState.navigate(to: .workbench, workbenchToolRoute: .jsonFormatter)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("文字识别") {
+                appState.navigate(to: .workbench, workbenchToolRoute: .ocr)
+                appDelegate?.showMainWindow()
+            }
+        }
+
+        CommandMenu("设置") {
+            Button("通用") {
+                appState.navigate(to: .settings, settingsCategory: .general)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("随身能力") {
+                appState.navigate(to: .settings, settingsCategory: .companion)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("智能与模型") {
+                appState.navigate(to: .settings, settingsCategory: .aiModels)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("数据与知识库") {
+                appState.navigate(to: .settings, settingsCategory: .dataKnowledge)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("捕获与输入") {
+                appState.navigate(to: .settings, settingsCategory: .captureInput)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("权限与安全") {
+                appState.navigate(to: .settings, settingsCategory: .security)
+                appDelegate?.showMainWindow()
+            }
+
+            Button("关于") {
+                appState.navigate(to: .settings, settingsCategory: .about)
+                appDelegate?.showMainWindow()
+            }
+        }
+
         CommandMenu("截图") {
             Button("立即截图") {
                 (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
@@ -88,6 +147,11 @@ struct AcMindCommands: Commands {
 
             Button("截图历史") {
                 appState.selectInboxWorkspace("screenshotHistory")
+                appDelegate?.showMainWindow()
+            }
+
+            Button("手机同步") {
+                appState.selectInboxWorkspace("phoneSync")
                 appDelegate?.showMainWindow()
             }
 

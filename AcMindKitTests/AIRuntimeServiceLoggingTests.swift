@@ -131,6 +131,44 @@ final class AIRuntimeServiceLoggingTests: XCTestCase {
         XCTAssertTrue(sink.events[1].contains("chat stream success provider=mock model=mock-model chunks=2"))
     }
 
+    func testDisabledDefaultProviderFallsBackToEnabledProvider() async throws {
+        let defaults = makeDefaults(aiCallLogEnabled: true, errorLogEnabled: true)
+        SettingsLocalPreferences(localFirstMode: false).save(to: defaults)
+        let sink = RecordingAIRuntimeLoggingSink()
+        let storage = LoggingTestStorageStub(
+            providers: [
+                ProviderConfig(
+                    id: "disabled-cloud",
+                    name: "Disabled Cloud",
+                    providerType: .openAICompatible,
+                    tier: .cloudLight,
+                    baseURL: "https://example.com",
+                    modelId: "cloud-model",
+                    enabled: false
+                ),
+                ProviderConfig(
+                    id: "enabled-local",
+                    name: "Enabled Local",
+                    providerType: .ollama,
+                    tier: .localLight,
+                    baseURL: "http://127.0.0.1:11434",
+                    modelId: "local-model",
+                    enabled: true
+                ),
+            ]
+        )
+        let service = AIRuntimeService(
+            storage: storage,
+            settingsDefaults: defaults,
+            loggingSink: sink
+        )
+
+        _ = try await service.listProviders()
+
+        XCTAssertEqual(service.getDefaultProvider(), "enabled-local")
+        XCTAssertEqual(service.preferredProviderId(), "enabled-local")
+    }
+
     private func makeDefaults(aiCallLogEnabled: Bool, errorLogEnabled: Bool) -> UserDefaults {
         let suiteName = "AcMind.AIRuntimeServiceLoggingTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -227,6 +265,12 @@ private final class StreamingAIProvider: AIProvider, @unchecked Sendable {
 }
 
 private final class LoggingTestStorageStub: StorageServiceProtocol, @unchecked Sendable {
+    var providers: [ProviderConfig]
+
+    init(providers: [ProviderConfig] = []) {
+        self.providers = providers
+    }
+
     func insertSourceItem(_ item: SourceItem) async throws {}
     func getSourceItem(id: String) async throws -> SourceItem? { nil }
     func listSourceItems(filter: SourceItemFilter?) async throws -> [SourceItem] { [] }
@@ -262,7 +306,7 @@ private final class LoggingTestStorageStub: StorageServiceProtocol, @unchecked S
     func updateClipboardItem(_ item: ClipboardItem) async throws {}
     func deleteClipboardItem(id: String) async throws {}
 
-    func listProviders() async -> [ProviderConfig] { [] }
+    func listProviders() async -> [ProviderConfig] { providers }
     func addProvider(_ config: ProviderConfig) async throws {}
     func updateProvider(_ config: ProviderConfig) async throws {}
     func removeProvider(id: String) async throws {}

@@ -247,8 +247,8 @@ struct MainContent: View {
                 AgentDashboardView()
                     .navigationTitle("智能体")
             case .clipboard:
-                InboxView(clipboardPinActions: clipboardPinActions)
-                    .navigationTitle("收集箱")
+                ClipboardView(clipboardPinActions: clipboardPinActions)
+                    .navigationTitle("剪贴板 & 手机同步")
             case .inbox:
                 InboxView(clipboardPinActions: clipboardPinActions, previewScenario: inboxPreviewScenario)
                     .navigationTitle("收集箱")

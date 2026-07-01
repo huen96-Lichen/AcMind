@@ -71,9 +71,10 @@ public struct CloudSyncStatusSummary: Sendable, Equatable {
         }
 
         if status.syncInProgress {
+            let pendingText = status.pendingChanges > 0 ? " · 待同步 \(status.pendingChanges) 项" : ""
             return CloudSyncStatusSummary(
                 title: "云同步进行中",
-                detail: "正在拉取和推送最新数据，请稍候。",
+                detail: "正在拉取和推送最新数据，请稍候。\(pendingText)",
                 canRetry: false,
                 retryTitle: nil
             )
@@ -89,9 +90,10 @@ public struct CloudSyncStatusSummary: Sendable, Equatable {
         }
 
         guard let lastSyncDate = status.lastSyncDate else {
+            let pendingText = status.pendingChanges > 0 ? " 当前有 \(status.pendingChanges) 项待同步。" : ""
             return CloudSyncStatusSummary(
                 title: "云同步待首次运行",
-                detail: "开启后尚未完成过同步，可以手动触发一次。",
+                detail: "开启后尚未完成过同步，可以手动触发一次。\(pendingText)",
                 canRetry: true,
                 retryTitle: "立即同步"
             )
@@ -99,9 +101,10 @@ public struct CloudSyncStatusSummary: Sendable, Equatable {
 
         let typeCount = status.lastSyncByType.count
         let typeText = typeCount > 0 ? " · 已覆盖 \(typeCount) 类数据" : ""
+        let pendingText = status.pendingChanges > 0 ? " · 待同步 \(status.pendingChanges) 项" : ""
         return CloudSyncStatusSummary(
             title: "云同步正常",
-            detail: "最近同步于 \(relativeTime(from: lastSyncDate, to: now))\(typeText)",
+            detail: "最近同步于 \(relativeTime(from: lastSyncDate, to: now))\(typeText)\(pendingText)",
             canRetry: false,
             retryTitle: nil
         )
@@ -292,6 +295,7 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         syncInProgress = true
         lastErrorMessage = nil
         cloudStore.synchronize()
+        await postChangeNotification()
 
         do {
             try await pullAll()
@@ -301,18 +305,21 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
             recordSyncFailure(error.localizedDescription)
         }
         syncInProgress = false
+        await postChangeNotification()
     }
 
     public func pull() async {
         guard await isSyncEnabled() else { return }
         lastErrorMessage = nil
         do { try await pullAll() } catch { recordSyncFailure(error.localizedDescription) }
+        await postChangeNotification()
     }
 
     public func push() async {
         guard await isSyncEnabled() else { return }
         lastErrorMessage = nil
         do { try await pushAll() } catch { recordSyncFailure(error.localizedDescription) }
+        await postChangeNotification()
     }
 
     private func pullAll() async throws {
@@ -341,6 +348,8 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
         userDefaults.set(enabled, forKey: syncEnabledKey)
         if enabled {
             await sync()
+        } else {
+            await postChangeNotification()
         }
     }
 
@@ -349,11 +358,13 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
     }
 
     public func getSyncStatus() async -> SyncStatus {
-        SyncStatus(
+        let pendingChanges = await calculatePendingChanges(since: lastSync)
+        return SyncStatus(
             isEnabled: await isSyncEnabled(),
             lastSyncDate: lastSync,
             syncInProgress: syncInProgress,
             lastSyncByType: lastSyncByType,
+            pendingChanges: pendingChanges,
             lastErrorMessage: lastErrorMessage
         )
     }
@@ -371,6 +382,33 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
 
     private func recordSyncFailure(_ message: String) {
         lastErrorMessage = message
+    }
+
+    private func postChangeNotification() async {
+        await MainActor.run {
+            NotificationCenter.default.post(name: .cloudSyncDidChange, object: nil)
+        }
+    }
+
+    private func calculatePendingChanges(since lastSyncDate: Date?) async -> Int {
+        let referenceDate = lastSyncDate ?? .distantPast
+
+        let words = await personalDictionary.getAllWords()
+        let cards = (try? await storage.listKnowledgeCards()) ?? []
+        let notes = (try? await storage.listDistilledNotes()) ?? []
+        let tasks = (try? await storage.listScheduledAgentTasks()) ?? []
+        let settingsSnapshot = (try? await storage.getSettingsSnapshot())
+
+        let personalWordCount = words.filter { word in
+            max(word.lastUsed ?? word.createdAt, word.createdAt) > referenceDate
+        }.count
+
+        let knowledgeCardCount = cards.filter { $0.updatedAt > referenceDate }.count
+        let distilledNoteCount = notes.filter { $0.updatedAt > referenceDate }.count
+        let scheduledTaskCount = tasks.filter { $0.updatedAt > referenceDate }.count
+        let settingsCount = (settingsSnapshot?.updatedAt ?? .distantPast) > referenceDate ? 1 : 0
+
+        return personalWordCount + knowledgeCardCount + distilledNoteCount + scheduledTaskCount + settingsCount
     }
 
     // MARK: - External Change
@@ -541,6 +579,7 @@ public actor CloudSyncService: CloudSyncServiceProtocol {
             type: .settings
         )
         try setCloudValue(sanitizedJson, forKey: settingsKey, type: .settings)
+        lastSyncByType[.settings] = now()
     }
 
     private func decodeSettingsSnapshot(_ json: String) throws -> CloudSettingsSnapshot {

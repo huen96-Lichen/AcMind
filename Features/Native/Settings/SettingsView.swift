@@ -52,6 +52,7 @@ fileprivate func usageBurnColor(for severity: UsageBurnSeverity) -> Color {
 // MARK: - 设置视图
 
 struct SettingsView: View {
+    @ObservedObject private var appState = AppState.shared
     @StateObject private var viewModel: SettingsViewModel
     @State private var selectedCategory: SettingsCategory
     @State private var searchQuery: String
@@ -140,6 +141,12 @@ struct SettingsView: View {
             }
         }
         .background(searchKeyboardShortcut)
+        .onAppear {
+            consumePendingSettingsCategory()
+        }
+        .onChange(of: appState.pendingSettingsCategory) { _, _ in
+            consumePendingSettingsCategory()
+        }
         .onChange(of: settingsSearchQuery) { _, newValue in
             if let matchedCategory = SettingsSearchCatalog.bestCategory(for: newValue) {
                 selectedCategory = matchedCategory
@@ -149,6 +156,12 @@ struct SettingsView: View {
 
     private var settingsSearchQuery: String {
         searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func consumePendingSettingsCategory() {
+        guard let category = appState.pendingSettingsCategory else { return }
+        selectedCategory = category
+        appState.pendingSettingsCategory = nil
     }
 
     private var searchKeyboardShortcut: some View {
@@ -838,6 +851,65 @@ struct AIModelsSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
+            SettingsCard(title: "就绪总览", description: "把模型和语音入口放在一起看") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        statusTile(
+                            title: "默认智能",
+                            value: viewModel.defaultProviderId.isEmpty ? "未配置" : viewModel.defaultProviderId,
+                            subtitle: viewModel.providers.first(where: { $0.id == viewModel.defaultProviderId })?.name ?? "当前默认智能提供商",
+                            tint: viewModel.defaultProviderId.isEmpty ? AppSurfaceTokens.accentOrange : AppSurfaceTokens.accentBlue
+                        )
+
+                        statusTile(
+                            title: "默认语音",
+                            value: asrDisplayName(for: viewModel.voiceDefaultProvider),
+                            subtitle: "说入法当前识别引擎",
+                            tint: AppSurfaceTokens.accentGreen
+                        )
+
+                        statusTile(
+                            title: "模型策略",
+                            value: viewModel.modelRoutingStrategy.displayName,
+                            subtitle: "当前路由优先级",
+                            tint: AppSurfaceTokens.secondaryText
+                        )
+                    }
+
+                    HStack(spacing: 8) {
+                        Button {
+                            AppState.shared.navigate(to: .modelManagement)
+                        } label: {
+                            Label("打开模型管理", systemImage: "square.stack.3d.up")
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button {
+                            AppState.shared.navigate(to: .voiceEntry)
+                        } label: {
+                            Label("打开说入法", systemImage: "waveform")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            AppState.shared.navigate(to: .workbench, workbenchToolRoute: .apiTest)
+                        } label: {
+                            Label("验证接口", systemImage: "checkmark.shield")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            AppState.shared.navigate(to: .settings)
+                        } label: {
+                            Label("查看设置首页", systemImage: "gearshape")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+
             SettingsCard(title: "模型路由策略", description: "选择不同任务的默认路由方式") {
                 HStack(spacing: 8) {
                     StrategyButton(title: "自动", subtitle: "智能选择最佳模型", icon: "wand.and.stars", selected: viewModel.modelRoutingStrategy == .automatic) {
@@ -1019,6 +1091,30 @@ struct AIModelsSettingsPage: View {
         }
         .padding(.top, 16)
     }
+
+    private func statusTile(title: String, value: String, subtitle: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+    }
+
+    private func asrDisplayName(for providerID: String) -> String {
+        STTProvider(rawValue: STTProvider.selectableIdentifier(from: providerID))?.displayName ?? "系统听写"
+    }
 }
 
 private struct PluginManagementSettingsSection: View {
@@ -1069,6 +1165,9 @@ private struct PluginManagementSettingsSection: View {
         }
         .task {
             await loadPluginSummaries()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pluginManagerDidChange)) { _ in
+            Task { await loadPluginSummaries() }
         }
     }
 
@@ -1140,6 +1239,68 @@ struct DataKnowledgeSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
+            SettingsCard(title: "文档处理总览", description: "网页精读、文档转换和文字识别的就绪状态") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        statusTile(
+                            title: "网页精读",
+                            value: commandReadyText(for: "defuddle"),
+                            subtitle: "defuddle / markitdown",
+                            tint: commandReadyTint(for: ["defuddle", "markitdown"])
+                        )
+
+                        statusTile(
+                            title: "文档转换",
+                            value: "可用",
+                            subtitle: "PDFKit / textutil / markitdown",
+                            tint: AppSurfaceTokens.accentGreen
+                        )
+
+                        statusTile(
+                            title: "文字识别",
+                            value: "可用",
+                            subtitle: "Vision OCR / 识别结果回写",
+                            tint: AppSurfaceTokens.accentBlue
+                        )
+                    }
+
+                    HStack(spacing: 8) {
+                        Button {
+                            AppState.shared.navigate(to: .workbench, workbenchToolRoute: .webDigest)
+                        } label: {
+                            Label("打开网页精读", systemImage: "globe")
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button {
+                            AppState.shared.navigate(to: .workbench, workbenchToolRoute: .documentConvert)
+                        } label: {
+                            Label("打开文档转换", systemImage: "doc.text")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            AppState.shared.navigate(to: .workbench, workbenchToolRoute: .ocr)
+                        } label: {
+                            Label("打开文字识别", systemImage: "text.viewfinder")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            AppState.shared.navigate(to: .workbench)
+                        } label: {
+                            Label("打开工具台", systemImage: "wrench.and.screwdriver")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Text("这些入口覆盖网页正文提取、文件转文稿、图片文字识别和批量下载能力。")
+                        .font(.caption)
+                        .foregroundStyle(AppSurfaceTokens.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             SettingsCard(title: "数据存储", description: "配置本地数据和附件存储位置") {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsPathRow(
@@ -1282,6 +1443,50 @@ struct DataKnowledgeSettingsPage: View {
         }
         .padding(.top, 16)
     }
+
+    private func statusTile(title: String, value: String, subtitle: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+            Text(value)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundStyle(AppSurfaceTokens.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppSurfaceTokens.cardBackgroundSoft)
+        .cornerRadius(AppSurfaceTokens.inlineBlockRadius)
+    }
+
+    private func commandReadyText(for command: String) -> String {
+        commandExists(named: command) ? "已就绪" : "未检测到"
+    }
+
+    private func commandReadyTint(for commands: [String]) -> Color {
+        commands.contains(where: { commandExists(named: $0) }) ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange
+    }
+
+    private func commandExists(named name: String) -> Bool {
+        let fm = FileManager.default
+        let candidates = [
+            "/opt/homebrew/bin/\(name)",
+            "/usr/local/bin/\(name)",
+            "/usr/bin/\(name)"
+        ]
+        if candidates.contains(where: { fm.isExecutableFile(atPath: $0) }) {
+            return true
+        }
+        guard let pathValue = ProcessInfo.processInfo.environment["PATH"] else { return false }
+        return pathValue.split(separator: ":").contains { component in
+            fm.isExecutableFile(atPath: URL(fileURLWithPath: String(component)).appendingPathComponent(name).path)
+        }
+    }
 }
 
 // MARK: - 捕获输入设置页
@@ -1384,6 +1589,11 @@ struct CaptureInputSettingsPage: View {
                             (NSApp.delegate as? AppDelegate)?.showScreenshotOptionsPanel()
                         }
                         .buttonStyle(.borderedProminent)
+
+                        Button("打开截图历史") {
+                            AppState.shared.navigate(to: .screenshotHistory)
+                        }
+                        .buttonStyle(.bordered)
 
                         Text("可从菜单栏「AcWork→截图」、首页「截图」、侧栏「截图」、截图工作区、随身快捷键和胶囊打开。")
                             .font(.caption)
@@ -1726,6 +1936,9 @@ struct CaptureInputSettingsPage: View {
         }
         .task {
             await refreshCloudSyncSummary()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .cloudSyncDidChange)) { _ in
+            Task { await refreshCloudSyncSummary() }
         }
         .onChange(of: isEditingScreenshotPresetName) { _, isFocused in
             guard isFocused == false else { return }

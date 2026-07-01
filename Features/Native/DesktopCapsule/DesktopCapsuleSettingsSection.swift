@@ -37,6 +37,24 @@ struct DesktopCapsuleSettingsSection: View {
 
             Divider()
 
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("快速入口")
+                        .font(.headline)
+
+                    Spacer()
+                }
+
+                HStack(spacing: 8) {
+                    quickEntryButton(title: "设置首页", category: nil)
+                    quickEntryButton(title: "随身能力", category: .companion)
+                    quickEntryButton(title: "智能与模型", category: .aiModels)
+                    quickEntryButton(title: "捕获与输入", category: .captureInput)
+                }
+            }
+
+            Divider()
+
             // 功能列表
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -136,6 +154,14 @@ struct DesktopCapsuleSettingsSection: View {
             UserDefaults.standard.set(data, forKey: "AppSettings.desktopCapsule")
             NotificationCenter.default.post(name: .desktopCapsuleSettingsDidChange, object: nil)
         }
+    }
+
+    private func quickEntryButton(title: String, category: SettingsCategory?) -> some View {
+        Button(title) {
+            (NSApp.delegate as? AppDelegate)?.openSettingsWindow(category: category)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
     }
 
     private func toggleAction(_ action: CapsuleActionConfig) {

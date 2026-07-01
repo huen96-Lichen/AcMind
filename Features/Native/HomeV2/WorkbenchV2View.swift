@@ -31,13 +31,13 @@ struct WorkbenchV2LiveView: View {
     }
 
     var body: some View {
-        WorkbenchV2View(
+            WorkbenchV2View(
             dashboardData: .live(from: dashboardViewModel.snapshot),
             debugOverlayEnabled: true,
             heroBackgroundStore: heroBackgroundStore,
             currentFocusActions: .init(
                 continueWork: { AppState.shared.navigate(to: .agent) },
-                viewDetails: { AppState.shared.navigate(to: .agent) },
+                viewDetails: { AppState.shared.navigateToInbox() },
                 selectBackground: {}
             ),
             quickActionHandlers: .init(
@@ -55,6 +55,18 @@ struct WorkbenchV2LiveView: View {
         )
         .onAppear { dashboardViewModel.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: .acmindSourceItemsDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .scheduleDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .agentTaskBoardDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsDidChange)) { _ in
+            dashboardViewModel.refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .companionConfigurationDidChange)) { _ in
             dashboardViewModel.refresh()
         }
         .task {
@@ -186,7 +198,11 @@ private struct WorkbenchV2MainDashboardGrid: View {
                 }
                 .frame(width: layout.leftColumnWidth + layout.dashboardColumnGap + layout.middleColumnWidth, alignment: .topLeading)
 
-                DeviceStatusBar(model: model.deviceStatus, layout: layout)
+                DeviceStatusBar(
+                    model: model.deviceStatus,
+                    layout: layout,
+                    detailsAction: { AppState.shared.navigate(to: .systemStatus) }
+                )
                     .frame(width: layout.leftColumnWidth + layout.dashboardColumnGap + layout.middleColumnWidth, height: layout.footerHeight, alignment: .center)
                     .layoutDebugRegion("DeviceStatusBar")
             }

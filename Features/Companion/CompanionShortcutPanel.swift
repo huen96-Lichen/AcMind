@@ -17,6 +17,7 @@ struct CompanionShortcutPanel: View {
             ScrollView {
                 VStack(spacing: 24) {
                     infoBanner
+                    quickSettingsLinks
                     shortcutsList
                 }
                 .padding(24)
@@ -109,6 +110,34 @@ struct CompanionShortcutPanel: View {
         )
     }
 
+    private var quickSettingsLinks: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("快速入口")
+                    .font(.system(size: AppSurfaceTokens.Typography.sectionTitle, weight: .semibold))
+                    .foregroundStyle(AppSurfaceTokens.primaryText)
+
+                Spacer()
+            }
+
+            HStack(spacing: 8) {
+                quickSettingsButton(title: "设置首页", category: nil)
+                quickSettingsButton(title: "随身能力", category: .companion)
+                quickSettingsButton(title: "捕获与输入", category: .captureInput)
+                quickSettingsButton(title: "智能与模型", category: .aiModels)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .fill(AppSurfaceTokens.cardBackgroundSoft)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSurfaceTokens.inlineBlockRadius, style: .continuous)
+                .stroke(AppSurfaceTokens.separator.opacity(0.85), lineWidth: 1)
+        )
+    }
+
     // MARK: - Shortcuts List
 
     private var shortcutsList: some View {
@@ -149,6 +178,14 @@ struct CompanionShortcutPanel: View {
         Task {
             await viewModel.saveCompanionSettings()
         }
+    }
+
+    private func quickSettingsButton(title: String, category: SettingsCategory?) -> some View {
+        Button(title) {
+            (NSApp.delegate as? AppDelegate)?.openSettingsWindow(category: category)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
     }
 }
 

@@ -133,6 +133,8 @@ struct WorkbenchV2DashboardData {
     let deviceStatus: DeviceStatus
 
     static func live(from snapshot: WorkspaceDashboardSnapshot) -> WorkbenchV2DashboardData {
+        let companionSettings = CompanionDisplaySettingsStore.load()
+        let localPreferences = SettingsLocalPreferences.loadOrDefault()
         let pending = snapshot.pendingItems.enumerated().map { index, item in
             WorkQueueItem(
                 title: item,
@@ -187,7 +189,20 @@ struct WorkbenchV2DashboardData {
                     .init(label: "智能体状态", value: snapshot.pendingItems.isEmpty ? "空闲" : "运行中", unit: "", meta: "\(snapshot.pendingItems.count) 个任务", tint: .green, systemImage: "command.circle.fill"),
                     .init(label: "今日日程", value: "\(scheduleCount)", unit: "项", meta: "现状", tint: .purple, systemImage: "calendar")
                 ],
-                toggles: [],
+                toggles: [
+                    .init(
+                        title: "灵动大陆",
+                        subtitle: companionSettings.isEnabled ? "已开启" : "已关闭",
+                        isOn: companionSettings.isEnabled,
+                        systemImage: "bubble.left.and.bubble.right"
+                    ),
+                    .init(
+                        title: "说入法",
+                        subtitle: localPreferences.voiceInputEnabled ? "已开启" : "已关闭",
+                        isOn: localPreferences.voiceInputEnabled,
+                        systemImage: "waveform"
+                    )
+                ],
                 statusBlocks: [
                     .init(
                         title: "权限与采样",

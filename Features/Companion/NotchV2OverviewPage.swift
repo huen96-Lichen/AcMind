@@ -162,6 +162,37 @@ struct NotchV2OverviewPage: View {
                     )
                 }
             }
+
+            CompanionPanel(title: "快捷入口", symbol: "square.grid.2x2", accent: nil) {
+                VStack(alignment: .leading, spacing: 8) {
+                    NotchV2StatusPill(
+                        icon: "gearshape",
+                        title: "设置首页",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.showMainSettings()
+                        }
+                    )
+
+                    NotchV2StatusPill(
+                        icon: "brain",
+                        title: "智能与模型",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.showMainSettings(category: .aiModels)
+                        }
+                    )
+
+                    NotchV2StatusPill(
+                        icon: "camera.viewfinder",
+                        title: "捕获与输入",
+                        accent: NotchV2DesignTokens.cardBackgroundStrong,
+                        action: {
+                            viewModel.showMainSettings(category: .captureInput)
+                        }
+                    )
+                }
+            }
         }
     }
 
