@@ -436,19 +436,11 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
     public func listJobs() async throws -> [ProcessJob] {
         await taskQueue.list()
     }
-    
-    public func getJob(id: String) async -> ProcessJob? {
-        await taskQueue.get(id: id)
-    }
-    
+
     public func cancelJob(id: String) async throws {
         try await taskQueue.cancel(id: id)
     }
-    
-    public func getQueueStats() async -> TaskQueueStats {
-        await taskQueue.stats()
-    }
-    
+
     // MARK: - Private
 
     private func recordModelUsage(

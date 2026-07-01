@@ -1197,6 +1197,12 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("fileprivate func allows("))
     }
 
+    func testAIRuntimeServiceNoLongerExposesDeadQueueAccessors() throws {
+        let source = try readSource("AcMindKit/Services/AI/AIRuntimeService.swift")
+        XCTAssertFalse(source.contains("public func getJob"))
+        XCTAssertFalse(source.contains("public func getQueueStats"))
+    }
+
     func testAppSurfaceTokensMatchAcWorkPhaseOneLayout() throws {
         let source = try readSource("Features/Native/Shared/AppSurfaceStyle.swift")
         XCTAssertTrue(source.contains("enum Radius"))
