@@ -170,7 +170,9 @@ final class AgentToolRouterTests: XCTestCase {
         XCTAssertTrue(result.output?.contains("AI 返回内容") == true)
         XCTAssertEqual(aiRuntime.lastProviderId, "provider-1")
         XCTAssertEqual(aiRuntime.lastModel, "gpt-test")
+        XCTAssertEqual(aiRuntime.lastMessages?.count, 2)
         XCTAssertEqual(aiRuntime.lastMessages?.first?.role, .system)
+        XCTAssertEqual(aiRuntime.lastMessages?.first?.content, "你是一个摘要助手")
         XCTAssertEqual(aiRuntime.lastMessages?.last?.role, .user)
         XCTAssertEqual(aiRuntime.lastMessages?.last?.content, "请总结这段内容")
     }

@@ -31,6 +31,27 @@ final class ToolWorkspaceStateTests: XCTestCase {
         XCTAssertFalse(source.contains(".background(AppSurfaceTokens.background)"))
     }
 
+    func testEveryRegisteredToolRouteHasSheetAndPersistenceMapping() throws {
+        let source = try readSource("Features/Native/Tools/ToolsView.swift")
+        let routeNames = try toolRouteCaseNames(in: source)
+
+        XCTAssertFalse(routeNames.isEmpty)
+        for routeName in routeNames {
+            XCTAssertTrue(
+                source.contains("route: .\(routeName)"),
+                "ToolRoute.\(routeName) should be visible in ToolRegistry.defaultTools"
+            )
+            XCTAssertTrue(
+                source.contains("case .\(routeName):"),
+                "ToolRoute.\(routeName) should be handled by id/tool sheet switches"
+            )
+            XCTAssertTrue(
+                source.contains("case \"\(routeName)\": self = .\(routeName)"),
+                "ToolRoute.\(routeName) should round-trip through RecentToolsStore"
+            )
+        }
+    }
+
     func testWorkbenchViewShowsProjectNoteArchiveWorkflow() throws {
         let workbenchView = try readSource("Features/Native/Workbench/WorkbenchView.swift")
 
@@ -165,5 +186,20 @@ final class ToolWorkspaceStateTests: XCTestCase {
             .deletingLastPathComponent()
         let url = repoRoot.appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func toolRouteCaseNames(in source: String) throws -> [String] {
+        guard let enumStart = source.range(of: "enum ToolRoute:")?.lowerBound,
+              let enumEnd = source[enumStart...].range(of: "\nenum ToolCategory")?.lowerBound else {
+            return []
+        }
+
+        let enumSource = String(source[enumStart..<enumEnd])
+        let caseRegex = try NSRegularExpression(pattern: #"^\s*case\s+([A-Za-z0-9_]+)\s*$"#, options: [.anchorsMatchLines])
+        let enumRange = NSRange(enumSource.startIndex..<enumSource.endIndex, in: enumSource)
+        return caseRegex.matches(in: enumSource, range: enumRange).compactMap { match in
+            guard let range = Range(match.range(at: 1), in: enumSource) else { return nil }
+            return String(enumSource[range])
+        }
     }
 }
