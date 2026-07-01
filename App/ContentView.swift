@@ -7,7 +7,6 @@ struct ClipboardPinActions {
     let showAll: () -> Void
     let hideAll: () -> Void
     let closeAll: () -> Void
-    let copyDiagnostics: () -> Void
 }
 
 // MARK: - Content View

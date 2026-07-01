@@ -925,9 +925,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             },
             closeAll: { [weak self] in
                 self?.closeClipboardPinWindows()
-            },
-            copyDiagnostics: { [weak self] in
-                self?.copyClipboardPinDiagnosticsToPasteboard()
             }
         )
     }

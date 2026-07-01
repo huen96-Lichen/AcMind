@@ -831,6 +831,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("MainSidebar("))
         XCTAssertFalse(source.contains("struct MainSidebar"))
         XCTAssertFalse(source.contains("struct SidebarItemView"))
+        XCTAssertFalse(source.contains("copyDiagnostics"))
     }
 
     func testMainNavigationShortcutsLiveInNavigationCommandMenu() throws {

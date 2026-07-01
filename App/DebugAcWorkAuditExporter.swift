@@ -469,8 +469,7 @@ enum DebugAcWorkAuditExporter {
             showItem: { _ in },
             showAll: {},
             hideAll: {},
-            closeAll: {},
-            copyDiagnostics: {}
+            closeAll: {}
         )
     }
 }
