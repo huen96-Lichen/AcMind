@@ -324,7 +324,6 @@ public extension ProviderTier {
 public enum ModelManagementDomain: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
     case ai
     case speechRecognition
-    case voiceClone
     case localModel
 
     public var id: String { rawValue }
@@ -333,7 +332,6 @@ public enum ModelManagementDomain: String, Codable, Sendable, Hashable, CaseIter
         switch self {
         case .ai: return "智能"
         case .speechRecognition: return "语音识别"
-        case .voiceClone: return "语音克隆"
         case .localModel: return "本地智能 / 语音识别"
         }
     }

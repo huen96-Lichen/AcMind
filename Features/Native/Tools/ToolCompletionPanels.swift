@@ -1412,8 +1412,6 @@ struct ModelManagementPanel: View {
             } else {
                 return "云端语音识别。"
             }
-        case .voiceClone:
-            return "等待接入真实模型后显示。"
         case .localModel:
             return "管理本地智能与本地语音识别。"
         }
@@ -1446,8 +1444,6 @@ struct ModelManagementPanel: View {
             return "cpu"
         case .speechRecognition:
             return item.deploymentKind == .local ? "waveform" : "mic.fill"
-        case .voiceClone:
-            return "person.wave.2"
         case .localModel:
             return "square.stack.3d.up.fill"
         }
@@ -1575,8 +1571,6 @@ private struct ModelManagementListRow: View {
             return "cpu"
         case .speechRecognition:
             return item.deploymentKind == .local ? "waveform" : "mic.fill"
-        case .voiceClone:
-            return "person.wave.2"
         case .localModel:
             return "square.stack.3d.up.fill"
         }
@@ -1726,10 +1720,6 @@ final class ModelManagementViewModel: ObservableObject {
 
     var localCount: Int {
         filteredItems.filter { $0.deploymentKind == .local }.count
-    }
-
-    var voiceCloneCount: Int {
-        filteredItems.filter { $0.domain == .voiceClone }.count
     }
 
     var defaultAIProviderName: String {

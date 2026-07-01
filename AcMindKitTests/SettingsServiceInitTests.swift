@@ -49,4 +49,8 @@ final class SettingsServiceInitTests: XCTestCase {
         XCTAssertEqual(summary.cloudCount, 1)
         XCTAssertEqual(summary.downloadedCount, 1)
     }
+
+    func testModelManagementDomainNoLongerCarriesVoiceCloneShell() {
+        XCTAssertEqual(ModelManagementDomain.allCases, [.ai, .speechRecognition, .localModel])
+    }
 }

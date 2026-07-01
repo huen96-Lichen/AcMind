@@ -7,10 +7,6 @@ import AcMindKit
 struct WeekCalendarView: View {
     @ObservedObject var viewModel: ScheduleViewModel
 
-    private let calendar = Calendar.current
-    private let hours = Array(6...23) // 06:00 - 23:00
-    private let weekdaySymbols = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-
     var body: some View {
         VStack(spacing: 0) {
             // 周头部
@@ -40,7 +36,7 @@ private struct WeekHeader: View {
     var body: some View {
         HStack(spacing: 0) {
             // 时间列占位
-            Text("")
+            Color.clear
                 .frame(width: ScheduleLayout.weekTimeColumnWidth)
 
             ForEach(weekDates(for: viewModel.selectedDate), id: \.self) { date in
