@@ -165,7 +165,6 @@ final class AIRuntimeServiceLoggingTests: XCTestCase {
 
         _ = await service.listProviders()
 
-        XCTAssertEqual(service.getDefaultProvider(), "enabled-local")
         XCTAssertEqual(service.preferredProviderId(), "enabled-local")
     }
 

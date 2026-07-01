@@ -155,10 +155,6 @@ public final class AIRuntimeService: AIRuntimeProtocol, @unchecked Sendable {
         defaultProviderId = id
     }
     
-    public func getDefaultProvider() -> String? {
-        defaultProviderId
-    }
-    
     // MARK: - Chat
     
     public func chat(messages: [ChatMessage]) async throws -> ChatResponse {
