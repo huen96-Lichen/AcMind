@@ -437,7 +437,7 @@ private struct ScheduleWeekGridPanel: View {
         SchedulePanel {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    Text("")
+                    Color.clear
                         .frame(width: 54)
                     ForEach(Array(weekDates.enumerated()), id: \.offset) { index, date in
                         VStack(spacing: 4) {

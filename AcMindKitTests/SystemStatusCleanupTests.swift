@@ -635,6 +635,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"月视图\""))
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"本月事件\""))
         XCTAssertFalse(source.contains("background(RoundedRectangle(cornerRadius: 12).fill(AppSurfaceTokens.cardBackgroundSoft))"))
+        XCTAssertFalse(source.contains("Text(\"\")"))
     }
 
     func testMainWindowPrunesPlaceholderAcMindWindows() throws {
