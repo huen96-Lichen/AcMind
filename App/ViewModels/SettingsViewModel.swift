@@ -564,12 +564,6 @@ public final class SettingsViewModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
-    public func openBackupsFolder() {
-        let url = Self.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        NSWorkspace.shared.open(url)
-    }
-
     public func openReleasesPage() {
         guard let url = URL(string: "https://github.com/huen96-Lichen/AcMind/releases") else { return }
         NSWorkspace.shared.open(url)

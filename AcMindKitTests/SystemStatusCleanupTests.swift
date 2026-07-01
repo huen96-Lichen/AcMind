@@ -837,6 +837,7 @@ final class SystemStatusCleanupTests: XCTestCase {
     func testSettingsViewModelNoLongerExposesDeadDiagnosticsClipboardAction() throws {
         let source = try readSource("App/ViewModels/SettingsViewModel.swift")
         XCTAssertFalse(source.contains("copyDiagnosticsToPasteboard"))
+        XCTAssertFalse(source.contains("openBackupsFolder"))
     }
 
     func testMainNavigationShortcutsLiveInNavigationCommandMenu() throws {
