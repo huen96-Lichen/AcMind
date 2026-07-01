@@ -1,12 +1,12 @@
 import Foundation
 import AppKit
 
-public final class TransientPaster: @unchecked Sendable {
+final class TransientPaster: @unchecked Sendable {
     
     private let pauseMonitoring: () async -> Void
     private let resumeMonitoring: () async -> Void
     
-    public init(
+    init(
         pauseMonitoring: @escaping () async -> Void,
         resumeMonitoring: @escaping () async -> Void
     ) {
@@ -14,7 +14,7 @@ public final class TransientPaster: @unchecked Sendable {
         self.resumeMonitoring = resumeMonitoring
     }
     
-    public func pasteTransiently(_ item: ClipboardItem, assetStore: AssetStore) async {
+    func pasteTransiently(_ item: ClipboardItem, assetStore: AssetStore) async {
         await pauseMonitoring()
         
         let pasteboard = NSPasteboard.general

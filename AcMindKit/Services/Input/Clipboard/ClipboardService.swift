@@ -22,12 +22,6 @@ public final class ClipboardService: ClipboardServiceProtocol {
     private let settingsDefaults: UserDefaults
     private let pipeline: ClipboardPipeline
     private let cleaningRulesStore: CleaningRulesStore
-    private lazy var transientPaster: TransientPaster = {
-        TransientPaster(
-            pauseMonitoring: { [weak self] in await self?.pauseWatching() },
-            resumeMonitoring: { [weak self] in await self?.resumeWatching() }
-        )
-    }()
     private let pasteQueue = PasteQueue()
     private let focusManager = FocusManager()
     
@@ -476,17 +470,6 @@ public final class ClipboardService: ClipboardServiceProtocol {
         lastChangeCount = pasteboard.changeCount
     }
     
-    // MARK: - Transient Paste
-    
-    public func pasteTransiently(id: String) async throws {
-        guard let item = items.first(where: { $0.id == id }) else {
-            throw ClipboardError.itemNotFound
-        }
-        focusManager.saveCurrentFocus()
-        await transientPaster.pasteTransiently(item, assetStore: assetStore)
-        focusManager.restoreFocus()
-    }
-    
     // MARK: - Sequential Paste Queue
     
     public func enqueueForSequentialPaste(ids: [String]) {
@@ -531,28 +514,6 @@ public final class ClipboardService: ClipboardServiceProtocol {
         keyUp?.post(tap: .cghidEventTap)
     }
     
-    // MARK: - Cleaning Rules
-
-    public func getCleaningRules() -> [CleaningRule] {
-        cleaningRulesStore.getRules()
-    }
-
-    public func addCleaningRule(_ rule: CleaningRule) async {
-        await cleaningRulesStore.addRule(rule)
-    }
-
-    public func updateCleaningRule(_ rule: CleaningRule) async {
-        await cleaningRulesStore.updateRule(rule)
-    }
-
-    public func deleteCleaningRule(id: String) async {
-        await cleaningRulesStore.deleteRule(id: id)
-    }
-
-    public func toggleCleaningRule(id: String) async {
-        await cleaningRulesStore.toggleRule(id: id)
-    }
-
     // MARK: - Tags
 
     public func createTag(name: String, color: String) async throws -> ClipboardTag {

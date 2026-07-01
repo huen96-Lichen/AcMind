@@ -6,17 +6,17 @@ public enum CleaningResult: Sendable {
     case pass(text: String)
 }
 
-public final class CleaningRulesStore: @unchecked Sendable {
+final class CleaningRulesStore: @unchecked Sendable {
 
     private var rules: [CleaningRule] = []
     private let storage: StorageServiceProtocol
     private let storageKey = "clipboard_cleaning_rules"
 
-    public init(storage: StorageServiceProtocol) {
+    init(storage: StorageServiceProtocol) {
         self.storage = storage
     }
 
-    public func loadRules() async {
+    func loadRules() async {
         if let stored = try? await storage.getSetting(key: storageKey),
            let data = stored.data(using: .utf8),
            let decoded = try? JSONDecoder().decode([CleaningRule].self, from: data) {
@@ -24,41 +24,41 @@ public final class CleaningRulesStore: @unchecked Sendable {
         }
     }
 
-    public func saveRules() async {
+    func saveRules() async {
         let data = try? JSONEncoder().encode(rules)
         let json = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
         try? await storage.setSetting(key: storageKey, value: json)
     }
 
-    public func getRules() -> [CleaningRule] {
+    func getRules() -> [CleaningRule] {
         rules
     }
 
-    public func addRule(_ rule: CleaningRule) async {
+    func addRule(_ rule: CleaningRule) async {
         rules.append(rule)
         await saveRules()
     }
 
-    public func updateRule(_ rule: CleaningRule) async {
+    func updateRule(_ rule: CleaningRule) async {
         if let index = rules.firstIndex(where: { $0.id == rule.id }) {
             rules[index] = rule
             await saveRules()
         }
     }
 
-    public func deleteRule(id: String) async {
+    func deleteRule(id: String) async {
         rules.removeAll { $0.id == id }
         await saveRules()
     }
 
-    public func toggleRule(id: String) async {
+    func toggleRule(id: String) async {
         if let index = rules.firstIndex(where: { $0.id == id }) {
             rules[index].isEnabled.toggle()
             await saveRules()
         }
     }
 
-    public func evaluate(text: String, sourceApp: String?) -> CleaningResult {
+    func evaluate(text: String, sourceApp: String?) -> CleaningResult {
         for rule in rules where rule.isEnabled {
             let matches: Bool
 

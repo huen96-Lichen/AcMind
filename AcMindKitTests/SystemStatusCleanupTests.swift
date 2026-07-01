@@ -573,6 +573,32 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(clipboardViewModelSource.contains("private func createTag(name: String, color: String) async"))
         XCTAssertTrue(clipboardViewModelSource.contains("private func addTagToItem"))
         XCTAssertTrue(clipboardViewModelSource.contains("private func removeTagFromItem"))
+
+        let clipboardServiceSource = try readSource("AcMindKit/Services/Input/Clipboard/ClipboardService.swift")
+        XCTAssertFalse(clipboardServiceSource.contains("public func pasteTransiently"))
+        XCTAssertFalse(clipboardServiceSource.contains("public func getCleaningRules"))
+        XCTAssertFalse(clipboardServiceSource.contains("public func addCleaningRule"))
+        XCTAssertFalse(clipboardServiceSource.contains("public func updateCleaningRule"))
+        XCTAssertFalse(clipboardServiceSource.contains("public func deleteCleaningRule"))
+        XCTAssertFalse(clipboardServiceSource.contains("public func toggleCleaningRule"))
+        XCTAssertTrue(clipboardServiceSource.contains("private let cleaningRulesStore"))
+
+        let clipboardProtocolSource = try readSource("AcMindKit/Protocols/StorageServiceProtocol.swift")
+        XCTAssertFalse(clipboardProtocolSource.contains("func pasteTransiently(id: String) async throws"))
+        XCTAssertFalse(clipboardProtocolSource.contains("func getCleaningRules() -> [CleaningRule]"))
+        XCTAssertFalse(clipboardProtocolSource.contains("func addCleaningRule(_ rule: CleaningRule) async"))
+        XCTAssertFalse(clipboardProtocolSource.contains("func updateCleaningRule(_ rule: CleaningRule) async"))
+        XCTAssertFalse(clipboardProtocolSource.contains("func deleteCleaningRule(id: String) async"))
+        XCTAssertFalse(clipboardProtocolSource.contains("func toggleCleaningRule(id: String) async"))
+
+        let transientPasterSource = try readSource("AcMindKit/Services/Input/Clipboard/TransientPaster.swift")
+        XCTAssertFalse(transientPasterSource.contains("public final class TransientPaster"))
+        XCTAssertFalse(transientPasterSource.contains("public func pasteTransiently"))
+        XCTAssertTrue(transientPasterSource.contains("final class TransientPaster"))
+
+        let cleaningRulesStoreSource = try readSource("AcMindKit/Services/Input/Clipboard/CleaningRulesStore.swift")
+        XCTAssertFalse(cleaningRulesStoreSource.contains("public final class CleaningRulesStore"))
+        XCTAssertTrue(cleaningRulesStoreSource.contains("final class CleaningRulesStore"))
     }
 
     func testSettingsViewSurfacesSearchResultsAndKeepsCategoryNavigation() throws {

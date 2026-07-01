@@ -1061,18 +1061,12 @@ public protocol ClipboardServiceProtocol: Sendable {
     func copyItem(id: String) async throws
     func copyText(_ text: String) async
     func clearHistory() async throws
-    func pasteTransiently(id: String) async throws
     func enqueueForSequentialPaste(ids: [String])
     func pasteNextInQueue() async throws -> ClipboardItem?
     func getQueueItems() -> [PasteQueue.QueueItem]
     func clearPasteQueue()
     func removeQueueItem(id: String)
     func reorderQueue(from source: Int, to destination: Int)
-    func getCleaningRules() -> [CleaningRule]
-    func addCleaningRule(_ rule: CleaningRule) async
-    func updateCleaningRule(_ rule: CleaningRule) async
-    func deleteCleaningRule(id: String) async
-    func toggleCleaningRule(id: String) async
 
     // Tags
     func createTag(name: String, color: String) async throws -> ClipboardTag
