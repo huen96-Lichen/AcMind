@@ -175,21 +175,21 @@ public final class ClipboardViewModel: ObservableObject {
     
     // MARK: - Watching Control
     
-    public func startWatching() async {
+    private func startWatching() async {
         await clipboardService.startWatching()
         isWatching = true
     }
     
-    public func stopWatching() async {
+    private func stopWatching() async {
         await clipboardService.stopWatching()
         isWatching = false
     }
     
-    public func pauseWatching() async {
+    private func pauseWatching() async {
         await clipboardService.pauseWatching()
     }
     
-    public func resumeWatching() async {
+    private func resumeWatching() async {
         await clipboardService.resumeWatching()
     }
     
@@ -221,7 +221,7 @@ public final class ClipboardViewModel: ObservableObject {
         }
     }
     
-    public func createTag(name: String, color: String) async {
+    private func createTag(name: String, color: String) async {
         do {
             let tag = try await clipboardService.createTag(name: name, color: color)
             availableTags.append(tag)
@@ -230,7 +230,7 @@ public final class ClipboardViewModel: ObservableObject {
         }
     }
     
-    public func addTagToItem(itemId: String, tagName: String) async {
+    private func addTagToItem(itemId: String, tagName: String) async {
         do {
             try await clipboardService.addTagToItem(itemId: itemId, tagName: tagName)
             await loadItems()
@@ -239,7 +239,7 @@ public final class ClipboardViewModel: ObservableObject {
         }
     }
     
-    public func removeTagFromItem(itemId: String, tagName: String) async {
+    private func removeTagFromItem(itemId: String, tagName: String) async {
         do {
             try await clipboardService.removeTagFromItem(itemId: itemId, tagName: tagName)
             await loadItems()

@@ -557,6 +557,22 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(knowledgeServiceSource.contains("private func getStats() async throws -> KnowledgeStats"))
         XCTAssertTrue(knowledgeServiceSource.contains("private func linkCardToExport"))
         XCTAssertTrue(knowledgeServiceSource.contains("private func setVaultPath"))
+
+        let clipboardViewModelSource = try readSource("App/ViewModels/ClipboardViewModel.swift")
+        XCTAssertFalse(clipboardViewModelSource.contains("public func startWatching"))
+        XCTAssertFalse(clipboardViewModelSource.contains("public func stopWatching"))
+        XCTAssertFalse(clipboardViewModelSource.contains("public func pauseWatching"))
+        XCTAssertFalse(clipboardViewModelSource.contains("public func resumeWatching"))
+        XCTAssertFalse(clipboardViewModelSource.contains("public func createTag(name: String, color: String) async"))
+        XCTAssertFalse(clipboardViewModelSource.contains("public func addTagToItem"))
+        XCTAssertFalse(clipboardViewModelSource.contains("public func removeTagFromItem"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func startWatching"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func stopWatching"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func pauseWatching"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func resumeWatching"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func createTag(name: String, color: String) async"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func addTagToItem"))
+        XCTAssertTrue(clipboardViewModelSource.contains("private func removeTagFromItem"))
     }
 
     func testSettingsViewSurfacesSearchResultsAndKeepsCategoryNavigation() throws {
