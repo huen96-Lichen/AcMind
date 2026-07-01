@@ -1178,6 +1178,11 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("validateDependencies"))
     }
 
+    func testAcMindLoggerNoLongerExposesDeadNoticeConvenience() throws {
+        let source = try readSource("AcMindKit/Services/AcMindLogger.swift")
+        XCTAssertFalse(source.contains("public func notice"))
+    }
+
     func testAppSurfaceTokensMatchAcWorkPhaseOneLayout() throws {
         let source = try readSource("Features/Native/Shared/AppSurfaceStyle.swift")
         XCTAssertTrue(source.contains("enum Radius"))

@@ -42,15 +42,6 @@ public struct AcMindLogger: Sendable {
         logger.info("\(Self.format(message, file: file, function: function, line: line), privacy: .public)")
     }
 
-    public func notice(
-        _ message: String,
-        file: StaticString = #fileID,
-        function: StaticString = #function,
-        line: UInt = #line
-    ) {
-        logger.notice("\(Self.format(message, file: file, function: function, line: line), privacy: .public)")
-    }
-
     public func warning(
         _ message: String,
         file: StaticString = #fileID,
