@@ -131,6 +131,8 @@ final class ToolWorkspaceStateTests: XCTestCase {
         XCTAssertTrue(source.contains("AppSurfaceCard(title: \"暂无选中项\""))
         XCTAssertTrue(source.contains("ModelManagementListRow("))
         XCTAssertTrue(source.contains("WorkspacePageShell("))
+        XCTAssertFalse(source.contains("filterChip(title: \"语音克隆\""))
+        XCTAssertFalse(source.contains("语音克隆功能未开放"))
     }
 
     func testToolWorkspacePreviewUsesSharedBackdrop() throws {

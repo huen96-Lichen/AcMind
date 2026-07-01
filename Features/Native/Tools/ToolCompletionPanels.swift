@@ -1010,15 +1010,6 @@ struct ModelManagementPanel: View {
                     }
                 }
 
-                if shouldShowSection(.voiceClone) {
-                    modelListSection(
-                        title: "语音克隆",
-                        description: "语音克隆功能未开放",
-                        count: 0
-                    ) {
-                        emptyState(title: "没有可用的语音克隆模型", subtitle: "语音克隆功能未开放。")
-                    }
-                }
             }
             .padding(AppSurfaceTokens.Spacing.md)
         }
@@ -1115,10 +1106,6 @@ struct ModelManagementPanel: View {
                 }
                 filterChip(title: "语音识别", isSelected: viewModel.selectedDomain == .speechRecognition) {
                     viewModel.selectedDomain = .speechRecognition
-                    viewModel.selectedDeploymentKind = nil
-                }
-                filterChip(title: "语音克隆", isSelected: viewModel.selectedDomain == .voiceClone) {
-                    viewModel.selectedDomain = .voiceClone
                     viewModel.selectedDeploymentKind = nil
                 }
                 filterChip(title: ModelManagementDomain.localModel.displayName, isSelected: viewModel.selectedDomain == .localModel || viewModel.selectedDeploymentKind == .local) {
@@ -1426,7 +1413,7 @@ struct ModelManagementPanel: View {
                 return "云端语音识别。"
             }
         case .voiceClone:
-            return "语音克隆功能未开放。"
+            return "等待接入真实模型后显示。"
         case .localModel:
             return "管理本地智能与本地语音识别。"
         }
@@ -1503,7 +1490,7 @@ struct ModelManagementPanel: View {
     private func shouldShowSection(_ domain: ModelManagementDomain) -> Bool {
         guard let selected = viewModel.selectedDomain else { return true }
         if selected == .localModel {
-            return domain == .ai || domain == .speechRecognition || domain == .voiceClone
+            return domain == .ai || domain == .speechRecognition
         }
         return selected == domain
     }
@@ -1755,10 +1742,6 @@ final class ModelManagementViewModel: ObservableObject {
         ToolStatusLabelFormatter.fallbackText(
             value: items.first(where: { $0.domain == .speechRecognition && $0.isDefault })?.displayName ?? ""
         )
-    }
-
-    var voiceCloneStatusText: String {
-        "未开放"
     }
 
     var filteredItems: [ModelManagementItem] {
