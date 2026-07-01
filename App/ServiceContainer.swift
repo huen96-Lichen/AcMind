@@ -384,7 +384,7 @@ public final class ServiceContainer: ObservableObject, Sendable {
 
     // MARK: - Shutdown
 
-    public func shutdown() async {
+    func shutdown() async {
         // 按相反顺序清理
 
         // 停止采集监听

@@ -1176,6 +1176,7 @@ final class SystemStatusCleanupTests: XCTestCase {
     func testServiceContainerNoLongerExposesDebugDependencyValidationHook() throws {
         let source = try readSource("App/ServiceContainer.swift")
         XCTAssertFalse(source.contains("validateDependencies"))
+        XCTAssertFalse(source.contains("public func shutdown"))
     }
 
     func testAcMindLoggerNoLongerExposesDeadNoticeConvenience() throws {
