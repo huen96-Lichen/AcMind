@@ -838,6 +838,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         let source = try readSource("App/ViewModels/SettingsViewModel.swift")
         XCTAssertFalse(source.contains("copyDiagnosticsToPasteboard"))
         XCTAssertFalse(source.contains("openBackupsFolder"))
+        XCTAssertFalse(source.contains("refreshPermissionsFromManager"))
     }
 
     func testMainNavigationShortcutsLiveInNavigationCommandMenu() throws {

@@ -438,11 +438,6 @@ public final class SettingsViewModel: ObservableObject {
 
     // MARK: - Permissions
 
-    /// 刷新所有权限状态（从 PermissionManager 读取最新状态）
-    public func refreshPermissionsFromManager() {
-        refreshPermissionStatesFromManager()
-    }
-
     public func loadPermissions() async {
         await permissionManager.refreshAll()
         refreshPermissionStatesFromManager()
