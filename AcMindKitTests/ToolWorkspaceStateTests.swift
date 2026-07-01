@@ -176,6 +176,9 @@ final class ToolWorkspaceStateTests: XCTestCase {
         XCTAssertTrue(settingsSource.contains("leadingRailWidth: 208"))
         XCTAssertTrue(settingsSource.contains("SettingsNavigationRow("))
         XCTAssertTrue(settingsSource.contains("compactToolbar: true"))
+        XCTAssertTrue(settingsSource.contains("title: \"下载工具\""))
+        XCTAssertTrue(settingsSource.contains("commandReadyText(forRequiredCommands: [\"yt-dlp\"], optionalCommands: [\"ffmpeg\"])"))
+        XCTAssertTrue(settingsSource.contains("AppState.shared.navigate(to: .workbench, workbenchToolRoute: .videoDownload)"))
         XCTAssertFalse(settingsSource.contains(".frame(minWidth: AppSurfaceTokens.Layout.minimumWindowWidth"))
         XCTAssertTrue(appSource.contains("minWidth: AppSurfaceTokens.Layout.minimumWindowWidth"))
     }

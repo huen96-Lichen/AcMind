@@ -1241,7 +1241,7 @@ struct DataKnowledgeSettingsPage: View {
         VStack(alignment: .leading, spacing: 24) {
             SettingsCard(title: "文档处理总览", description: "网页精读、文档转换和文字识别的就绪状态") {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 10) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
                         statusTile(
                             title: "网页精读",
                             value: commandReadyText(for: "defuddle"),
@@ -1261,6 +1261,13 @@ struct DataKnowledgeSettingsPage: View {
                             value: "可用",
                             subtitle: "Vision OCR / 识别结果回写",
                             tint: AppSurfaceTokens.accentBlue
+                        )
+
+                        statusTile(
+                            title: "下载工具",
+                            value: commandReadyText(forRequiredCommands: ["yt-dlp"], optionalCommands: ["ffmpeg"]),
+                            subtitle: "yt-dlp / ffmpeg",
+                            tint: commandReadyTint(forRequiredCommands: ["yt-dlp"], optionalCommands: ["ffmpeg"])
                         )
                     }
 
@@ -1287,6 +1294,13 @@ struct DataKnowledgeSettingsPage: View {
                         .buttonStyle(.bordered)
 
                         Button {
+                            AppState.shared.navigate(to: .workbench, workbenchToolRoute: .videoDownload)
+                        } label: {
+                            Label("打开视频下载", systemImage: "video")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
                             AppState.shared.navigate(to: .workbench)
                         } label: {
                             Label("打开工具台", systemImage: "wrench.and.screwdriver")
@@ -1294,7 +1308,7 @@ struct DataKnowledgeSettingsPage: View {
                         .buttonStyle(.bordered)
                     }
 
-                    Text("这些入口覆盖网页正文提取、文件转文稿、图片文字识别和批量下载能力。")
+                    Text("这些入口覆盖网页正文提取、文件转文稿、图片文字识别、批量下载和视频下载能力；缺少命令行依赖时会给出安装指引。")
                         .font(.caption)
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1468,8 +1482,30 @@ struct DataKnowledgeSettingsPage: View {
         commandExists(named: command) ? "已就绪" : "未检测到"
     }
 
+    private func commandReadyText(forRequiredCommands requiredCommands: [String], optionalCommands: [String]) -> String {
+        let missingRequired = requiredCommands.filter { commandExists(named: $0) == false }
+        if missingRequired.isEmpty == false {
+            return "缺少 \(missingRequired.joined(separator: " / "))"
+        }
+
+        let missingOptional = optionalCommands.filter { commandExists(named: $0) == false }
+        if missingOptional.isEmpty == false {
+            return "核心就绪"
+        }
+
+        return "已就绪"
+    }
+
     private func commandReadyTint(for commands: [String]) -> Color {
         commands.contains(where: { commandExists(named: $0) }) ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentOrange
+    }
+
+    private func commandReadyTint(forRequiredCommands requiredCommands: [String], optionalCommands: [String]) -> Color {
+        let requiredReady = requiredCommands.allSatisfy { commandExists(named: $0) }
+        guard requiredReady else { return AppSurfaceTokens.accentOrange }
+
+        let optionalReady = optionalCommands.allSatisfy { commandExists(named: $0) }
+        return optionalReady ? AppSurfaceTokens.accentGreen : AppSurfaceTokens.accentBlue
     }
 
     private func commandExists(named name: String) -> Bool {

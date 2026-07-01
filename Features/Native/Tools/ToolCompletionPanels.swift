@@ -744,7 +744,7 @@ final class VideoDownloadViewModel: ObservableObject {
 
         guard let ytDLP = ToolBinaryResolver.executablePath(named: "yt-dlp") else {
             statusText = ToolStatusLabelFormatter.missingTool("yt-dlp")
-            errorMessage = "请先安装 yt-dlp。"
+            errorMessage = "请先运行 `brew install yt-dlp` 或 `python3 -m pip install -U yt-dlp`，安装后重新开始下载。"
             ToastManager.shared.show(.error, ToolStatusLabelFormatter.missingTool("yt-dlp"))
             return
         }

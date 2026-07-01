@@ -74,6 +74,7 @@ final class ToolStatusCopyTests: XCTestCase {
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.running(\"抓取网页资源\")"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.invalidURL(\"URL\")"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.missingTool(\"yt-dlp\")"))
+        XCTAssertTrue(completionSource.contains("brew install yt-dlp"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.completed(\"批量下载\")"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.copied(\"摘要\")"))
         XCTAssertTrue(completionSource.contains("ToolStatusLabelFormatter.copied(\"文件路径\")"))
