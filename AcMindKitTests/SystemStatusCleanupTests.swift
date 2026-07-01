@@ -462,6 +462,36 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("struct StatusBadge"))
     }
 
+    func testMusicServiceAndAppAwareSettingsServiceOnlyExposeLiveAPIs() throws {
+        let musicServiceSource = try readSource("Features/Companion/MusicService.swift")
+        XCTAssertFalse(musicServiceSource.contains("public func fetchLyrics"))
+        XCTAssertFalse(musicServiceSource.contains("public func setPlaying"))
+        XCTAssertTrue(musicServiceSource.contains("private func fetchLyrics()"))
+        XCTAssertTrue(musicServiceSource.contains("fileprivate func setPlaying(_ playing: Bool)"))
+
+        let appAwareSettingsSource = try readSource("AcMindKit/Services/Settings/AppAwareSettingsService.swift")
+        XCTAssertFalse(appAwareSettingsSource.contains("public func getCurrentAppSettings"))
+        XCTAssertFalse(appAwareSettingsSource.contains("public func addAppRule"))
+        XCTAssertFalse(appAwareSettingsSource.contains("public func removeAppRule"))
+        XCTAssertFalse(appAwareSettingsSource.contains("public func getAllAppRules"))
+        XCTAssertFalse(appAwareSettingsSource.contains("public func getAppRule"))
+        XCTAssertFalse(appAwareSettingsSource.contains("public func hasAppRule"))
+        XCTAssertTrue(appAwareSettingsSource.contains("private func getCurrentAppSettings()"))
+        XCTAssertTrue(appAwareSettingsSource.contains("private func addAppRule(_ rule: AppRule)"))
+        XCTAssertTrue(appAwareSettingsSource.contains("private func removeAppRule(bundleIdentifier: String)"))
+
+        let voiceServiceSource = try readSource("AcMindKit/Services/Voice/VoiceService.swift")
+        XCTAssertFalse(voiceServiceSource.contains("public func getRecordingDuration"))
+        XCTAssertFalse(voiceServiceSource.contains("public func setASRProvider"))
+        XCTAssertFalse(voiceServiceSource.contains("public func getASRProvider"))
+        XCTAssertFalse(voiceServiceSource.contains("public func setSTTProvider"))
+        XCTAssertFalse(voiceServiceSource.contains("public func getSTTProvider"))
+        XCTAssertTrue(voiceServiceSource.contains("private func getRecordingDuration() async -> TimeInterval"))
+        XCTAssertTrue(voiceServiceSource.contains("private func setASRProvider(_ provider: ASRProvider)"))
+        XCTAssertTrue(voiceServiceSource.contains("private func getASRProvider() -> ASRProvider"))
+        XCTAssertTrue(voiceServiceSource.contains("private func setSTTProvider(_ provider: STTProvider)"))
+    }
+
     func testSettingsViewSurfacesSearchResultsAndKeepsCategoryNavigation() throws {
         let source = try readSource("Features/Native/Settings/SettingsView.swift")
         XCTAssertTrue(source.contains("settingsSearchResultsPanel"))

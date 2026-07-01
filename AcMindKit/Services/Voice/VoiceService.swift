@@ -680,19 +680,19 @@ public actor VoiceService: VoiceServiceProtocol {
         status
     }
 
-    public func getRecordingDuration() async -> TimeInterval {
+    private func getRecordingDuration() async -> TimeInterval {
         guard let startTime = recordingStartTime else { return 0 }
         return Date().timeIntervalSince(startTime)
     }
 
     // MARK: - Configuration
 
-    public func setASRProvider(_ provider: ASRProvider) {
+    private func setASRProvider(_ provider: ASRProvider) {
         sttProvider = provider.toSTTProvider
         sttRouter?.setProvider(provider.toSTTProvider)
     }
 
-    public func getASRProvider() -> ASRProvider {
+    private func getASRProvider() -> ASRProvider {
         switch sttProvider {
         case .senseVoice, .whisperKit, .qwen3ASR, .funASR, .parakeet:
             return .whisperLocal
@@ -706,14 +706,14 @@ public actor VoiceService: VoiceServiceProtocol {
     }
 
     /// 设置 STT Provider
-    public func setSTTProvider(_ provider: STTProvider) {
+    private func setSTTProvider(_ provider: STTProvider) {
         let selectableProvider = STTProvider.selectableProvider(from: provider)
         sttProvider = selectableProvider
         sttRouter?.setProvider(selectableProvider)
     }
 
     /// 获取 STT Provider
-    public func getSTTProvider() -> STTProvider {
+    private func getSTTProvider() -> STTProvider {
         sttProvider
     }
 

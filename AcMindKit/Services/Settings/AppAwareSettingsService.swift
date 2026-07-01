@@ -166,7 +166,7 @@ public actor AppAwareSettingsService {
     }
     
     /// 获取当前应用的设置
-    public func getCurrentAppSettings() async -> AppRule? {
+    private func getCurrentAppSettings() async -> AppRule? {
         let appInfo = await contextCaptureService.getFrontmostAppInfo()
         return appRules[appInfo.bundleIdentifier]
     }
@@ -201,27 +201,27 @@ public actor AppAwareSettingsService {
     }
     
     /// 添加应用规则
-    public func addAppRule(_ rule: AppRule) {
+    private func addAppRule(_ rule: AppRule) {
         appRules[rule.bundleIdentifier] = rule
     }
     
     /// 删除应用规则
-    public func removeAppRule(bundleIdentifier: String) {
+    private func removeAppRule(bundleIdentifier: String) {
         appRules.removeValue(forKey: bundleIdentifier)
     }
     
     /// 获取所有应用规则
-    public func getAllAppRules() -> [AppRule] {
+    private func getAllAppRules() -> [AppRule] {
         return Array(appRules.values)
     }
     
     /// 获取指定应用规则
-    public func getAppRule(bundleIdentifier: String) -> AppRule? {
+    private func getAppRule(bundleIdentifier: String) -> AppRule? {
         return appRules[bundleIdentifier]
     }
     
     /// 检查是否有应用规则
-    public func hasAppRule(bundleIdentifier: String) -> Bool {
+    private func hasAppRule(bundleIdentifier: String) -> Bool {
         return appRules[bundleIdentifier] != nil
     }
     

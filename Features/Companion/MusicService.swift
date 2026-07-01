@@ -488,7 +488,7 @@ public class MusicService: ObservableObject {
         sendMediaRemoteCommand(5)
     }
 
-    public func fetchLyrics() {
+    private func fetchLyrics() {
         let title = songTitle
         let artist = artistName
         guard !title.isEmpty else {
@@ -1807,7 +1807,7 @@ public class AudioSpectrumView: NSView {
         }
     }
 
-    public func setPlaying(_ playing: Bool) {
+    fileprivate func setPlaying(_ playing: Bool) {
         isPlaying = playing
         if isPlaying {
             startAnimating()

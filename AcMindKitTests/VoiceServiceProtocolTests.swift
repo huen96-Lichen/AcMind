@@ -21,18 +21,6 @@ final class VoiceServiceProtocolTests: XCTestCase {
         XCTAssertEqual(receivedStatus, .recording)
     }
 
-    func testLegacyASRProviderKeepsAllSelectableLocalSTTProvidersLocal() async {
-        let service = VoiceService()
-        let localProviders = STTProvider.selectableCases.filter(\.isLocal)
-
-        XCTAssertTrue(localProviders.contains(.parakeet))
-
-        for provider in localProviders {
-            await service.setSTTProvider(provider)
-            let legacyProvider = await service.getASRProvider()
-            XCTAssertEqual(legacyProvider, .whisperLocal, "\(provider.displayName) should remain a local legacy ASR provider")
-        }
-    }
 }
 
 private final class VoiceServiceMock: @unchecked Sendable, VoiceServiceProtocol {

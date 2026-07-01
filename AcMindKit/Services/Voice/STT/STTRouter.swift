@@ -52,7 +52,7 @@ public final class STTRouter: @unchecked Sendable {
         self.currentProvider = STTProvider.selectableProvider(from: provider)
     }
     
-    public func getProvider() -> STTProvider {
+    private func getProvider() -> STTProvider {
         currentProvider
     }
     
