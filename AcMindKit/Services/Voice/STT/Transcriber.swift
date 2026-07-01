@@ -156,4 +156,60 @@ public enum STTProvider: String, Codable, Sendable, CaseIterable {
             return false
         }
     }
+
+    /// Providers that have a real executable route in `STTRouter` and should
+    /// be exposed as selectable user-facing options.
+    public static var selectableCases: [STTProvider] {
+        [
+            .appleSpeech,
+            .senseVoice,
+            .whisperKit,
+            .funASR,
+            .qwen3ASR,
+            .parakeet,
+            .openAI,
+            .aliCloud,
+            .doubao,
+            .mimoASR
+        ]
+    }
+
+    public var isSelectable: Bool {
+        Self.selectableCases.contains(self)
+    }
+
+    /// Normalizes historical and UI-only identifiers to the canonical raw value.
+    public static func normalizedIdentifier(_ rawValue: String) -> String {
+        switch rawValue.trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "whisper", "whisper_api":
+            return STTProvider.openAI.rawValue
+        case "whisper_local":
+            return STTProvider.senseVoice.rawValue
+        case "system", "appleSpeech":
+            return STTProvider.appleSpeech.rawValue
+        case "senseVoice":
+            return STTProvider.senseVoice.rawValue
+        case "whisperKit":
+            return STTProvider.whisperKit.rawValue
+        case "funASR":
+            return STTProvider.funASR.rawValue
+        case "qwen3ASR":
+            return STTProvider.qwen3ASR.rawValue
+        default:
+            return rawValue
+        }
+    }
+
+    public static func selectableIdentifier(from rawValue: String) -> String {
+        let normalized = normalizedIdentifier(rawValue)
+        guard let provider = STTProvider(rawValue: normalized),
+              provider.isSelectable else {
+            return STTProvider.appleSpeech.rawValue
+        }
+        return normalized
+    }
+
+    public static func selectableProvider(from provider: STTProvider) -> STTProvider {
+        provider.isSelectable ? provider : .appleSpeech
+    }
 }

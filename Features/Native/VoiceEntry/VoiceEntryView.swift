@@ -239,7 +239,7 @@ struct VoiceEntryView: View {
                         Text(option.title).tag(option.id)
                     }
                 }
-                if viewModel.voiceDefaultProvider == "qwen3ASR" {
+                if STTProvider.selectableIdentifier(from: viewModel.voiceDefaultProvider) == STTProvider.qwen3ASR.rawValue {
                     Text("Qwen3 语音识别以分段结果呈现，不提供真正的实时流式输出。")
                         .font(.system(size: 11))
                         .foregroundStyle(AppSurfaceTokens.secondaryText)
@@ -527,16 +527,7 @@ struct VoiceEntryView: View {
     }
 
     private var asrProviderOptions: [(id: String, title: String)] {
-        [
-            ("whisper", "Whisper"),
-            ("appleSpeech", "Apple Speech"),
-            ("senseVoice", "SenseVoice"),
-            ("whisperKit", "WhisperKit"),
-            ("funASR", "FunASR"),
-            ("qwen3ASR", "Qwen3 语音识别"),
-            ("parakeet", "Parakeet"),
-            ("mimo_asr", "MiMo ASR")
-        ]
+        STTProvider.selectableCases.map { ($0.rawValue, $0.displayName) }
     }
 
     private var languageOptions: [(id: String, title: String)] {

@@ -64,7 +64,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var vaultFrontmatterTemplateText: String = "{}"
 
     // Voice Settings
-    @Published public var voiceDefaultProvider: String = "whisper"
+    @Published public var voiceDefaultProvider: String = STTProvider.appleSpeech.rawValue
     @Published public var voiceDefaultLanguage: String = "zh"
     @Published public var voiceAutoPolish: Bool = true
     @Published public var voicePolishMode: VoicePolishMode = .light
@@ -216,7 +216,7 @@ public final class SettingsViewModel: ObservableObject {
 
         // Voice Settings
         let voiceSettings = await settings.getVoiceSettings()
-        voiceDefaultProvider = voiceSettings.defaultProvider
+        voiceDefaultProvider = STTProvider.selectableIdentifier(from: voiceSettings.defaultProvider)
         voiceDefaultLanguage = voiceSettings.defaultLanguage
         voiceAutoPolish = voiceSettings.autoPolish
         voicePolishMode = voiceSettings.voicePolishMode
@@ -287,7 +287,7 @@ public final class SettingsViewModel: ObservableObject {
 
             // Voice Settings
             let voiceSettings = VoiceSettings(
-                defaultProvider: voiceDefaultProvider,
+                defaultProvider: STTProvider.selectableIdentifier(from: voiceDefaultProvider),
                 defaultLanguage: voiceDefaultLanguage,
                 autoPolish: voiceAutoPolish,
                 voicePolishMode: voicePolishMode,
@@ -940,7 +940,7 @@ public final class SettingsViewModel: ObservableObject {
         )
 
         let voiceSettings = VoiceSettings(
-            defaultProvider: voiceDefaultProvider,
+            defaultProvider: STTProvider.selectableIdentifier(from: voiceDefaultProvider),
             defaultLanguage: voiceDefaultLanguage,
             autoPolish: voiceAutoPolish,
             voicePolishMode: voicePolishMode,
@@ -955,10 +955,10 @@ public final class SettingsViewModel: ObservableObject {
             injectionStrategy: injectionStrategy,
             enableCloudSync: enableCloudSync,
             preferredLanguage: preferredLanguage,
-                translationLanguage: translationLanguage,
-                correctionRules: correctionRules,
-                muteSystemAudioDuringRecording: muteSystemAudioDuringRecording
-            )
+            translationLanguage: translationLanguage,
+            correctionRules: correctionRules,
+            muteSystemAudioDuringRecording: muteSystemAudioDuringRecording
+        )
 
         let companionConfiguration = CompanionConfiguration(
             companionEnabled: companionEnabled,
@@ -1030,7 +1030,7 @@ public final class SettingsViewModel: ObservableObject {
         autoFrontmatter = snapshot.vaultConfig.autoFrontmatter
         vaultFrontmatterTemplateText = Self.encodeFrontmatterTemplate(snapshot.vaultConfig.frontmatterTemplate)
 
-        voiceDefaultProvider = snapshot.voiceSettings.defaultProvider
+        voiceDefaultProvider = STTProvider.selectableIdentifier(from: snapshot.voiceSettings.defaultProvider)
         voiceDefaultLanguage = snapshot.voiceSettings.defaultLanguage
         voiceAutoPolish = snapshot.voiceSettings.autoPolish
         voicePolishMode = snapshot.voiceSettings.voicePolishMode

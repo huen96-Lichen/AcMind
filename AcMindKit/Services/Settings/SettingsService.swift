@@ -187,12 +187,16 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
     }
 
     public func updateVoiceSettings(_ settings: VoiceSettings) async throws {
-        voiceSettingsCache = settings
-        try await saveVoiceSettingsToStorage(settings)
+        var normalizedSettings = settings
+        normalizedSettings.defaultProvider = STTProvider.selectableIdentifier(from: settings.defaultProvider)
+        voiceSettingsCache = normalizedSettings
+        try await saveVoiceSettingsToStorage(normalizedSettings)
     }
 
     private func loadVoiceSettings() async throws -> VoiceSettings {
-        let provider = (try? await storage.getSetting(key: "voice.defaultProvider")) ?? "whisper"
+        let storedProvider = (try? await storage.getSetting(key: "voice.defaultProvider"))
+            ?? STTProvider.appleSpeech.rawValue
+        let provider = STTProvider.selectableIdentifier(from: storedProvider)
         let language = (try? await storage.getSetting(key: "voice.defaultLanguage")) ?? "zh"
         let autoPolish = (try? await storage.getSetting(key: "voice.autoPolish")) == "true"
         let voicePolishMode = try await loadVoicePolishMode()
@@ -244,7 +248,10 @@ public actor SettingsService: SettingsServiceProtocol, HotCornerSettingsStore {
     }
 
     private func saveVoiceSettingsToStorage(_ settings: VoiceSettings) async throws {
-        try await storage.setSetting(key: "voice.defaultProvider", value: settings.defaultProvider)
+        try await storage.setSetting(
+            key: "voice.defaultProvider",
+            value: STTProvider.selectableIdentifier(from: settings.defaultProvider)
+        )
         try await storage.setSetting(key: "voice.defaultLanguage", value: settings.defaultLanguage)
         try await storage.setSetting(key: "voice.autoPolish", value: settings.autoPolish ? "true" : "false")
         try await storage.setSetting(key: "voice.voicePolishMode", value: settings.voicePolishMode.rawValue)

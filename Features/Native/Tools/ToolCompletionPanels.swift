@@ -2023,7 +2023,7 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     private var supportedSpeechProviders: [STTProvider] {
-        [.appleSpeech, .senseVoice, .whisperKit, .funASR, .qwen3ASR, .parakeet, .openAI, .aliCloud, .doubao, .mimoASR]
+        STTProvider.selectableCases
     }
 
     private func speechDisplayName(for provider: STTProvider) -> String {
@@ -2169,16 +2169,7 @@ final class ModelManagementViewModel: ObservableObject {
     }
 
     private func resolvedSpeechProviderID(_ rawValue: String) -> String {
-        switch rawValue {
-        case "whisper", "whisper_api":
-            return STTProvider.openAI.rawValue
-        case "whisper_local":
-            return STTProvider.senseVoice.rawValue
-        case "system":
-            return STTProvider.appleSpeech.rawValue
-        default:
-            return rawValue
-        }
+        STTProvider.selectableIdentifier(from: rawValue)
     }
 
     private func keyProbeIDs(for providers: [ProviderConfig]) -> [String] {

@@ -707,8 +707,9 @@ public actor VoiceService: VoiceServiceProtocol {
 
     /// 设置 STT Provider
     public func setSTTProvider(_ provider: STTProvider) {
-        sttProvider = provider
-        sttRouter?.setProvider(provider)
+        let selectableProvider = STTProvider.selectableProvider(from: provider)
+        sttProvider = selectableProvider
+        sttRouter?.setProvider(selectableProvider)
     }
 
     /// 获取 STT Provider

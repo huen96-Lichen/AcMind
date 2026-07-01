@@ -1670,7 +1670,7 @@ struct CaptureInputSettingsPage: View {
                         .font(.subheadline)
 
                     Picker("", selection: $viewModel.voiceDefaultProvider) {
-                        ForEach(STTProvider.allCases, id: \.rawValue) { provider in
+                        ForEach(STTProvider.selectableCases, id: \.rawValue) { provider in
                             Text(provider.displayName).tag(provider.rawValue)
                         }
                     }

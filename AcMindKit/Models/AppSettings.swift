@@ -116,7 +116,7 @@ public struct VoiceSettings: Codable, Sendable, Equatable {
     public var muteSystemAudioDuringRecording: Bool
 
     public init(
-        defaultProvider: String = "whisper",
+        defaultProvider: String = STTProvider.appleSpeech.rawValue,
         defaultLanguage: String = "zh",
         autoPolish: Bool = true,
         voicePolishMode: VoicePolishMode = .light,

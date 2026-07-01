@@ -65,7 +65,8 @@ final class OOBEWindowController: NSObject {
         // 后台加载当前设置，加载完成后刷新当前步骤内容
         Task {
             let voiceSettings = await settingsService.getVoiceSettings()
-            let engine = STTProvider(rawValue: voiceSettings.defaultProvider) ?? .appleSpeech
+            let engine = STTProvider(rawValue: STTProvider.selectableIdentifier(from: voiceSettings.defaultProvider))
+                ?? .appleSpeech
             let polishMode = voiceSettings.voicePolishMode
 
             await MainActor.run {
@@ -218,7 +219,7 @@ final class OOBEWindowController: NSObject {
         
         Task {
             var voiceSettings = await settingsService.getVoiceSettings()
-            voiceSettings.defaultProvider = selectedEngine.rawValue
+            voiceSettings.defaultProvider = STTProvider.selectableIdentifier(from: selectedEngine.rawValue)
             voiceSettings.voicePolishMode = selectedPolishMode
             try? await settingsService.updateVoiceSettings(voiceSettings)
             

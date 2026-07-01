@@ -27,6 +27,7 @@ public final class STTRouter: @unchecked Sendable {
     // Configuration
     private var whisperKitModelName: String = "medium"
     private var sherpaOnnxModelFolder: String?
+    private let transcriberFactory: (@Sendable (STTProvider) async throws -> Transcriber)?
     
     // MARK: - Initialization
     
@@ -34,19 +35,21 @@ public final class STTRouter: @unchecked Sendable {
         provider: STTProvider = .appleSpeech,
         settingsService: SettingsServiceProtocol? = nil,
         whisperKitModelName: String = "medium",
-        sherpaOnnxModelFolder: String? = nil
+        sherpaOnnxModelFolder: String? = nil,
+        transcriberFactory: (@Sendable (STTProvider) async throws -> Transcriber)? = nil
     ) {
         self.currentProvider = provider
         self.settingsService = settingsService
         self.whisperKitModelName = whisperKitModelName
         self.sherpaOnnxModelFolder = sherpaOnnxModelFolder
             ?? (NSHomeDirectory() + "/Library/Application Support/AcMind/LocalModels")
+        self.transcriberFactory = transcriberFactory
     }
     
     // MARK: - Provider Management
     
     public func setProvider(_ provider: STTProvider) {
-        self.currentProvider = provider
+        self.currentProvider = STTProvider.selectableProvider(from: provider)
     }
     
     public func getProvider() -> STTProvider {
@@ -73,8 +76,13 @@ public final class STTRouter: @unchecked Sendable {
         if language != "auto" {
             let langProvider = selectProviderForLanguage(language)
             if langProvider != currentProvider {
-                let transcriber = try await getTranscriber(for: langProvider)
-                return try await transcriber.transcribe(audioFile: audioFile)
+                do {
+                    let transcriber = try await getTranscriber(for: langProvider)
+                    return try await transcriber.transcribe(audioFile: audioFile)
+                } catch {
+                    Self.logger.warning("STT language route failed with \(langProvider), falling back to \(currentProvider): \(error)")
+                    return try await transcribe(audioFile: audioFile)
+                }
             }
         }
         return try await transcribe(audioFile: audioFile)
@@ -95,12 +103,11 @@ public final class STTRouter: @unchecked Sendable {
             // 尝试兼容路径：系统听写
             if currentProvider != .appleSpeech {
                 Self.logger.warning("STT failed with \(currentProvider), using Apple Speech compatibility path: \(error)")
-                if let compatibilityTranscriber = appleSpeechTranscriber {
-                    return try await compatibilityTranscriber.transcribeStream(
-                        audioFile: audioFile,
-                        onUpdate: onUpdate
-                    )
-                }
+                let compatibilityTranscriber = try await getTranscriber(for: .appleSpeech)
+                return try await compatibilityTranscriber.transcribeStream(
+                    audioFile: audioFile,
+                    onUpdate: onUpdate
+                )
             }
             throw error
         }
@@ -162,7 +169,7 @@ public final class STTRouter: @unchecked Sendable {
                 return transcriber
             }
             // 延迟初始化
-            let transcriber = try await createSenseVoiceTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             senseVoiceTranscriber = transcriber
             return transcriber
             
@@ -170,7 +177,7 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = whisperKitTranscriber {
                 return transcriber
             }
-            let transcriber = try await createWhisperKitTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             whisperKitTranscriber = transcriber
             return transcriber
 
@@ -178,13 +185,13 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = qwen3ASRTranscriber {
                 return transcriber
             }
-            let transcriber = try await createQwen3ASRTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             qwen3ASRTranscriber = transcriber
             return transcriber
 
         case .funASR:
             if let transcriber = funASRTranscriber { return transcriber }
-            let transcriber = try await createFunASRTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             funASRTranscriber = transcriber
             return transcriber
             
@@ -192,7 +199,7 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = parakeetTranscriber {
                 return transcriber
             }
-            let transcriber = try await createParakeetTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             parakeetTranscriber = transcriber
             return transcriber
             
@@ -200,7 +207,7 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = appleSpeechTranscriber {
                 return transcriber
             }
-            let transcriber = AppleSpeechTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             appleSpeechTranscriber = transcriber
             return transcriber
             
@@ -208,7 +215,7 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = openAITranscriber {
                 return transcriber
             }
-            let transcriber = try await createOpenAITranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             openAITranscriber = transcriber
             return transcriber
             
@@ -216,7 +223,7 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = aliCloudTranscriber {
                 return transcriber
             }
-            let transcriber = try await createAliCloudTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             aliCloudTranscriber = transcriber
             return transcriber
             
@@ -224,7 +231,7 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = doubaoTranscriber {
                 return transcriber
             }
-            let transcriber = try await createDoubaoTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             doubaoTranscriber = transcriber
             return transcriber
 
@@ -232,10 +239,41 @@ public final class STTRouter: @unchecked Sendable {
             if let transcriber = mimoTranscriber {
                 return transcriber
             }
-            let transcriber = try await createMiMoTranscriber()
+            let transcriber = try await makeTranscriber(for: provider)
             mimoTranscriber = transcriber
             return transcriber
             
+        case .googleCloud, .groq, .freeModel:
+            throw STTError.providerNotAvailable("\(provider.displayName) 尚未接入可执行转写适配器")
+        }
+    }
+
+    private func makeTranscriber(for provider: STTProvider) async throws -> Transcriber {
+        if let transcriberFactory {
+            return try await transcriberFactory(provider)
+        }
+
+        switch provider {
+        case .senseVoice:
+            return try await createSenseVoiceTranscriber()
+        case .whisperKit:
+            return try await createWhisperKitTranscriber()
+        case .qwen3ASR:
+            return try await createQwen3ASRTranscriber()
+        case .funASR:
+            return try await createFunASRTranscriber()
+        case .parakeet:
+            return try await createParakeetTranscriber()
+        case .appleSpeech:
+            return AppleSpeechTranscriber()
+        case .openAI:
+            return try await createOpenAITranscriber()
+        case .aliCloud:
+            return try await createAliCloudTranscriber()
+        case .doubao:
+            return try await createDoubaoTranscriber()
+        case .mimoASR:
+            return try await createMiMoTranscriber()
         case .googleCloud, .groq, .freeModel:
             throw STTError.providerNotAvailable("\(provider.displayName) 尚未接入可执行转写适配器")
         }
