@@ -98,6 +98,8 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(source.contains("title: section.title"))
         XCTAssertTrue(source.contains("selectedItem = item.id"))
         XCTAssertTrue(source.contains(".buttonStyle(.plain)"))
+        XCTAssertFalse(source.contains("isComingSoon"))
+        XCTAssertFalse(source.contains("即将上线"))
         XCTAssertFalse(source.contains("List(selection:"))
         XCTAssertFalse(source.contains(".tag(item.id as String?)"))
     }

@@ -6,7 +6,6 @@ struct SecondarySidebarItem: Identifiable {
     let icon: String
     var badge: String? = nil
     var isDisabled: Bool = false
-    var isComingSoon: Bool = false
 }
 
 struct SecondarySidebarSection: Identifiable {
@@ -106,11 +105,6 @@ struct SecondarySidebar: View {
                     .truncationMode(.tail)
                     .foregroundStyle(item.isDisabled ? AppSurfaceTokens.tertiaryText : AppSurfaceTokens.primaryText)
 
-                if item.isComingSoon {
-                    Text("即将上线")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppSurfaceTokens.secondaryText)
-                }
             }
 
             Spacer(minLength: 6)
