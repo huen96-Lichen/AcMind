@@ -153,7 +153,7 @@ public final class AppState: ObservableObject, Sendable {
         sidebarSelection = .inbox
     }
 
-    public func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {
+    private func canonicalSidebarItem(for item: SidebarItem) -> SidebarItem {
         if item == .screenshotHistory {
             return .inbox
         }

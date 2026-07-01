@@ -1171,6 +1171,7 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("selectSidebarItem"))
         XCTAssertFalse(source.contains("capsuleWindowDidOpen"))
         XCTAssertFalse(source.contains("handleShortcut"))
+        XCTAssertFalse(source.contains("public func canonicalSidebarItem"))
     }
 
     func testServiceContainerNoLongerExposesDebugDependencyValidationHook() throws {
