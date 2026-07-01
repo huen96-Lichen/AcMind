@@ -62,7 +62,7 @@ public actor SecretStore {
     
     // MARK: - List All Keys
     
-    public func listStoredProviderIds() -> [String] {
+    private func listStoredProviderIds() -> [String] {
         var ids = Set<String>()
 
         let query: [String: Any] = [

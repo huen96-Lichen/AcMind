@@ -453,7 +453,7 @@ public struct TaskProduct: Codable, Sendable, Identifiable, Equatable {
 
 /// 任务看板
 public struct TaskBoard: Codable, Sendable, Equatable {
-    public var tasks: [AgentTask]
+    public private(set) var tasks: [AgentTask]
 
     public init(tasks: [AgentTask] = []) {
         self.tasks = tasks

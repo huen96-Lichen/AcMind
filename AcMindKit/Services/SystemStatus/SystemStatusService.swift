@@ -69,7 +69,7 @@ public final class SleepAwareRepeatingTimer {
         observers.removeAll()
     }
 
-    public func suspend() {
+    private func suspend() {
         guard isRunning, isSuspended == false else { return }
         timer?.suspend()
         isSuspended = true

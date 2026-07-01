@@ -490,6 +490,28 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertTrue(voiceServiceSource.contains("private func setASRProvider(_ provider: ASRProvider)"))
         XCTAssertTrue(voiceServiceSource.contains("private func getASRProvider() -> ASRProvider"))
         XCTAssertTrue(voiceServiceSource.contains("private func setSTTProvider(_ provider: STTProvider)"))
+
+        let systemStatusSource = try readSource("AcMindKit/Services/SystemStatus/SystemStatusService.swift")
+        XCTAssertFalse(systemStatusSource.contains("public func suspend()"))
+        XCTAssertTrue(systemStatusSource.contains("private func suspend()"))
+        XCTAssertTrue(systemStatusSource.contains("public func fireForTesting()"))
+
+        let agentTaskSource = try readSource("AcMindKit/Models/AgentTask.swift")
+        XCTAssertTrue(agentTaskSource.contains("public private(set) var tasks"))
+        XCTAssertFalse(agentTaskSource.contains("public var tasks"))
+
+        let pluginSandboxSource = try readSource("AcMindKit/Services/Plugins/PluginSandbox.swift")
+        XCTAssertFalse(pluginSandboxSource.contains("public func hasPermission"))
+        XCTAssertFalse(pluginSandboxSource.contains("public func grantPermission"))
+        XCTAssertFalse(pluginSandboxSource.contains("public func revokePermission"))
+        XCTAssertFalse(pluginSandboxSource.contains("public func getGrantedPermissions"))
+        XCTAssertFalse(pluginSandboxSource.contains("public func getResourceLimits"))
+        XCTAssertTrue(pluginSandboxSource.contains("public func validateAccess(path: URL) -> Bool"))
+        XCTAssertTrue(pluginSandboxSource.contains("public func policySnapshot() -> PluginSandboxPolicySnapshot"))
+
+        let secretStoreSource = try readSource("AcMindKit/Services/AI/Support/SecretStore.swift")
+        XCTAssertFalse(secretStoreSource.contains("public func listStoredProviderIds"))
+        XCTAssertTrue(secretStoreSource.contains("private func listStoredProviderIds() -> [String]"))
     }
 
     func testSettingsViewSurfacesSearchResultsAndKeepsCategoryNavigation() throws {

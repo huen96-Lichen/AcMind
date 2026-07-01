@@ -81,23 +81,23 @@ public actor PluginSandbox {
         }
     }
 
-    public func hasPermission(_ permission: PluginPermission) -> Bool {
+    private func hasPermission(_ permission: PluginPermission) -> Bool {
         grantedPermissions.contains(permission)
     }
 
-    public func grantPermission(_ permission: PluginPermission) {
+    private func grantPermission(_ permission: PluginPermission) {
         grantedPermissions.insert(permission)
     }
 
-    public func revokePermission(_ permission: PluginPermission) {
+    private func revokePermission(_ permission: PluginPermission) {
         grantedPermissions.remove(permission)
     }
 
-    public func getGrantedPermissions() -> Set<PluginPermission> {
+    private func getGrantedPermissions() -> Set<PluginPermission> {
         grantedPermissions
     }
 
-    public func getResourceLimits() -> (memoryMB: Int, cpuPercent: Int) {
+    private func getResourceLimits() -> (memoryMB: Int, cpuPercent: Int) {
         (maxMemoryMB, maxCPUPercent)
     }
 
