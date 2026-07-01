@@ -494,7 +494,7 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
                     toolType: .webDigest,
                     action: "fetch",
                     success: false,
-                    errorMessage: result.stderr.isEmpty ? "defuddle 没有返回可用内容" : result.stderr
+                    errorMessage: friendlyDefuddleError(from: result.stderr)
                 )
             }
             return AgentToolResult(
@@ -512,6 +512,19 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
                 errorMessage: "未知操作: \(request.action)"
             )
         }
+    }
+
+    private func friendlyDefuddleError(from stderr: String) -> String {
+        let trimmed = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "defuddle 没有返回可用内容"
+        }
+        if trimmed.localizedCaseInsensitiveContains("defuddle") ||
+            trimmed.localizedCaseInsensitiveContains("command not found") ||
+            trimmed.localizedCaseInsensitiveContains("no such file") {
+            return "未找到 defuddle。请先运行 `npm install -g defuddle`，或安装后重试。"
+        }
+        return trimmed
     }
 
     private func routeToMarkdown(_ request: AgentToolRequest) async throws -> AgentToolResult {
@@ -1259,7 +1272,10 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
         let outputFolder = URL(fileURLWithPath: request.parameters["outputFolder"] ?? defaultDownloadDirectory(named: "VideoDownloads").path)
         let binaryPath = request.parameters["binaryPath"].flatMap { $0.isEmpty ? nil : $0 } ?? executablePath(named: "yt-dlp")
         guard let binaryPath else {
-            return unsupportedToolResult(toolType: .tools, action: "videoDownload", message: "未找到 yt-dlp")
+            return unsupportedToolResult(toolType: .tools, action: "videoDownload", message: missingYTDLPMessage())
+        }
+        guard FileManager.default.isExecutableFile(atPath: binaryPath) else {
+            return unsupportedToolResult(toolType: .tools, action: "videoDownload", message: missingYTDLPMessage(binaryPath: binaryPath))
         }
         try FileManager.default.createDirectory(at: outputFolder, withIntermediateDirectories: true)
 
@@ -1273,6 +1289,13 @@ public actor AgentToolRouter: AgentToolRouterProtocol {
             ? (result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "下载完成" : result.stdout.trimmingCharacters(in: .whitespacesAndNewlines))
             : files.map { $0.path }.joined(separator: "\n")
         return AgentToolResult(toolType: .tools, action: "videoDownload", success: true, output: output)
+    }
+
+    private func missingYTDLPMessage(binaryPath: String? = nil) -> String {
+        if let binaryPath, binaryPath.isEmpty == false {
+            return "未找到可执行的 yt-dlp: \(binaryPath)。请确认路径正确，或运行 `brew install yt-dlp` / `python3 -m pip install -U yt-dlp`。"
+        }
+        return "未找到 yt-dlp。请先运行 `brew install yt-dlp` 或 `python3 -m pip install -U yt-dlp`，也可以在参数 binaryPath 指定可执行文件路径。"
     }
 
     private func routeToSRTToFCPXML(_ request: AgentToolRequest) -> AgentToolResult {

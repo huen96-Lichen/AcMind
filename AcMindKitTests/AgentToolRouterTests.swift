@@ -448,6 +448,22 @@ final class AgentToolRouterTests: XCTestCase {
         XCTAssertTrue(videoResult.success)
         XCTAssertEqual(processRunner.lastExecutablePath, "/bin/echo")
         XCTAssertTrue(processRunner.lastArguments.contains("https://example.com/watch?v=123"))
+
+        let missingBinaryResult = try await router.routeTool(
+            request: AgentToolRequest(
+                toolType: .tools,
+                action: "videoDownload",
+                parameters: [
+                    "name": "videoDownload",
+                    "url": "https://example.com/watch?v=missing",
+                    "binaryPath": "/definitely/missing/yt-dlp",
+                    "outputFolder": videoFolder.path
+                ]
+            )
+        )
+
+        XCTAssertFalse(missingBinaryResult.success)
+        XCTAssertTrue(missingBinaryResult.errorMessage?.contains("brew install yt-dlp") == true)
     }
 
     func testToolsDocumentConvertAndFileRoutesAreReal() async throws {
@@ -627,6 +643,29 @@ final class AgentToolRouterTests: XCTestCase {
         XCTAssertEqual(result.output, "# 标题\n正文")
         XCTAssertEqual(processRunner.lastExecutablePath, "/usr/bin/env")
         XCTAssertEqual(processRunner.lastArguments, ["defuddle", "parse", "https://example.com/article", "--md"])
+    }
+
+    func testWebDigestMissingDefuddleReturnsInstallHint() async throws {
+        let storage = AgentToolRouterStorageStub()
+        let processRunner = MockProcessRunner(
+            result: ProcessCommandResult(
+                stdout: "",
+                stderr: "env: defuddle: No such file or directory",
+                exitCode: 127
+            )
+        )
+        let router = AgentToolRouter(storage: storage, processRunner: processRunner)
+
+        let result = try await router.routeTool(
+            request: AgentToolRequest(
+                toolType: .webDigest,
+                action: "fetch",
+                parameters: ["url": "https://example.com/article"]
+            )
+        )
+
+        XCTAssertFalse(result.success)
+        XCTAssertTrue(result.errorMessage?.contains("npm install -g defuddle") == true)
     }
 
     func testScheduleCreateListUpdateAndDeleteUsePersistence() async throws {
