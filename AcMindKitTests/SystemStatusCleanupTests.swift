@@ -1173,6 +1173,11 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("handleShortcut"))
     }
 
+    func testServiceContainerNoLongerExposesDebugDependencyValidationHook() throws {
+        let source = try readSource("App/ServiceContainer.swift")
+        XCTAssertFalse(source.contains("validateDependencies"))
+    }
+
     func testAppSurfaceTokensMatchAcWorkPhaseOneLayout() throws {
         let source = try readSource("Features/Native/Shared/AppSurfaceStyle.swift")
         XCTAssertTrue(source.contains("enum Radius"))
