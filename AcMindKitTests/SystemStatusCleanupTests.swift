@@ -1165,6 +1165,14 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(contentView.contains("minWidth: 880"))
     }
 
+    func testAppStateNoLongerExposesDeadOnboardingCompletionHelper() throws {
+        let source = try readSource("App/AppState.swift")
+        XCTAssertFalse(source.contains("markOnboardingComplete"))
+        XCTAssertFalse(source.contains("selectSidebarItem"))
+        XCTAssertFalse(source.contains("capsuleWindowDidOpen"))
+        XCTAssertFalse(source.contains("handleShortcut"))
+    }
+
     func testAppSurfaceTokensMatchAcWorkPhaseOneLayout() throws {
         let source = try readSource("Features/Native/Shared/AppSurfaceStyle.swift")
         XCTAssertTrue(source.contains("enum Radius"))

@@ -145,10 +145,6 @@ public final class AppState: ObservableObject, Sendable {
         selectInboxWorkspace(selection)
     }
 
-    public func selectSidebarItem(_ item: SidebarItem) {
-        navigate(to: item)
-    }
-
     public func selectInboxWorkspace(_ selection: String?) {
         let resolvedSelection = selection ?? "all"
         inboxWorkspaceSelection = resolvedSelection
@@ -186,10 +182,6 @@ public final class AppState: ObservableObject, Sendable {
         isMainWindowKey = false
     }
 
-    public func capsuleWindowDidOpen() {
-        capsuleWindowState = .normal
-    }
-
     public func capsuleWindowDidClose() {
         capsuleWindowState = .closed
     }
@@ -216,20 +208,7 @@ public final class AppState: ObservableObject, Sendable {
         shortcutHandlers.removeValue(forKey: shortcut)
     }
 
-    public func handleShortcut(_ shortcut: KeyboardShortcut) -> Bool {
-        if let action = shortcutHandlers[shortcut] {
-            action()
-            return true
-        }
-        return false
-    }
-
     // MARK: - Launch Flow
-
-    public func markOnboardingComplete() {
-        showOnboarding = false
-        isFirstLaunch = false
-    }
 
     public func retryInitialization() async {
         initializationError = nil
