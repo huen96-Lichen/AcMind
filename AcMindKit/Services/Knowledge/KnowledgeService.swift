@@ -111,14 +111,16 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         await postChangeNotification()
     }
     
-    public func createCardFromNote(_ note: DistilledNote) async throws -> KnowledgeCard {
+    private func createCardFromNote(_ note: DistilledNote) async throws -> KnowledgeCard {
         let card = KnowledgeCard(from: note)
         try await createCard(card)
         return card
     }
 
     public func createCard(from note: DistilledNote) async throws -> KnowledgeCard {
-        try await createCardFromNote(note)
+        let card = KnowledgeCard(from: note)
+        try await createCard(card)
+        return card
     }
     
     public func updateCard(_ card: KnowledgeCard) async throws {
@@ -363,7 +365,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         }
     }
 
-    public func batchMoveToCategory(ids: [String], category: String) async throws {
+    private func batchMoveToCategory(ids: [String], category: String) async throws {
         for id in ids {
             guard var card = cards[id] else { continue }
             card.category = category
@@ -410,7 +412,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
 
     // MARK: - Stats
 
-    public func getStats() async throws -> KnowledgeStats {
+    private func getStats() async throws -> KnowledgeStats {
         let allCards = Array(cards.values).filter { $0.status != .deleted }
         
         let activeCards = allCards.filter { $0.status == .active }
@@ -441,7 +443,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
     
     // MARK: - Link to Export
     
-    public func linkCardToExport(cardId: String, exportRecordId: String) async throws {
+    private func linkCardToExport(cardId: String, exportRecordId: String) async throws {
         guard var card = cards[cardId] else {
             throw KnowledgeError.cardNotFound
         }
@@ -454,7 +456,7 @@ public actor KnowledgeService: KnowledgeServiceProtocol {
         await postChangeNotification()
     }
     
-    public func setVaultPath(cardId: String, path: String) async throws {
+    private func setVaultPath(cardId: String, path: String) async throws {
         guard var card = cards[cardId] else {
             throw KnowledgeError.cardNotFound
         }

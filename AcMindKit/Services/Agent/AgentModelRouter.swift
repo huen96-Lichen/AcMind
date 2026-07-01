@@ -96,7 +96,7 @@ public actor AgentModelRouter: AgentModelRouterProtocol {
         pricingConfig.values.first { $0.modelId == modelId }
     }
 
-    public func updatePricing(_ config: PricingConfig) {
+    private func updatePricing(_ config: PricingConfig) {
         pricingConfig["\(config.providerId)_\(config.modelId)"] = config
     }
 

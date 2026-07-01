@@ -540,6 +540,23 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(agentToolRouterSource.contains("public func disableTool"))
         XCTAssertTrue(agentToolRouterSource.contains("private func enableTool"))
         XCTAssertTrue(agentToolRouterSource.contains("private func disableTool"))
+
+        let agentModelRouterSource = try readSource("AcMindKit/Services/Agent/AgentModelRouter.swift")
+        XCTAssertFalse(agentModelRouterSource.contains("public func updatePricing"))
+        XCTAssertTrue(agentModelRouterSource.contains("private func updatePricing"))
+        XCTAssertTrue(agentModelRouterSource.contains("public func getRoutingHistory(limit: Int = 50) async -> [RoutingRecord]"))
+
+        let knowledgeServiceSource = try readSource("AcMindKit/Services/Knowledge/KnowledgeService.swift")
+        XCTAssertFalse(knowledgeServiceSource.contains("public func createCardFromNote"))
+        XCTAssertFalse(knowledgeServiceSource.contains("public func batchMoveToCategory"))
+        XCTAssertFalse(knowledgeServiceSource.contains("public func getStats() async throws -> KnowledgeStats"))
+        XCTAssertFalse(knowledgeServiceSource.contains("public func linkCardToExport"))
+        XCTAssertFalse(knowledgeServiceSource.contains("public func setVaultPath"))
+        XCTAssertTrue(knowledgeServiceSource.contains("private func createCardFromNote"))
+        XCTAssertTrue(knowledgeServiceSource.contains("private func batchMoveToCategory"))
+        XCTAssertTrue(knowledgeServiceSource.contains("private func getStats() async throws -> KnowledgeStats"))
+        XCTAssertTrue(knowledgeServiceSource.contains("private func linkCardToExport"))
+        XCTAssertTrue(knowledgeServiceSource.contains("private func setVaultPath"))
     }
 
     func testSettingsViewSurfacesSearchResultsAndKeepsCategoryNavigation() throws {
