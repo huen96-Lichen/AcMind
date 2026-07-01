@@ -1191,6 +1191,12 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("public func typeColor"))
     }
 
+    func testNotchRuntimeSurfaceContextKeepsAllowsInternalOnly() throws {
+        let source = try readSource("Features/Companion/NotchRuntimeSurface.swift")
+        XCTAssertFalse(source.contains("\n    func allows("))
+        XCTAssertTrue(source.contains("fileprivate func allows("))
+    }
+
     func testAppSurfaceTokensMatchAcWorkPhaseOneLayout() throws {
         let source = try readSource("Features/Native/Shared/AppSurfaceStyle.swift")
         XCTAssertTrue(source.contains("enum Radius"))

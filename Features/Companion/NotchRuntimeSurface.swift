@@ -63,7 +63,7 @@ struct NotchRuntimeSurfaceContext {
         displaySettings.enabledDynamicModules.contains(module)
     }
 
-    func allows(_ contentID: CompanionRuntimeContentID, scope: NotchRuntimeSurfaceScope) -> Bool {
+    fileprivate func allows(_ contentID: CompanionRuntimeContentID, scope: NotchRuntimeSurfaceScope) -> Bool {
         let allowedSet = switch scope {
         case .collapsed:
             displaySettings.collapsedVisibleContents
