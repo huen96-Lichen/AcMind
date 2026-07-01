@@ -1183,6 +1183,14 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("public func notice"))
     }
 
+    func testClipboardViewModelNoLongerExposesInternalHelpersAsPublicAPI() throws {
+        let source = try readSource("App/ViewModels/ClipboardViewModel.swift")
+        XCTAssertFalse(source.contains("public func updateStats"))
+        XCTAssertFalse(source.contains("public func loadTags"))
+        XCTAssertFalse(source.contains("public func typeIcon"))
+        XCTAssertFalse(source.contains("public func typeColor"))
+    }
+
     func testAppSurfaceTokensMatchAcWorkPhaseOneLayout() throws {
         let source = try readSource("Features/Native/Shared/AppSurfaceStyle.swift")
         XCTAssertTrue(source.contains("enum Radius"))

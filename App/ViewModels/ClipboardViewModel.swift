@@ -195,7 +195,7 @@ public final class ClipboardViewModel: ObservableObject {
     
     // MARK: - Stats
     
-    public func updateStats() async {
+    private func updateStats() async {
         stats = await clipboardService.getStats()
     }
     
@@ -213,7 +213,7 @@ public final class ClipboardViewModel: ObservableObject {
     
     // MARK: - Tags
     
-    public func loadTags() async {
+    private func loadTags() async {
         do {
             availableTags = try await clipboardService.listTags()
         } catch {
@@ -287,11 +287,11 @@ public final class ClipboardViewModel: ObservableObject {
         item.textContent ?? item.content ?? ""
     }
     
-    public func typeIcon(for type: ClipboardContentType) -> String {
+    private func typeIcon(for type: ClipboardContentType) -> String {
         type.icon
     }
 
-    public func typeColor(for type: ClipboardContentType) -> Color {
+    private func typeColor(for type: ClipboardContentType) -> Color {
         type.color
     }
 }
