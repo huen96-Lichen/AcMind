@@ -834,6 +834,11 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("copyDiagnostics"))
     }
 
+    func testSettingsViewModelNoLongerExposesDeadDiagnosticsClipboardAction() throws {
+        let source = try readSource("App/ViewModels/SettingsViewModel.swift")
+        XCTAssertFalse(source.contains("copyDiagnosticsToPasteboard"))
+    }
+
     func testMainNavigationShortcutsLiveInNavigationCommandMenu() throws {
         let appSource = try readSource("App/AcMindApp.swift")
         let itemSource = try readSource("AcMindKit/Models/SidebarItem.swift")

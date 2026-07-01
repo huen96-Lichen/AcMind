@@ -622,30 +622,6 @@ public final class SettingsViewModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
-    public func copyDiagnosticsToPasteboard() {
-        let diagnostics = """
-        AcWork Diagnostics
-        Time: \(ISO8601DateFormatter().string(from: Date()))
-        App Version: \(diagnosticAppVersionString)
-        macOS: \(diagnosticMacOSVersionString)
-        Device: \(diagnosticDeviceModelString)
-        Processor: \(diagnosticProcessorString)
-        Memory: \(diagnosticMemoryString)
-        Theme: \(theme.displayName)
-        Language: \(language)
-        Vault Path: \(vaultPath.isEmpty ? "未设置" : vaultPath)
-        Default Provider: \(defaultProviderId.isEmpty ? "未设置" : defaultProviderId)
-        Default Model: \(defaultModelId.isEmpty ? "未设置" : defaultModelId)
-        Providers: \(usageSummary.providers)
-        Companion Capsule: \(companionCapsuleEnabled ? "enabled" : "disabled")
-        Companion Voice: \(companionVoiceEnabled ? "enabled" : "disabled")
-        Auto Capture: \(autoCaptureClipboard ? "enabled" : "disabled")
-        """
-
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(diagnostics, forType: .string)
-    }
-
     private func fetchLatestReleaseVersion() async throws -> String? {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {

@@ -638,7 +638,7 @@ struct InboxView: View {
             Task { await viewModel.updateFilter(InboxFilterState(quickFilter: .screenshotHistory)) }
         } else if appState.inboxWorkspaceSelection == "phoneSync" {
             Task {
-                var next = InboxFilterState(quickFilter: .phoneSync)
+                let next = InboxFilterState(quickFilter: .phoneSync)
                 await viewModel.updateFilter(next)
             }
         } else {
