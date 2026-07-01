@@ -694,7 +694,7 @@ public actor VoiceService: VoiceServiceProtocol {
 
     public func getASRProvider() -> ASRProvider {
         switch sttProvider {
-        case .senseVoice, .whisperKit, .qwen3ASR, .funASR:
+        case .senseVoice, .whisperKit, .qwen3ASR, .funASR, .parakeet:
             return .whisperLocal
         case .openAI, .groq:
             return .whisperAPI
