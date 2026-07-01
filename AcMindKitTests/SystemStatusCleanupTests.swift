@@ -839,6 +839,9 @@ final class SystemStatusCleanupTests: XCTestCase {
         XCTAssertFalse(source.contains("copyDiagnosticsToPasteboard"))
         XCTAssertFalse(source.contains("openBackupsFolder"))
         XCTAssertFalse(source.contains("refreshPermissionsFromManager"))
+        XCTAssertFalse(source.contains("public func loadUsageSummary"))
+        XCTAssertFalse(source.contains("public func loadUsageBurnSnapshot"))
+        XCTAssertFalse(source.contains("public func openReleasesPage"))
     }
 
     func testMainNavigationShortcutsLiveInNavigationCommandMenu() throws {

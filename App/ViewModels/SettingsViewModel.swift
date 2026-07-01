@@ -481,7 +481,7 @@ public final class SettingsViewModel: ObservableObject {
         }
     }
 
-    public func loadUsageSummary() async {
+    private func loadUsageSummary() async {
         do {
             async let sourceItemsTask = storage.listSourceItems(filter: nil)
             async let distilledNotesTask = storage.listDistilledNotes()
@@ -501,7 +501,7 @@ public final class SettingsViewModel: ObservableObject {
         }
     }
 
-    public func loadUsageBurnSnapshot() async {
+    private func loadUsageBurnSnapshot() async {
         usageBurnSnapshot = await UsageBurnMonitor.shared.snapshot()
     }
 
@@ -559,7 +559,7 @@ public final class SettingsViewModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
-    public func openReleasesPage() {
+    private func openReleasesPage() {
         guard let url = URL(string: "https://github.com/huen96-Lichen/AcMind/releases") else { return }
         NSWorkspace.shared.open(url)
     }
